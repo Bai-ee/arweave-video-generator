@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scan The Space - EditTrades</title>
+  <link rel="icon" type="image/svg+xml" href="/logos/logo.svg">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/edittrax-styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <style>
+    /* Prevent horizontal overflow - iOS specific fixes */
+    html {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100%;
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    
+    body {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+      position: relative;
+    }
+    
+    /* Particle background */
+    #particles-js {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: -1;
+      background: linear-gradient(180deg, #000000 0%, #0a0a0a 100%);
+    }
+    
+    *, *::before, *::after {
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    
+    /* Main container width control */
+    main {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    
+    /* Star icon styling */
+    .star-icon {
+      cursor: pointer;
+      font-size: 1.5rem;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    
+    .star-icon:hover {
+      transform: scale(1.2);
+    }
+    
+    .star-outline {
+      color: var(--color-yellow-75);
+    }
+    
+    .star-filled {
+      color: var(--color-yellow-75);
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .table-edittrax thead {
+        display: none;
+      }
+      
+      .coin-row {
+        display: block;
+        padding: 1rem 0.5rem;
+        border-bottom: 2px solid var(--color-yellow-75);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+      
+      .coin-row td {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        padding: 0.25rem 0 !important;
+        border: none;
+        text-align: left !important;
+        box-sizing: border-box;
+      }
+      
+      .coin-row td:before {
+        content: attr(data-label);
+        font-weight: bold;
+        display: inline-block;
+        margin-right: 0.5rem;
+        color: var(--color-yellow-75);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        min-width: 80px;
+      }
+      
+      .coin-row td:first-child:before {
+        display: none;
+      }
+    }
+    
+    @media (min-width: 769px) {
+      .table-edittrax th,
+      .table-edittrax td {
+        padding: var(--spacing-2) var(--spacing-2);
+      }
+      
+      /* Set explicit column widths */
+      .table-edittrax thead th:nth-child(1),
+      .table-edittrax tbody td:nth-child(1) { width: 5%; } /* STAR */
+      
+      .table-edittrax thead th:nth-child(2),
+      .table-edittrax tbody td:nth-child(2) { width: 20%; } /* COIN */
+      
+      .table-edittrax thead th:nth-child(3),
+      .table-edittrax tbody td:nth-child(3) { width: 15%; } /* PRICE */
+      
+      .table-edittrax thead th:nth-child(4),
+      .table-edittrax tbody td:nth-child(4) { width: 10%; } /* 24H CHANGE */
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  
+  <!-- Particle Background -->
+  <div id="particles-js"></div>
+  
+  <!-- Header -->
+  <header class="header-edittrax">
+    <div class="max-w-6xl mx-auto px-4 py-3">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="logo-container flex flex-col items-center gap-2">
+          <img src="/logos/load.gif" alt="Loading Animation" style="width: 140px; height: auto;">
+          <img src="/logos/et_horizontal.png" alt="EditTrades Logo" class="logo-img">
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="/" class="btn-base btn-secondary px-3 py-2 text-sm rounded">
+            Home
+          </a>
+          <button onclick="window.location.reload()" class="btn-base btn-secondary px-3 py-2 text-sm rounded">
+            Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-4 py-4">
+    
+    <!-- Loading State -->
+    <div id="loadingState" class="text-center py-8">
+      <div style="color: var(--color-yellow-75);">Loading tokens...</div>
+    </div>
+
+    <!-- Opportunities Table -->
+    <div id="opportunitiesContainer" class="hidden">
+      <div class="card-edittrax rounded-lg">
+        <div class="overflow-x-auto">
+          <table class="table-edittrax w-full">
+            <thead style="background-color: var(--color-yellow-75);">
+              <tr>
+                <th class="px-2 py-2" style="color: black;"></th>
+                <th class="px-2 py-2" style="color: black;">COIN</th>
+                <th class="px-2 py-2" style="color: black;">PRICE</th>
+                <th class="px-2 py-2" style="color: black;">24H CHANGE</th>
+              </tr>
+            </thead>
+            <tbody id="tokensTable">
+              <!-- Rows will be populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Initialize particles.js
+    particlesJS('particles-js', {
+      particles: {
+        number: { value: 500 },
+        color: { value: '#ffffff' },
+        shape: { type: 'circle' },
+        opacity: {
+          value: 0.5,
+          random: true,
+          anim: { enable: true, speed: 1, opacity_min: 0.1 }
+        },
+        size: {
+          value: 2,
+          random: true
+        },
+        line_linked: {
+          enable: false
+        },
+        move: {
+          enable: true,
+          speed: 0.5,
+          direction: 'none',
+          random: true,
+          out_mode: 'out'
+        }
+      },
+      interactivity: {
+        detect_on: 'canvas',
+        events: {
+          onhover: {
+            enable: true,
+            mode: 'grab'
+          }
+        },
+        modes: {
+          grab: {
+            distance: 140,
+            line_linked: { opacity: 0.3 }
+          }
+        }
+      }
+    });
+
+    // State
+    let starredCoins = JSON.parse(localStorage.getItem('starredCoins') || '[]');
+    let allTokens = [];
+
+    // Common trading pairs on Kraken
+    const KRAKEN_PAIRS = [
+      'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'ADAUSDT', 'DOGEUSDT', 'XRPUSDT', 
+      'DOTUSDT', 'MATICUSDT', 'LINKUSDT', 'LTCUSDT', 'AVAXUSDT', 'ATOMUSDT',
+      'ALGOUSDT', 'UNIUSDT', 'FILUSDT', 'TRXUSDT', 'XLMUSDT', 'MANAUSDT',
+      'AAVEUSDT', 'EOSUSDT', 'SANDUSDT', 'APEUSDT', 'ICPUSDT', 'FLOWUSDT',
+      'GRTUSDT', 'RNDRUSDT', 'INJUSDT', 'STXUSDT', 'NEARUSDT', 'IMXUSDT'
+    ];
+
+    // Toggle star
+    function toggleStar(symbol) {
+      const index = starredCoins.indexOf(symbol);
+      if (index > -1) {
+        starredCoins.splice(index, 1);
+      } else {
+        starredCoins.push(symbol);
+      }
+      localStorage.setItem('starredCoins', JSON.stringify(starredCoins));
+      updateStarDisplay(symbol);
+      sortAndRenderTokens();
+    }
+
+    // Update star icon display
+    function updateStarDisplay(symbol) {
+      const starElement = document.getElementById(`star-${symbol}`);
+      if (starElement) {
+        const isStarred = starredCoins.includes(symbol);
+        starElement.innerHTML = isStarred ? '★' : '☆';
+        starElement.className = `star-icon ${isStarred ? 'star-filled' : 'star-outline'}`;
+      }
+    }
+
+    // Create table row
+    function createTokenRow(token) {
+      const row = document.createElement('tr');
+      row.className = 'coin-row';
+      row.id = `row-${token.symbol}`;
+      
+      const isStarred = starredCoins.includes(token.symbol);
+      const changeClass = (token.change24h || 0) >= 0 ? 'status-long' : 'status-short';
+      const change = token.change24h ? 
+        `${token.change24h >= 0 ? '+' : ''}${token.change24h.toFixed(2)}%` : 'N/A';
+      
+      row.innerHTML = `
+        <td class="px-2 py-3" data-label="">
+          <span 
+            id="star-${token.symbol}" 
+            class="star-icon ${isStarred ? 'star-filled' : 'star-outline'}"
+            onclick="toggleStar('${token.symbol}')"
+          >
+            ${isStarred ? '★' : '☆'}
+          </span>
+        </td>
+        <td class="px-2 py-3" data-label="Coin:">
+          <div style="color: var(--color-yellow-75); font-weight: bold;">${token.name}</div>
+        </td>
+        <td class="px-2 py-3" data-label="Price:">
+          <div style="color: var(--color-yellow-75);">${token.price}</div>
+        </td>
+        <td class="px-2 py-3" data-label="24H Change:">
+          <div class="${changeClass}">${change}</div>
+        </td>
+      `;
+      
+      return row;
+    }
+
+    // Fetch token data from CoinGecko
+    async function fetchTokenData(symbol) {
+      try {
+        // Map common symbols to CoinGecko IDs
+        const coinGeckoMap = {
+          'BTCUSDT': 'bitcoin',
+          'ETHUSDT': 'ethereum',
+          'SOLUSDT': 'solana',
+          'ADAUSDT': 'cardano',
+          'DOGEUSDT': 'dogecoin',
+          'XRPUSDT': 'ripple',
+          'DOTUSDT': 'polkadot',
+          'MATICUSDT': 'matic-network',
+          'LINKUSDT': 'chainlink',
+          'LTCUSDT': 'litecoin',
+          'AVAXUSDT': 'avalanche-2',
+          'ATOMUSDT': 'cosmos',
+          'ALGOUSDT': 'algorand',
+          'UNIUSDT': 'uniswap',
+          'FILUSDT': 'filecoin',
+          'TRXUSDT': 'tron',
+          'XLMUSDT': 'stellar',
+          'MANAUSDT': 'decentraland',
+          'AAVEUSDT': 'aave',
+          'EOSUSDT': 'eos',
+          'SANDUSDT': 'the-sandbox',
+          'APEUSDT': 'apecoin',
+          'ICPUSDT': 'internet-computer',
+          'FLOWUSDT': 'flow',
+          'GRTUSDT': 'the-graph',
+          'RNDRUSDT': 'render-token',
+          'INJUSDT': 'injective-protocol',
+          'STXUSDT': 'blockstack',
+          'NEARUSDT': 'near',
+          'IMXUSDT': 'immutable-x'
+        };
+        
+        const coinId = coinGeckoMap[symbol];
+        if (!coinId) {
+          throw new Error('Unsupported symbol');
+        }
+        
+        const response = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`
+        );
+        
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        
+        const coinData = data[coinId];
+        const price = coinData?.usd || 0;
+        const change24h = coinData?.usd_24h_change || 0;
+        
+        return {
+          symbol: symbol,
+          name: symbol.replace('USDT', '').toUpperCase(),
+          price: price ? `$${price.toLocaleString()}` : 'N/A',
+          change24h: change24h
+        };
+      } catch (error) {
+        console.error(`Error fetching ${symbol}:`, error);
+        return {
+          symbol: symbol,
+          name: symbol.replace('USDT', '').toUpperCase(),
+          price: 'Loading...',
+          change24h: 0
+        };
+      }
+    }
+
+    // Utility to delay between requests
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    
+    // Load all tokens
+    async function loadAllTokens() {
+      document.getElementById('loadingState').classList.remove('hidden');
+      document.getElementById('opportunitiesContainer').classList.add('hidden');
+      
+      const tokensTable = document.getElementById('tokensTable');
+      tokensTable.innerHTML = '';
+      
+      // Show table with loading state
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('opportunitiesContainer').classList.remove('hidden');
+      
+      // Create placeholder rows first
+      KRAKEN_PAIRS.forEach(symbol => {
+        const token = {
+          symbol: symbol,
+          name: symbol.replace('USDT', '').toUpperCase(),
+          price: 'Loading...',
+          change24h: 0
+        };
+        const row = createTokenRow(token);
+        tokensTable.appendChild(row);
+      });
+      
+      // Fetch data in batches to avoid rate limiting
+      const batchSize = 5;
+      for (let i = 0; i < KRAKEN_PAIRS.length; i += batchSize) {
+        const batch = KRAKEN_PAIRS.slice(i, i + batchSize);
+        const promises = batch.map(symbol => fetchTokenData(symbol));
+        const tokens = await Promise.all(promises);
+        
+        // Update the rows with real data
+        tokens.forEach(token => {
+          const row = document.getElementById(`row-${token.symbol}`);
+          if (row) {
+            const priceCell = row.querySelector('[data-label="Price:"]');
+            const changeCell = row.querySelector('[data-label="24H Change:"]');
+            
+            if (priceCell) {
+              priceCell.querySelector('div').textContent = token.price;
+            }
+            
+            if (changeCell) {
+              const changeDiv = changeCell.querySelector('div');
+              const changeClass = (token.change24h || 0) >= 0 ? 'status-long' : 'status-short';
+              const change = token.change24h ? 
+                `${token.change24h >= 0 ? '+' : ''}${token.change24h.toFixed(2)}%` : 'N/A';
+              changeDiv.className = changeClass;
+              changeDiv.textContent = change;
+            }
+          }
+          
+          allTokens.push(token);
+        });
+        
+        // Delay between batches
+        if (i + batchSize < KRAKEN_PAIRS.length) {
+          await delay(1000);
+        }
+      }
+      
+      // Sort table after all data is loaded
+      sortAndRenderTokens();
+    }
+    
+    // Sort and render tokens
+    function sortAndRenderTokens() {
+      const tokensTable = document.getElementById('tokensTable');
+      const rows = Array.from(tokensTable.querySelectorAll('tr'));
+      
+      rows.sort((a, b) => {
+        const aSymbol = a.id.replace('row-', '');
+        const bSymbol = b.id.replace('row-', '');
+        const aStarred = starredCoins.includes(aSymbol);
+        const bStarred = starredCoins.includes(bSymbol);
+        
+        if (aStarred && !bStarred) return -1;
+        if (!aStarred && bStarred) return 1;
+        
+        return aSymbol.localeCompare(bSymbol);
+      });
+      
+      tokensTable.innerHTML = '';
+      rows.forEach(row => tokensTable.appendChild(row));
+    }
+
+    // Copy all data to clipboard
+    function copyAllToClipboard() {
+      const data = {
+        starredCoins: starredCoins,
+        allTokens: allTokens,
+        timestamp: new Date().toISOString()
+      };
+      
+      navigator.clipboard.writeText(JSON.stringify(data, null, 2))
+        .then(() => alert('Data copied to clipboard!'))
+        .catch(err => console.error('Failed to copy:', err));
+    }
+
+    // Auto-load on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadAllTokens();
+    });
+  </script>
+
+</body>
+</html>

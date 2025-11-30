@@ -1,0 +1,4593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EditTrades - 4H Trading Strategy Scanner</title>
+  
+  <!-- Open Graph / Social Media Meta Tags -->
+  <meta property="og:title" content="EditTrades">
+  <meta property="og:description" content="EditTrades">
+  <meta property="og:image" content="/logos/og_img.jpg">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="EditTrades">
+  <meta name="twitter:description" content="EditTrades">
+  <meta name="twitter:image" content="/logos/og_img.jpg">
+  
+  <link rel="icon" type="image/svg+xml" href="/logos/logo.svg">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/edittrax-styles.css">
+  <style>
+    /* Prevent horizontal overflow - iOS specific fixes */
+    html {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100%;
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    
+    body {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+      position: relative;
+    }
+    
+    /* Particle background */
+    #particles-js {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: -1;
+      background: linear-gradient(180deg, #000000 0%, #0a0a0a 100%);
+    }
+    
+    *, *::before, *::after {
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    
+    /* Prevent iOS specific issues */
+    input, button, select, textarea {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+    
+    /* Main container width control */
+    main {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    
+    /* Additional component-specific styles */
+    .details-row {
+      display: none;
+      background-color: transparent;
+    }
+    
+    .details-row.expanded {
+      display: table-row;
+    }
+    
+    .details-row td {
+      padding: 0.75rem !important;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    
+    .details-content-wrapper {
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      box-sizing: border-box;
+      -webkit-box-sizing: border-box;
+    }
+    
+    /* Force layout recalculation on mobile iOS after toggle */
+    @media (max-width: 674px) {
+      .details-content-wrapper {
+        display: block;
+        contain: layout;
+      }
+      
+      .details-content-wrapper .tf-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        -webkit-grid-template-columns: 1fr !important;
+      }
+      
+      .details-content-wrapper .trade-info-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        -webkit-grid-template-columns: 1fr !important;
+      }
+    }
+    
+    /* Mobile responsive table */
+    /* Desktop: hide mobile entry price and entry label, show desktop column */
+    .entry-price-mobile {
+      display: none;
+    }
+    .entry-label-mobile {
+      display: none;
+    }
+    .entry-price-desktop {
+      display: table-cell;
+      white-space: nowrap;
+      overflow: visible;
+    }
+    
+    /* Minimize gaps on desktop */
+    @media (min-width: 675px) {
+      .table-edittrax th,
+      .table-edittrax td {
+        padding: var(--spacing-2) var(--spacing-2);
+      }
+      
+      /* Set explicit column widths for proper alignment */
+      .table-edittrax thead th:nth-child(1),
+      .table-edittrax tbody td:nth-child(1) { 
+        width: 15%; 
+        text-align: center;
+      } /* COIN */
+      
+      .table-edittrax thead th:nth-child(2),
+      .table-edittrax tbody td:nth-child(2) { 
+        width: 8%; 
+        overflow: visible;
+        text-align: center;
+      } /* PRICE */
+      
+      .table-edittrax thead th:nth-child(3),
+      .table-edittrax tbody td:nth-child(3) { 
+        width: 15%;
+        text-align: center;
+      } /* SIGNAL */
+      
+      .table-edittrax thead th:nth-child(4),
+      .table-edittrax tbody td:nth-child(4) { 
+        width: 30%;
+        text-align: center;
+      } /* STRATEGY */
+      
+      .table-edittrax thead th:nth-child(5),
+      .table-edittrax tbody td:nth-child(5) { 
+        width: 30%;
+        text-align: center;
+      } /* ACTIONS */
+      
+      /* Ensure flex containers respect column width and are centered */
+      .table-edittrax tbody td:nth-child(4) .flex,
+      .table-edittrax tbody td:nth-child(5) .flex {
+        width: 100%;
+        max-width: 100%;
+        justify-content: center;
+      }
+      
+      /* Reduce gap between action buttons */
+      .flex.gap-1 {
+        gap: 0.25rem;
+      }
+    }
+    
+    /* Medium screens: Hide entry column for more compact table */
+    @media (min-width: 675px) and (max-width: 900px) {
+      /* Hide entry price column and label on medium screens */
+      .entry-cell,
+      .table-edittrax thead th:nth-child(3) {
+        display: none !important;
+      }
+      
+      /* Make table expand to full width */
+      .table-edittrax {
+        width: 100% !important;
+      }
+      
+      /* Adjust remaining column widths to fill space */
+      .table-edittrax thead th:nth-child(1),
+      .table-edittrax tbody td:nth-child(1) { 
+        width: 18% !important;
+      }
+      
+      .table-edittrax thead th:nth-child(2),
+      .table-edittrax tbody td:nth-child(2) { 
+        width: 18% !important;
+      }
+      
+      .table-edittrax thead th:nth-child(4),
+      .table-edittrax tbody td:nth-child(4) { 
+        width: 28% !important;
+      }
+      
+      .table-edittrax thead th:nth-child(5),
+      .table-edittrax tbody td:nth-child(5) { 
+        width: 36% !important;
+      }
+    }
+    
+    /* Mobile: Single breakpoint for all mobile/small screen styles */
+    @media (max-width: 674px) {
+      /* Mobile: add consistent padding to header and main content */
+      .header-edittrax > div,
+      main {
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+      }
+      
+      /* Mobile: results container padding */
+      #resultsContainer {
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+      }
+      
+      /* Mobile: adjust trading indicators position and size */
+      .header-edittrax > div > div[style*="position: absolute"][style*="top: 25px"][style*="left: 0"] {
+        top: 18px !important;
+        left: 5px !important;
+        font-size: 0.6rem !important;
+        gap: 8px !important;
+      }
+      
+      #candle-timer-container,
+      #4h-timer-container {
+        gap: 4px !important;
+      }
+      
+      #candle-timer-container > div,
+      #4h-timer-container > div {
+        width: 25px !important;
+        height: 2px !important;
+      }
+      
+      /* Mobile: adjust top-right actions */
+      .header-edittrax > div > div[style*="top: 25px"][style*="right: 0"] {
+        top: 18px !important;
+        right: 5px !important;
+        gap: 17px !important;
+      }
+      
+      #refreshBtn,
+      #dataCopyBtn,
+      .header-edittrax a[href="/strategy.html"] {
+        padding: 2px 4px !important;
+        font-size: 0.6rem !important;
+        gap: 4px !important;
+      }
+      
+      #refreshBtn svg,
+      #dataCopyBtn svg,
+      .header-edittrax a[href="/strategy.html"] svg {
+        width: 16px !important;
+        height: 16px !important;
+      }
+      
+      /* Mobile: adjust news marquee - full width, no padding */
+      #newsMarquee {
+        font-size: 0.75rem !important;
+        padding: 0.4rem 0 !important;
+        margin-left: -5px !important;
+        margin-right: -5px !important;
+        width: calc(100% + 10px) !important;
+      }
+      
+      /* Mobile: make strategy buttons stretch full width */
+      .strategy-buttons-container {
+        width: 100% !important;
+      }
+      
+      .strategy-buttons-container button {
+        flex: 1 !important;
+        min-width: 0 !important;
+      }
+      
+      /* Mobile: show entry price under coin name, hide desktop column */
+      .entry-price-mobile {
+        display: block !important;
+      }
+      .entry-label-mobile {
+        display: block !important;
+        text-align: right !important;
+      }
+      .entry-value {
+        text-align: right !important;
+      }
+      .entry-price-desktop {
+        display: none !important;
+      }
+      
+      /* Right-justify signal confidence on mobile */
+      .signal-confidence {
+        text-align: right !important;
+      }
+      
+      /* Mobile: Adjust action buttons for better fit */
+      .table-edittrax tbody td:nth-child(5) .flex {
+        gap: 0.5rem !important;
+      }
+      
+      .table-edittrax tbody td:nth-child(5) button {
+        font-size: 0.65rem !important;
+        padding: 0.4rem 0.6rem !important;
+        min-width: auto !important;
+      }
+      
+      .table-edittrax thead {
+        display: none;
+      }
+      
+      .coin-row {
+        display: block !important;
+        padding: 0 0.5rem 1rem 0.5rem;
+        border-bottom: 2px solid var(--color-yellow-75);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+      
+      /* Ensure table stays block layout on mobile */
+      .table-edittrax tbody {
+        display: block !important;
+      }
+      
+      .table-edittrax tbody tr.coin-row {
+        display: block !important;
+      }
+      
+      /* Keep details row hidden unless expanded */
+      .table-edittrax tbody tr.details-row {
+        display: none !important;
+      }
+      
+      .table-edittrax tbody tr.details-row.expanded {
+        display: block !important;
+      }
+      
+      .table-edittrax tbody tr.details-row.expanded td {
+        display: block !important;
+      }
+      
+      /* Create flex container for first row */
+      .coin-row::after {
+        content: "";
+        display: table;
+        clear: both;
+      }
+      
+      .coin-row td {
+        padding: 0.5rem 0 !important;
+        border: none;
+        text-align: left !important;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+      
+      .coin-row td:before {
+        content: attr(data-label);
+        font-weight: bold;
+        display: block;
+        margin-bottom: 0.25rem;
+        color: var(--color-yellow-75);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+      }
+      
+      /* Coin name and Signal on same row with flex (Signal is now 3rd column) */
+      .coin-row td:first-child,
+      .coin-row td:nth-child(3) {
+        display: inline-block;
+        vertical-align: top;
+      }
+      
+      .coin-row td:first-child {
+        width: auto;
+        max-width: 50%;
+        font-size: 2.5rem;
+        padding-right: 0.5rem !important;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        box-sizing: border-box;
+      }
+      
+      .coin-row td:first-child:before {
+        display: none;
+      }
+      
+      .coin-row td:nth-child(3) {
+        width: auto;
+        float: right;
+        text-align: right;
+      }
+      
+      .coin-row td:nth-child(3):before {
+        display: none;
+      }
+      
+      /* Make signal text same size as coin name */
+      .coin-row td:nth-child(3) div[id^="signal-"] > div:first-child {
+        font-size: 1.25rem !important;
+      }
+      
+      .coin-row td:nth-child(3) div[id^="signal-"] > div:last-child {
+        font-size: 1rem !important;
+      }
+      
+      /* Strategy on its own row (now 4th column) */
+      .coin-row td:nth-child(4) {
+        display: block;
+        clear: both;
+      }
+      
+      /* Action buttons on their own row (now 5th column) */
+      .coin-row td:nth-child(5) {
+        display: block;
+      }
+      
+      /* Strategy buttons stretch full width */
+      .coin-row td:nth-child(4) .flex {
+        width: 100%;
+        max-width: 100%;
+        display: flex;
+        gap: 0;
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+      
+      /* EditTrades button needs more space */
+      .coin-row td:nth-child(4) button {
+        flex: 0 0 auto;
+        min-width: 80px;
+        max-width: 30%;
+        font-size: 0.65rem;
+        padding: 0.35rem 0.5rem;
+        box-sizing: border-box;
+      }
+      
+      /* Indicator buttons share remaining space */
+      .coin-row td:nth-child(4) div[id^="indicator-"] {
+        flex: 1;
+        min-width: 0;
+        max-width: 23%;
+        font-size: 0.65rem;
+        padding: 0.35rem 0.25rem;
+        box-sizing: border-box;
+      }
+      
+      /* Action buttons stretch full width */
+      .coin-row td:nth-child(5) .flex {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.5rem;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      
+      .coin-row td:nth-child(5) button {
+        width: 100%;
+        max-width: 100%;
+        justify-content: center;
+        font-size: 0.65rem;
+        padding: 0.35rem 0.25rem;
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      /* Shrink logo on mobile */
+      .logo-img {
+        height: 32px !important;
+      }
+      
+      
+      /* Shrink nav buttons on mobile */
+      .grid[style*="grid-template-columns"] {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.2rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      
+      .btn-base {
+        padding: 0.35rem 0.25rem !important;
+        font-size: 0.6rem !important;
+        min-width: auto !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+    }
+    
+    /* Container consistency - match header and content padding */
+    .container,
+    .max-w-7xl {
+      width: 100%;
+      max-width: 100%;
+      padding-left: var(--spacing-4);
+      padding-right: var(--spacing-4);
+      box-sizing: border-box;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    /* Table container responsive */
+    .table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    
+    /* Timeframe grid */
+    .tf-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    /* Mobile: Force 1 column (iOS fix) */
+    @media (max-width: 674px) {
+      .tf-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+    
+    /* Desktop: 4 columns */
+    @media (min-width: 675px) {
+      .tf-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+      }
+    }
+    
+    .tf-grid > * {
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    
+    /* Trade info grid (Confidence, Direction, Setup Type) */
+    .trade-info-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    @media (min-width: 675px) {
+      .trade-info-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    
+    /* Timeframe cards */
+    .tf-card {
+      width: 100%;
+      max-width: 100%;
+      padding: 1rem;
+      background-color: black;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      box-sizing: border-box;
+      -webkit-box-sizing: border-box;
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* iOS specific fix for grid layout */
+    @supports (-webkit-touch-callout: none) {
+      .tf-grid {
+        display: -webkit-grid;
+        display: grid;
+      }
+      
+      @media (max-width: 674px) {
+        .tf-grid {
+          -webkit-grid-template-columns: 1fr;
+          grid-template-columns: 1fr !important;
+        }
+      }
+      
+      .tf-card {
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+      }
+    }
+    
+    .tf-card.uptrend {
+      border-color: rgba(34, 197, 94, 0.6);
+      box-shadow: 
+        0 0 15px rgba(34, 197, 94, 0.3),
+        0 0 30px rgba(34, 197, 94, 0.2),
+        inset 0 0 20px rgba(34, 197, 94, 0.05);
+    }
+    
+    .tf-card.downtrend {
+      border-color: rgba(239, 68, 68, 0.6);
+      box-shadow: 
+        0 0 15px rgba(239, 68, 68, 0.3),
+        0 0 30px rgba(239, 68, 68, 0.2),
+        inset 0 0 20px rgba(239, 68, 68, 0.05);
+    }
+    
+    .tf-card.flat {
+      border-color: rgba(156, 163, 175, 0.3);
+    }
+    
+    /* Rotating glow streak effect - fills entire card space */
+    .tf-card.uptrend::before,
+    .tf-card.downtrend::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      animation: rotateGlow 12.8s linear infinite;
+      z-index: 0;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    
+    .tf-card.uptrend::before {
+      background: conic-gradient(
+        from 0deg at 50% 50%,
+        rgba(34, 197, 94, 0.15) 0deg,
+        rgba(34, 197, 94, 0.25) 45deg,
+        rgba(34, 197, 94, 0.4) 90deg,
+        rgba(34, 197, 94, 0.6) 135deg,
+        rgba(34, 197, 94, 0.7) 180deg,
+        rgba(34, 197, 94, 0.6) 225deg,
+        rgba(34, 197, 94, 0.4) 270deg,
+        rgba(34, 197, 94, 0.25) 315deg,
+        rgba(34, 197, 94, 0.15) 360deg
+      );
+      filter: blur(30px);
+    }
+    
+    .tf-card.downtrend::before {
+      background: conic-gradient(
+        from 0deg at 50% 50%,
+        rgba(239, 68, 68, 0.15) 0deg,
+        rgba(239, 68, 68, 0.25) 45deg,
+        rgba(239, 68, 68, 0.4) 90deg,
+        rgba(239, 68, 68, 0.6) 135deg,
+        rgba(239, 68, 68, 0.7) 180deg,
+        rgba(239, 68, 68, 0.6) 225deg,
+        rgba(239, 68, 68, 0.4) 270deg,
+        rgba(239, 68, 68, 0.25) 315deg,
+        rgba(239, 68, 68, 0.15) 360deg
+      );
+      filter: blur(30px);
+    }
+    
+    /* Ensure card content is above the glow */
+    .tf-card > * {
+      position: relative;
+      z-index: 1;
+    }
+    
+    /* Smooth rotation animation */
+    @keyframes rotateGlow {
+      0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+      100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+    
+    /* News Marquee Animation */
+    @keyframes marquee {
+      0% {
+        transform: translateX(0%);
+      }
+      100% {
+        transform: translateX(-50%);
+      }
+    }
+    
+    #newsMarquee:hover #newsMarqueeContent {
+      animation-play-state: paused;
+    }
+    
+    #newsMarqueeContent a:hover {
+      opacity: 0.8;
+    }
+    
+    /* Table row styling */
+    .coin-row {
+      position: relative;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      background-color: transparent;
+    }
+    
+    /* Static glow background for LONG trades */
+    .coin-row.has-trade-long {
+      background: radial-gradient(
+        ellipse at 0% 50%,
+        rgba(34, 197, 94, 0.2) 0%,
+        rgba(34, 197, 94, 0.12) 30%,
+        rgba(34, 197, 94, 0.06) 60%,
+        transparent 100%
+      );
+      border-left: 2px solid rgba(34, 197, 94, 0.6);
+    }
+    
+    /* Static glow background for SHORT trades */
+    .coin-row.has-trade-short {
+      background: radial-gradient(
+        ellipse at 0% 50%,
+        rgba(239, 68, 68, 0.2) 0%,
+        rgba(239, 68, 68, 0.12) 30%,
+        rgba(239, 68, 68, 0.06) 60%,
+        transparent 100%
+      );
+      border-left: 2px solid rgba(239, 68, 68, 0.6);
+    }
+    
+    /* All table cells */
+    .coin-row > td {
+      background-color: transparent;
+      position: relative;
+    }
+    
+    /* Pulse glow animation for buttons */
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+      }
+      50% {
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.4), 0 0 30px rgba(255, 255, 255, 0.2);
+      }
+    }
+    
+    /* Desktop: stronger border */
+    @media (min-width: 675px) {
+      .coin-row {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+    }
+    
+    /* Subtle static glow on text elements */
+    .tf-card.uptrend .status-long {
+      text-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+    }
+    
+    .tf-card.downtrend .status-short {
+      text-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+    }
+    
+    /* Colored titles for trend cards */
+    .tf-card.uptrend > div:first-child > p {
+      color: rgba(34, 197, 94, 1);
+      text-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+    }
+    
+    .tf-card.downtrend > div:first-child > p {
+      color: rgba(239, 68, 68, 1);
+      text-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+    }
+    
+    /* Trend badge subtle glow */
+    .tf-card.uptrend > div:first-child > span {
+      text-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+    }
+    
+    .tf-card.downtrend > div:first-child > span {
+      text-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  
+  <!-- Color Bar - Top Border -->
+  <img src="/logos/color_bar.png" alt="" style="position: fixed; top: 0; left: 0; width: 100%; height: 5px; max-height: 5px; z-index: 9999; pointer-events: none; display: block; object-fit: cover;">
+  
+  <!-- Particle Background -->
+  <div id="particles-js"></div>
+  
+  <!-- Header -->
+  <header class="header-edittrax">
+    <div class="max-w-6xl mx-auto pt-3" style="position: relative;">
+      <!-- Trading Indicators (Top Left) -->
+      <div style="position: absolute; top: 25px; left: 0; display: flex; flex-direction: column; gap: 6px; font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.75rem; z-index: 50;">
+        <!-- 1M Candle Timer -->
+        <div id="candle-timer-container" style="display: flex; align-items: center; gap: 8px;">
+          <span>1M</span>
+          <div style="width: 50px; height: 3px; background-color: rgba(230, 233, 224, 0.2); border-radius: 2px; overflow: hidden;">
+            <div id="candle-timer-bar" style="width: 100%; height: 100%; background-color: var(--color-yellow-75); transition: width 0.5s linear;"></div>
+          </div>
+        </div>
+        <!-- 4H Candle Timer -->
+        <div id="4h-timer-container" style="display: flex; align-items: center; gap: 8px;">
+          <span>4H</span>
+          <div style="width: 50px; height: 3px; background-color: rgba(230, 233, 224, 0.2); border-radius: 2px; overflow: hidden;">
+            <div id="4h-timer-bar" style="width: 100%; height: 100%; background-color: var(--color-yellow-75); transition: width 0.5s linear;"></div>
+          </div>
+        </div>
+        <!-- Active Signals -->
+        <div id="active-signals" style="display: flex; align-items: center; gap: 8px;">
+          <span id="signals-count" style="font-weight: bold; color: var(--color-yellow-75);">0 SIGNALS</span>
+        </div>
+      </div>
+      
+      <!-- Top Right Actions -->
+      <div style="position: absolute; top: 25px; right: 0; display: flex; flex-direction: column; gap: 17px; align-items: flex-end; z-index: 50; font-family: var(--font-mathias); font-size: 0.75rem;">
+        <!-- Refresh -->
+        <button 
+          id="refreshBtn" 
+          onclick="scanMajorCoins()"
+          style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; font-family: var(--font-mathias); font-size: 0.75rem;"
+          title="Refresh Data"
+        >
+          <span style="font-weight: bold;">REFRESH</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+        </button>
+        
+        <!-- Copy Trade -->
+        <button 
+          id="dataCopyBtn" 
+          onclick="copyAllCoins()"
+          style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; font-family: var(--font-mathias); font-size: 0.75rem;"
+          title="Copy All Data"
+        >
+          <span style="font-weight: bold;">COPY ALL</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        </button>
+        
+        <!-- Copy Toast -->
+        <div id="copyToastContainer" style="pointer-events: none;"></div>
+        
+      </div>
+      
+      <div class="flex flex-col items-center gap-3 w-full">
+        <div class="logo-container flex flex-col items-center gap-2">
+          <img src="/logos/load.gif" alt="Loading Animation" style="width: 140px; height: auto;">
+          <img src="/logos/et_horizontal.png" alt="EditTrades Logo" class="logo-img">
+        </div>
+        <div class="grid gap-2 w-full" style="grid-template-columns: 1fr 1fr;">
+          <button 
+            id="safeToggle" 
+            onclick="toggleToSafe()"
+            class="btn-base btn-secondary px-2 py-2 text-xs sm:text-sm rounded text-center whitespace-nowrap"
+            style="transition: all 0.3s ease;"
+          >
+            <span id="safeLabel">SAFE (<span id="safe-count">0</span>)</span>
+          </button>
+          <button 
+            id="aggressiveToggle" 
+            onclick="toggleToAggressive()"
+            class="btn-base btn-secondary px-2 py-2 text-xs sm:text-sm rounded text-center whitespace-nowrap"
+            style="transition: all 0.3s ease;"
+          >
+            <span id="aggressiveLabel">AGGRESSIVE (<span id="aggressive-count">0</span>)</span>
+          </button>
+            </div>
+          </div>
+              </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto pb-4" style="width: 100%; box-sizing: border-box;overflow: visible; position: relative;">
+    
+    <!-- AI Market Review Marquee -->
+    <div id="newsMarquee" style="background-color: rgba(0, 0, 0, 0.6); border-radius: 5px; padding: 0.5rem 0; margin: 0.5rem 0 1rem 0; overflow: hidden; position: relative;">
+      <div id="newsMarqueeContent" style="display: flex; white-space: nowrap; animation: marquee 10.5s linear infinite; font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.875rem;">
+        <span style="padding: 0 2rem;">Analyzing Market Sentiment</span>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="text-center py-12">
+      <div class="inline-block w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mb-4" style="border-color: var(--text-primary); border-top-color: transparent;"></div>
+      <!-- <p style="color: var(--text-secondary);">Loading BTC, ETH & SOL...</p> -->
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="hidden card rounded p-4 mb-4 border-red-600">
+      <h3 class="font-bold mb-2 text-red-400">Error</h3>
+      <p id="errorMessage" class="text-sm" style="color: var(--text-secondary);"></p>
+      <button onclick="scanMajorCoins()" class="mt-3 btn-primary px-4 py-2 text-sm rounded">
+        Retry
+      </button>
+    </div>
+
+    <!-- Results Container -->
+    <div id="resultsContainer" class="hidden" style="padding-left: 1rem; padding-right: 1rem;">
+      
+      <!-- Opportunities Table -->
+      <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+        <div class="table-container">
+          <table class="table-edittrax" style="border: none; margin: 0; border-collapse: collapse;">
+            <thead style="background-color: var(--color-yellow-75); border: none; border-left: none; border-right: none;">
+              <tr style="border: none; border-left: none; border-right: none;">
+                <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center; border: none; border-left: none;">COIN</th>
+                <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black;">PRICE</th>
+                <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black;">ENTRY</th>
+                <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black;">EDITTRADES</th>
+                <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black;">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="opportunitiesTable">
+              <!-- Rows will be populated dynamically -->
+            </tbody>
+          </table>
+          </div>
+          
+          <!-- Legend -->
+          <div style="padding: 1rem 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-mathias); font-size: 0.75rem;">
+              <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #10b981;"></div>
+              <span style="color: var(--color-yellow-75);">LONG TRADE</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-mathias); font-size: 0.75rem;">
+              <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444;"></div>
+              <span style="color: var(--color-yellow-75);">SHORT TRADE</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-mathias); font-size: 0.75rem;">
+              <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #6b7280;"></div>
+              <span style="color: var(--color-yellow-75);">NO TRADE</span>
+            </div>
+          </div>
+          
+          <!-- Footer Links -->
+          <div style="padding: 0.75rem 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+            <a 
+              href="/strategy.html"
+              style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; font-family: var(--font-mathias); font-size: 0.75rem; text-decoration: none;"
+              title="Proof of Strategy"
+            >
+              <span style="font-weight: bold;">PROOF OF STRATEGY</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </a>
+            
+            <a 
+              href="/tracker.html"
+              style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; font-family: var(--font-mathias); font-size: 0.75rem; text-decoration: none;"
+              title="Trade Tracker"
+            >
+              <span style="font-weight: bold;">TRADE TRACKER</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </a>
+          </div>
+          </div>
+
+      </div>
+
+  </main>
+
+  <script>
+    let scanResults = {};
+    let scanResultsAggressive = {}; // Store aggressive mode results
+    let scanResultsSafe = {}; // Store safe mode results
+    
+    // Aggressive mode state (default: STANDARD)
+    let aggressiveMode = localStorage.getItem('aggressiveMode') === 'true' || false;
+    
+    // Initialize aggressive mode UI on page load
+    function initializeAggressiveMode() {
+      // Initialize mode button states
+      updateModeButtons();
+    }
+    
+    // Toggle aggressive mode
+    function toggleToAggressive() {
+      if (aggressiveMode) return; // Already in aggressive mode
+      aggressiveMode = true;
+      localStorage.setItem('aggressiveMode', aggressiveMode);
+      updateModeButtons();
+      
+      // Switch display to aggressive mode
+      scanResults = scanResultsAggressive;
+      
+      // If mode data doesn't exist yet, fetch it
+      if (Object.keys(scanResults).length === 0) {
+        scanMajorCoins();
+      } else {
+        displayResults();
+      }
+    }
+    
+    function toggleToSafe() {
+      if (!aggressiveMode) return; // Already in safe mode
+      aggressiveMode = false;
+      localStorage.setItem('aggressiveMode', aggressiveMode);
+      updateModeButtons();
+      
+      // Switch display to safe mode
+      scanResults = scanResultsSafe;
+      
+      // If mode data doesn't exist yet, fetch it
+      if (Object.keys(scanResults).length === 0) {
+        scanMajorCoins();
+      } else {
+        displayResults();
+      }
+    }
+    
+    // Update mode button states
+    function updateModeButtons() {
+      const aggressiveBtn = document.getElementById('aggressiveToggle');
+      const safeBtn = document.getElementById('safeToggle');
+      
+      // Get highest confidence trade for each mode
+      const getStrongestTrade = (results) => {
+        let strongestConfidence = 0;
+        let dominantDirection = null;
+        
+        Object.entries(results).forEach(([symbol, data]) => {
+          const signal = data?.signal || data?.tradeSignal;
+          if (signal && signal.valid) {
+            const confidence = signal.confidence || 0;
+            if (confidence > strongestConfidence) {
+              strongestConfidence = confidence;
+              dominantDirection = signal.direction;
+            }
+          }
+        });
+        
+        return { hasTrade: strongestConfidence > 0, dominantDirection };
+      };
+      
+      const aggressiveTrade = getStrongestTrade(scanResultsAggressive);
+      const safeTrade = getStrongestTrade(scanResultsSafe);
+      
+      if (aggressiveMode) {
+        // AGGRESSIVE MODE ACTIVE: Yellow-white bg with black text
+        aggressiveBtn.style.backgroundColor = 'var(--color-yellow-75)';
+        aggressiveBtn.style.color = 'black';
+        aggressiveBtn.style.borderColor = 'var(--color-yellow-75)';
+        aggressiveBtn.style.animation = 'none';
+        
+        // SAFE MODE INACTIVE: Show glow based on trade
+        if (safeTrade.hasTrade) {
+          const isLong = safeTrade.dominantDirection === 'long' || safeTrade.dominantDirection === 'LONG';
+          safeBtn.style.backgroundColor = isLong ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+          safeBtn.style.color = 'var(--color-yellow-75)';
+          safeBtn.style.animation = 'pulse-glow 2s ease-in-out infinite';
+        } else {
+          safeBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+          safeBtn.style.color = 'var(--color-yellow-75)';
+          safeBtn.style.animation = 'none';
+        }
+        safeBtn.style.borderColor = 'var(--color-yellow-75)';
+        
+      } else {
+        // SAFE MODE ACTIVE: Yellow-white bg with black text
+        safeBtn.style.backgroundColor = 'var(--color-yellow-75)';
+        safeBtn.style.color = 'black';
+        safeBtn.style.borderColor = 'var(--color-yellow-75)';
+        safeBtn.style.animation = 'none';
+        
+        // AGGRESSIVE MODE INACTIVE: Show glow based on trade
+        if (aggressiveTrade.hasTrade) {
+          const isLong = aggressiveTrade.dominantDirection === 'long' || aggressiveTrade.dominantDirection === 'LONG';
+          aggressiveBtn.style.backgroundColor = isLong ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+          aggressiveBtn.style.color = 'var(--color-yellow-75)';
+          aggressiveBtn.style.animation = 'pulse-glow 2s ease-in-out infinite';
+        } else {
+          aggressiveBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+          aggressiveBtn.style.color = 'var(--color-yellow-75)';
+          aggressiveBtn.style.animation = 'none';
+        }
+        aggressiveBtn.style.borderColor = 'var(--color-yellow-75)';
+      }
+    }
+    
+    // Strategy states for each symbol (default: index 0 = 4-Hour)
+    const strategyStates = {
+      'BTCUSDT': 0,
+      'ETHUSDT': 0,
+      'SOLUSDT': 0
+    };
+    
+    const strategyOptions = ['4h', 'Swing', 'Scalp', 'MicroScalp'];
+    
+    // Trade Templates Configuration
+    const tradeTemplates = {
+      '4h': {
+        label: '4H Set & Forget',
+        anchorTimeframes: ['4h'],
+        confirmTimeframes: ['1h'],
+        entryTimeframes: ['15m', '5m'],
+        minConfidence: 0.7,
+        maxLeverage: 50,
+        rrTargets: [1.0, 2.0],
+        maxTradesPerDay: 1,
+        displayName: '4 HOUR'
+      },
+      'Swing': {
+        label: '3D / 1D / 4H Swing',
+        anchorTimeframes: ['3d', '1d', '4h'],
+        confirmTimeframes: ['1h'],
+        entryTimeframes: ['15m', '5m'],
+        minConfidence: 0.75,
+        maxLeverage: 10,
+        rrTargets: [3.0, 5.0],  // Minimum 3R as per text file
+        maxHoldCandles: { '4h': 20 },
+        displayName: 'SWING'
+      },
+      'Scalp': {
+        label: '4H+1H → 15m/5m Scalp',
+        anchorTimeframes: ['4h', '1h'],  // Both required as gatekeepers
+        confirmTimeframes: ['15m', '5m'],  // Both must be in ENTRY_ZONE
+        entryTimeframes: ['5m', '1m'],    // 1m as noise filter
+        minConfidence: 0.65,
+        maxLeverage: 25,
+        rrTargets: [1.5, 2.5],  // Updated to match text file (1.5R-3R)
+        maxHoldCandles: { '5m': 12 },
+        displayName: 'SCALP'
+      },
+      'MicroScalp': {
+        label: 'Micro-Scalp Mean Reversion',
+        anchorTimeframes: ['1h'],  // 1H must be trending
+        confirmTimeframes: ['15m', '5m'],  // Both within ±0.25% of 21 EMA
+        entryTimeframes: ['5m', '1m'],
+        minConfidence: 0.5,
+        maxLeverage: 10,
+        rrTargets: [1.0, 1.5],  // Quick 1R-1.5R targets
+        maxHoldCandles: { '5m': 6 },
+        displayName: 'MICRO-SCALP'
+      }
+    };
+    
+    // Evaluate signal based on template
+    // Evaluate 3D Swing Signal (frontend version matching backend logic)
+    function evaluateSwingSignalFrontend(symbol, data) {
+      try {
+        const analysis = data.analysis;
+        const tf3d = analysis['3d'];
+        const tf1d = analysis['1d'];
+        const tf4h = analysis['4h'];
+        const currentPrice = data.currentPrice;
+        
+        // Guard: Need all required timeframes
+        if (!tf3d || !tf1d || !tf4h || !currentPrice) {
+          return {
+            valid: false,
+            direction: 'NO_TRADE',
+            reason: 'Missing 3D/1D/4H data for swing analysis',
+            confidence: 0,
+            setupType: 'Swing'
+          };
+        }
+      
+      const trend3d = tf3d.indicators?.analysis?.trend;
+      const trend1d = tf1d.indicators?.analysis?.trend;
+      const trend4h = tf4h.indicators?.analysis?.trend;
+      const pullback3d = tf3d.indicators?.pullback;
+      const pullback1d = tf1d.indicators?.pullback;
+      const pullback4h = tf4h.indicators?.pullback;
+      const stoch3d = tf3d.indicators?.stoch;
+      const stoch1d = tf1d.indicators?.stoch;
+      const stoch4h = tf4h.indicators?.stoch;
+      const ema21_4h = tf4h.indicators?.ema21;
+      const ema21_1d = tf1d.indicators?.ema21;
+      const swingLow3d = tf3d.indicators?.swingLow;
+      const swingLow1d = tf1d.indicators?.swingLow;
+      const swingHigh3d = tf3d.indicators?.swingHigh;
+      const swingHigh1d = tf1d.indicators?.swingHigh;
+      
+      // Guard: Check if we have all critical data points
+      if (!trend3d || !trend1d || !trend4h || !pullback3d || !pullback1d || !pullback4h ||
+          !stoch3d || !stoch1d || !stoch4h || !ema21_4h || !ema21_1d) {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: 'Missing required data for swing analysis',
+          confidence: 0,
+          setupType: 'Swing'
+        };
+      }
+      
+      // GATEKEEPERS — WHEN SWING IS EVEN ALLOWED
+      // 4H trend must NOT be FLAT for swing trades
+      if (trend4h === 'FLAT') {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: 'Swing blocked: 4H trend is FLAT',
+          confidence: 0,
+          setupType: 'Swing'
+        };
+      }
+      
+      // 3D trend must NOT be FLAT
+      if (trend3d === 'FLAT') {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: 'Swing blocked: 3D trend is FLAT',
+          confidence: 0,
+          setupType: 'Swing'
+        };
+      }
+      
+      // 1D trend must be either UPTREND or DOWNTREND
+      if (trend1d === 'FLAT') {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: 'Swing blocked: 1D trend is FLAT',
+          confidence: 0,
+          setupType: 'Swing'
+        };
+      }
+      
+      // 3D pullback must be OVEREXTENDED or RETRACING
+      if (pullback3d.state !== 'OVEREXTENDED' && pullback3d.state !== 'RETRACING') {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: 'Swing blocked: 3D pullback not in position',
+          confidence: 0,
+          setupType: 'Swing'
+        };
+      }
+      
+      // 1D pullback must be RETRACING or ENTRY_ZONE
+      if (pullback1d.state !== 'RETRACING' && pullback1d.state !== 'ENTRY_ZONE') {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: 'Swing blocked: 1D pullback not in position',
+          confidence: 0,
+          setupType: 'Swing'
+        };
+      }
+      
+      // Check for LONG swing setup
+      let direction = null;
+      let reclaimLevel = null;
+      let confidence = 70;
+      
+      const longConditionsCheck = 
+        // 3D bullish or flat leaning bullish
+        (trend3d === 'UPTREND' || (trend3d === 'FLAT' && (stoch3d?.condition === 'BULLISH' || stoch3d?.condition === 'OVERSOLD'))) &&
+        // 1D trending down BUT with bullish pivot
+        (trend1d === 'DOWNTREND' && (stoch1d?.condition === 'BULLISH' || (stoch1d?.k && stoch1d.k < 25))) &&
+        // 3D overextended below
+        (pullback3d?.state === 'OVEREXTENDED' && pullback3d?.distanceFrom21EMA && pullback3d.distanceFrom21EMA < -8) &&
+        // 1D pullback OK
+        (pullback1d?.state === 'RETRACING' || pullback1d?.state === 'ENTRY_ZONE') &&
+        // Price near 1D EMA21
+        (currentPrice >= (swingLow1d || ema21_1d * 0.90) && currentPrice <= ema21_1d * 1.02) &&
+        // 4H confirmation
+        ((trend4h === 'UPTREND' || (trend4h === 'FLAT' && stoch4h?.condition === 'BULLISH')) &&
+         (pullback4h?.state === 'RETRACING' || pullback4h?.state === 'ENTRY_ZONE') &&
+         Math.abs(currentPrice - ema21_4h) / currentPrice <= 0.01);
+      
+      if (longConditionsCheck) {
+        direction = 'long';
+        const swingLowToUse = swingLow1d || ema21_1d * 0.95;
+        reclaimLevel = (swingLowToUse + ema21_1d) / 2;
+        
+        // Boost confidence
+        if (stoch3d?.condition === 'OVERSOLD' && stoch1d?.condition === 'BULLISH') confidence += 10;
+        if (Math.abs(currentPrice - ema21_4h) / currentPrice <= 0.005) confidence += 5;
+        if (pullback3d?.distanceFrom21EMA && Math.abs(pullback3d.distanceFrom21EMA) >= 10) confidence += 5;
+      }
+      
+      // Check for SHORT swing setup
+      if (!direction) {
+        const shortConditionsCheck = 
+          // 3D bearish or flat leaning bearish
+          (trend3d === 'DOWNTREND' || (trend3d === 'FLAT' && (stoch3d?.condition === 'BEARISH' || stoch3d?.condition === 'OVERBOUGHT'))) &&
+          // 1D trending up BUT with bearish rejection
+          (trend1d === 'UPTREND' && (stoch1d?.condition === 'BEARISH' || (stoch1d?.k && stoch1d.k > 75))) &&
+          // 3D overextended above
+          (pullback3d?.state === 'OVEREXTENDED' && pullback3d?.distanceFrom21EMA && pullback3d.distanceFrom21EMA > 8) &&
+          // 1D pullback OK
+          (pullback1d?.state === 'RETRACING' || pullback1d?.state === 'ENTRY_ZONE') &&
+          // Price near 1D EMA21
+          (currentPrice <= (swingHigh1d || ema21_1d * 1.10) && currentPrice >= ema21_1d * 0.98) &&
+          // 4H confirmation
+          ((trend4h === 'DOWNTREND' || (trend4h === 'FLAT' && stoch4h?.condition === 'BEARISH')) &&
+           (pullback4h?.state === 'RETRACING' || pullback4h?.state === 'ENTRY_ZONE') &&
+           Math.abs(currentPrice - ema21_4h) / currentPrice <= 0.01);
+        
+        if (shortConditionsCheck) {
+          direction = 'short';
+          const swingHighToUse = swingHigh1d || ema21_1d * 1.05;
+          reclaimLevel = (swingHighToUse + ema21_1d) / 2;
+          
+          // Boost confidence
+          if (stoch3d?.condition === 'OVERBOUGHT' && stoch1d?.condition === 'BEARISH') confidence += 10;
+          if (Math.abs(currentPrice - ema21_4h) / currentPrice <= 0.005) confidence += 5;
+          if (pullback3d?.distanceFrom21EMA && Math.abs(pullback3d.distanceFrom21EMA) >= 10) confidence += 5;
+        }
+      }
+      
+      // If no valid direction, return NO_TRADE
+      if (!direction || !reclaimLevel) {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: '3D + 1D swing conditions not met',
+          confidence: 0,
+          setupType: 'Swing'
+        };
+      }
+      
+      // Calculate SL/TP
+      let stopLoss;
+      if (direction === 'long') {
+        const sl3d = swingLow3d || (ema21_1d * 0.90);
+        const sl1d = swingLow1d || (ema21_1d * 0.92);
+        stopLoss = Math.min(sl3d, sl1d);
+      } else {
+        const sh3d = swingHigh3d || (ema21_1d * 1.10);
+        const sh1d = swingHigh1d || (ema21_1d * 1.08);
+        stopLoss = Math.max(sh3d, sh1d);
+      }
+      
+      // Entry zone
+      const entryMin = reclaimLevel * 0.995;
+      const entryMax = reclaimLevel * 1.005;
+      const midEntry = (entryMin + entryMax) / 2;
+      const R = Math.abs(midEntry - stopLoss);
+      
+      // Targets: 3R, 4R, 5R
+      let tp1, tp2, tp3;
+      if (direction === 'long') {
+        tp1 = midEntry + (R * 3);
+        tp2 = midEntry + (R * 4);
+        tp3 = midEntry + (R * 5);
+      } else {
+        tp1 = midEntry - (R * 3);
+        tp2 = midEntry - (R * 4);
+        tp3 = midEntry - (R * 5);
+      }
+      
+      confidence = Math.min(confidence, 90);
+      
+      return {
+        valid: true,
+        direction: direction,
+        setupType: 'Swing',
+        confidence: confidence / 100,
+        reason: direction === 'long' ? 
+          '3D oversold pivot + 1D reclaim + 4H confirmation' : 
+          '3D overbought rejection + 1D distribution + 4H confirmation',
+        entryZone: {
+          min: parseFloat(entryMin.toFixed(2)),
+          max: parseFloat(entryMax.toFixed(2))
+        },
+        stopLoss: parseFloat(stopLoss.toFixed(2)),
+        targets: {
+          tp1: parseFloat(tp1.toFixed(2)),
+          tp2: parseFloat(tp2.toFixed(2)),
+          tp3: parseFloat(tp3.toFixed(2))
+        },
+        riskReward: {
+          tp1RR: 3.0,
+          tp2RR: 4.0,
+          tp3RR: 5.0
+        }
+      };
+      } catch (error) {
+        console.error(`Error evaluating Swing signal for ${symbol}:`, error);
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: 'Error analyzing swing setup',
+          confidence: 0,
+          setupType: 'Swing'
+        };
+      }
+    }
+    
+    /**
+     * Get backend strategy for a symbol and template key
+     * Returns strategy object from richSymbol.strategies, or null if not available
+     * @param {string} symbol - Trading symbol
+     * @param {string} templateKey - Frontend strategy key ('4h', 'Swing', 'Scalp', 'MicroScalp')
+     * @returns {Object|null} Backend strategy object or null
+     */
+    function getBackendStrategy(symbol, templateKey) {
+      const data = scanResults[symbol];
+      if (!data) return null;
+      
+      const richSymbol = data?.richSymbol || data;
+      if (!richSymbol?.strategies) return null;
+      
+      // Map frontend keys to backend strategy names
+      const strategyMap = {
+        '4h': 'TREND_4H',
+        'Swing': 'SWING',
+        'Scalp': 'SCALP_1H',
+        'MicroScalp': 'MICRO_SCALP'
+      };
+      
+      const backendStrategyName = strategyMap[templateKey];
+      if (!backendStrategyName) return null;
+      
+      return richSymbol.strategies[backendStrategyName] || null;
+    }
+    
+    /**
+     * Get active signal for a symbol (uses bestSignal or selected strategy)
+     * @param {string} symbol - Trading symbol
+     * @param {string} templateKey - Optional: specific strategy key, otherwise uses bestSignal
+     * @returns {Object|null} Signal object or null
+     */
+    function getActiveSignal(symbol, templateKey = null) {
+      const data = scanResults[symbol];
+      if (!data) return null;
+      
+      const richSymbol = data?.richSymbol || data;
+      if (!richSymbol?.strategies) {
+        // Fallback to legacy signal
+        return data?.signal || data?.tradeSignal || null;
+      }
+      
+      // If templateKey provided, use that strategy
+      if (templateKey) {
+        const strategy = getBackendStrategy(symbol, templateKey);
+        if (strategy && strategy.valid) {
+          return {
+            valid: true,
+            direction: strategy.direction,
+            confidence: strategy.confidence,
+            reason: strategy.reason,
+            entryZone: strategy.entryZone,
+            stopLoss: strategy.stopLoss,
+            invalidationLevel: strategy.invalidationLevel,
+            targets: strategy.targets,
+            riskReward: strategy.riskReward,
+            setupType: templateKey
+          };
+        }
+        return null;
+      }
+      
+      // Use bestSignal if available
+      if (richSymbol.bestSignal && richSymbol.strategies[richSymbol.bestSignal]) {
+        const bestStrategy = richSymbol.strategies[richSymbol.bestSignal];
+        if (bestStrategy && bestStrategy.valid) {
+          return {
+            valid: true,
+            direction: bestStrategy.direction,
+            confidence: bestStrategy.confidence,
+            reason: bestStrategy.reason,
+            entryZone: bestStrategy.entryZone,
+            stopLoss: bestStrategy.stopLoss,
+            invalidationLevel: bestStrategy.invalidationLevel,
+            targets: bestStrategy.targets,
+            riskReward: bestStrategy.riskReward,
+            setupType: richSymbol.bestSignal === 'TREND_4H' ? '4h' :
+                       richSymbol.bestSignal === 'SWING' ? 'Swing' :
+                       richSymbol.bestSignal === 'SCALP_1H' ? 'Scalp' :
+                       richSymbol.bestSignal === 'MICRO_SCALP' ? 'MicroScalp' : 'auto'
+          };
+        }
+      }
+      
+      // Fallback to legacy signal
+      return data?.signal || data?.tradeSignal || null;
+    }
+    
+    // DEPRECATED: evaluateTemplateSignal - kept for backward compatibility but should not be used
+    // All new code should use getBackendStrategy() or getActiveSignal()
+    function evaluateTemplateSignal(symbol, templateKey) {
+      try {
+        const data = scanResults[symbol];
+        if (!data || !data.analysis) return null;
+        
+        const template = tradeTemplates[templateKey];
+        const analysis = data.analysis;
+      
+      // PRIORITY 1: Handle SWING trades (3D -> 1D -> 4H structure)
+      if (templateKey === 'Swing') {
+        return evaluateSwingSignalFrontend(symbol, data);
+      }
+      
+      // CRITICAL: Check 4H trend first (gatekeeper for ALL other trades per text file)
+      const tf4h = analysis['4h'];
+      if (!tf4h || !tf4h.indicators || !tf4h.indicators.analysis) {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: 'No 4H data available',
+          confidence: 0
+        };
+      }
+      
+      const trend4h = tf4h.indicators.analysis.trend;
+      
+      // Block ALL trades if 4H is FLAT (text file rule: "4H must show clear direction")
+      // This blocks Scalp and 4H trades, but Swing is handled separately above
+      if (trend4h === 'FLAT') {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: '4H trend is FLAT - no trade allowed per strategy rules',
+          confidence: 0
+        };
+      }
+      
+      // For SCALP: Require 4H AND 1H both have clear trends (text file: "4H+1H as gatekeepers")
+      if (templateKey === 'Scalp') {
+        const tf1h = analysis['1h'];
+        if (!tf1h || !tf1h.indicators || !tf1h.indicators.analysis) {
+          return {
+            valid: false,
+            direction: 'NO_TRADE',
+            reason: 'No 1H data for scalp confirmation',
+            confidence: 0
+          };
+        }
+        
+        const trend1h = tf1h.indicators.analysis.trend;
+        if (trend1h === 'FLAT') {
+          return {
+            valid: false,
+            direction: 'NO_TRADE',
+            reason: 'Scalp blocked: 1H trend is FLAT',
+            confidence: 0
+          };
+        }
+        
+        // Check 4H and 1H are aligned
+        if (trend4h === 'UPTREND' && trend1h === 'DOWNTREND') {
+          return {
+            valid: false,
+            direction: 'NO_TRADE',
+            reason: 'Scalp blocked: 4H/1H trends not aligned',
+            confidence: 0
+          };
+        }
+        if (trend4h === 'DOWNTREND' && trend1h === 'UPTREND') {
+          return {
+            valid: false,
+            direction: 'NO_TRADE',
+            reason: 'Scalp blocked: 4H/1H trends not aligned',
+            confidence: 0
+          };
+        }
+      }
+      
+      // Check anchor timeframe trends (now that 4H gatekeeper passed)
+      let anchorTrend = null;
+      for (const tf of template.anchorTimeframes) {
+        const tfData = analysis[tf];
+        if (tfData && tfData.indicators && tfData.indicators.analysis) {
+          const trend = tfData.indicators.analysis.trend;
+          if (trend && trend !== 'FLAT') {
+            anchorTrend = trend;
+            break;
+          }
+        }
+      }
+      
+      if (!anchorTrend) {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: `No clear trend on ${template.anchorTimeframes.join('/')} anchor`,
+          confidence: 0
+        };
+      }
+      
+      // Check confirmation timeframes alignment
+      let confirmsAlign = true;
+      for (const tf of template.confirmTimeframes) {
+        const tfData = analysis[tf];
+        if (tfData && tfData.indicators && tfData.indicators.analysis) {
+          const trend = tfData.indicators.analysis.trend;
+          if (trend && trend !== anchorTrend && trend !== 'FLAT') {
+            confirmsAlign = false;
+            break;
+          }
+        }
+      }
+      
+      if (!confirmsAlign) {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: `Confirmation timeframes don't align with ${anchorTrend}`,
+          confidence: 0
+        };
+      }
+      
+      // If we have a valid 4h trade signal, use it
+      const originalSignal = data.signal || data.tradeSignal;
+      if (originalSignal && originalSignal.valid && templateKey === '4h') {
+        return originalSignal;
+      }
+      
+      // For Swing/Scalp, create a basic signal
+      const direction = anchorTrend === 'UPTREND' ? 'long' : 'short';
+      let confidence = 0.3; // Lowered base confidence (was 0.5)
+      
+      // Check pullback state on 4H (critical for entry validity)
+      const pullbackState4h = tf4h.indicators.analysis.pullbackState;
+      if (pullbackState4h === 'OVEREXTENDED') {
+        // Price too far from 21 EMA - block trade per text file
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: 'Price OVEREXTENDED from 4H 21 EMA - no entry',
+          confidence: 0
+        };
+      }
+      
+      // Increase confidence based on pullback state
+      if (pullbackState4h === 'ENTRY_ZONE') {
+        confidence += 0.25;  // Perfect entry zone
+      } else if (pullbackState4h === 'RETRACING') {
+        confidence += 0.10;  // Approaching, but not perfect
+      }
+      
+      // Increase confidence based on confirmation alignment
+      if (confirmsAlign) confidence += 0.15;
+      
+      // Check stoch alignment for additional confidence
+      const stoch4h = tf4h.indicators.stochRSI;
+      if (stoch4h && stoch4h.condition) {
+        if (direction === 'long' && stoch4h.condition === 'BULLISH') {
+          confidence += 0.10;
+        } else if (direction === 'short' && stoch4h.condition === 'BEARISH') {
+          confidence += 0.10;
+        } else if (stoch4h.condition !== 'NEUTRAL') {
+          // Stoch fighting the trade direction
+          confidence -= 0.15;
+        }
+      }
+      
+      // Calculate entry zone based on current price and 21 EMA
+      const primaryTf = template.anchorTimeframes[0];
+      const primaryData = analysis[primaryTf];
+      let entryZone = originalSignal?.entryZone || null;
+      let stopLoss = originalSignal?.stopLoss || null;
+      let invalidationLevel = originalSignal?.invalidationLevel || null;
+      
+      if (primaryData && primaryData.indicators && primaryData.indicators.ema) {
+        const ema21 = primaryData.indicators.ema.ema21;
+        const currentPrice = data.currentPrice;
+        const distanceFrom21 = Math.abs(
+          ((currentPrice - ema21) / currentPrice) * 100
+        );
+        
+        // Only give bonus if very close to EMA
+        if (distanceFrom21 < 0.5) {
+          confidence += 0.15;
+        } else if (distanceFrom21 < 1.5) {
+          confidence += 0.08;
+        }
+        // If distance > 2%, reduce confidence
+        else if (distanceFrom21 > 2.5) {
+          confidence -= 0.10;
+        }
+        
+        // Calculate entry zone around 21 EMA (±0.4%)
+        if (!entryZone) {
+          entryZone = {
+            min: ema21 * 0.996,
+            max: ema21 * 1.004
+          };
+        }
+        
+        // Calculate stop loss using setupType-conditional logic (matching text file)
+        if (!stopLoss) {
+          let slStructure = null;
+          
+          if (templateKey === 'Swing') {
+            // Swing: Use HTF (3D or 1D) structure
+            slStructure = analysis['3d']?.indicators?.swings || 
+                         analysis['1d']?.indicators?.swings || 
+                         analysis['4h']?.indicators?.swings;
+          } else if (templateKey === 'Scalp') {
+            // Scalp: Use LTF (5m or 15m) structure
+            slStructure = analysis['5m']?.indicators?.swings || 
+                         analysis['15m']?.indicators?.swings || 
+                         analysis['4h']?.indicators?.swings;
+          } else {
+            // 4H: Use 4H structure
+            slStructure = analysis['4h']?.indicators?.swings;
+          }
+          
+          if (slStructure) {
+            if (direction === 'long') {
+              stopLoss = slStructure.swingLow || (currentPrice * 0.95);
+              invalidationLevel = slStructure.swingLow;
+            } else {
+              stopLoss = slStructure.swingHigh || (currentPrice * 1.05);
+              invalidationLevel = slStructure.swingHigh;
+            }
+          } else {
+            stopLoss = direction === 'long' ? (currentPrice * 0.95) : (currentPrice * 1.05);
+          }
+        }
+      }
+      
+      // DO NOT force confidence to minimum - let validation reject low confidence trades
+      // Clamp confidence between 0 and 1
+      confidence = Math.max(0, Math.min(confidence, 0.95));
+      
+      // If confidence below minimum, return NO TRADE
+      if (confidence < template.minConfidence) {
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: `Confidence ${(confidence * 100).toFixed(0)}% below minimum ${(template.minConfidence * 100).toFixed(0)}% for ${templateKey}`,
+          confidence: confidence
+        };
+      }
+      
+      // Ensure entryZone is set (fallback to current price ±0.4%)
+      if (!entryZone && data.currentPrice) {
+        entryZone = {
+          min: data.currentPrice * 0.996,
+          max: data.currentPrice * 1.004
+        };
+      }
+      
+      // Calculate targets based on R:R ratios and entry/SL
+      const entryMid = entryZone ? (entryZone.min + entryZone.max) / 2 : data.currentPrice;
+      const risk = direction === 'long' ? 
+        (entryMid - stopLoss) : 
+        (stopLoss - entryMid);
+      
+      const tp1 = direction === 'long' ? 
+        entryMid + (risk * template.rrTargets[0]) : 
+        entryMid - (risk * template.rrTargets[0]);
+      
+      const tp2 = direction === 'long' ? 
+        entryMid + (risk * template.rrTargets[1]) : 
+        entryMid - (risk * template.rrTargets[1]);
+      
+      return {
+        valid: true,  // Already validated above
+        direction: direction,
+        setupType: templateKey,
+        confidence: confidence,  // Already clamped above
+        reason: `${template.label}: ${anchorTrend}, confidence ${(confidence * 100).toFixed(0)}%`,
+        entryZone: entryZone,
+        stopLoss: stopLoss,
+        invalidationLevel: invalidationLevel,  // Added: HTF/LTF invalidation
+        targets: {
+          tp1: tp1 ? parseFloat(tp1.toFixed(2)) : null,
+          tp2: tp2 ? parseFloat(tp2.toFixed(2)) : null
+        },
+        riskReward: {
+          tp1RR: template.rrTargets[0],
+          tp2RR: template.rrTargets[1]
+        },
+        riskAmount: risk ? parseFloat(risk.toFixed(2)) : null  // Added: dollar risk
+      };
+      } catch (error) {
+        console.error(`Error evaluating ${templateKey} signal for ${symbol}:`, error);
+        return {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: 'Error analyzing data',
+          confidence: 0
+        };
+      }
+    }
+    
+    // Set specific strategy (replacing cycleStrategy)
+    function setStrategy(symbol, strategyIndex) {
+      strategyStates[symbol] = strategyIndex;
+      
+      // Update button appearance
+      updateStrategyButtons(symbol);
+      
+      // Map frontend strategy keys to backend strategy names
+      const strategyKeyMap = {
+        '4h': 'TREND_4H',
+        'Swing': 'SWING',
+        'Scalp': 'SCALP_1H',
+        'MicroScalp': 'MICRO_SCALP'
+      };
+      
+      const templateKey = strategyOptions[strategyIndex];
+      const backendStrategyName = strategyKeyMap[templateKey] || 'TREND_4H';
+      
+      // Get backend strategy directly from rich symbol (NO template evaluation)
+      const data = scanResults[symbol];
+      const richSymbol = data?.richSymbol || data;
+      const backendStrategy = richSymbol?.strategies?.[backendStrategyName];
+      
+      // Convert backend strategy to frontend signal format
+      let templateSignal = null;
+      if (backendStrategy && backendStrategy.valid) {
+        templateSignal = {
+          valid: true,
+          direction: backendStrategy.direction,
+          confidence: backendStrategy.confidence,
+          reason: backendStrategy.reason,
+          entryZone: backendStrategy.entryZone,
+          stopLoss: backendStrategy.stopLoss,
+          invalidationLevel: backendStrategy.invalidationLevel,
+          targets: backendStrategy.targets,
+          riskReward: backendStrategy.riskReward,
+          setupType: templateKey
+        };
+      } else {
+        templateSignal = {
+          valid: false,
+          direction: 'NO_TRADE',
+          reason: backendStrategy?.reason || 'No trade setup available',
+          confidence: 0,
+          setupType: templateKey
+        };
+      }
+      
+      // Update signal display with template-specific evaluation
+      updateSignalForTemplate(symbol, templateKey, templateSignal);
+      
+      // Update entry price display
+      updateEntryPrice(symbol, templateSignal);
+      
+      // Update row glow animation based on active signal (template or API)
+      const row = document.getElementById(`row-${symbol}`);
+      if (row) {
+        // Remove existing trade classes
+        row.classList.remove('has-trade-long', 'has-trade-short');
+        
+        // Use backend strategy signal (already extracted above)
+        const activeSignal = templateSignal;
+        
+        // Add appropriate class if there's any valid trade
+        if (activeSignal && activeSignal.valid) {
+          const tradeClass = (activeSignal.direction === 'long' || activeSignal.direction === 'LONG') ? 'has-trade-long' : 'has-trade-short';
+          row.classList.add(tradeClass);
+        }
+      }
+      
+      // If details row is expanded, regenerate it with new signal
+      const detailsRow = document.getElementById(`details-${symbol}`);
+      if (detailsRow && detailsRow.classList.contains('expanded')) {
+        const data = scanResults[symbol];
+        if (data) {
+          const newDetailsRow = createDetailsRow(symbol, data);
+          detailsRow.innerHTML = newDetailsRow.innerHTML;
+        }
+      }
+      
+      // Auto-trigger AI review when strategy changes
+      getAIReview(symbol, true);  // isAutoTrigger = true (silent mode)
+    }
+    
+    // Update entry price display
+    function updateEntryPrice(symbol, templateSignal) {
+      const data = scanResults[symbol];
+      
+      // Get active signal from backend (use provided templateSignal if it's from backend, otherwise get from backend)
+      let tradeSignal = null;
+      if (templateSignal && templateSignal.valid) {
+        tradeSignal = templateSignal;
+      } else {
+        // Get from backend using current selected strategy
+        const currentStrategyIndex = strategyStates[symbol] || 0;
+        const currentStrategy = strategyOptions[currentStrategyIndex];
+        tradeSignal = getActiveSignal(symbol, currentStrategy);
+        
+        // Fallback to legacy signal if backend not available
+        if (!tradeSignal) {
+          tradeSignal = data?.signal || data?.tradeSignal;
+        }
+      }
+      
+      let entryPriceDisplay = 'NO TRADE';
+      let hasSignal = false;
+      
+      if (tradeSignal && tradeSignal.valid) {
+        // Handle both API format (entry_zone) and template format (entryZone)
+        const entryZone = tradeSignal.entryZone || tradeSignal.entry_zone;
+        
+        if (entryZone && entryZone.min && entryZone.max) {
+          const entryMin = entryZone.min;
+          const entryMax = entryZone.max;
+          // For LONG: lowest entry (entryMin), for SHORT: highest entry (entryMax)
+          const direction = tradeSignal.direction || 'long';
+          const recommendedEntry = (direction === 'long' || direction === 'LONG') ? entryMin : entryMax;
+          entryPriceDisplay = `$${parseFloat(recommendedEntry).toLocaleString()}`;
+          hasSignal = true;
+        }
+      }
+      // If no valid signal, show "NO TRADE"
+      
+      // Update mobile entry price (under coin name) - this should show current PRICE, not entry
+      const row = document.getElementById(`row-${symbol}`);
+      if (row) {
+        const mobilePrice = row.querySelector('.entry-price-mobile');
+        if (mobilePrice && data?.currentPrice) {
+          mobilePrice.textContent = `$${data.currentPrice.toLocaleString()}`;
+        }
+        
+        // Update desktop entry price column
+        const desktopEntry = row.querySelector('.entry-price-desktop div');
+        if (desktopEntry && data?.currentPrice) {
+          desktopEntry.textContent = `$${data.currentPrice.toLocaleString()}`;
+        }
+        
+        // Update the actual entry column (3rd column)
+        const entryCell = row.querySelectorAll('td')[2];
+        if (entryCell) {
+          const entryDiv = entryCell.querySelector('div');
+          if (entryDiv) {
+            entryDiv.textContent = entryPriceDisplay;
+            // Add opacity if no signal
+            entryDiv.style.opacity = hasSignal ? '1' : '0.7';
+          }
+        }
+      }
+    }
+    
+    // Update signal text based on current strategy
+    function updateSignalText(symbol) {
+      const data = scanResults[symbol];
+      if (!data) return;
+      
+      const signal = data.signal || data.tradeSignal;
+      const hasValidTrade = signal && signal.valid;
+      
+      // Only update if NO TRADE
+      if (!hasValidTrade) {
+        const currentStrategyIndex = strategyStates[symbol] || 0;
+        const currentStrategy = strategyOptions[currentStrategyIndex];
+        const strategyNames = {
+          '4h': '4 HOUR',
+          'Swing': 'SWING',
+          'Scalp': 'SCALP'
+        };
+        const strategyName = strategyNames[currentStrategy] || '4 HOUR';
+        
+        // Calculate readiness
+        const readiness = calculateSignalReadiness(data);
+        
+        // Show readiness only if on 4h strategy
+        const showReadiness = currentStrategy === '4h';
+        const readinessHtml = showReadiness ? 
+          `<div class="text-xs ${readiness.class}" style="font-size: 0.65rem; white-space: nowrap;">${readiness.text}</div>` : 
+          `<div class="text-xs status-neutral">-</div>`;
+        
+        const signalElement = document.getElementById(`signal-${symbol}`);
+        if (signalElement) {
+          signalElement.innerHTML = `
+            <div class="status-neutral" style="font-size: 0.65rem; white-space: nowrap;">NO ${strategyName}</div>
+            ${readinessHtml}
+          `;
+        }
+      }
+    }
+    
+    // Update signal display based on template evaluation
+    function updateSignalForTemplate(symbol, templateKey, templateSignal) {
+      if (!templateSignal) return;
+      
+      const template = tradeTemplates[templateKey];
+      if (!template) {
+        console.error('Template not found for key:', templateKey);
+        return;
+      }
+      
+      const signalElement = document.getElementById(`signal-${symbol}`);
+      if (!signalElement) return;
+      
+      if (templateSignal.valid) {
+        // Valid trade signal - simple display matching price font size
+        const dirClass = templateSignal.direction === 'long' ? 'status-long' : 'status-short';
+        signalElement.style.textAlign = 'center';
+        signalElement.innerHTML = `
+          <div class="${dirClass}" style="font-size: 0.875rem; white-space: nowrap;">${template.displayName} TRADE</div>
+        `;
+      } else {
+        // No trade signal
+        signalElement.style.textAlign = 'center';
+        signalElement.innerHTML = `
+          <div class="status-neutral" style="font-size: 0.875rem; white-space: nowrap;">NO TRADE</div>
+        `;
+      }
+    }
+    
+    // Update strategy button appearance
+    function updateStrategyButtons(symbol) {
+      console.log(`🔄 Updating buttons for ${symbol}`);
+      
+      const activeIndex = strategyStates[symbol];
+      const data = scanResults[symbol];
+      
+      if (!data) {
+        console.warn(`No data for ${symbol}`);
+        return;
+      }
+      
+      // Get API signal as fallback
+      const apiSignal = data?.signal || data?.tradeSignal;
+      
+      // Debug logging for Bitcoin
+      if (symbol === 'BTCUSDT') {
+        console.log('=== BITCOIN BUTTON UPDATE ===');
+        console.log('Active index:', activeIndex);
+        console.log('API Signal:', apiSignal);
+        console.log('Full data:', data);
+      }
+      
+      // Evaluate ALL strategies for color coding
+      // For each strategy, use template signal if valid, otherwise check if API signal matches that strategy
+      // Get ALL strategies from backend for color coding (NO template evaluation)
+      const richSymbol = data?.richSymbol || data;
+      const strategy4h = getBackendStrategy(symbol, '4h');
+      const strategySwing = getBackendStrategy(symbol, 'Swing');
+      const strategyScalp = getBackendStrategy(symbol, 'Scalp');
+      
+      const strategy4hSignal = strategy4h && strategy4h.valid ? {
+        valid: true,
+        direction: strategy4h.direction,
+        confidence: strategy4h.confidence
+      } : null;
+      
+      const strategySwingSignal = strategySwing && strategySwing.valid ? {
+        valid: true,
+        direction: strategySwing.direction,
+        confidence: strategySwing.confidence
+      } : null;
+      
+      const strategyScalpSignal = strategyScalp && strategyScalp.valid ? {
+        valid: true,
+        direction: strategyScalp.direction,
+        confidence: strategyScalp.confidence
+      } : null;
+      
+      // Get micro-scalp signal from API data
+      const microScalpSignal = data && data.microScalp && data.microScalp.valid ? {
+        valid: true,
+        direction: data.microScalp.direction,
+        confidence: data.microScalp.confidence
+      } : null;
+      
+      const strategySignals = [strategy4hSignal, strategySwingSignal, strategyScalpSignal, microScalpSignal];
+      
+      // Update each button
+      strategyOptions.forEach((option, index) => {
+        const button = document.getElementById(`strategy-btn-${symbol}-${index}`);
+        if (!button) {
+          console.warn(`Button not found: strategy-btn-${symbol}-${index}`);
+          return;
+        }
+        
+        const signal = strategySignals[index];
+        const hasValidTrade = signal && signal.valid;
+        
+        // Update background and color based on state
+        const isLong = signal?.direction === 'long' || signal?.direction === 'LONG';
+        const isShort = signal?.direction === 'short' || signal?.direction === 'SHORT';
+        
+        if (symbol === 'BTCUSDT' && index === 0) {
+          console.log('Bitcoin 4H button update:');
+          console.log('  - Index:', index, 'Active:', activeIndex);
+          console.log('  - Signal:', signal);
+          console.log('  - hasValidTrade:', hasValidTrade);
+          console.log('  - isLong:', isLong, 'isShort:', isShort);
+          console.log('  - Will apply:', index === activeIndex && hasValidTrade ? 'COLORED BG' : 'transparent');
+        }
+        
+        if (index === activeIndex && hasValidTrade) {
+          // Active button with valid trade: colored background, yellow-white text
+          button.style.backgroundColor = isLong ? '#10b981' : '#ef4444';
+          button.style.color = 'var(--color-yellow-75)';
+          if (symbol === 'BTCUSDT' && index === 0) {
+            console.log('  ✅ Applied colored background:', isLong ? 'GREEN' : 'RED');
+          }
+        } else if (index === activeIndex && !hasValidTrade) {
+          // Active button without trade: yellow-white background, grey text
+          button.style.backgroundColor = 'var(--color-yellow-75)';
+          button.style.color = '#6b7280';
+        } else if (hasValidTrade) {
+          // Inactive button with valid trade: transparent background, colored text
+          button.style.backgroundColor = 'transparent';
+          button.style.color = isLong ? '#10b981' : '#ef4444';
+        } else {
+          // Inactive button without trade: transparent background, grey text
+          button.style.backgroundColor = 'transparent';
+          button.style.color = '#6b7280';
+        }
+      });
+    }
+
+    // Auto-trigger AI analysis for MAJOR COINS ONLY (BTC, ETH, SOL)
+    async function autoTriggerAIAnalysis() {
+      console.log('Starting automatic AI analysis for major coins only...');
+      
+      // Only analyze the 3 major coins (not starred coins)
+      const majorCoins = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
+      
+      // Trigger AI analysis for each major coin with current strategy (default: 4h)
+      for (const symbol of majorCoins) {
+        // Only analyze if we have data for this coin
+        if (!scanResults[symbol]) {
+          console.log(`Skipping ${symbol} - no data available`);
+          continue;
+        }
+        
+        try {
+          console.log(`Auto-triggering AI for ${symbol}...`);
+          await getAIReview(symbol, true);  // isAutoTrigger = true (silent mode)
+          
+          // Small delay between requests to avoid overwhelming the API
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          console.error(`Auto AI analysis failed for ${symbol}:`, error);
+          // Continue with next symbol even if one fails
+        }
+      }
+      
+      console.log('✅ Automatic AI analysis complete for major coins (BTC, ETH, SOL)');
+    }
+    
+    // Auto-run scan on page load
+    // 1-minute candle timer
+    function updateCandleTimer() {
+      const now = new Date();
+      const seconds = now.getSeconds();
+      const milliseconds = now.getMilliseconds();
+      
+      // Calculate time remaining until next minute
+      const secondsRemaining = 60 - seconds - (milliseconds / 1000);
+      const percentageRemaining = (secondsRemaining / 60) * 100;
+      
+      // Update progress bar width
+      const timerBar = document.getElementById('candle-timer-bar');
+      if (timerBar) {
+        timerBar.style.width = `${percentageRemaining}%`;
+      }
+    }
+    
+    // 4-hour candle timer
+    function update4HTimer() {
+      const now = new Date();
+      const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
+      const milliseconds = now.getMilliseconds();
+      const hours = now.getUTCHours(); // Use UTC for consistency with trading
+      
+      // Calculate minutes into current 4H period
+      const minutesInto4H = ((hours % 4) * 60) + minutes;
+      const secondsInto4H = (minutesInto4H * 60) + seconds + (milliseconds / 1000);
+      
+      // Total seconds in 4 hours = 14400
+      const totalSeconds4H = 4 * 60 * 60;
+      const secondsRemaining = totalSeconds4H - secondsInto4H;
+      const percentageRemaining = (secondsRemaining / totalSeconds4H) * 100;
+      
+      // Update progress bar width
+      const timer4H = document.getElementById('4h-timer-bar');
+      if (timer4H) {
+        timer4H.style.width = `${percentageRemaining}%`;
+      }
+    }
+    
+    // Update active signals and market bias
+    function updateTradingIndicators() {
+      let activeSignalsCount = 0;
+      let longCount = 0;
+      let shortCount = 0;
+      
+      console.log('=== Counting All Signals Across BOTH Modes ===');
+      
+      // Helper function to count signals from a result set
+      const countSignalsFromResults = (results, modeName) => {
+        let modeCount = 0;
+        Object.entries(results).forEach(([symbol, data]) => {
+          const strategies = ['4h', 'Swing', 'Scalp', 'MicroScalp'];
+          const apiSignal = data.signal || data.tradeSignal;
+          
+          strategies.forEach(strategy => {
+            // Temporarily set scanResults to this mode's data for evaluation
+            const originalScanResults = scanResults;
+            scanResults = results;
+            
+            // Get backend strategy directly (NO template evaluation)
+            const strategyMap = {
+              '4h': 'TREND_4H',
+              'Swing': 'SWING',
+              'Scalp': 'SCALP_1H',
+              'MicroScalp': 'MICRO_SCALP'
+            };
+            const backendStrategyName = strategyMap[strategy];
+            const richSymbol = results[symbol]?.richSymbol || results[symbol];
+            const backendStrategy = richSymbol?.strategies?.[backendStrategyName];
+            
+            // Restore original scanResults
+            scanResults = originalScanResults;
+            
+            const templateSignal = backendStrategy && backendStrategy.valid ? {
+              valid: true,
+              direction: backendStrategy.direction,
+              confidence: backendStrategy.confidence
+            } : null;
+            
+            if (templateSignal && templateSignal.valid) {
+              activeSignalsCount++;
+              modeCount++;
+              const isLong = templateSignal.direction === 'long' || templateSignal.direction === 'LONG';
+              console.log(`✓ ${symbol} ${strategy} [${modeName}]: ${templateSignal.direction} (Total: ${activeSignalsCount})`);
+              if (isLong) {
+                longCount++;
+              } else {
+                shortCount++;
+              }
+            }
+          });
+        });
+        return modeCount;
+      };
+      
+      // Count from BOTH modes
+      const aggressiveCount = Object.keys(scanResultsAggressive).length > 0 ? 
+        countSignalsFromResults(scanResultsAggressive, 'AGGRESSIVE') : 0;
+      const safeCount = Object.keys(scanResultsSafe).length > 0 ? 
+        countSignalsFromResults(scanResultsSafe, 'SAFE') : 0;
+      
+      console.log(`\n📊 Total Signals: ${activeSignalsCount} (${longCount}L | ${shortCount}S)`);
+      console.log(`   Aggressive: ${aggressiveCount} | Safe: ${safeCount}`);
+      
+      // Update Active Signals (always yellow-white)
+      const signalsCountEl = document.getElementById('signals-count');
+      if (signalsCountEl) {
+        signalsCountEl.textContent = `${activeSignalsCount} SIGNAL${activeSignalsCount !== 1 ? 'S' : ''}`;
+        signalsCountEl.style.color = 'var(--color-yellow-75)';
+      }
+      
+      // Update mode button counts
+      const aggressiveCountEl = document.getElementById('aggressive-count');
+      const safeCountEl = document.getElementById('safe-count');
+      if (aggressiveCountEl) aggressiveCountEl.textContent = aggressiveCount;
+      if (safeCountEl) safeCountEl.textContent = safeCount;
+    }
+    
+    // Start timers
+    function startCandleTimers() {
+      updateCandleTimer();
+      update4HTimer();
+      setInterval(updateCandleTimer, 500); // Update twice per second for smooth animation
+      setInterval(update4HTimer, 1000); // Update every second for 4H timer
+    }
+
+    // AI Market Review (replacing news marquee)
+    let marketReviewCache = 'Analyzing Market Sentiment';
+    
+    // Get AI market review from all trades data
+    async function getAIMarketReview() {
+      try {
+        console.log('🤖 Requesting AI market review...');
+        console.log('Current scanResults:', Object.keys(scanResults));
+        console.log('Safe results:', Object.keys(scanResultsSafe));
+        console.log('Aggressive results:', Object.keys(scanResultsAggressive));
+        
+        // Store current state
+        const originalScanResults = scanResults;
+        
+        // Collect all trades from both modes
+        const allTradesData = {
+          SAFE_MODE: {},
+          AGGRESSIVE_MODE: {}
+        };
+        
+        const strategyKeys = ['4h', 'Swing', 'Scalp', 'MicroScalp'];
+        const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
+        
+        // SAFE MODE
+        scanResults = scanResultsSafe;
+        for (const symbol of symbols) {
+          const safeData = scanResultsSafe[symbol];
+          if (!safeData) continue;
+          
+          allTradesData.SAFE_MODE[symbol] = {
+            currentPrice: safeData.currentPrice,
+            strategies: {}
+          };
+          
+          strategyKeys.forEach((strategyKey) => {
+            // Get backend strategy directly (NO template evaluation)
+            const strategyMap = {
+              '4h': 'TREND_4H',
+              'Swing': 'SWING',
+              'Scalp': 'SCALP_1H',
+              'MicroScalp': 'MICRO_SCALP'
+            };
+            const backendStrategyName = strategyMap[strategyKey];
+            const richSymbol = safeData?.richSymbol || safeData;
+            const backendStrategy = richSymbol?.strategies?.[backendStrategyName];
+            const signal = backendStrategy && backendStrategy.valid ? {
+              valid: true,
+              direction: backendStrategy.direction,
+              setupType: strategyKey,
+              confidence: backendStrategy.confidence
+            } : null;
+            if (signal && signal.valid) {
+              allTradesData.SAFE_MODE[symbol].strategies[strategyKey] = {
+                direction: signal.direction,
+                setupType: signal.setupType,
+                confidence: signal.confidence ? signal.confidence.toFixed(0) + '%' : '0%'
+              };
+            }
+          });
+        }
+        
+        // AGGRESSIVE MODE
+        scanResults = scanResultsAggressive;
+        for (const symbol of symbols) {
+          const aggressiveData = scanResultsAggressive[symbol];
+          if (!aggressiveData) continue;
+          
+          allTradesData.AGGRESSIVE_MODE[symbol] = {
+            currentPrice: aggressiveData.currentPrice,
+            strategies: {}
+          };
+          
+          strategyKeys.forEach((strategyKey) => {
+            // Get backend strategy directly (NO template evaluation)
+            const strategyMap = {
+              '4h': 'TREND_4H',
+              'Swing': 'SWING',
+              'Scalp': 'SCALP_1H',
+              'MicroScalp': 'MICRO_SCALP'
+            };
+            const backendStrategyName = strategyMap[strategyKey];
+            const richSymbol = aggressiveData?.richSymbol || aggressiveData;
+            const backendStrategy = richSymbol?.strategies?.[backendStrategyName];
+            const signal = backendStrategy && backendStrategy.valid ? {
+              valid: true,
+              direction: backendStrategy.direction,
+              setupType: strategyKey,
+              confidence: backendStrategy.confidence
+            } : null;
+            if (signal && signal.valid) {
+              allTradesData.AGGRESSIVE_MODE[symbol].strategies[strategyKey] = {
+                direction: signal.direction,
+                setupType: signal.setupType,
+                confidence: signal.confidence ? signal.confidence.toFixed(0) + '%' : '0%'
+              };
+            }
+          });
+        }
+        
+        // Restore original scan results
+        scanResults = originalScanResults;
+        
+        // Call AI agent for market review
+        console.log('📤 Sending request to /api/agent-review with trades data');
+        const response = await fetch('/api/agent-review', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            tradesData: allTradesData,
+            systemPrompt: 'When analyzing trade JSON, respond with direct, concise market insight. Avoid technical jargon unless necessary. Focus on what the market is behaving like rather than what indicators say. Identify whether assets influence each other and call out any shared momentum or correlation. If no trades appear, state why the structure isn\'t clean. Tone should be confident, observational, and actionable—similar to a seasoned trader explaining what they see without fluff. Always keep responses tight, honest, and rooted in the bigger picture sentiment behind the data, not just the numbers. Keep your response to 1-2 sentences maximum.'
+          })
+        });
+        
+        console.log('📥 Response status:', response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ API error response:', errorText);
+          throw new Error(`AI review failed: ${response.status} - ${errorText}`);
+        }
+        
+        const data = await response.json();
+        console.log('📊 API response data:', data);
+        
+        if (data.review) {
+          marketReviewCache = data.review;
+          updateMarketReviewDisplay();
+          console.log('✅ AI market review received:', data.review);
+        } else {
+          console.warn('⚠️ No review in response:', data);
+          marketReviewCache = 'Market analysis temporarily unavailable';
+          updateMarketReviewDisplay();
+        }
+      } catch (error) {
+        console.error('❌ Error getting AI market review:', error);
+        console.error('Error details:', error.message, error.stack);
+        marketReviewCache = 'Market analysis temporarily unavailable';
+        updateMarketReviewDisplay();
+      }
+    }
+    
+    function updateMarketReviewDisplay() {
+      const marqueeContent = document.getElementById('newsMarqueeContent');
+      
+      if (!marqueeContent) {
+        console.error('❌ Marquee content element not found!');
+        return;
+      }
+      
+      // Display as a scrolling message
+      marqueeContent.innerHTML = `
+        <span style="padding-right: 4rem;">${marketReviewCache}</span>
+        <span style="padding-right: 4rem;">${marketReviewCache}</span>
+      `;
+      
+      console.log('✅ Market review updated');
+    }
+    
+    function startMarketReview() {
+      console.log('🤖 Starting AI market review...');
+      // Initial review display with placeholder
+      updateMarketReviewDisplay();
+      
+      // Wait for data to load, then get first review (non-blocking)
+      setTimeout(() => {
+        if (Object.keys(scanResults).length > 0) {
+          getAIMarketReview().catch(err => {
+            console.error('❌ Market review failed:', err);
+            marketReviewCache = 'Market analysis temporarily unavailable';
+            updateMarketReviewDisplay();
+          });
+        } else {
+          console.log('⏳ No scan results yet, will retry in 5 seconds...');
+          setTimeout(() => {
+            if (Object.keys(scanResults).length > 0) {
+              getAIMarketReview().catch(err => console.error('Market review error:', err));
+            }
+          }, 5000);
+        }
+      }, 5000);
+      
+      // Refresh every 5 minutes
+      setInterval(() => {
+        if (Object.keys(scanResults).length > 0) {
+          getAIMarketReview().catch(err => console.error('Market review error:', err));
+        }
+      }, 300000);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initializeAggressiveMode();
+      startCandleTimers();
+      startMarketReview(); // AI market review enabled
+      scanMajorCoins();
+    });
+
+    // Main scan function
+    async function scanMajorCoins() {
+      // Always show BTC, ETH, SOL plus any additional starred coins
+      const defaults = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
+      const starredCoins = JSON.parse(localStorage.getItem('starredCoins') || '[]');
+      // Combine defaults with starred coins, remove duplicates
+      const symbols = [...new Set([...defaults, ...starredCoins])];
+      
+      // Show loading
+      document.getElementById('loadingState').classList.remove('hidden');
+      document.getElementById('resultsContainer').classList.add('hidden');
+      document.getElementById('errorState').classList.add('hidden');
+      
+      try {
+        scanResults = {};
+        
+        // Fetch data for BOTH modes to count all signals
+        const mode = aggressiveMode ? 'AGGRESSIVE' : 'STANDARD';
+        
+        // Fetch current mode (for display) - USE /api/analyze-full for rich structure
+        const currentModePromises = symbols.map(symbol => 
+          fetch(`/api/analyze-full?symbol=${symbol}&mode=${mode}`)
+            .then(res => {
+              if (!res.ok) throw new Error(`Failed to fetch ${symbol}`);
+              return res.json();
+            })
+            .then(richSymbol => {
+              // Convert rich symbol to legacy format for backward compatibility
+              const legacyData = convertRichSymbolToLegacy(richSymbol);
+              return { symbol, data: legacyData, mode, richSymbol };
+            })
+        );
+        
+        // Fetch opposite mode (for counting) - USE /api/analyze-full for rich structure
+        const oppositeMode = aggressiveMode ? 'STANDARD' : 'AGGRESSIVE';
+        const oppositeModePromises = symbols.map(symbol => 
+          fetch(`/api/analyze-full?symbol=${symbol}&mode=${oppositeMode}`)
+            .then(res => {
+              if (!res.ok) throw new Error(`Failed to fetch ${symbol}`);
+              return res.json();
+            })
+            .then(richSymbol => {
+              // Convert rich symbol to legacy format for backward compatibility
+              const legacyData = convertRichSymbolToLegacy(richSymbol);
+              return { symbol, data: legacyData, mode: oppositeMode, richSymbol };
+            })
+        );
+        
+        // Fetch both modes in parallel
+        const allResults = await Promise.all([...currentModePromises, ...oppositeModePromises]);
+        
+        // Store results by mode (store both legacy data and rich symbol)
+        allResults.forEach(({ symbol, data, mode: resultMode, richSymbol }) => {
+          const resultData = data;
+          // Store rich symbol for direct backend access
+          if (richSymbol) {
+            resultData.richSymbol = richSymbol;
+            resultData.strategies = richSymbol.strategies;
+            resultData.bestSignal = richSymbol.bestSignal;
+          }
+          if (resultMode === 'AGGRESSIVE') {
+            scanResultsAggressive[symbol] = resultData;
+          } else {
+            scanResultsSafe[symbol] = resultData;
+          }
+        });
+        
+        // Set scanResults to current mode for display
+        scanResults = aggressiveMode ? scanResultsAggressive : scanResultsSafe;
+        
+        // Display results
+        displayResults();
+        
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('resultsContainer').classList.remove('hidden');
+        
+        // Update all strategy buttons to ensure correct state
+        setTimeout(() => {
+          console.log('📊 scanResults symbols:', Object.keys(scanResults));
+          console.log('📊 strategyStates:', strategyStates);
+          
+          for (const symbol in scanResults) {
+            console.log(`Attempting to update buttons for ${symbol}`);
+            updateStrategyButtons(symbol);
+          }
+          console.log('✅ All strategy buttons updated');
+          
+          // Update aggressive/standard button based on trade status
+          initializeAggressiveMode();
+        }, 50);
+        
+        // Auto-trigger AI analysis for all coins after page load
+        console.log('Auto-triggering AI analysis for all coins...');
+        autoTriggerAIAnalysis();
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        showError(error.message || 'Failed to scan markets. Check your connection and try again.');
+        document.getElementById('loadingState').classList.add('hidden');
+      }
+    }
+
+    // Auto-select best strategy based on available signals
+    // Priority: 4h > Swing (Daily) > Scalp (1h) > MicroScalp
+    function autoSelectStrategy(symbol) {
+      const data = scanResults[symbol];
+      const apiSignal = data?.signal || data?.tradeSignal;
+      
+      // Priority order: 0 (4h), 1 (Swing), 2 (Scalp), 3 (MicroScalp)
+      const strategies = ['4h', 'Swing', 'Scalp', 'MicroScalp'];
+      
+      for (let i = 0; i < strategies.length; i++) {
+        const strategy = strategies[i];
+        
+        // Map frontend strategy key to backend strategy name
+        const strategyKeyMap = {
+          '4h': 'TREND_4H',
+          'Swing': 'SWING',
+          'Scalp': 'SCALP_1H',
+          'MicroScalp': 'MICRO_SCALP'
+        };
+        const backendStrategyName = strategyKeyMap[strategy];
+        
+        // Get backend strategy directly (NO template evaluation)
+        const richSymbol = data?.richSymbol || data;
+        const backendStrategy = richSymbol?.strategies?.[backendStrategyName];
+        const signal = backendStrategy && backendStrategy.valid ? {
+          valid: true,
+          direction: backendStrategy.direction,
+          confidence: backendStrategy.confidence
+        } : null;
+        
+        if (signal && signal.valid) {
+          // Found a valid signal, select this strategy
+          strategyStates[symbol] = i;
+          console.log(`Auto-selected ${strategy} for ${symbol}`);
+          return i;
+        }
+      }
+      
+      // No valid signals found, default to 4h (index 0)
+      strategyStates[symbol] = 0;
+      return 0;
+    }
+    
+    // Display scan results
+    function displayResults() {
+      const tableBody = document.getElementById('opportunitiesTable');
+      tableBody.innerHTML = '';
+      
+      // Create row for each coin in scanResults (includes all scanned coins)
+      for (const symbol in scanResults) {
+        const data = scanResults[symbol];
+        if (data && data.currentPrice) {  // Ensure data is valid
+          try {
+            // Auto-select best strategy for this symbol
+            autoSelectStrategy(symbol);
+            
+            const row = createCoinRow(symbol, data);
+            const detailsRow = createDetailsRow(symbol, data);
+            tableBody.appendChild(row);
+            tableBody.appendChild(detailsRow);
+            
+            // Update strategy buttons after row is added to DOM
+            setTimeout(() => updateStrategyButtons(symbol), 10);
+          } catch (error) {
+            console.error(`Error creating row for ${symbol}:`, error);
+          }
+        }
+      }
+      
+      // Update trading indicators
+      updateTradingIndicators();
+      
+      // Update mode buttons
+      updateModeButtons();
+    }
+
+    // Calculate signal readiness (proximity to trade setup)
+    function calculateSignalReadiness(data) {
+      if (!data || !data.analysis) {
+        return { score: 0, text: 'No data', class: 'status-neutral' };
+      }
+      
+      const signal = data.tradeSignal;
+      if (signal && signal.valid) {
+        // Valid trade signal = 100% ready
+        return { 
+          score: 100, 
+          text: 'READY', 
+          class: signal.direction === 'long' ? 'status-long' : 'status-short'
+        };
+      }
+      
+      // Calculate proximity based on indicator alignment
+      const timeframes = ['4h', '1h', '15m', '5m'];
+      let aligned = 0;
+      let total = 0;
+      let direction = null;
+      
+      // Guard: Ensure analysis exists
+      if (!data.analysis) {
+        return { score: 0, text: 'No data', class: 'status-neutral' };
+      }
+      
+      timeframes.forEach(tf => {
+        const analysis = data.analysis[tf];
+        if (analysis && analysis.indicators) {
+          const trend = analysis.indicators.analysis?.trend;
+          const stochCond = analysis.indicators.stochRSI?.condition;
+          const pullbackState = analysis.indicators.analysis?.pullbackState;
+          
+          if (trend === 'UPTREND' || trend === 'DOWNTREND') {
+            total += 3;
+            if (!direction) direction = trend;
+            
+            // Count alignment factors
+            if (trend === direction) aligned += 1;
+            if ((direction === 'UPTREND' && (stochCond === 'OVERSOLD' || stochCond === 'BULLISH')) ||
+                (direction === 'DOWNTREND' && (stochCond === 'OVERBOUGHT' || stochCond === 'BEARISH'))) {
+              aligned += 1;
+            }
+            if (pullbackState === 'ENTRY_ZONE') aligned += 1;
+          }
+        }
+      });
+      
+      if (total === 0) {
+        return { score: 0, text: 'No trend', class: 'status-neutral' };
+      }
+      
+      const proximityPct = Math.round((aligned / total) * 100);
+      const awayPct = 100 - proximityPct;
+      
+      return {
+        score: proximityPct,
+        text: `${awayPct}% away`,
+        class: proximityPct > 70 ? 'status-long' : proximityPct > 40 ? 'text-yellow-400' : 'status-neutral'
+      };
+    }
+
+    // Create table row for coin
+    function createCoinRow(symbol, data) {
+      const row = document.createElement('tr');
+      row.id = `row-${symbol}`;
+      
+      // Get current strategy for this symbol FIRST
+      const currentStrategyIndex = strategyStates[symbol] || 0;
+      const currentStrategy = strategyOptions[currentStrategyIndex];
+      const strategyNames = {
+        '4h': '4 HOUR',
+        'Swing': 'SWING',
+        'Scalp': 'SCALP'
+      };
+      const strategyName = strategyNames[currentStrategy] || '4 HOUR';
+      
+      // Get active signal from backend (no template evaluation)
+      const templateSignal = getActiveSignal(symbol, currentStrategy);
+      
+      // Use backend signal if available, otherwise fall back to legacy signal
+      const activeSignal = templateSignal || (data.signal || data.tradeSignal);
+      
+      // Set row class based on active signal (template or API)
+      const hasValidTrade = activeSignal && activeSignal.valid;
+      const tradeClass = hasValidTrade ? 
+        (activeSignal.direction === 'long' || activeSignal.direction === 'LONG' ? 'has-trade-long' : 'has-trade-short') : '';
+      
+      row.className = `coin-row ${tradeClass}`;
+      
+      // Coin name - spell out full names
+      const coinNames = {
+        'BTCUSDT': 'BITCOIN',
+        'ETHUSDT': 'ETHEREUM',
+        'SOLUSDT': 'SOLANA'
+      };
+      const coinName = coinNames[symbol] || symbol.replace('USDT', '');
+      
+      // Price and change
+      const price = data.currentPrice ? `$${data.currentPrice.toLocaleString()}` : 'N/A';
+      const changeClass = (data.priceChange24h || 0) >= 0 ? 'status-long' : 'status-short';
+      const change = data.priceChange24h ? 
+        `${data.priceChange24h >= 0 ? '+' : ''}${data.priceChange24h.toFixed(2)}%` : 'N/A';
+      
+      // Signal readiness
+      const readiness = calculateSignalReadiness(data);
+      
+      // Get API signal as fallback
+      const apiSignal = data?.signal || data?.tradeSignal;
+      
+      // Get ALL strategies from backend to color-code the indicator buttons
+      const richSymbol = data?.richSymbol || data;
+      const strategies = richSymbol?.strategies || {};
+      
+      // Get backend strategies directly (NO template evaluation)
+      const strategy4h = getBackendStrategy(symbol, '4h');
+      const strategySwing = getBackendStrategy(symbol, 'Swing');
+      const strategyScalp = getBackendStrategy(symbol, 'Scalp');
+      const strategyMicroScalp = getBackendStrategy(symbol, 'MicroScalp');
+      
+      const strategy4hSignal = strategy4h && strategy4h.valid ? {
+        valid: true,
+        direction: strategy4h.direction,
+        confidence: strategy4h.confidence
+      } : null;
+      
+      const strategySwingSignal = strategySwing && strategySwing.valid ? {
+        valid: true,
+        direction: strategySwing.direction,
+        confidence: strategySwing.confidence
+      } : null;
+      
+      const strategyScalpSignal = strategyScalp && strategyScalp.valid ? {
+        valid: true,
+        direction: strategyScalp.direction,
+        confidence: strategyScalp.confidence
+      } : null;
+      
+      // Check if ANY strategy has a valid trade for coin name color
+      const hasAnyTrade = (strategy4hSignal && strategy4hSignal.valid) || 
+                          (strategySwingSignal && strategySwingSignal.valid) || 
+                          (strategyScalpSignal && strategyScalpSignal.valid) ||
+                          (strategyMicroScalp && strategyMicroScalp.valid);
+      
+      
+      // Calculate current price display
+      const currentPriceDisplay = data.currentPrice ? `$${data.currentPrice.toLocaleString()}` : 'N/A';
+      
+      // Calculate entry price - use backend signal
+      const tradeSignal = templateSignal || (data.signal || data.tradeSignal);
+      
+      let entryPriceDisplay = 'NO TRADE';
+      let entryHasSignal = false;
+      
+      if (tradeSignal && tradeSignal.valid) {
+        // Handle both API format (entry_zone) and template format (entryZone)
+        const entryZone = tradeSignal.entryZone || tradeSignal.entry_zone;
+        
+        if (entryZone && entryZone.min && entryZone.max) {
+          const entryMin = entryZone.min;
+          const entryMax = entryZone.max;
+          // For LONG: lowest entry (entryMin), for SHORT: highest entry (entryMax)
+          const direction = tradeSignal.direction || 'long';
+          const recommendedEntry = direction === 'long' || direction === 'LONG' ? entryMin : entryMax;
+          entryPriceDisplay = `$${parseFloat(recommendedEntry).toLocaleString()}`;
+          entryHasSignal = true;
+        }
+      } else if (data.microScalp && data.microScalp.valid && data.microScalp.entry) {
+        // Show micro-scalp entry if available
+        const entryMin = data.microScalp.entry.min;
+        const entryMax = data.microScalp.entry.max;
+        const recommendedEntry = data.microScalp.direction === 'long' ? entryMin : entryMax;
+        entryPriceDisplay = `$${parseFloat(recommendedEntry).toLocaleString()}`;
+        entryHasSignal = true;
+      }
+      // If no valid signal, show "NO TRADE" in yellow-white
+      
+      // Determine coin name color based on SELECTED strategy's trade direction (templateSignal, not activeSignal)
+      let coinNameColor = 'var(--color-yellow-75)';
+      if (templateSignal && templateSignal.valid) {
+        const isLong = templateSignal.direction === 'long' || templateSignal.direction === 'LONG';
+        coinNameColor = isLong ? '#10b981' : '#ef4444';
+      }
+      
+      row.innerHTML = `
+        <td class="px-2" style="padding-top: 1.65rem; padding-bottom: 1.65rem; text-align: center;" data-label="">
+          <div class="text-lg ${hasAnyTrade ? 'coin-name-has-trade' : ''}" style="color: ${coinNameColor};">${coinName}</div>
+          <div class="entry-price-mobile" style="font-size: 0.9rem; color: var(--color-yellow-75); margin-top: 0.25rem;">${currentPriceDisplay}</div>
+        </td>
+        <td class="px-2 entry-price-desktop" style="padding-top: 1.65rem; padding-bottom: 1.65rem;" data-label="Price:">
+          <div style="color: var(--color-yellow-75); font-size: 0.875rem;">${currentPriceDisplay}</div>
+        </td>
+        <td class="px-2 entry-cell" style="padding-top: 1.65rem; padding-bottom: 1.65rem; text-align: center;" data-label="Entry:">
+          <div class="entry-label-mobile" style="font-size: 1.125rem; font-family: var(--font-mathias); font-weight: bold; color: var(--color-yellow-75);">ENTRY</div>
+          <div class="entry-value" style="color: var(--color-yellow-75); font-size: 0.9rem; margin-top: 0.25rem; ${!entryHasSignal ? 'opacity: 0.7;' : ''}">${entryPriceDisplay}</div>
+        </td>
+        <td class="px-2" style="padding-top: 1.65rem; padding-bottom: 1.65rem;" data-label="EditTrades:">
+          <div class="flex strategy-buttons-container" style="gap: 0;">
+            <button 
+              onclick="setStrategy('${symbol}', 0)"
+              id="strategy-btn-${symbol}-0"
+              class="px-2 py-1 text-xs font-mathias font-bold"
+              style="border: 2px solid var(--color-yellow-75); border-radius: var(--radius-md) 0 0 var(--radius-md); transition: all 0.3s; white-space: nowrap; min-width: 40px; cursor: pointer;"
+            >
+              4H
+            </button>
+            <button 
+              onclick="setStrategy('${symbol}', 1)"
+              id="strategy-btn-${symbol}-1"
+              class="px-2 py-1 text-xs font-mathias font-bold"
+              style="border: 2px solid var(--color-yellow-75); border-left: none; transition: all 0.3s; white-space: nowrap; min-width: 45px; cursor: pointer;"
+            >
+              Swing
+            </button>
+            <button 
+              onclick="setStrategy('${symbol}', 2)"
+              id="strategy-btn-${symbol}-2"
+              class="px-2 py-1 text-xs font-mathias font-bold"
+              style="border: 2px solid var(--color-yellow-75); border-left: none; transition: all 0.3s; white-space: nowrap; min-width: 42px; cursor: pointer;"
+            >
+              Scalp
+            </button>
+            <button 
+              onclick="setStrategy('${symbol}', 3)"
+              id="strategy-btn-${symbol}-3"
+              class="px-2 py-1 text-xs font-mathias font-bold"
+              style="border: 2px solid var(--color-yellow-75); border-left: none; border-radius: 0 var(--radius-md) var(--radius-md) 0; transition: all 0.3s; white-space: nowrap; min-width: 35px; font-size: 0.6rem; cursor: pointer;"
+            >
+              M-S
+            </button>
+          </div>
+        </td>
+        <td class="px-2" style="padding-top: 1.65rem; padding-bottom: 1.65rem;" data-label="Actions:">
+          <div class="flex gap-1" style="justify-content: center; flex-wrap: wrap;">
+            <button 
+              onclick="toggleDetails('${symbol}')"
+              class="px-3 py-1 text-xs font-mathias font-bold"
+              style="background-color: var(--color-yellow-75); color: black; border: 2px solid var(--color-yellow-75); border-radius: var(--radius-md); transition: all 0.3s; min-width: 80px;"
+              id="toggle-${symbol}"
+            >
+              DETAILS
+            </button>
+            <button 
+              onclick="copyCoinView('${symbol}')"
+              class="px-3 py-1 text-xs font-mathias font-bold"
+              style="background-color: var(--color-yellow-75); color: black; border: 2px solid var(--color-yellow-75); border-radius: var(--radius-md); transition: all 0.3s;"
+            >
+              COPY
+            </button>
+            <button 
+              onclick="trackThisTrade('${symbol}')"
+              class="px-3 py-1 text-xs font-mathias font-bold"
+              style="background-color: var(--color-yellow-75); color: black; border: 2px solid var(--color-yellow-75); border-radius: var(--radius-md); transition: all 0.3s;"
+            >
+              TRACK
+            </button>
+          </div>
+        </td>
+      `;
+      
+      return row;
+    }
+
+    // Detect Stoch RSI curl direction
+    function detectStochCurl(stochRSI) {
+      if (!stochRSI || stochRSI.k === null || stochRSI.d === null) {
+        return { direction: 'flat', text: '→ Flat', color: 'status-neutral' };
+      }
+      
+      const diff = stochRSI.k - stochRSI.d;
+      
+      if (diff > 5) {
+        return { direction: 'up', text: '↑ Curling Up', color: 'status-long' };
+      } else if (diff < -5) {
+        return { direction: 'down', text: '↓ Curling Down', color: 'status-short' };
+      } else {
+        return { direction: 'flat', text: '→ Flat', color: 'status-neutral' };
+      }
+    }
+    
+    // Get Stoch range/zone
+    function getStochZone(k) {
+      if (k === null || k === undefined) return 'UNKNOWN';
+      if (k >= 80) return 'OVERBOUGHT';
+      if (k <= 20) return 'OVERSOLD';
+      if (k >= 50) return 'BULLISH ZONE';
+      return 'BEARISH ZONE';
+    }
+
+    // Create details row with full timeframe breakdown
+    function createDetailsRow(symbol, data) {
+      const detailsRow = document.createElement('tr');
+      detailsRow.className = 'details-row';
+      detailsRow.id = `details-${symbol}`;
+      
+      // Create detailed timeframe cards - ALL TIMEFRAMES (1m first, 1 Month last)
+      const timeframes = ['1m', '3m', '5m', '15m', '1h', '4h', '1d', '3d', '1w', '1M'];
+      const tfCards = timeframes.map(tf => {
+        const analysis = data.analysis?.[tf];
+        if (!analysis || analysis.error || !analysis.indicators) {
+          return `<div class="tf-card"><p class="text-sm font-bold mb-2">${tf.toUpperCase()}</p><p class="text-xs" style="color: var(--text-secondary);">No data</p></div>`;
+        }
+        
+        const ind = analysis.indicators;
+        const trend = ind.analysis?.trend || 'UNKNOWN';
+        const trendClass = trend === 'UPTREND' ? 'uptrend' : 
+                          trend === 'DOWNTREND' ? 'downtrend' : 'flat';
+        const trendBadge = trend === 'UPTREND' ? 'UPTREND' : 
+                          trend === 'DOWNTREND' ? 'DOWNTREND' : 'FLAT';
+        
+        // Stoch curl detection
+        const stochCurl = detectStochCurl(ind.stochRSI);
+        const stochZone = getStochZone(ind.stochRSI?.k);
+        
+        // Display name for timeframe (spell out Month, 3 Day)
+        const tfDisplay = tf === '1M' ? '1 MONTH' : 
+                         tf === '3d' ? '3 DAY' : 
+                         tf.toUpperCase();
+        
+        return `
+          <div class="tf-card ${trendClass}" style="font-family: var(--font-mathias);">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-sm font-bold" style="color: var(--color-yellow-75);">${tfDisplay}</p>
+              <span class="text-xs px-2 py-0.5 rounded ${trend === 'UPTREND' ? 'status-long' : trend === 'DOWNTREND' ? 'status-short' : 'status-neutral'}" style="background-color: var(--bg-tertiary);">${trendBadge}</span>
+          </div>
+
+            <div class="space-y-2 text-xs">
+                <div class="flex justify-between">
+                <span style="color: var(--color-yellow-75); opacity: 0.6;">Current Price</span>
+                <span class="font-bold" style="color: var(--color-yellow-75);">${ind.price?.current ? '$' + ind.price.current.toLocaleString() : 'N/A'}</span>
+                </div>
+              
+                <div class="flex justify-between">
+                <span style="color: var(--color-yellow-75); opacity: 0.6;">21 EMA</span>
+                <span class="font-bold" style="color: var(--color-yellow-75);">${ind.ema?.ema21 ? '$' + ind.ema.ema21.toLocaleString() : 'N/A'}</span>
+                </div>
+              
+                  <div class="flex justify-between">
+                <span style="color: var(--color-yellow-75); opacity: 0.6;">200 EMA</span>
+                <span class="font-bold" style="color: var(--color-yellow-75);">${ind.ema?.ema200 ? '$' + ind.ema.ema200.toLocaleString() : 'N/A'}</span>
+                  </div>
+              
+              <div class="border-t pt-2" style="border-color: var(--border);">
+                <div class="flex justify-between mb-1">
+                  <span style="color: var(--color-yellow-75); opacity: 0.6;">Stoch RSI</span>
+                  <span class="text-xs px-1 py-0.5 rounded ${getStochColor(ind.stochRSI?.condition)}" style="background-color: var(--bg-tertiary);">${ind.stochRSI?.condition || 'N/A'}</span>
+              </div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-xs" style="color: var(--color-yellow-75); opacity: 0.6;">${stochZone}</span>
+                  <span class="${stochCurl.color} font-medium">${stochCurl.text}</span>
+            </div>
+                <div class="flex justify-between text-xs" style="color: var(--color-yellow-75); opacity: 0.6;">
+                  <span>%K: ${ind.stochRSI?.k ? ind.stochRSI.k.toFixed(0) : 'N/A'}</span>
+                  <span>%D: ${ind.stochRSI?.d ? ind.stochRSI.d.toFixed(0) : 'N/A'}</span>
+                </div>
+                </div>
+              
+              <div class="border-t pt-2" style="border-color: var(--border);">
+                <div class="flex justify-between mb-1">
+                  <span style="color: var(--color-yellow-75); opacity: 0.6;">Pullback State</span>
+                  <span class="text-xs px-1 py-0.5 rounded ${getPullbackColor(ind.analysis?.pullbackState)}" style="background-color: var(--bg-tertiary);">${ind.analysis?.pullbackState || 'N/A'}</span>
+                </div>
+                ${ind.analysis?.distanceFrom21EMA !== null && ind.analysis?.distanceFrom21EMA !== undefined ? `
+                  <div class="text-xs" style="color: var(--color-yellow-75); opacity: 0.6;">
+                    Distance from 21 EMA: ${ind.analysis.distanceFrom21EMA.toFixed(2)}%
+              </div>
+                ` : ''}
+            </div>
+
+              ${analysis.structure?.swingHigh || analysis.structure?.swingLow ? `
+                <div class="border-t pt-2" style="border-color: var(--border);">
+                  ${analysis.structure.swingHigh ? `
+                  <div class="flex justify-between">
+                      <span style="color: var(--color-yellow-75); opacity: 0.6;">Swing High</span>
+                      <span class="font-bold" style="color: var(--color-yellow-75);">$${analysis.structure.swingHigh.toLocaleString()}</span>
+                  </div>
+                ` : ''}
+                  ${analysis.structure.swingLow ? `
+                  <div class="flex justify-between">
+                      <span style="color: var(--color-yellow-75); opacity: 0.6;">Swing Low</span>
+                      <span class="font-bold" style="color: var(--color-yellow-75);">$${analysis.structure.swingLow.toLocaleString()}</span>
+                  </div>
+                ` : ''}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+        `;
+      }).join('');
+      
+      // Create formatted trade call output (text file format)
+      // Check both original trade signal and active template signal
+      const currentStrategyIndex = strategyStates[symbol] || 0;
+      const currentStrategy = strategyOptions[currentStrategyIndex];  // Use strategyOptions, not tradeTemplates keys
+      
+      let templateSignal;
+      if (currentStrategy === 'MicroScalp') {
+        // For Micro-Scalp, use the microScalp signal from API if available
+        if (data.microScalp && data.microScalp.valid) {
+          templateSignal = {
+            valid: true,
+            direction: data.microScalp.direction,
+            confidence: data.microScalp.confidence,
+            entryZone: data.microScalp.entry,
+            stopLoss: data.microScalp.stopLoss,
+            targets: data.microScalp.targets,
+            riskReward: data.microScalp.riskReward,
+            invalidationLevel: data.microScalp.invalidation_level,
+            setupType: 'MicroScalp',
+            reason: data.microScalp.reason
+          };
+        } else {
+          templateSignal = {
+            valid: false,
+            direction: 'NO_TRADE',
+            reason: '1H/15m/5m conditions not met for micro-scalp',
+            setupType: 'MicroScalp'
+          };
+        }
+      } else {
+        // Get backend strategy for current strategy
+        templateSignal = getActiveSignal(symbol, currentStrategy);
+      }
+      
+      // Use backend signal if available, otherwise fall back to legacy signal
+      const tradeSignal = templateSignal || (data.signal || data.tradeSignal);
+      let tradeCallHtml = '';
+      
+      if (tradeSignal && tradeSignal.valid) {
+        const direction = tradeSignal.direction.toUpperCase();
+        const setupType = tradeSignal.setupType ? tradeSignal.setupType.toUpperCase() : '4H';
+        const confidence = tradeSignal.confidence ? (tradeSignal.confidence * 100).toFixed(0) : '0';
+        const directionIcon = direction === 'LONG' ? '🟢⬆️' : direction === 'SHORT' ? '🔴⬇️' : '⚪';
+        const directionColor = direction === 'LONG' ? '#22c55e' : direction === 'SHORT' ? '#ef4444' : '#9ca3af';
+        
+        // Handle both API format (entry_zone) and template format (entryZone)
+        const entryZone = tradeSignal.entryZone || tradeSignal.entry_zone || {};
+        const entryMin = entryZone.min ? `$${entryZone.min.toLocaleString()}` : 'N/A';
+        const entryMax = entryZone.max ? `$${entryZone.max.toLocaleString()}` : 'N/A';
+        
+        const stopLoss = (tradeSignal.stopLoss || tradeSignal.stop_loss) ? 
+          `$${(tradeSignal.stopLoss || tradeSignal.stop_loss).toLocaleString()}` : 'N/A';
+        
+        const invalidationLevel = tradeSignal.invalidationLevel || tradeSignal.invalidation_level;
+        const invalidation = invalidationLevel ? `$${invalidationLevel.toLocaleString()}` : stopLoss;
+        
+        // Handle both array format and object format for targets
+        const targets = tradeSignal.targets || {};
+        const tp1 = (targets.tp1 || targets[0]) ? `$${(targets.tp1 || targets[0]).toLocaleString()}` : 'N/A';
+        const tp2 = (targets.tp2 || targets[1]) ? `$${(targets.tp2 || targets[1]).toLocaleString()}` : 'N/A';
+        const tp3 = (targets.tp3 || targets[2]) ? `$${(targets.tp3 || targets[2]).toLocaleString()}` : null;  // Swing trades have TP3
+        
+        const riskReward = tradeSignal.riskReward || tradeSignal.risk_reward || {};
+        const rr1 = riskReward.tp1RR || 1.0;
+        const rr2 = riskReward.tp2RR || 2.0;
+        const rr3 = riskReward.tp3RR || null;  // Swing: 5.0, others: null
+        
+        const riskAmt = tradeSignal.riskAmount || tradeSignal.risk_amount;
+        const riskAmount = riskAmt ? `$${riskAmt.toLocaleString()}` : 'N/A';
+        
+        const reason = tradeSignal.reason_summary || tradeSignal.reason || 'Trade setup detected';
+        
+        // Build confluence bullets
+        const tf4h = data.analysis?.['4h'];
+        const tf1h = data.analysis?.['1h'];
+        
+        const trendAlignment = tf4h && tf1h ? 
+          `${tf4h.indicators?.analysis?.trend || 'UNKNOWN'} on 4H, ${tf1h.indicators?.analysis?.trend || 'UNKNOWN'} on 1H` : 
+          'HTF trend analysis';
+        
+        const stochMomentum = tf4h?.indicators?.stochRSI?.condition || 'N/A';
+        const pullbackState = tf4h?.indicators?.analysis?.pullbackState || 'N/A';
+        const distanceFrom21 = tf4h?.indicators?.analysis?.distanceFrom21EMA ? 
+          `${Math.abs(tf4h.indicators.analysis.distanceFrom21EMA).toFixed(2)}% from 21 EMA` : 
+          'Price positioning';
+        
+        // Conditions required
+        const conditionsRequired = [];
+        if (setupType === 'SWING') {
+          conditionsRequired.push('✓ 3D stoch oversold/overbought pivot');
+          conditionsRequired.push('✓ 1D reclaim/rejection of key level');
+          conditionsRequired.push('✓ 4H trend supportive');
+          conditionsRequired.push('✓ Price in ENTRY_ZONE on 15m/5m');
+        } else if (setupType === 'SCALP') {
+          conditionsRequired.push('✓ 4H trend clear (not FLAT)');
+          conditionsRequired.push('✓ 1H aligned with 4H');
+          conditionsRequired.push('✓ 15m & 5m stoch curl in direction');
+          conditionsRequired.push('✓ Price in ENTRY_ZONE');
+          conditionsRequired.push('✓ 1m confirms (noise filter)');
+        } else if (setupType === 'MICROSCALP') {
+          conditionsRequired.push('✓ 1H trending (not FLAT)');
+          conditionsRequired.push('✓ 1H pullback in ENTRY_ZONE or RETRACING');
+          conditionsRequired.push('✓ 15m within ±0.25% of 21 EMA');
+          conditionsRequired.push('✓ 5m within ±0.25% of 21 EMA');
+          conditionsRequired.push('✓ Stoch aligned on both 15m & 5m');
+          conditionsRequired.push('⚠️ Disregards 4H trend - independent strategy');
+        } else {
+          conditionsRequired.push('✓ 4H trend clear (not FLAT)');
+          conditionsRequired.push('✓ 1H confirmation');
+          conditionsRequired.push('✓ Price near 21 EMA');
+          conditionsRequired.push('✓ Stoch aligned');
+        }
+        
+        const riskPercent = tradeSignal.risk_amount || riskAmt ? 
+          ((tradeSignal.risk_amount || riskAmt) / (entryZone.min || 1) * 100).toFixed(2) : 'N/A';
+        const rewardPercent1 = rr1 * parseFloat(riskPercent);
+        const rewardPercent2 = rr2 * parseFloat(riskPercent);
+        
+        tradeCallHtml = `
+          <div class="trade-call-output" style="margin-bottom: 1.5rem; padding: 1.5rem; background-color: rgba(0, 0, 0, 0.6); border-radius: var(--radius-md); font-family: var(--font-system); backdrop-filter: blur(10px); border-left: 4px solid ${directionColor};">
+            <!-- Header -->
+            <div style="margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 1rem;">
+              <h2 style="font-size: clamp(1.25rem, 4vw, 1.75rem); font-weight: bold; color: var(--color-yellow-75); margin-bottom: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; font-family: var(--font-mathias);">
+                ${symbol.replace('USDT', '')} — ${direction} (${setupType})
+              </h2>
+              <!-- Key Metrics Grid -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <div>
+                  <div style="color: var(--color-yellow-75); font-size: 0.75rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mathias);">Confidence</div>
+                  <div style="color: ${directionColor}; font-size: 1.5rem; font-weight: bold;">${confidence}%</div>
+                </div>
+                <div>
+                  <div style="color: var(--color-yellow-75); font-size: 0.75rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mathias);">Direction</div>
+                  <div style="color: ${directionColor}; font-size: 1.25rem; font-weight: bold;">${directionIcon} ${direction}</div>
+                </div>
+                <div>
+                  <div style="color: var(--color-yellow-75); font-size: 0.75rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mathias);">Setup Type</div>
+                  <div style="color: var(--color-yellow-75); font-size: 1rem; font-weight: bold;">${
+                    setupType === 'SWING' ? 'Swing Trade' :
+                    setupType === 'SCALP' ? '1H Scalp' :
+                    setupType === 'MICROSCALP' ? 'Micro Scalp' :
+                    setupType === '4H' ? '4H Trend Play' :
+                    '4H Trend Play'
+                  }</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Editorial Grid Layout -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+              <!-- Left Column: Entry & Risk -->
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                  <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">Entry</div>
+                  <div style="color: var(--color-yellow-75); font-size: 1.125rem; font-weight: bold; line-height: 1.2;">${entryMin} – ${entryMax}</div>
+                </div>
+                
+                <div>
+                  <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">Stop Loss</div>
+                  <div style="color: ${direction === 'LONG' ? '#ef4444' : '#22c55e'}; font-size: 1.125rem; font-weight: bold;">${stopLoss}</div>
+                </div>
+                
+                <div>
+                  <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">Risk / Reward</div>
+                  <div style="color: #22c55e; font-size: 1rem; font-weight: bold; line-height: 1.4;">
+                    ${rr1}R to ${rr2}R${tp3 ? ` to ${rr3}R` : ''}
+                    <div style="color: var(--color-yellow-75); font-size: 0.875rem; margin-top: 0.25rem;">${riskPercent}% risk → ${rewardPercent1.toFixed(1)}% reward</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Right Column: Targets & Analysis -->
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                  <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;">Targets</div>
+                  <div style="color: var(--color-yellow-75); font-size: 0.875rem; font-weight: bold; line-height: 1.6;">
+                    <div>TP1 (${rr1}R): ${tp1}</div>
+                    <div style="margin-top: 0.25rem;">TP2 (${rr2}R): ${tp2}</div>
+                    ${tp3 ? `<div style="margin-top: 0.25rem;">TP3 (${rr3}R): ${tp3}</div>` : ''}
+                  </div>
+                </div>
+                
+                <div>
+                  <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;">Invalidation</div>
+                  <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.5;">
+                    <div style="margin-bottom: 0.5rem;">
+                      ${setupType === 'SWING' ? 'HTF invalidation indicates macro trend shifted.' : 
+                        setupType === 'SCALP' ? 'LTF invalidation means scalp failed.' : 
+                        setupType === 'MICROSCALP' ? 'Exit immediately if wrong - high risk countertrend.' :
+                        'Structure break invalidates setup.'}
+                    </div>
+                    <div><strong>Level:</strong> ${invalidation} (${direction === 'LONG' ? 'close below' : 'close above'})</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Full Width: Confluence Analysis -->
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">Why This Trade</div>
+              <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.8;">
+                <div style="margin-bottom: 0.5rem; color: rgba(255, 255, 255, 0.85);">Clear explanation of confluence:</div>
+                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                  <div><span style="color: rgba(255, 255, 255, 0.5);">–</span> Trend alignment: ${trendAlignment}</div>
+                  <div><span style="color: rgba(255, 255, 255, 0.5);">–</span> Stoch momentum: ${stochMomentum}</div>
+                  <div><span style="color: rgba(255, 255, 255, 0.5);">–</span> Pullback state: ${pullbackState}</div>
+                  <div><span style="color: rgba(255, 255, 255, 0.5);">–</span> Liquidity zones: ${distanceFrom21}</div>
+                  <div><span style="color: rgba(255, 255, 255, 0.5);">–</span> HTF confirmation: ${tf4h?.indicators?.analysis?.trend || 'N/A'} 4H trend${setupType === 'MICROSCALP' ? ' (disregarded for micro-scalp)' : ''}</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Full Width: Conditions -->
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">Conditions Required</div>
+              <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.8; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.5rem;">
+                ${conditionsRequired.map(cond => `<div style="color: rgba(255, 255, 255, 0.7);">${cond}</div>`).join('')}
+              </div>
+            </div>
+            
+            <!-- Full Width: Time Horizon -->
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">How Long to Hold This Setup</div>
+              <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.6;">
+                ${setupType === 'SWING' ? 'This is a multi-day swing play. Expect movement within 1–5 days. Requires waiting for daily/4H closes to confirm progression.' :
+                  setupType === 'SCALP' ? 'Short-duration 1H–4H play. Expect movement within 2–8 hours. Monitor 1H and 4H closes.' :
+                  setupType === 'MICROSCALP' ? 'Ultra-short 15m–1H scalp. Expect movement within 15 minutes to 2 hours. Watch candle-by-candle.' :
+                  'Standard 4H trend play. Expect movement within 4–12 hours. Check every 1H or 4H close.'}
+              </div>
+            </div>
+            
+            <!-- Full Width: Monitoring Requirement -->
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">How Close It Must Be Monitored</div>
+              <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.6;">
+                ${setupType === 'SWING' ? 'Low-touch swing setup — can be checked every 4–12 hours unless invalidation is close. Set alerts for key levels.' :
+                  setupType === 'SCALP' ? 'Normal risk — check every 15–30 minutes during active hours. Tighten stops if momentum stalls.' :
+                  setupType === 'MICROSCALP' ? 'High-risk scalp — must be watched candle-to-candle on 15m or 5m. Use tight stops and quick exits.' :
+                  'Standard monitoring — check every 1–2 hours during active sessions. Adjust if 4H shows weakness.'}
+              </div>
+            </div>
+            
+            <!-- Full Width: Chop Guidance -->
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">Recommended Action If Price Chops</div>
+              <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.6;">
+                ${setupType === 'SWING' ? 'Cut early if daily stoch flips against trend or if 4H loses key structure. Do not hold through major macro shifts.' :
+                  setupType === 'SCALP' ? 'Exit early if 1H stoch flips against trend or if we lose EMA21 with momentum. Do not hold if liquidity sweeps both sides.' :
+                  setupType === 'MICROSCALP' ? 'Cut immediately if 15m breaks entry zone or if stoch crosses against you. Do not wait — this is a precision scalp.' :
+                  'Exit if 4H closes against trend or if 1H momentum stalls. Cut early if liquidity sweeps both sides.'}
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (tradeSignal && !tradeSignal.valid) {
+        // Show NO TRADE format with ALL sections (full format)
+        const reason = tradeSignal.reason_summary || tradeSignal.reason || 'Setup requirements not met';
+        const setupType = tradeSignal.setupType ? tradeSignal.setupType.toUpperCase() : currentStrategy.toUpperCase();
+        const confidence = tradeSignal.confidence || 0;
+        
+        // Get current timeframe data for context
+        const tf4h = data.analysis?.['4h'];
+        const tf1h = data.analysis?.['1h'];
+        const tf15m = data.analysis?.['15m'];
+        const tf5m = data.analysis?.['5m'];
+        
+        const trend4h = tf4h?.indicators?.analysis?.trend || 'UNKNOWN';
+        const trend1h = tf1h?.indicators?.analysis?.trend || 'UNKNOWN';
+        const stoch4h = tf4h?.indicators?.stochRSI?.condition || 'NEUTRAL';
+        const stoch1h = tf1h?.indicators?.stochRSI?.condition || 'NEUTRAL';
+        const pullback4h = tf4h?.indicators?.analysis?.pullbackState || 'UNKNOWN';
+        const distanceFrom21 = tf4h?.indicators?.analysis?.distanceFrom21EMA ? 
+          `${tf4h.indicators.analysis.distanceFrom21EMA.toFixed(2)}%` : 'N/A';
+        
+        // Conditions that would need to be met - use API data if available, otherwise default
+        let conditionsRequired = tradeSignal.conditionsRequired || [];
+        
+        // Fallback conditions if not provided by API
+        if (conditionsRequired.length === 0) {
+          if (setupType === 'auto' || setupType === 'AUTO') {
+            conditionsRequired = [
+              '⚠ Awaiting clean setup',
+              '• Swing: Needs 3D/1D/4H structure (4H not FLAT)',
+              '• 4H Trend: Needs 4H trending (UP or DOWN)',
+              '• 1H Scalp: Needs 1H trending + 15m pullback + stoch aligned',
+              '• Micro-Scalp: Needs 1H trending + 15m/5m within ±0.25% of EMA21'
+            ];
+          } else if (setupType === 'SWING' || setupType === 'swing') {
+            conditionsRequired = [
+              '✓ 3D stoch oversold/overbought pivot',
+              '✓ 1D reclaim/rejection of key level',
+              '✓ 4H trend supportive (not FLAT)',
+              '✓ Price in ENTRY_ZONE on 15m/5m'
+            ];
+          } else if (setupType === 'SCALP' || setupType === '1hScalp') {
+            conditionsRequired = [
+              '✓ 1H trend clear (UPTREND or DOWNTREND)',
+              '✓ Price near 21 EMA on 1H (±2%) and 15m (±1.5%)',
+              '✓ 15m Stoch aligned with 1H trend',
+              '✓ 4H disregarded (scalp uses 1H bias)'
+            ];
+          } else if (setupType === 'MicroScalp' || setupType === 'microScalp') {
+            conditionsRequired = [
+              '✓ 1H trending (not FLAT)',
+              '✓ 15m within ±0.25% of 21 EMA',
+              '✓ 5m within ±0.25% of 21 EMA',
+              '✓ Stoch aligned on both 15m & 5m',
+              '⚠️ Disregards 4H trend entirely'
+            ];
+          } else if (setupType === 'AGGRO_SCALP_1H') {
+            conditionsRequired = [
+              '⚠ AGGRESSIVE MODE: Counter-trend scalp with reduced size',
+              '✓ 1H trend UPTREND/DOWNTREND or FLAT (allows FLAT)',
+              '✓ 15m within ±2.5% of EMA21 (wider than standard)',
+              '✓ 15m stoch supportive (not extreme)',
+              '✓ Position size: 0.5% risk (half of standard)',
+              '⚠ Exit immediately if wrong - tight invalidation'
+            ];
+          } else if (setupType === 'AGGRO_MICRO_SCALP') {
+            conditionsRequired = [
+              '⚠ AGGRESSIVE MODE: LTF counter-scalp with minimal size',
+              '✓ 1H trending',
+              '✓ 15m within ±0.75% of EMA21 (3x standard band)',
+              '✓ 5m within ±0.75% of EMA21',
+              '✓ At least one stoch oversold/overbought',
+              '✓ Position size: 0.33% risk (1/3 of standard)'
+            ];
+          } else {
+            conditionsRequired = [
+              '✓ 4H trend clear (UPTREND or DOWNTREND)',
+              '✓ 1H confirmation',
+              '✓ Price near 21 EMA',
+              '✓ Stoch aligned'
+            ];
+          }
+        }
+        
+        tradeCallHtml = `
+          <div class="trade-call-output" style="margin-bottom: 1.5rem; padding: 1.5rem; background-color: rgba(0, 0, 0, 0.6); border-radius: var(--radius-md); font-family: var(--font-system); backdrop-filter: blur(10px); border-left: 4px solid #9ca3af;">
+            <!-- Header -->
+            <div style="margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 1rem;">
+              <h2 style="font-size: clamp(1.25rem, 4vw, 1.75rem); font-weight: bold; color: #6b7280; margin-bottom: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; font-family: var(--font-mathias);">
+                ${symbol.replace('USDT', '')} — NO TRADE (${setupType})
+              </h2>
+              <div style="color: rgba(255, 255, 255, 0.5); font-size: 0.875rem;">
+                NO VALID SETUP AT THIS TIME
+              </div>
+              <!-- Key Metrics Grid -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <div>
+                  <div style="color: var(--color-yellow-75); font-size: 0.75rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mathias);">Confidence</div>
+                  <div style="color: #6b7280; font-size: 1.5rem; font-weight: bold;">${confidence}%</div>
+                </div>
+                <div>
+                  <div style="color: var(--color-yellow-75); font-size: 0.75rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mathias);">Direction</div>
+                  <div style="color: #6b7280; font-size: 1.25rem; font-weight: bold;">⚪ NO TRADE</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Reason Section -->
+            <div style="margin-bottom: 1.5rem; padding: 1rem; background-color: rgba(255, 255, 255, 0.05); border-radius: var(--radius-md); border-left: 3px solid #6b7280;">
+              <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;">Reason</div>
+              <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.6;">${reason}</div>
+            </div>
+            
+            <!-- Current Market Analysis -->
+            <div style="margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;">Current Market Analysis</div>
+              <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.8;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem;">
+                  <div><span style="color: rgba(255, 255, 255, 0.5);">–</span> 4H Trend: ${trend4h}</div>
+                  <div><span style="color: rgba(255, 255, 255, 0.5);">–</span> 1H Trend: ${trend1h}</div>
+                  <div><span style="color: rgba(255, 255, 255, 0.5);">–</span> 4H Stoch: ${stoch4h}</div>
+                  <div><span style="color: rgba(255, 255, 255, 0.5);">–</span> 1H Stoch: ${stoch1h}</div>
+                  <div><span style="color: rgba(255, 255, 255, 0.5);">–</span> Pullback: ${pullback4h}</div>
+                  <div><span style="color: rgba(255, 255, 255, 0.5);">–</span> Zone: ${distanceFrom21}</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Conditions Required -->
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;">Conditions Required Before Entry</div>
+              <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.8; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.5rem;">
+                ${conditionsRequired.map(cond => `<div style="color: rgba(255, 255, 255, 0.7);">${cond}</div>`).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (data.microScalp && data.microScalp.valid) {
+        // Show MICRO-SCALP trade call (LTF mean-reversion setup)
+        const direction = data.microScalp.direction.toUpperCase();
+        const directionColor = direction === 'LONG' ? '#22c55e' : direction === 'SHORT' ? '#ef4444' : '#9ca3af';
+        const directionIcon = direction === 'LONG' ? '🟢⬆️' : '🔴⬇️';
+        const confidence = data.microScalp.confidence;
+        const entryMin = `$${data.microScalp.entry.min.toLocaleString()}`;
+        const entryMax = `$${data.microScalp.entry.max.toLocaleString()}`;
+        const stopLoss = `$${data.microScalp.stopLoss.toLocaleString()}`;
+        const tp1 = `$${data.microScalp.targets.tp1.toLocaleString()}`;
+        const tp2 = `$${data.microScalp.targets.tp2.toLocaleString()}`;
+        const rr1 = data.microScalp.riskReward.tp1RR;
+        const rr2 = data.microScalp.riskReward.tp2RR;
+        const invalidation = `$${data.microScalp.invalidation_level.toLocaleString()}`;
+        const reason = data.microScalp.reason;
+        
+        tradeCallHtml = `
+          <div class="trade-call-output" style="margin-bottom: 1.5rem; padding: 1.5rem; background-color: rgba(0, 0, 0, 0.6); border-radius: var(--radius-md); font-family: var(--font-system); backdrop-filter: blur(10px); border-left: 4px solid ${directionColor};">
+            <!-- Header -->
+            <div style="margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 1rem;">
+              <h2 style="font-size: clamp(1.25rem, 4vw, 1.75rem); font-weight: bold; color: ${directionColor}; margin-bottom: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; font-family: var(--font-mathias);">
+                ${symbol.replace('USDT', '')} — ${direction} (MICRO-SCALP)
+              </h2>
+              <div style="background-color: rgba(255, 193, 7, 0.15); border: 1px solid #ffc107; border-radius: var(--radius-sm); padding: 0.75rem; margin-top: 0.75rem;">
+                <p style="color: #ffc107; font-size: 0.875rem; margin: 0; letter-spacing: 0.02em;">⚡ LOWER TIMEFRAME TRADE – Quick scalp when 4H is FLAT</p>
+              </div>
+              <!-- Key Metrics Grid -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <div>
+                  <div style="color: var(--color-yellow-75); font-size: 0.75rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mathias);">Confidence</div>
+                  <div style="color: ${directionColor}; font-size: 1.5rem; font-weight: bold;">${confidence}%</div>
+                </div>
+                <div>
+                  <div style="color: var(--color-yellow-75); font-size: 0.75rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mathias);">Direction</div>
+                  <div style="color: ${directionColor}; font-size: 1.25rem; font-weight: bold;">${directionIcon} ${direction}</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Editorial Grid Layout -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+              <!-- Left Column: Entry & Risk -->
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                  <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">Entry</div>
+                  <div style="color: var(--color-yellow-75); font-size: 1.125rem; font-weight: bold; line-height: 1.2;">${entryMin} – ${entryMax}</div>
+                  <div style="color: rgba(255, 255, 255, 0.5); font-size: 0.75rem; margin-top: 0.25rem;">Avg 15m & 5m EMA21</div>
+                </div>
+                
+                <div>
+                  <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">Stop Loss</div>
+                  <div style="color: ${direction === 'LONG' ? '#ef4444' : '#22c55e'}; font-size: 1.125rem; font-weight: bold;">${stopLoss}</div>
+                  <div style="color: rgba(255, 255, 255, 0.5); font-size: 0.75rem; margin-top: 0.25rem;">${direction === 'LONG' ? 'Below' : 'Above'} 15m/5m swings</div>
+                </div>
+                
+                <div>
+                  <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">Risk / Reward</div>
+                  <div style="color: #22c55e; font-size: 1rem; font-weight: bold;">${rr1}R to ${rr2}R targets</div>
+                </div>
+              </div>
+              
+              <!-- Right Column: Targets & Analysis -->
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                  <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;">Targets</div>
+                  <div style="color: var(--color-yellow-75); font-size: 0.875rem; font-weight: bold; line-height: 1.6;">
+                    <div>TP1 (${rr1}R): ${tp1}</div>
+                    <div style="margin-top: 0.25rem;">TP2 (${rr2}R): ${tp2}</div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;">Invalidation</div>
+                  <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.5;">
+                    ${data.microScalp.invalidation_description}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Full Width: Why This Trade -->
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mathias);">Why This Trade</div>
+              <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.7;">
+                ${reason}
+              </div>
+            </div>
+            
+            <!-- Full Width: Conditions -->
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <div style="color: var(--color-yellow-75); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;">Conditions Met</div>
+              <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.8; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.5rem;">
+                <div style="color: rgba(255, 255, 255, 0.7);">✓ 1H trending (not FLAT)</div>
+                <div style="color: rgba(255, 255, 255, 0.7);">✓ 1H pullback near entry zone</div>
+                <div style="color: rgba(255, 255, 255, 0.7);">✓ 15m & 5m within 0.25% of EMA21</div>
+                <div style="color: rgba(255, 255, 255, 0.7);">✓ 15m & 5m stoch aligned</div>
+                <div style="color: rgba(255, 255, 255, 0.7);">✓ Tight confluence for quick scalp</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      detailsRow.innerHTML = `
+        <td colspan="5">
+          <div class="details-content-wrapper">
+            <!-- AI Reasoning Agent Section - TOP OF DETAILS -->
+            <div id="ai-review-section-${symbol}" style="margin-bottom: 1.5rem; padding: 1.5rem; background-color: rgba(0, 0, 0, 0.6); border-radius: var(--radius-md); font-family: var(--font-system); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1);">
+              <div id="ai-review-content-${symbol}">
+                <!-- Loading state (will be replaced by AI response) -->
+                <div style="display: flex; align-items: center; gap: 0.75rem; padding: 2rem; justify-content: center;">
+                  <img src="/logos/load.gif" alt="Loading" style="width: 140px; height: auto;">
+                  <span style="color: var(--color-yellow-75); font-size: 0.875rem; opacity: 0.7;">Analyzing Call</span>
+                </div>
+              </div>
+            </div>
+            
+            <style>
+              @keyframes spin {
+                to { transform: rotate(360deg); }
+              }
+            </style>
+            
+            ${tradeCallHtml}
+            
+            <div class="tf-grid">
+              ${tfCards}
+          </div>
+        </div>
+        </td>
+      `;
+      
+      return detailsRow;
+    }
+
+    // Helper functions for styling
+    function getStochColor(condition) {
+      const colors = {
+        'OVERBOUGHT': 'status-short',
+        'OVERSOLD': 'status-long',
+        'BULLISH': 'status-long',
+        'BEARISH': 'status-short',
+        'NEUTRAL': 'status-neutral'
+      };
+      return colors[condition] || 'status-neutral';
+    }
+
+    function getPullbackColor(state) {
+      const colors = {
+        'ENTRY_ZONE': 'status-long',
+        'OVEREXTENDED': 'style="color: #f59e0b;"',
+        'RETRACING': 'style="color: #3b82f6;"',
+        'UNKNOWN': 'status-neutral'
+      };
+      return colors[state] || 'status-neutral';
+    }
+
+    // Toggle details row
+    function toggleDetails(symbol) {
+      const detailsRow = document.getElementById(`details-${symbol}`);
+      const button = document.getElementById(`toggle-${symbol}`);
+      
+      if (detailsRow.classList.contains('expanded')) {
+        detailsRow.classList.remove('expanded');
+        button.textContent = 'DETAILS';
+      } else {
+        detailsRow.classList.add('expanded');
+        button.textContent = 'HIDE';
+      }
+    }
+
+
+    // Track this trade automatically - UNIFIED: Trade + Full Signal Snapshot
+    async function trackThisTrade(symbol) {
+      console.log(`🎯 Tracking trade for ${symbol}...`);
+      
+      // Determine current mode
+      const currentMode = aggressiveMode ? 'AGGRESSIVE' : 'STANDARD';
+      
+      // Fetch full rich symbol snapshot (all strategies, all timeframes, htfBias)
+      let signalSnapshot = null;
+      try {
+        console.log(`  Fetching full snapshot for ${symbol} (${currentMode})...`);
+        const response = await fetch(`/api/analyze-full?symbol=${symbol}&mode=${currentMode}`);
+        if (response.ok) {
+          signalSnapshot = await response.json();
+          console.log(`  ✅ Got snapshot from API: bestSignal=${signalSnapshot.bestSignal || 'null'}`);
+        } else {
+          throw new Error(`API returned ${response.status}`);
+        }
+      } catch (error) {
+        console.warn(`  ⚠️ API failed, using fallback:`, error.message);
+        // Fallback to building from scanResults
+        signalSnapshot = buildRichSymbolFromScanResults(symbol, currentMode);
+        if (!signalSnapshot) {
+          alert(`No data available for ${symbol}. Please wait for scan to complete.`);
+          return;
+        }
+        console.log(`  ✅ Built snapshot from fallback: bestSignal=${signalSnapshot.bestSignal || 'null'}`);
+      }
+      
+      // Pick the strategy to trade (use bestSignal or user-selected strategy)
+      const selectedStrategyIndex = strategyStates[symbol] || 0;
+      const strategyOptions = ['4h', 'Swing', 'Scalp', 'MicroScalp'];
+      const strategyMap = { '4h': 'TREND_4H', 'Swing': 'SWING', 'Scalp': 'SCALP_1H', 'MicroScalp': 'MICRO_SCALP' };
+      const selectedStrategyKey = strategyOptions[selectedStrategyIndex];
+      const strategyName = strategyMap[selectedStrategyKey] || signalSnapshot.bestSignal || 'TREND_4H';
+      
+      const strategy = signalSnapshot.strategies[strategyName];
+      
+      if (!strategy || !strategy.valid) {
+        alert(`No valid ${strategyName} signal for ${symbol.replace('USDT', '')}. Cannot track without a valid signal.`);
+        return;
+      }
+      
+      // Extract trade details from the selected strategy
+      const direction = (strategy.direction || 'long').toUpperCase();
+      const entryZone = strategy.entryZone || { min: null, max: null };
+      const entryMin = entryZone.min || 0;
+      const entryMax = entryZone.max || 0;
+      const entryAverage = entryMin > 0 && entryMax > 0 ? (entryMin + entryMax) / 2 : signalSnapshot.currentPrice || 0;
+      
+      const stopLoss = strategy.stopLoss || 0;
+      const targets = Array.isArray(strategy.targets) ? strategy.targets : [];
+      const tp1 = targets[0] || null;
+      const tp2 = targets[1] || null;
+      const invalidationLevel = strategy.invalidationLevel || stopLoss;
+      
+      // Determine status (PENDING if price not in entry zone, ACTIVE if in zone)
+      const currentPrice = signalSnapshot.currentPrice || 0;
+      let status = 'PENDING';
+      
+      if (currentPrice > 0 && entryMin > 0 && entryMax > 0) {
+        if (direction === 'LONG' && currentPrice >= entryMin && currentPrice <= entryMax) {
+          status = 'ACTIVE';
+        } else if (direction === 'SHORT' && currentPrice >= entryMin && currentPrice <= entryMax) {
+          status = 'ACTIVE';
+        }
+      }
+      
+      // Build unified trade object (trade fields + full signalSnapshot)
+      const trackedTrade = {
+        id: Date.now(),
+        symbol: symbol,
+        mode: signalSnapshot.mode, // SAFE / AGGRESSIVE
+        strategyName: strategyName, // e.g., "TREND_4H"
+        direction: direction,
+        entry: parseFloat(entryAverage.toFixed(2)),
+        entryZone: {
+          min: entryMin,
+          max: entryMax
+        },
+        stopLoss: stopLoss,
+        invalidationLevel: invalidationLevel,
+        target1: tp1,
+        target2: tp2,
+        strategy: strategyName, // Keep for backward compatibility
+        playbook: `${strategyName} ${direction}`, // e.g., "TREND_4H LONG"
+        riskPercent: 1,
+        confidence: strategy.confidence || 0,
+        notes: `Auto-tracked from ${symbol.replace('USDT', '')} ${strategyName} signal`,
+        journal: `Auto-tracked from ${symbol.replace('USDT', '')} signal\n\nSetup: ${strategyName}\nConfidence: ${strategy.confidence || 0}%\nReason: ${strategy.reason || 'No reason provided'}`,
+        imageUrl: null,
+        trackedAt: Date.now(),
+        entryTime: new Date().toISOString(),
+        status: status,
+        exitPrice: null,
+        exitTime: null,
+        outcome: null,
+        autoTracked: true,
+        // 🔽 THE BIG ONE: Full signal snapshot (entire symbol object with all strategies, timeframes, htfBias)
+        signalSnapshot: signalSnapshot,
+        review: {
+          whatWentRight: '',
+          whatWentWrong: '',
+          performanceSummary: ''
+        },
+        monitorZones: {
+          invalidation: invalidationLevel,
+          entryMin: entryMin,
+          entryMax: entryMax
+        }
+      };
+      
+      // Store in localStorage for tracker to pick up
+      const tradeJSON = JSON.stringify(trackedTrade);
+      localStorage.setItem('pendingTradeToTrack', tradeJSON);
+      
+      console.log('📊 Unified trade object (trade + snapshot):', trackedTrade);
+      console.log('💾 Stored in localStorage');
+      
+      // Redirect to tracker
+      console.log('🔀 Redirecting to tracker with autoTrack=true');
+      window.location.href = '/tracker.html?autoTrack=true';
+    }
+
+    // Copy single coin view - UNIFIED: Trade + Full Signal Snapshot (ONE COIN ONLY)
+    async function copyCoinView(symbol) {
+      console.log(`📋 Copying ${symbol} with unified format (trade + full snapshot)...`);
+      
+      // Determine current mode
+      const currentMode = aggressiveMode ? 'AGGRESSIVE' : 'STANDARD';
+      
+      // Fetch full rich symbol snapshot for THIS COIN ONLY
+      let signalSnapshot = null;
+      try {
+        const response = await fetch(`/api/analyze-full?symbol=${symbol}&mode=${currentMode}`);
+        if (response.ok) {
+          signalSnapshot = await response.json();
+        } else {
+          throw new Error(`API returned ${response.status}`);
+        }
+      } catch (error) {
+        console.warn(`API failed, using fallback:`, error.message);
+        signalSnapshot = buildRichSymbolFromScanResults(symbol, currentMode);
+        if (!signalSnapshot) {
+          alert(`No data available for ${symbol}. Please wait for scan to complete.`);
+          return;
+        }
+      }
+      
+      // Pick the strategy (use bestSignal or user-selected)
+      const selectedStrategyIndex = strategyStates[symbol] || 0;
+      const strategyOptions = ['4h', 'Swing', 'Scalp', 'MicroScalp'];
+      const strategyMap = { '4h': 'TREND_4H', 'Swing': 'SWING', 'Scalp': 'SCALP_1H', 'MicroScalp': 'MICRO_SCALP' };
+      const selectedStrategyKey = strategyOptions[selectedStrategyIndex];
+      const strategyName = strategyMap[selectedStrategyKey] || signalSnapshot.bestSignal || 'TREND_4H';
+      
+      const strategy = signalSnapshot.strategies[strategyName];
+      
+      // Build unified payload: trade fields + full signalSnapshot
+      // Matches the exact structure: symbol, mode, htfBias, strategies, bestSignal, currentPrice, generatedAt, timeframes
+      const unifiedPayload = {
+        // Core symbol data (ONE COIN ONLY)
+        symbol: signalSnapshot.symbol,
+        mode: signalSnapshot.mode, // SAFE / AGGRESSIVE
+        currentPrice: signalSnapshot.currentPrice,
+        htfBias: signalSnapshot.htfBias,
+        timeframes: signalSnapshot.timeframes,
+        strategies: signalSnapshot.strategies,
+        bestSignal: signalSnapshot.bestSignal, // Currently null if no valid strategy
+        schemaVersion: signalSnapshot.schemaVersion || '1.0.0',
+        generatedAt: signalSnapshot.generatedAt,
+        
+        // Trade fields (from selected strategy, if valid)
+        strategyName: strategyName,
+        direction: strategy?.direction || 'NO_TRADE',
+        entryZone: strategy?.entryZone || { min: null, max: null },
+        stopLoss: strategy?.stopLoss || null,
+        targets: strategy?.targets || [],
+        confidence: strategy?.confidence || 0,
+        reason: strategy?.reason || 'No trade available',
+        
+        // Full signal snapshot for journaling/analytics (self-reference for convenience)
+        signalSnapshot: signalSnapshot
+      };
+      
+      const jsonString = JSON.stringify(unifiedPayload, null, 2);
+      
+      navigator.clipboard.writeText(jsonString).then(() => {
+        showCopySuccess(`${symbol.replace('USDT', '')} COPIED!`);
+        console.log(`✅ ${symbol} copied (unified format: ONE COIN, trade + snapshot)`);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy');
+      });
+    }
+
+    // Convert rich symbol from /api/analyze-full to legacy format for backward compatibility
+    function convertRichSymbolToLegacy(richSymbol) {
+      if (!richSymbol) return null;
+      
+      // Extract best signal strategy
+      const bestStrategy = richSymbol.bestSignal 
+        ? richSymbol.strategies[richSymbol.bestSignal]
+        : null;
+      
+      // Build legacy signal format
+      const legacySignal = bestStrategy && bestStrategy.valid ? {
+        valid: true,
+        direction: bestStrategy.direction,
+        confidence: bestStrategy.confidence,
+        reason: bestStrategy.reason,
+        entryZone: bestStrategy.entryZone,
+        stopLoss: bestStrategy.stopLoss,
+        invalidationLevel: bestStrategy.invalidationLevel,
+        targets: bestStrategy.targets,
+        riskReward: bestStrategy.riskReward,
+        setupType: richSymbol.bestSignal === 'TREND_4H' ? '4h' :
+                   richSymbol.bestSignal === 'SWING' ? 'Swing' :
+                   richSymbol.bestSignal === 'SCALP_1H' ? 'Scalp' :
+                   richSymbol.bestSignal === 'MICRO_SCALP' ? 'MicroScalp' : 'auto'
+      } : {
+        valid: false,
+        direction: 'NO_TRADE',
+        confidence: 0,
+        reason: 'No valid strategy available'
+      };
+      
+      // Build analysis structure from timeframes
+      const analysis = {};
+      if (richSymbol.timeframes) {
+        for (const [tf, tfData] of Object.entries(richSymbol.timeframes)) {
+          analysis[tf] = {
+            indicators: {
+              analysis: {
+                trend: tfData.trend || 'UNKNOWN',
+                pullbackState: tfData.pullback?.state || 'UNKNOWN',
+                distanceFrom21EMA: tfData.pullback?.distanceFrom21EMA || null
+              },
+              ema: {
+                ema21: tfData.ema21 || null,
+                ema200: tfData.ema200 || null
+              },
+              stochRSI: tfData.stochRsi || null
+            },
+            structure: tfData.structure || null
+          };
+        }
+      }
+      
+      return {
+        symbol: richSymbol.symbol,
+        currentPrice: richSymbol.currentPrice,
+        signal: legacySignal,
+        tradeSignal: legacySignal,
+        htfBias: richSymbol.htfBias,
+        analysis: analysis,
+        strategies: richSymbol.strategies,
+        bestSignal: richSymbol.bestSignal,
+        richSymbol: richSymbol // Keep reference to full rich symbol
+      };
+    }
+
+    // Build rich symbol object from existing scanResults data (fallback)
+    function buildRichSymbolFromScanResults(symbol, mode) {
+      const originalScanResults = scanResults;
+      const results = mode === 'STANDARD' ? scanResultsSafe : scanResultsAggressive;
+      scanResults = results; // Temporarily set for evaluateTemplateSignal
+      
+      const data = results[symbol];
+      if (!data) {
+        scanResults = originalScanResults;
+        return null;
+      }
+      
+      const strategies = {
+        SWING: null,
+        TREND_4H: null,
+        SCALP_1H: null,
+        MICRO_SCALP: null
+      };
+      
+      // Evaluate all strategies using existing frontend logic
+      const strategyKeys = ['Swing', '4h', 'Scalp', 'MicroScalp'];
+      const strategyNames = ['SWING', 'TREND_4H', 'SCALP_1H', 'MICRO_SCALP'];
+      
+      strategyKeys.forEach((key, idx) => {
+        // Get backend strategy directly (NO template evaluation) - this is fallback only
+        const strategyMap = {
+          '4h': 'TREND_4H',
+          'Swing': 'SWING',
+          'Scalp': 'SCALP_1H',
+          'MicroScalp': 'MICRO_SCALP'
+        };
+        const backendStrategyName = strategyMap[key];
+        const richSymbol = data?.richSymbol || data;
+        const backendStrategy = richSymbol?.strategies?.[backendStrategyName];
+        
+        // Use backend strategy if available, otherwise fall back to template evaluation (legacy)
+        const signal = backendStrategy ? {
+          valid: backendStrategy.valid || false,
+          direction: backendStrategy.direction || 'NO_TRADE',
+          confidence: typeof backendStrategy.confidence === 'number'
+            ? backendStrategy.confidence
+            : 0,
+          reason: backendStrategy.reason || 'No trade setup available',
+          entryZone: backendStrategy.entryZone || { min: null, max: null },
+          stopLoss: backendStrategy.stopLoss || null,
+          invalidationLevel: backendStrategy.invalidationLevel || null,
+          targets: backendStrategy.targets || [],
+          riskReward: backendStrategy.riskReward || { tp1RR: null, tp2RR: null }
+        } : evaluateTemplateSignal(symbol, key); // Legacy fallback only
+        
+        if (signal) {
+          strategies[strategyNames[idx]] = {
+            valid: signal.valid || false,
+            direction: signal.direction || 'NO_TRADE',
+            confidence: typeof signal.confidence === 'number'
+              ? Math.round(signal.confidence > 1 ? signal.confidence : signal.confidence * 100)
+              : 0,
+            reason: signal.reason || 'No trade setup available',
+            entryZone: signal.entryZone || { min: null, max: null },
+            stopLoss: signal.stopLoss || null,
+            invalidationLevel: signal.invalidationLevel || null,
+            targets: signal.targets 
+              ? (Array.isArray(signal.targets) 
+                  ? signal.targets.filter(t => t !== null && t !== undefined)
+                  : signal.targets.tp1 ? [signal.targets.tp1, signal.targets.tp2].filter(t => t !== null) : [])
+              : [],
+            riskReward: signal.riskReward || { tp1RR: null, tp2RR: null },
+            validationErrors: []
+          };
+        } else {
+          strategies[strategyNames[idx]] = {
+            valid: false,
+            direction: 'NO_TRADE',
+            confidence: 0,
+            reason: 'Strategy evaluation returned null',
+            entryZone: { min: null, max: null },
+            stopLoss: null,
+            invalidationLevel: null,
+            targets: [],
+            riskReward: { tp1RR: null, tp2RR: null },
+            validationErrors: []
+          };
+        }
+      });
+      
+      // Find best signal
+      const validStrategies = Object.entries(strategies)
+        .filter(([_, s]) => s && s.valid === true)
+        .map(([name, s]) => ({ name, confidence: s.confidence }));
+      
+      const bestSignal = validStrategies.length > 0
+        ? validStrategies.sort((a, b) => b.confidence - a.confidence)[0].name
+        : null;
+      
+      // Build htfBias from data
+      const htfBias = data.htfBias || { direction: 'neutral', confidence: 0, source: 'none' };
+      
+      // Build timeframes summary
+      const timeframes = {};
+      if (data.analysis) {
+        for (const [tf, tfData] of Object.entries(data.analysis)) {
+          if (tfData && tfData.indicators) {
+            const stoch = tfData.indicators.stochRSI || {};
+            let stochState = 'neutral';
+            if (stoch.k > 80 && stoch.d > 80) stochState = 'overbought';
+            else if (stoch.k < 20 && stoch.d < 20) stochState = 'oversold';
+            
+            timeframes[tf] = {
+              trend: (tfData.indicators.analysis?.trend || 'UNKNOWN').toLowerCase(),
+              ema21: tfData.indicators.ema?.ema21 || null,
+              ema200: tfData.indicators.ema?.ema200 || null,
+              stochRsi: {
+                k: stoch.k || null,
+                d: stoch.d || null,
+                state: stochState
+              },
+              confluenceScore: null,
+              structureSummary: '',
+              notes: ''
+            };
+          }
+        }
+      }
+      
+      scanResults = originalScanResults;
+      
+      return {
+        symbol,
+        mode: mode === 'STANDARD' ? 'SAFE' : 'AGGRESSIVE',
+        currentPrice: data.currentPrice || null,
+        htfBias: {
+          direction: htfBias.direction || 'neutral',
+          confidence: typeof htfBias.confidence === 'number'
+            ? (htfBias.confidence > 1 ? htfBias.confidence : htfBias.confidence * 100)
+            : 0,
+          source: htfBias.source || 'none'
+        },
+        timeframes,
+        strategies,
+        bestSignal,
+        schemaVersion: '1.0.0',
+        generatedAt: new Date().toISOString()
+      };
+    }
+
+    // Copy all coins with ALL strategies from BOTH modes (RICH FORMAT)
+    async function copyAllCoins() {
+      console.log('📋 Copying all trades with rich format (all strategies included)...');
+      
+      const allViews = {
+        SAFE_MODE: {},
+        AGGRESSIVE_MODE: {}
+      };
+      
+      const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
+      const modes = ['STANDARD', 'AGGRESSIVE'];
+      
+      // Try API first, fallback to scanResults
+      for (const symbol of symbols) {
+        for (const mode of modes) {
+          try {
+            console.log(`  Fetching ${symbol} (${mode}) from API...`);
+            const response = await fetch(`/api/analyze-full?symbol=${symbol}&mode=${mode}`);
+            if (response.ok) {
+              const richSymbol = await response.json();
+              const modeKey = mode === 'STANDARD' ? 'SAFE_MODE' : 'AGGRESSIVE_MODE';
+              allViews[modeKey][symbol] = richSymbol;
+              console.log(`  ✅ ${symbol} (${mode}) from API: bestSignal=${richSymbol.bestSignal || 'null'}`);
+            } else {
+              throw new Error(`API returned ${response.status}`);
+            }
+          } catch (error) {
+            console.warn(`  ⚠️ API failed for ${symbol} (${mode}), using fallback:`, error.message);
+            // Fallback to existing scanResults
+            const richSymbol = buildRichSymbolFromScanResults(symbol, mode);
+            if (richSymbol) {
+              const modeKey = mode === 'STANDARD' ? 'SAFE_MODE' : 'AGGRESSIVE_MODE';
+              allViews[modeKey][symbol] = richSymbol;
+              console.log(`  ✅ ${symbol} (${mode}) from fallback: bestSignal=${richSymbol.bestSignal || 'null'}`);
+            } else {
+              // Last resort: create structure with NO_TRADE for all strategies
+              const modeKey = mode === 'STANDARD' ? 'SAFE_MODE' : 'AGGRESSIVE_MODE';
+              allViews[modeKey][symbol] = {
+                symbol,
+                mode: mode === 'STANDARD' ? 'SAFE' : 'AGGRESSIVE',
+                currentPrice: null,
+                htfBias: { direction: 'neutral', confidence: 0, source: 'none' },
+                timeframes: {},
+                strategies: {
+                  SWING: { valid: false, direction: 'NO_TRADE', confidence: 0, reason: 'No data available', entryZone: { min: null, max: null }, stopLoss: null, invalidationLevel: null, targets: [], riskReward: { tp1RR: null, tp2RR: null }, validationErrors: [] },
+                  TREND_4H: { valid: false, direction: 'NO_TRADE', confidence: 0, reason: 'No data available', entryZone: { min: null, max: null }, stopLoss: null, invalidationLevel: null, targets: [], riskReward: { tp1RR: null, tp2RR: null }, validationErrors: [] },
+                  SCALP_1H: { valid: false, direction: 'NO_TRADE', confidence: 0, reason: 'No data available', entryZone: { min: null, max: null }, stopLoss: null, invalidationLevel: null, targets: [], riskReward: { tp1RR: null, tp2RR: null }, validationErrors: [] },
+                  MICRO_SCALP: { valid: false, direction: 'NO_TRADE', confidence: 0, reason: 'No data available', entryZone: { min: null, max: null }, stopLoss: null, invalidationLevel: null, targets: [], riskReward: { tp1RR: null, tp2RR: null }, validationErrors: [] }
+                },
+                bestSignal: null,
+                schemaVersion: '1.0.0',
+                generatedAt: new Date().toISOString()
+              };
+              console.log(`  ⚠️ ${symbol} (${mode}): Created empty structure (no data available)`);
+            }
+          }
+        }
+      }
+      
+      // Verify we have data
+      const hasData = Object.keys(allViews.SAFE_MODE).length > 0 || Object.keys(allViews.AGGRESSIVE_MODE).length > 0;
+      if (!hasData) {
+        console.error('❌ No data collected for any symbol!');
+        alert('No data available to copy. Please wait for scan to complete.');
+        return;
+      }
+      
+      const jsonString = JSON.stringify(allViews, null, 2);
+      console.log('📋 Final JSON structure:', JSON.stringify(Object.keys(allViews.SAFE_MODE), null, 2));
+      
+      navigator.clipboard.writeText(jsonString).then(() => {
+        showCopySuccess('ALL COINS COPIED!');
+        console.log('✅ All trades copied to clipboard (rich format)');
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy');
+      });
+    }
+
+    // Generate formatted trade call text (matches text file format exactly)
+    function generateFormattedTradeCallText(data, signal) {
+      const symbol = data.symbol.replace('USDT', '');
+      const direction = signal.direction;
+      const setupType = signal.setupType.toUpperCase();
+      const confidence = signal.confidence;
+      const directionIcon = direction === 'long' ? '🟢⬆️' : direction === 'short' ? '🔴⬇️' : '⚪';
+      
+      const setupLabel = setupType === 'auto' || setupType === 'AUTO' ? 'Auto (No Trade)' :
+                         setupType === 'swing' || setupType === 'SWING' ? 'Swing Trade' :
+                         setupType === '4hTrend' || setupType === '4H' ? '4H Trend Play' :
+                         setupType === '1hScalp' || setupType === 'SCALP' ? '1H Scalp' :
+                         setupType === 'microScalp' || setupType === 'MicroScalp' || setupType === 'MICROSCALP' ? 'Micro Scalp' :
+                         setupType === 'AGGRO_SCALP_1H' ? 'Aggressive 1H Scalp' :
+                         setupType === 'AGGRO_MICRO_SCALP' ? 'Aggressive Micro Scalp' :
+                         '4H Trend Play';
+      
+      let text = `${symbol} — ${direction.toUpperCase()}${direction === 'NO_TRADE' ? '' : ' ('+setupType+')'}\n\n`;
+      text += `Confidence: ${confidence}%\n`;
+      text += `Direction: ${directionIcon} ${direction.toUpperCase()}\n`;
+      text += `Setup Type: ${setupLabel}\n\n`;
+      
+      if (signal.valid && signal.entryZone) {
+        text += `ENTRY:\n$${signal.entryZone.min?.toLocaleString()} – $${signal.entryZone.max?.toLocaleString()}\n\n`;
+        text += `STOP LOSS:\n$${signal.stopLoss?.toLocaleString()}\n\n`;
+        
+        // TARGETS: Include TP3 for Swing trades (3R, 4R, 5R)
+        text += `TARGETS:\nTP1: $${signal.targets.tp1?.toLocaleString()}\nTP2: $${signal.targets.tp2?.toLocaleString()}`;
+        if (signal.targets.tp3) {
+          text += `\nTP3: $${signal.targets.tp3.toLocaleString()}`;
+        }
+        text += `\n\n`;
+        
+        // RISK/REWARD: Include tp3RR for Swing trades
+        if (signal.riskReward.tp3RR) {
+          text += `RISK / REWARD:\n${signal.riskReward.tp1RR}R to ${signal.riskReward.tp2RR}R to ${signal.riskReward.tp3RR}R\n\n`;
+        } else {
+          text += `RISK / REWARD:\n${signal.riskReward.tp1RR}R to ${signal.riskReward.tp2RR}R\n\n`;
+        }
+      } else {
+        text += `ENTRY:\nNo valid entry zone at this time\n\n`;
+        text += `STOP LOSS:\nN/A\n\n`;
+        text += `TARGETS:\nTP1: N/A\nTP2: N/A\nTP3: N/A\n\n`;
+        text += `RISK / REWARD:\nN/A\n\n`;
+      }
+      
+      text += `INVALIDATION:\n${signal.invalidation.description}\n`;
+      if (signal.invalidation.level) {
+        text += `Level: $${signal.invalidation.level.toLocaleString()}\n`;
+      }
+      text += `\n`;
+      
+      text += `WHY THIS TRADE:\nClear short explanation of confluence:\n`;
+      text += `– Trend alignment: ${signal.confluence.trendAlignment}\n`;
+      text += `– Stoch momentum: ${signal.confluence.stochMomentum}\n`;
+      text += `– Pullback state: ${signal.confluence.pullbackState}\n`;
+      text += `– Liquidity zones: ${signal.confluence.liquidityZones}\n`;
+      text += `– HTF confirmation: ${signal.confluence.htfConfirmation}\n\n`;
+      
+      text += `CONDITIONS REQUIRED:\n`;
+      signal.conditionsRequired.forEach(cond => {
+        text += `${cond}\n`;
+      });
+      
+      return text;
+    }
+    
+    // Get AI Review for a specific symbol and setup type
+    async function getAIReview(symbol, isAutoTrigger = false) {
+      const data = scanResults[symbol];
+      if (!data) {
+        console.error('No data for symbol:', symbol);
+        return;
+      }
+      
+      // Get current strategy for this symbol
+      const currentStrategyIndex = strategyStates[symbol] || 0;
+      const setupType = strategyOptions[currentStrategyIndex];
+      
+      // Get content div to show loading/results
+      const contentDiv = document.getElementById(`ai-review-content-${symbol}`);
+      
+      if (!contentDiv) return;
+      
+      // Show loading state
+      if (!isAutoTrigger) {
+        contentDiv.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.75rem; padding: 2rem; justify-content: center;">
+            <img src="/logos/load.gif" alt="Loading" style="width: 140px; height: auto;">
+            <span style="color: var(--color-yellow-75); font-size: 0.875rem; opacity: 0.7;">Analyzing Call</span>
+          </div>
+        `;
+      }
+      
+      try {
+        // Create the dashboard view (same JSON that COPY TRADE exports)
+        const marketSnapshot = createDashboardView(data);
+        
+        // Call the agent API
+        const response = await fetch('/api/agent-review', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            symbol,
+            setupType,
+            marketSnapshot
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.error) {
+          throw new Error(result.error);
+        }
+        
+        // Store AI response in scanResults for JSON export
+        if (!scanResults[symbol].aiReviews) {
+          scanResults[symbol].aiReviews = {};
+        }
+        scanResults[symbol].aiReviews[setupType] = {
+          priority: result.priority,
+          formattedText: result.formattedText,
+          timestamp: result.timestamp
+        };
+        
+        // Display the formatted response
+        const priorityColor = 
+          result.priority === 'A+' ? '#22c55e' :
+          result.priority === 'A' ? '#3b82f6' :
+          result.priority === 'B' ? '#f59e0b' : '#6b7280';
+        
+        // Parse AI response and format in 2x2 grid layout
+        const priorityBadgeColor = priorityColor;
+        
+        // Extract sections from AI response
+        const sections = result.formattedText.split('\n\n');
+        const mainAnalysis = sections.find(s => s.includes('AGENT ANALYSIS') || s.length > 200) || sections[sections.length - 1] || result.formattedText;
+        
+        contentDiv.innerHTML = `
+          <!-- Full-Width Analysis Paragraph (Top) -->
+          <div style="margin-bottom: 1.5rem; padding: 1rem; background-color: rgba(255, 255, 255, 0.03); border-radius: var(--radius-md); border-left: 3px solid ${priorityBadgeColor};">
+            <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.8;">
+              ${mainAnalysis.replace('AGENT ANALYSIS:', '').trim()}
+            </div>
+          </div>
+          
+        `;
+        
+      } catch (error) {
+        console.error('AI Review error:', error);
+        contentDiv.innerHTML = `
+          <div style="padding: 2rem; text-align: center; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-md); background-color: rgba(239, 68, 68, 0.1);">
+            <div style="color: #ef4444; font-size: 1rem; font-weight: bold; margin-bottom: 0.75rem;">
+              ❌ AI Analysis Failed
+            </div>
+            <div style="color: var(--color-yellow-75); font-size: 0.875rem; opacity: 0.7; line-height: 1.6;">
+              ${error.message}
+            </div>
+            <div style="color: var(--color-yellow-75); font-size: 0.75rem; opacity: 0.5; margin-top: 0.75rem;">
+              The AI agent will retry automatically when you change strategies or refresh the page.
+            </div>
+          </div>
+        `;
+      }
+    }
+    
+    // Create compact dashboard view
+    function createDashboardView(data) {
+      const htfBias = data.htfBias || { direction: 'neutral', confidence: 0, source: 'none' };
+      
+      const view = {
+        symbol: data.symbol,
+        price: data.currentPrice || data.price,
+        change24h: data.priceChange24h,
+        htfBias: htfBias,  // HTF Bias at root level
+        signal: null,
+        timeframes: {}
+      };
+      
+      // Signal - ALWAYS INCLUDES ALL FORMATTED FIELDS (even if no valid trade)
+      const tradeSignal = data.signal || data.tradeSignal;
+      // htfBias already declared at top of function
+      
+      if (tradeSignal) {
+        const setupType = tradeSignal.setupType || '4h';
+        const selectedStrategy = tradeSignal.selectedStrategy || setupType.toUpperCase();
+        const strategiesChecked = tradeSignal.strategiesChecked || [];
+        const tf4h = data.analysis?.['4h'];
+        const tf1h = data.analysis?.['1h'];
+        
+        view.signal = {
+          valid: tradeSignal.valid,
+          direction: tradeSignal.direction || 'NO_TRADE',
+          setupType: setupType,
+          selectedStrategy: selectedStrategy,
+          strategiesChecked: strategiesChecked,
+          confidence: tradeSignal.confidence ? 
+            parseFloat((tradeSignal.confidence * 100).toFixed(0)) : 0,
+          reason: tradeSignal.reason_summary || tradeSignal.reason,
+          
+          // Entry/SL/Targets - include even if null (shows structure)
+          entryZone: tradeSignal.entry_zone ? {
+            min: tradeSignal.entry_zone.min,
+            max: tradeSignal.entry_zone.max
+          } : null,
+          stopLoss: tradeSignal.stop_loss || null,
+          invalidationLevel: tradeSignal.invalidation_level || null,
+          targets: {
+            tp1: tradeSignal.targets?.[0] || null,
+            tp2: tradeSignal.targets?.[1] || null,
+            tp3: tradeSignal.targets?.[2] || null
+          },
+          riskReward: {
+            tp1RR: tradeSignal.risk_reward?.tp1RR || 1.0,
+            tp2RR: tradeSignal.risk_reward?.tp2RR || 2.0,
+            tp3RR: tradeSignal.risk_reward?.tp3RR || null
+          },
+          riskAmount: tradeSignal.risk_amount || null,
+          
+          // Formatted trade call fields - ALWAYS INCLUDED
+          invalidation: tradeSignal.invalidation || {
+            level: tradeSignal.invalidation_level || null,
+            description: setupType === 'Swing' ? 
+              '3D/1D swing level. HTF invalidation indicates macro trend has shifted.' : 
+              setupType === 'Scalp' || selectedStrategy === 'SCALP_1H' ? 
+              '1H/15m swing level. LTF invalidation means the scalp setup has failed.' : 
+              setupType === 'MicroScalp' ?
+              '5m swing level. Exit immediately if wrong - tight invalidation.' :
+              '4H swing level. Structure break invalidates the setup.'
+          },
+          
+          confluence: tradeSignal.confluence || {
+            trendAlignment: tf4h && tf1h ? 
+              `${tf4h.indicators?.analysis?.trend || 'UNKNOWN'} on 4H, ${tf1h.indicators?.analysis?.trend || 'UNKNOWN'} on 1H` : 
+              'HTF trend analysis',
+            stochMomentum: tf4h?.indicators?.stochRSI?.condition || 'N/A',
+            pullbackState: tf4h?.indicators?.analysis?.pullbackState || 'N/A',
+            liquidityZones: tf4h?.indicators?.analysis?.distanceFrom21EMA ? 
+              `${Math.abs(tf4h.indicators.analysis.distanceFrom21EMA).toFixed(2)}% from 21 EMA` : 
+              'Price positioning',
+            htfConfirmation: `${htfBias.confidence}% confidence (${htfBias.source})`
+          },
+          
+          conditionsRequired: tradeSignal.conditionsRequired || (
+            setupType === 'Swing' ? [
+              '✓ 3D stoch oversold/overbought pivot',
+              '✓ 1D reclaim/rejection of key level',
+              '✓ 4H trend supportive (not FLAT)',
+              '✓ Price in ENTRY_ZONE on 15m/5m'
+            ] : selectedStrategy === 'SCALP_1H' ? [
+              '✓ 1H trend clear (UPTREND or DOWNTREND)',
+              '✓ 4H disregarded (scalp uses 1H bias)',
+              '✓ Price near 21 EMA on 1H (±2%) and 15m (±1%)',
+              '✓ 15m Stoch aligned with 1H trend'
+            ] : setupType === 'MicroScalp' ? [
+              '✓ 1H trending (not FLAT)',
+              '✓ 15m within ±0.25% of 21 EMA',
+              '✓ 5m within ±0.25% of 21 EMA',
+              '✓ Stoch aligned on both 15m & 5m',
+              '⚠️ Disregards 4H trend entirely'
+            ] : selectedStrategy === 'NO_TRADE' ? [
+              '⚠ Awaiting clean setup',
+              '• Swing: 3D/1D/4H structure needed',
+              '• 4H Trend: 4H trending (not FLAT) needed',
+              '• 1H Scalp: 1H trending + 15m pullback needed',
+              '• Micro-Scalp: Tight LTF confluence needed'
+            ] : [
+              '✓ 4H trend clear (UPTREND or DOWNTREND)',
+              '✓ 1H confirmation',
+              '✓ Price near 21 EMA',
+              '✓ Stoch aligned'
+            ]
+          )
+        };
+      } else {
+        // No trade signal - still provide structure with analysis data
+        const tf4h = data.analysis?.['4h'];
+        const tf1h = data.analysis?.['1h'];
+        
+        view.signal = {
+          valid: false,
+          direction: 'NO_TRADE',
+          setupType: '4h',
+          confidence: 0,
+          reason: 'No trade signal available',
+          entryZone: null,
+          stopLoss: null,
+          invalidationLevel: null,
+          targets: { tp1: null, tp2: null, tp3: null },
+          riskReward: { tp1RR: 1.0, tp2RR: 2.0, tp3RR: null },
+          riskAmount: null,
+          invalidation: {
+            level: null,
+            description: '4H swing level. Structure break invalidates the setup.'
+          },
+          confluence: {
+            trendAlignment: tf4h && tf1h ? 
+              `${tf4h.indicators?.analysis?.trend || 'UNKNOWN'} on 4H, ${tf1h.indicators?.analysis?.trend || 'UNKNOWN'} on 1H` : 
+              'HTF trend analysis',
+            stochMomentum: tf4h?.indicators?.stochRSI?.condition || 'N/A',
+            pullbackState: tf4h?.indicators?.analysis?.pullbackState || 'N/A',
+            liquidityZones: tf4h?.indicators?.analysis?.distanceFrom21EMA ? 
+              `${Math.abs(tf4h.indicators.analysis.distanceFrom21EMA).toFixed(2)}% from 21 EMA` : 
+              'Price positioning',
+            htfConfirmation: '0% confidence'
+          },
+          conditionsRequired: [
+            '✓ 4H trend clear (not FLAT)',
+            '✓ 1H confirmation',
+            '✓ Price near 21 EMA',
+            '✓ Stoch aligned'
+          ]
+        };
+      }
+      
+      // Store formatted trade call for easy GPT consumption
+      view.formattedTradeCall = generateFormattedTradeCallText(data, view.signal);
+      
+      // Timeframes - Includes all fetched intervals (1M, 1w, 3d, 1d, 4h, 1h, 15m, 5m, 3m, 1m)
+      if (data.analysis) {
+        for (const [interval, analysis] of Object.entries(data.analysis)) {
+          if (analysis.error || !analysis.indicators) {
+            view.timeframes[interval] = { error: analysis.error || 'No data' };
+            continue;
+          }
+          
+          const ind = analysis.indicators;
+          view.timeframes[interval] = {
+            trend: ind.analysis?.trend || 'UNKNOWN',
+            ema21: ind.ema?.ema21 ? parseFloat(ind.ema.ema21.toFixed(2)) : null,
+            ema200: ind.ema?.ema200 ? parseFloat(ind.ema.ema200.toFixed(2)) : null,
+            stoch: {
+              k: ind.stochRSI?.k ? parseFloat(ind.stochRSI.k.toFixed(1)) : null,
+              d: ind.stochRSI?.d ? parseFloat(ind.stochRSI.d.toFixed(1)) : null,
+              condition: ind.stochRSI?.condition || 'UNKNOWN'
+            },
+            pullback: {
+              state: ind.analysis?.pullbackState || 'UNKNOWN',
+              distanceFrom21EMA: ind.analysis?.distanceFrom21EMA ? 
+                parseFloat(ind.analysis.distanceFrom21EMA.toFixed(2)) : null
+            },
+            swingHigh: analysis.structure?.swingHigh ? 
+              parseFloat(analysis.structure.swingHigh.toFixed(2)) : null,
+            swingLow: analysis.structure?.swingLow ? 
+              parseFloat(analysis.structure.swingLow.toFixed(2)) : null
+          };
+        }
+      }
+      
+      // Micro-Scalp Override fields (new in v2.0)
+      view.microScalpEligible = data.microScalpEligible || false;
+      view.microScalp = data.microScalp ? {
+        valid: data.microScalp.valid,
+        direction: data.microScalp.direction,
+        setupType: data.microScalp.setupType,
+        confidence: data.microScalp.confidence,
+        entry: data.microScalp.entry,
+        stopLoss: data.microScalp.stopLoss,
+        targets: data.microScalp.targets,
+        riskReward: data.microScalp.riskReward,
+        invalidation_level: data.microScalp.invalidation_level,
+        invalidation_description: data.microScalp.invalidation_description,
+        reason: data.microScalp.reason,
+        currentPrice: data.microScalp.currentPrice,
+        timestamp: data.microScalp.timestamp
+      } : null;
+      
+      view.timestamp = data.timestamp;
+      
+      // Include AI Reviews (if available for any strategy)
+      if (data.aiReviews && Object.keys(data.aiReviews).length > 0) {
+        view.aiReviews = data.aiReviews;
+      }
+      
+      return view;
+    }
+
+    // Show copy success toast
+    function showCopySuccess(message) {
+      const container = document.getElementById('copyToastContainer');
+      
+      // Create simple text toast matching signals-count exactly
+      const toast = document.createElement('span');
+      toast.style.fontWeight = 'bold';
+      toast.style.color = 'var(--color-yellow-75)';
+      toast.style.fontFamily = 'var(--font-mathias)';
+      toast.style.fontSize = '0.75rem';
+      toast.style.opacity = '1';
+      toast.style.transition = 'opacity 0.3s';
+      toast.textContent = message;
+      
+      // Clear any existing toasts
+      container.innerHTML = '';
+      container.appendChild(toast);
+      
+      // Fade out after 1.5 seconds
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+          container.innerHTML = '';
+        }, 300);
+      }, 1500);
+    }
+
+    // Show error
+    function showError(message) {
+      document.getElementById('errorMessage').textContent = message;
+      document.getElementById('errorState').classList.remove('hidden');
+    }
+  </script>
+
+  <!-- Particles.js Library -->
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <script>
+    // Initialize particle system
+    particlesJS('particles-js', {
+      particles: {
+        number: {
+          value: 500,
+          density: {
+            enable: true,
+            value_area: 800
+          }
+        },
+        color: {
+          value: '#ffffff'
+        },
+        shape: {
+          type: 'circle'
+        },
+        opacity: {
+          value: 0.5,
+          random: true,
+          anim: {
+            enable: true,
+            speed: 1,
+            opacity_min: 0.1,
+            sync: false
+          }
+        },
+        size: {
+          value: 2,
+          random: true,
+          anim: {
+            enable: false
+          }
+        },
+        line_linked: {
+          enable: false
+        },
+        move: {
+          enable: true,
+          speed: 0.5,
+          direction: 'none',
+          random: true,
+          straight: false,
+          out_mode: 'out',
+          bounce: false
+        }
+      },
+      interactivity: {
+        detect_on: 'canvas',
+        events: {
+          onhover: {
+            enable: true,
+            mode: 'grab'
+          },
+          onclick: {
+            enable: false
+          },
+          resize: true
+        },
+        modes: {
+          grab: {
+            distance: 140,
+            line_linked: {
+              opacity: 0.3
+            }
+          }
+        }
+      },
+      retina_detect: true
+    });
+  </script>
+
+</body>
+</html>

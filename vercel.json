@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/generate-video",
+      "dest": "/api/generate-video.js"
+    },
+    {
+      "src": "/api/video-status",
+      "dest": "/api/video-status.js"
+    },
+    {
+      "src": "/api/videos",
+      "dest": "/api/videos.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
+  ],
+  "functions": {
+    "api/generate-video.js": {
+      "maxDuration": 10
+    },
+    "api/video-status.js": {
+      "maxDuration": 5
+    },
+    "api/videos.js": {
+      "maxDuration": 5
+    }
+  }
+}

@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Strategy & Backtest - EditTrades</title>
+  <link rel="icon" type="image/svg+xml" href="/logos/logo.svg">
+  
+  <!-- Open Graph / Social Media Meta Tags -->
+  <meta property="og:title" content="EditTrades - Proof of Signal">
+  <meta property="og:description" content="EditTrades - Proof of Signal">
+  <meta property="og:image" content="https://snapshottradingview-f2ak2arfk-baiees-projects.vercel.app/logos/og_img.jpg">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/edittrax-styles.css">
+  
+  <style>
+    .strategy-section {
+      display: none;
+    }
+    .strategy-section.active {
+      display: block;
+    }
+    .best-practices-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+    
+    /* Override body background for particle visibility */
+    body {
+      background-color: #000000 !important;
+      position: relative;
+    }
+    
+    #particles-js {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    
+    header, main {
+      position: relative;
+      z-index: 1;
+    }
+    
+    /* Font Strategy: Mathias for labels/headings, System font for content */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-mathias);
+    }
+    
+    p, ul, li, .card p, .card ul, .card li {
+      font-family: var(--font-system);
+    }
+    
+    /* Strong tags in content should use Mathias for emphasis */
+    li strong, p strong {
+      font-family: var(--font-mathias);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  
+  <!-- Color Bar - Top Border -->
+  <img src="/logos/color_bar.png" alt="" style="position: fixed; top: 0; left: 0; width: 100%; height: 5px; max-height: 5px; z-index: 9999; pointer-events: none; display: block; object-fit: cover;">
+  
+  <!-- Particle Background -->
+  <div id="particles-js"></div>
+  
+  <!-- Header -->
+  <header class="header-edittrax">
+    <div class="max-w-6xl mx-auto pt-3" style="position: relative;">
+      <!-- Trading Indicators (Top Left) -->
+      <div style="position: absolute; top: 25px; left: 0; display: flex; flex-direction: column; gap: 6px; font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.75rem; z-index: 50;">
+        <!-- 1M Candle Timer -->
+        <div id="candle-timer-container" style="display: flex; align-items: center; gap: 8px;">
+          <span>1M</span>
+          <div style="width: 50px; height: 3px; background-color: rgba(230, 233, 224, 0.2); border-radius: 2px; overflow: hidden;">
+            <div id="candle-timer-bar" style="width: 100%; height: 100%; background-color: var(--color-yellow-75); transition: width 0.5s linear;"></div>
+          </div>
+        </div>
+        <!-- 4H Candle Timer -->
+        <div id="4h-timer-container" style="display: flex; align-items: center; gap: 8px;">
+          <span>4H</span>
+          <div style="width: 50px; height: 3px; background-color: rgba(230, 233, 224, 0.2); border-radius: 2px; overflow: hidden;">
+            <div id="4h-timer-bar" style="width: 100%; height: 100%; background-color: var(--color-yellow-75); transition: width 0.5s linear;"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Top Right Actions -->
+      <div style="position: absolute; top: 25px; right: 0; display: flex; flex-direction: column; gap: 17px; align-items: flex-end; z-index: 50; font-family: var(--font-mathias); font-size: 0.75rem;">
+        <!-- Refresh -->
+        <a 
+          href="/"
+          style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; font-family: var(--font-mathias); font-size: 0.75rem; text-decoration: none;"
+          title="Back to Home"
+        >
+          <span style="font-weight: bold;">← HOME</span>
+        </a>
+        
+        <!-- Copy Toast -->
+        <div id="copyToastContainer" style="pointer-events: none;"></div>
+        
+      </div>
+      
+      <div class="flex flex-col items-center gap-3 w-full">
+        <div class="logo-container flex flex-col items-center gap-2">
+          <img src="/logos/load.gif" alt="Loading Animation" style="width: 140px; height: auto;">
+          <img src="/logos/et_horizontal.png" alt="EditTrades Logo" class="logo-img">
+        </div>
+        
+        <!-- Strategy Tabs -->
+        <div class="grid gap-2 w-full" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+          <button 
+            id="tab-4h" 
+            onclick="showStrategy('4h')"
+            class="strategy-tab btn-base btn-secondary px-2 py-2 text-xs sm:text-sm rounded text-center whitespace-nowrap"
+            style="transition: all 0.3s ease;"
+          >
+            4-HOUR
+          </button>
+          <button 
+            id="tab-swing" 
+            onclick="showStrategy('swing')"
+            class="strategy-tab btn-base btn-secondary px-2 py-2 text-xs sm:text-sm rounded text-center whitespace-nowrap"
+            style="transition: all 0.3s ease;"
+          >
+            SWING
+          </button>
+          <button 
+            id="tab-scalp" 
+            onclick="showStrategy('scalp')"
+            class="strategy-tab btn-base btn-secondary px-2 py-2 text-xs sm:text-sm rounded text-center whitespace-nowrap"
+            style="transition: all 0.3s ease;"
+          >
+            SCALP
+          </button>
+          <button 
+            id="tab-microscalp" 
+            onclick="showStrategy('microscalp')"
+            class="strategy-tab btn-base btn-secondary px-2 py-2 text-xs sm:text-sm rounded text-center whitespace-nowrap"
+            style="transition: all 0.3s ease;"
+          >
+            MICRO-SCALP
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto pb-4" style="width: 100%; box-sizing: border-box; padding-left: 1rem; padding-right: 1rem;">
+    
+    <!-- 4H Strategy -->
+    <div id="strategy-4h" class="strategy-section active">
+      <section class="mb-8 mt-6">
+        <h2 class="text-2xl font-bold mb-4">4-Hour Trend Following Strategy</h2>
+        <div class="card rounded-lg p-6 mb-4">
+          <h3 class="text-xl font-semibold mb-3">Strategy Philosophy</h3>
+          <p class="mb-4" style="color: var(--text-secondary);">
+            This is a <strong>trend-following, pullback-entry system</strong> designed for the 4-hour timeframe. 
+            The strategy combines multi-timeframe analysis (4H, 1H, 15M, 5M) with precise entry timing based on EMA structure, 
+            Stochastic RSI momentum, and swing-based risk management.
+          </p>
+          <p style="color: var(--text-secondary);">
+            The goal is to catch <strong>high-probability moves</strong> in the direction of the prevailing 4H trend, entering on 
+            pullbacks to the 21 EMA with confirmation from lower timeframes. Risk/Reward: 1.0R to 2.0R.
+          </p>
+        </div>
+      </section>
+
+      <!-- Entry Rules -->
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Entry Rules</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          
+          <!-- Long Setup -->
+          <div class="card rounded-lg p-6">
+            <h3 class="text-lg font-semibold mb-3 stat-positive">LONG Setup</h3>
+            <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+              <li>✅ <strong>4H Trend:</strong> UPTREND (SAFE_MODE: must NOT be FLAT; AGGRESSIVE_MODE: can use HTF bias if 4H flat + confidence ≥70%)</li>
+              <li>✅ <strong>4H Pullback:</strong> Price NOT OVEREXTENDED from 21 EMA (gatekeeper: within ±2%)</li>
+              <li>✅ <strong>Entry Zone:</strong> ±0.4% buffer around 4H EMA21 (actual entry: 0.996-1.002x EMA21 for LONG)</li>
+              <li>✅ <strong>1H Alignment:</strong> 1H trend NOT breaking down (not DOWNTREND)</li>
+              <li>✅ <strong>15M & 5M Stoch:</strong> NOT both curling down (bullish alignment)</li>
+              <li>✅ <strong>SL:</strong> Below 4H swing low (with 0.3% buffer) or 3% below entry</li>
+              <li>✅ <strong>TP:</strong> 1.0R (TP1), 2.0R (TP2)</li>
+              <li>✅ <strong>Confidence:</strong> 0-100 scale based on trend alignment, stoch, structure, MA confluence</li>
+            </ul>
+          </div>
+          
+          <!-- Short Setup -->
+          <div class="card rounded-lg p-6">
+            <h3 class="text-lg font-semibold mb-3 stat-negative">SHORT Setup</h3>
+            <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+              <li>✅ <strong>4H Trend:</strong> DOWNTREND (SAFE_MODE: must NOT be FLAT; AGGRESSIVE_MODE: can use HTF bias if 4H flat + confidence ≥70%)</li>
+              <li>✅ <strong>4H Pullback:</strong> Price NOT OVEREXTENDED from 21 EMA (gatekeeper: within ±2%)</li>
+              <li>✅ <strong>Entry Zone:</strong> ±0.4% buffer around 4H EMA21 (actual entry: 0.996-1.004x EMA21 for SHORT)</li>
+              <li>✅ <strong>1H Alignment:</strong> 1H trend NOT breaking up (not DOWNTREND)</li>
+              <li>✅ <strong>15M & 5M Stoch:</strong> NOT both curling up (bearish alignment)</li>
+              <li>✅ <strong>SL:</strong> Above 4H swing high (with 0.3% buffer) or 3% above entry</li>
+              <li>✅ <strong>TP:</strong> 1.0R (TP1), 2.0R (TP2)</li>
+              <li>✅ <strong>Confidence:</strong> 0-100 scale based on trend alignment, stoch, structure, MA confluence</li>
+            </ul>
+          </div>
+        </div>
+        
+          <div class="card rounded-lg p-6">
+            <h3 class="text-lg font-semibold mb-3">Key Filters (NO TRADE if...)</h3>
+            <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+              <li>❌ <strong>SAFE_MODE:</strong> 4H trend is FLAT (hard block - no trade allowed)</li>
+              <li>❌ <strong>AGGRESSIVE_MODE:</strong> 4H flat BUT HTF bias confidence &lt;70% or lower TFs not aligned</li>
+              <li>❌ Price is <strong>OVEREXTENDED</strong> from 21 EMA (>2% away - gatekeeper check)</li>
+              <li>❌ 1H trend conflicts with 4H direction (1H breaking down for longs, breaking up for shorts)</li>
+              <li>❌ 15m/5m stoch both curling against trade direction</li>
+            </ul>
+          </div>
+      </section>
+
+      <!-- Best Practices (Horizontal Layout) -->
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Best Practices</h2>
+        <div class="card rounded-lg p-6">
+          <div class="best-practices-grid">
+            <div>
+              <strong style="color: var(--text-primary);">Wait for the Setup</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Don't force trades. Wait for all timeframe conditions to align.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Respect the 21 EMA</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Price should be near it for entries, not far away.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Use Swing Points</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Stop loss beyond recent swing high/low gives trade room.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Risk Management</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Risk 1% of capital per trade. The edge comes from consistency.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Monitor 4H Closes</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Check 4H closes for invalidation signals.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Trust the Process</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Not every trade wins. The edge plays out over 50+ trades.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Backtest Results -->
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Backtest Results - 4H Strategy</h2>
+        <div class="card rounded-lg p-6">
+          <p class="text-sm mb-4" style="color: var(--text-secondary);">
+            Backtest coming soon. Use the Trade Tracker to monitor your live trades.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <!-- Swing Strategy -->
+    <div id="strategy-swing" class="strategy-section">
+      <section class="mb-8 mt-6">
+        <h2 class="text-2xl font-bold mb-4">Swing Strategy (3D → 1D → 4H)</h2>
+        <div class="card rounded-lg p-6 mb-4">
+          <h3 class="text-xl font-semibold mb-3">Strategy Philosophy</h3>
+          <p class="mb-4" style="color: var(--text-secondary);">
+            This is a <strong>multi-day swing trading system</strong> driven by 3-day, 1-day, and 4-hour structure alignment. 
+            Swing trades capture larger moves with wider stops at HTF (higher timeframe) levels and targets of 3R, 4R, and 5R.
+          </p>
+          <p style="color: var(--text-secondary);">
+            The goal is to catch <strong>major reversals and trend extensions</strong> by identifying oversold/overbought pivots 
+            on the 3D timeframe and confirming with 1D and 4H momentum. These are multi-day hold trades.
+          </p>
+        </div>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Entry Rules</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          
+          <div class="card rounded-lg p-6">
+            <h3 class="text-lg font-semibold mb-3 stat-positive">LONG Swing Setup</h3>
+            <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+              <li>✅ <strong>4H Trend:</strong> NOT FLAT (must show direction - hard gatekeeper)</li>
+              <li>✅ <strong>3D Trend:</strong> NOT FLAT (must show direction)</li>
+              <li>✅ <strong>1D Trend:</strong> NOT FLAT (must show direction)</li>
+              <li>✅ <strong>3D Pullback:</strong> OVEREXTENDED (8-15% below 21 EMA) OR (FLAT + stoch BULLISH/OVERSOLD)</li>
+              <li>✅ <strong>1D Trend:</strong> DOWNTREND BUT with bullish stoch pivot (k &lt; 25)</li>
+              <li>✅ <strong>1D Pullback:</strong> RETRACING or ENTRY_ZONE</li>
+              <li>✅ <strong>4H Confirmation:</strong> UPTREND or (FLAT + stoch BULLISH) + pullback RETRACING/ENTRY_ZONE</li>
+              <li>✅ <strong>Entry Zone:</strong> Reclaim level (mid between 1D swing low and 1D EMA21) ±0.5%</li>
+              <li>✅ <strong>SL:</strong> Min of 3D/1D swing lows (HTF invalidation)</li>
+              <li>✅ <strong>TP:</strong> 3R (TP1), 4R (TP2), 5R (TP3)</li>
+              <li>✅ <strong>Confidence:</strong> 70-90% (base 70 + stoch/entry/structure bonuses)</li>
+            </ul>
+          </div>
+          
+          <div class="card rounded-lg p-6">
+            <h3 class="text-lg font-semibold mb-3 stat-negative">SHORT Swing Setup</h3>
+            <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+              <li>✅ <strong>4H Trend:</strong> NOT FLAT (must show direction - hard gatekeeper)</li>
+              <li>✅ <strong>3D Trend:</strong> NOT FLAT (must show direction)</li>
+              <li>✅ <strong>1D Trend:</strong> NOT FLAT (must show direction)</li>
+              <li>✅ <strong>3D Pullback:</strong> OVEREXTENDED (8-15% above 21 EMA) OR (FLAT + stoch BEARISH/OVERBOUGHT)</li>
+              <li>✅ <strong>1D Trend:</strong> UPTREND BUT with bearish stoch pivot (k > 75)</li>
+              <li>✅ <strong>1D Pullback:</strong> RETRACING or ENTRY_ZONE</li>
+              <li>✅ <strong>4H Confirmation:</strong> DOWNTREND or (FLAT + stoch BEARISH) + pullback RETRACING/ENTRY_ZONE</li>
+              <li>✅ <strong>Entry Zone:</strong> Rejection level (mid between 1D swing high and 1D EMA21) ±0.5%</li>
+              <li>✅ <strong>SL:</strong> Max of 3D/1D swing highs (HTF invalidation)</li>
+              <li>✅ <strong>TP:</strong> 3R (TP1), 4R (TP2), 5R (TP3)</li>
+              <li>✅ <strong>Confidence:</strong> 70-90% (base 70 + stoch/entry/structure bonuses)</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="card rounded-lg p-6">
+          <h3 class="text-lg font-semibold mb-3">Key Filters (NO TRADE if...)</h3>
+            <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+              <li>❌ 4H trend is <strong>FLAT</strong> (instant disqualification - hard gatekeeper)</li>
+              <li>❌ 3D trend is <strong>FLAT</strong> (must show direction)</li>
+              <li>❌ 1D trend is <strong>FLAT</strong> (must show direction)</li>
+              <li>❌ 3D pullback is not OVEREXTENDED or RETRACING (or FLAT without stoch pivot)</li>
+              <li>❌ 1D/4H structure not aligned (1D downtrend without bullish pivot for longs, etc.)</li>
+            </ul>
+        </div>
+      </section>
+
+      <!-- Best Practices -->
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Best Practices</h2>
+        <div class="card rounded-lg p-6">
+          <div class="best-practices-grid">
+            <div>
+              <strong style="color: var(--text-primary);">HTF Invalidation Only</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Use 3D or 1D swing levels for stops, never 4H or lower.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Larger Hold Time</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Swing trades take days or weeks. Be patient.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Confidence: 70-90%</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Requires strong HTF confluence. Only take A+ setups.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Watch 3D Closes</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Monitor 3D closes for invalidation signals.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Wider Stops</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">HTF swings mean larger SL. Risk 1-2% still applies.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Trail Profits</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Consider trailing stop after TP1 to maximize gains.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Backtest Results -->
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Backtest Results - Swing Strategy</h2>
+        <div class="card rounded-lg p-6">
+          <p class="text-sm mb-4" style="color: var(--text-secondary);">
+            Swing strategy backtest data will be displayed here. Due to longer timeframes, sample size is smaller but R-multiples are larger.
+          </p>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Total Trades</p>
+              <p class="text-2xl font-bold">Coming Soon</p>
+            </div>
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Win Rate</p>
+              <p class="text-2xl font-bold">-</p>
+            </div>
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Avg R</p>
+              <p class="text-2xl font-bold">-</p>
+            </div>
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Total R</p>
+              <p class="text-2xl font-bold">-</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Scalp Strategy -->
+    <div id="strategy-scalp" class="strategy-section">
+      <section class="mb-8 mt-6">
+        <h2 class="text-2xl font-bold mb-4">Scalp Strategy (1H → 15M → 5M)</h2>
+        <div class="card rounded-lg p-6 mb-4">
+          <h3 class="text-xl font-semibold mb-3">Strategy Philosophy</h3>
+          <p class="mb-4" style="color: var(--text-secondary);">
+            This is a <strong>lower timeframe momentum scalping system</strong> that requires crystal-clear 4H trend support. 
+            Scalps are fast in/out trades with tight stops at LTF swing levels and quick targets of 1.5R to 3.0R.
+          </p>
+          <p style="color: var(--text-secondary);">
+            The goal is to catch <strong>short-term momentum bursts</strong> in the direction of the 4H trend, entering on 
+            precise LTF pullbacks to the 21 EMA with tight stoch alignment. Requires active monitoring.
+          </p>
+        </div>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Entry Rules</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          
+          <div class="card rounded-lg p-6">
+            <h3 class="text-lg font-semibold mb-3 stat-positive">LONG Scalp Setup</h3>
+            <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+              <li>✅ <strong>1H Trend:</strong> UPTREND (NOT FLAT - required gatekeeper)</li>
+              <li>✅ <strong>4H Trend:</strong> DISREGARDED (scalp uses 1H bias, ignores 4H)</li>
+              <li>✅ <strong>1H Pullback:</strong> Price near 21 EMA (within ±2% - gatekeeper)</li>
+              <li>✅ <strong>15M Pullback:</strong> Price near 15M EMA21 (within ±1.5%)</li>
+              <li>✅ <strong>1H Pullback State:</strong> ENTRY_ZONE or RETRACING</li>
+              <li>✅ <strong>15M Pullback State:</strong> ENTRY_ZONE or RETRACING</li>
+              <li>✅ <strong>15M Stoch:</strong> Aligned with 1H trend (BULLISH/OVERSOLD for longs)</li>
+              <li>✅ <strong>Entry Zone:</strong> ±0.4% buffer around 1H EMA21 (0.996-1.004x EMA21 for LONG)</li>
+              <li>✅ <strong>SL:</strong> Below 15M/5M swing low (LTF invalidation) with 0.3% buffer</li>
+              <li>✅ <strong>TP:</strong> 1.5R (TP1), 3.0R (TP2)</li>
+              <li>✅ <strong>Confidence:</strong> 60-85% (base 60 + HTF bias bonus)</li>
+            </ul>
+          </div>
+          
+          <div class="card rounded-lg p-6">
+            <h3 class="text-lg font-semibold mb-3 stat-negative">SHORT Scalp Setup</h3>
+            <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+              <li>✅ <strong>1H Trend:</strong> DOWNTREND (NOT FLAT - required gatekeeper)</li>
+              <li>✅ <strong>4H Trend:</strong> DISREGARDED (scalp uses 1H bias, ignores 4H)</li>
+              <li>✅ <strong>1H Pullback:</strong> Price near 21 EMA (within ±2% - gatekeeper)</li>
+              <li>✅ <strong>15M Pullback:</strong> Price near 15M EMA21 (within ±1.5%)</li>
+              <li>✅ <strong>1H Pullback State:</strong> ENTRY_ZONE or RETRACING</li>
+              <li>✅ <strong>15M Pullback State:</strong> ENTRY_ZONE or RETRACING</li>
+              <li>✅ <strong>15M Stoch:</strong> Aligned with 1H trend (BEARISH/OVERBOUGHT for shorts)</li>
+              <li>✅ <strong>Entry Zone:</strong> ±0.4% buffer around 1H EMA21 (0.998-1.004x EMA21 for SHORT)</li>
+              <li>✅ <strong>SL:</strong> Above 15M/5M swing high (LTF invalidation) with 0.3% buffer</li>
+              <li>✅ <strong>TP:</strong> 1.5R (TP1), 3.0R (TP2)</li>
+              <li>✅ <strong>Confidence:</strong> 60-85% (base 60 + HTF bias bonus)</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="card rounded-lg p-6">
+          <h3 class="text-lg font-semibold mb-3">Key Filters (NO TRADE if...)</h3>
+          <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+            <li>❌ 1H trend is <strong>FLAT</strong> (required gatekeeper - 1H must show direction)</li>
+            <li>❌ 1H pullback not ENTRY_ZONE or RETRACING</li>
+            <li>❌ 15M pullback not ENTRY_ZONE or RETRACING</li>
+            <li>❌ Price not near 1H EMA21 (within ±2%) or 15M EMA21 (within ±1.5%)</li>
+            <li>❌ 15M stoch not aligned with 1H trend direction</li>
+            <li>⚠️ <strong>Note:</strong> 4H trend is DISREGARDED for scalps (uses 1H bias only)</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Best Practices -->
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Best Practices</h2>
+        <div class="card rounded-lg p-6">
+          <div class="best-practices-grid">
+            <div>
+              <strong style="color: var(--text-primary);">HTF Direction Required</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Never scalp against 4H trend. If 4H is FLAT, skip scalps.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">LTF Invalidation</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Use 15M swing levels for stops. Exit quickly if wrong.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Fast Execution</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Take profits at 1.5R-3R and move on. Don't overstay.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Active Monitoring</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Check every 15-30 minutes. Tighten stops if momentum stalls.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Risk Management</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Risk 1% per trade. Tight stops mean more frequent signals.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Time Horizon</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Expect movement within 2-8 hours. Not overnight holds.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Backtest Results -->
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Backtest Results - Scalp Strategy</h2>
+        <div class="card rounded-lg p-6">
+          <p class="text-sm mb-4" style="color: var(--text-secondary);">
+            Scalp strategy backtest data will be displayed here. Higher frequency, lower R-multiples, requires consistent 4H trend.
+          </p>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Total Trades</p>
+              <p class="text-2xl font-bold">Coming Soon</p>
+            </div>
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Win Rate</p>
+              <p class="text-2xl font-bold">-</p>
+            </div>
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Avg R</p>
+              <p class="text-2xl font-bold">-</p>
+            </div>
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Total R</p>
+              <p class="text-2xl font-bold">-</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Micro-Scalp Strategy -->
+    <div id="strategy-microscalp" class="strategy-section">
+      <section class="mb-8 mt-6">
+        <h2 class="text-2xl font-bold mb-4">Micro-Scalp Strategy (Mean Reversion)</h2>
+        <div class="card rounded-lg p-6 mb-4" style="border: 2px solid #f59e0b;">
+          <h3 class="text-xl font-semibold mb-3">⚠️ High-Risk Strategy</h3>
+          <p class="mb-4" style="color: var(--text-secondary);">
+            This is a <strong>mean-reversion countertrend system</strong> that operates independently of 4H trend direction. 
+            Micro-scalps trade against short-term overextensions on 1H/15M/5M with very tight stops and quick 1.0R-1.5R targets.
+          </p>
+          <p style="color: var(--text-secondary);">
+            <strong>WARNING:</strong> This is the riskiest strategy. Disregards HTF trend. Use smallest position size (0.25-0.5% risk). 
+            Exit immediately if wrong. Available even when 4H is FLAT.
+          </p>
+        </div>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Entry Rules</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          
+          <div class="card rounded-lg p-6">
+            <h3 class="text-lg font-semibold mb-3 stat-positive">LONG Micro-Scalp Setup</h3>
+            <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+              <li>⚠️ <strong>4H Trend:</strong> DISREGARDED - independent of HTF</li>
+              <li>✅ <strong>1H Trend:</strong> UPTREND (not FLAT)</li>
+              <li>✅ <strong>1H Pullback:</strong> ENTRY_ZONE or RETRACING</li>
+              <li>✅ <strong>15M Price:</strong> Within ±0.25% of 15M EMA21 (SAFE_MODE) or ±0.75% (AGGRESSIVE_MODE)</li>
+              <li>✅ <strong>5M Price:</strong> Within ±0.25% of 5M EMA21 (SAFE_MODE) or ±0.75% (AGGRESSIVE_MODE)</li>
+              <li>✅ <strong>15M Stoch:</strong> OVERSOLD or BULLISH (aligned with 1H uptrend)</li>
+              <li>✅ <strong>5M Stoch:</strong> OVERSOLD or BULLISH (aligned with 1H uptrend)</li>
+              <li>✅ <strong>Entry Zone:</strong> Average of 15M/5M EMA21 ±0.4% buffer</li>
+              <li>✅ <strong>SL:</strong> Min of 15M/5M swing low (LTF invalidation)</li>
+              <li>✅ <strong>TP:</strong> 1.0R (TP1), 1.5R (TP2)</li>
+              <li>✅ <strong>Confidence:</strong> 60-75% (base 60 + confluence/stoch bonuses)</li>
+            </ul>
+          </div>
+          
+          <div class="card rounded-lg p-6">
+            <h3 class="text-lg font-semibold mb-3 stat-negative">SHORT Micro-Scalp Setup</h3>
+            <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+              <li>⚠️ <strong>4H Trend:</strong> DISREGARDED - independent of HTF</li>
+              <li>✅ <strong>1H Trend:</strong> DOWNTREND (not FLAT)</li>
+              <li>✅ <strong>1H Pullback:</strong> ENTRY_ZONE or RETRACING</li>
+              <li>✅ <strong>15M Price:</strong> Within ±0.25% of 15M EMA21 (SAFE_MODE) or ±0.75% (AGGRESSIVE_MODE)</li>
+              <li>✅ <strong>5M Price:</strong> Within ±0.25% of 5M EMA21 (SAFE_MODE) or ±0.75% (AGGRESSIVE_MODE)</li>
+              <li>✅ <strong>15M Stoch:</strong> OVERBOUGHT or BEARISH (aligned with 1H downtrend)</li>
+              <li>✅ <strong>5M Stoch:</strong> OVERBOUGHT or BEARISH (aligned with 1H downtrend)</li>
+              <li>✅ <strong>Entry Zone:</strong> Average of 15M/5M EMA21 ±0.4% buffer</li>
+              <li>✅ <strong>SL:</strong> Max of 15M/5M swing high (LTF invalidation)</li>
+              <li>✅ <strong>TP:</strong> 1.0R (TP1), 1.5R (TP2)</li>
+              <li>✅ <strong>Confidence:</strong> 60-75% (base 60 + confluence/stoch bonuses)</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="card rounded-lg p-6" style="border: 2px solid #ef4444;">
+          <h3 class="text-lg font-semibold mb-3">⚠️ Critical Rules (NO TRADE if...)</h3>
+          <ul class="space-y-2 text-sm" style="color: var(--text-secondary);">
+            <li>⚠️ <strong>4H Trend:</strong> DISREGARDED - Micro-scalps ignore HTF direction</li>
+            <li>❌ 1H trend is FLAT (required gatekeeper - 1H must show direction)</li>
+            <li>❌ 1H pullback is not ENTRY_ZONE or RETRACING</li>
+            <li>❌ Price not within ±0.25% (SAFE) or ±0.75% (AGGRESSIVE) of BOTH 15M and 5M EMA21</li>
+            <li>❌ Stoch not aligned on both 15M and 5M with 1H trend direction</li>
+            <li>⚠️ <strong>Note:</strong> 4H trend is DISREGARDED entirely - micro-scalp is independent of HTF</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Best Practices -->
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Best Practices</h2>
+        <div class="card rounded-lg p-6">
+          <div class="best-practices-grid">
+            <div>
+              <strong style="color: var(--text-primary);">Smallest Position Size</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Risk 0.25-0.5% max. This is the riskiest strategy.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Exit IMMEDIATELY</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Don't wait for SL. Exit at first sign of reversal.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Take Profits Fast</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Hit TP1 (1.0R) and consider closing. Don't hold.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Disregards 4H Trend</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Independent of HTF direction. Focus on 1H/15M/5M only.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Candle-by-Candle</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Must be watched closely. Ultra-short timeframes.</span>
+            </div>
+            <div>
+              <strong style="color: var(--text-primary);">Available Anytime</strong><br>
+              <span class="text-sm" style="color: var(--text-secondary);">Can trade even when 4H is FLAT. Independent strategy.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Backtest Results -->
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Backtest Results - Micro-Scalp Strategy</h2>
+        <div class="card rounded-lg p-6">
+          <p class="text-sm mb-4" style="color: var(--text-secondary);">
+            Micro-scalp backtest data will be displayed here. Highest frequency, smallest R-multiples, lowest win rate. High-risk/high-frequency.
+          </p>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Total Trades</p>
+              <p class="text-2xl font-bold">Coming Soon</p>
+            </div>
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Win Rate</p>
+              <p class="text-2xl font-bold">-</p>
+            </div>
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Avg R</p>
+              <p class="text-2xl font-bold">-</p>
+            </div>
+            <div class="stat-card">
+              <p class="text-xs mb-1" style="color: var(--text-secondary);">Total R</p>
+              <p class="text-2xl font-bold">-</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <script>
+    // Strategy tab switching
+    function showStrategy(strategyId) {
+      // Hide all strategy sections
+      document.querySelectorAll('.strategy-section').forEach(section => {
+        section.classList.remove('active');
+      });
+      
+      // Reset all tabs to inactive state (match home page btn-secondary style)
+      document.querySelectorAll('.strategy-tab').forEach(tab => {
+        tab.style.backgroundColor = 'var(--color-black)';
+        tab.style.color = 'var(--color-yellow-75)';
+        tab.style.borderColor = 'var(--color-yellow-75)';
+      });
+      
+      // Show selected strategy section
+      document.getElementById(`strategy-${strategyId}`).classList.add('active');
+      
+      // Set active tab style (match home page active button style)
+      const activeTab = document.getElementById(`tab-${strategyId}`);
+      activeTab.style.backgroundColor = 'var(--color-yellow-75)';
+      activeTab.style.color = 'black';
+      activeTab.style.borderColor = 'var(--color-yellow-75)';
+    }
+    
+    // 1-minute candle timer
+    function updateCandleTimer() {
+      const now = new Date();
+      const seconds = now.getSeconds();
+      const milliseconds = now.getMilliseconds();
+      
+      // Calculate time remaining until next minute
+      const secondsRemaining = 60 - seconds - (milliseconds / 1000);
+      const percentageRemaining = (secondsRemaining / 60) * 100;
+      
+      // Update progress bar width
+      const timerBar = document.getElementById('candle-timer-bar');
+      if (timerBar) {
+        timerBar.style.width = `${percentageRemaining}%`;
+      }
+    }
+    
+    // 4-hour candle timer
+    function update4HTimer() {
+      const now = new Date();
+      const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
+      const milliseconds = now.getMilliseconds();
+      const hours = now.getUTCHours(); // Use UTC for consistency with trading
+      
+      // Calculate minutes into current 4H period
+      const minutesInto4H = ((hours % 4) * 60) + minutes;
+      const secondsInto4H = (minutesInto4H * 60) + seconds + (milliseconds / 1000);
+      
+      // Total seconds in 4 hours = 14400
+      const totalSeconds4H = 4 * 60 * 60;
+      const secondsRemaining = totalSeconds4H - secondsInto4H;
+      const percentageRemaining = (secondsRemaining / totalSeconds4H) * 100;
+      
+      // Update progress bar width
+      const timer4H = document.getElementById('4h-timer-bar');
+      if (timer4H) {
+        timer4H.style.width = `${percentageRemaining}%`;
+      }
+    }
+    
+    // Start timers
+    function startCandleTimers() {
+      updateCandleTimer();
+      update4HTimer();
+      
+      setInterval(updateCandleTimer, 500); // Update twice per second
+      setInterval(update4HTimer, 1000); // Update every second
+    }
+    
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      startCandleTimers();
+      // Set initial button state
+      showStrategy('4h');
+    });
+  </script>
+
+  <!-- Particles.js Library -->
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <script>
+    // Initialize particle system
+    particlesJS('particles-js', {
+      particles: {
+        number: {
+          value: 500,
+          density: {
+            enable: true,
+            value_area: 800
+          }
+        },
+        color: {
+          value: '#ffffff'
+        },
+        shape: {
+          type: 'circle'
+        },
+        opacity: {
+          value: 0.5,
+          random: true,
+          anim: {
+            enable: true,
+            speed: 1,
+            opacity_min: 0.1,
+            sync: false
+          }
+        },
+        size: {
+          value: 2,
+          random: true,
+          anim: {
+            enable: false
+          }
+        },
+        line_linked: {
+          enable: false
+        },
+        move: {
+          enable: true,
+          speed: 0.5,
+          direction: 'none',
+          random: true,
+          straight: false,
+          out_mode: 'out',
+          bounce: false
+        }
+      },
+      interactivity: {
+        detect_on: 'canvas',
+        events: {
+          onhover: {
+            enable: false
+          },
+          onclick: {
+            enable: false
+          },
+          resize: true
+        }
+      },
+      retina_detect: true
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+# Firebase Storage Security Rules
+
+Copy and paste this into your Firebase Storage Rules editor:
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow public read access to videos (anyone can view/download)
+    // Allow authenticated write (only service accounts/authenticated users can upload)
+    match /videos/{videoId} {
+      allow read: if true;  // Public read access
+      allow write: if request.auth != null;  // Only authenticated users/service accounts
+    }
+    
+    // Default: deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+```
+
+## What This Does:
+
+✅ **Public Read**: Anyone can view/download videos from the `/videos/` path
+✅ **Authenticated Write**: Only authenticated users (like your Railway worker service account) can upload videos
+❌ **Everything Else**: All other paths are denied
+
+## For MVP (Even More Permissive):
+
+If you want to allow writes from anywhere (not just authenticated) for testing:
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /videos/{videoId} {
+      allow read, write: if true;  // Public read and write
+    }
+    
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+```
+
+**Note**: The more permissive version is fine for MVP/testing, but use the authenticated write version for production.
+
