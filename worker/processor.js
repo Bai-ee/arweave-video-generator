@@ -185,21 +185,40 @@ async function pollForPendingJobs() {
 
 /**
  * Main worker loop
+ * Supports both continuous polling (for Railway/Render) and one-time execution (for GitHub Actions)
  */
 async function startWorker() {
-  console.log('🚀 Railway Video Worker starting...');
-  console.log(`📊 Polling interval: ${POLL_INTERVAL}ms`);
-  console.log(`⚙️ Max concurrent jobs: ${MAX_CONCURRENT_JOBS}`);
+  const isScheduled = process.env.GITHUB_ACTIONS === 'true' || process.argv.includes('--once');
+  
+  if (isScheduled) {
+    // Scheduled mode: process jobs once and exit
+    console.log('🚀 Scheduled Video Processor (GitHub Actions mode)');
+    console.log(`⚙️ Max concurrent jobs: ${MAX_CONCURRENT_JOBS}`);
+    
+    try {
+      await pollForPendingJobs();
+      console.log('✅ Job processing complete');
+      process.exit(0);
+    } catch (error) {
+      console.error('❌ Error processing jobs:', error);
+      process.exit(1);
+    }
+  } else {
+    // Continuous mode: poll every few seconds (for Railway/Render)
+    console.log('🚀 Continuous Video Worker starting...');
+    console.log(`📊 Polling interval: ${POLL_INTERVAL}ms`);
+    console.log(`⚙️ Max concurrent jobs: ${MAX_CONCURRENT_JOBS}`);
 
-  // Initial poll
-  await pollForPendingJobs();
-
-  // Set up polling interval
-  setInterval(async () => {
+    // Initial poll
     await pollForPendingJobs();
-  }, POLL_INTERVAL);
 
-  console.log('✅ Worker started and polling for jobs');
+    // Set up polling interval
+    setInterval(async () => {
+      await pollForPendingJobs();
+    }, POLL_INTERVAL);
+
+    console.log('✅ Worker started and polling for jobs');
+  }
 }
 
 // Start the worker
@@ -208,7 +227,7 @@ startWorker().catch(error => {
   process.exit(1);
 });
 
-// Graceful shutdown
+// Graceful shutdown (only for continuous mode)
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, shutting down gracefully...');
   process.exit(0);

@@ -1,0 +1,38 @@
+name: Process Video Jobs
+
+on:
+  schedule:
+    # Run every minute
+    - cron: '*/1 * * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  process-videos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      
+      - name: Install dependencies
+        working-directory: ./worker
+        run: npm install
+      
+      - name: Process video jobs
+        working-directory: ./worker
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          FIREBASE_STORAGE_BUCKET: editvideos-63486.firebasestorage.app
+        run: node processor.js
+
