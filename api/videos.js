@@ -28,64 +28,101 @@ export default async function handler(req, res) {
   try {
     // Parse query parameters
     const limit = parseInt(req.query.limit) || 50;
-    const orderBy = req.query.orderBy || 'createdAt';
-    const orderDirection = req.query.orderDirection || 'desc';
 
     // Initialize Firebase Admin and Firestore
     initializeFirebaseAdmin();
     const db = getFirestore();
 
-    // Get completed videos from Firestore
-    let query = db.collection('videos')
-      .where('status', '==', 'completed')
-      .orderBy(orderBy, orderDirection)
-      .limit(limit);
-
-    const snapshot = await query.get();
-
-    // Format videos for response
     const videos = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      videos.push({
-        videoId: doc.id,
-        jobId: data.jobId,
-        artist: data.artist,
-        mixTitle: data.mixTitle,
-        duration: data.duration,
-        fileSize: data.fileSize,
-        videoUrl: data.videoUrl,
-        createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt
+
+    // Get from videoJobs collection (primary source)
+    try {
+      const jobsSnapshot = await db.collection('videoJobs')
+        .where('status', '==', 'completed')
+        .orderBy('completedAt', 'desc')
+        .limit(limit)
+        .get();
+
+      jobsSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.videoUrl) {
+          videos.push({
+            videoId: doc.id,
+            jobId: data.jobId || doc.id,
+            artist: data.artist || 'Unknown',
+            mixTitle: data.metadata?.mixTitle || null,
+            duration: data.duration || 30,
+            fileSize: data.metadata?.fileSize || null,
+            videoUrl: data.videoUrl,
+            status: 'completed',
+            createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString()
+          });
+        }
       });
-    });
+    } catch (jobsError) {
+      // If query fails (e.g., missing index), try without orderBy
+      console.warn('[Videos] Jobs query with orderBy failed, trying without:', jobsError.message);
+      try {
+        const jobsSnapshot = await db.collection('videoJobs')
+          .where('status', '==', 'completed')
+          .limit(limit)
+          .get();
 
-    // Also get from videoJobs collection (for backwards compatibility)
-    const jobsSnapshot = await db.collection('videoJobs')
-      .where('status', '==', 'completed')
-      .orderBy('completedAt', 'desc')
-      .limit(limit)
-      .get();
+        jobsSnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.videoUrl) {
+            videos.push({
+              videoId: doc.id,
+              jobId: data.jobId || doc.id,
+              artist: data.artist || 'Unknown',
+              mixTitle: data.metadata?.mixTitle || null,
+              duration: data.duration || 30,
+              fileSize: data.metadata?.fileSize || null,
+              videoUrl: data.videoUrl,
+              status: 'completed',
+              createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString()
+            });
+          }
+        });
+      } catch (fallbackError) {
+        console.warn('[Videos] Fallback query also failed:', fallbackError.message);
+      }
+    }
 
-    jobsSnapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.videoUrl) {
+    // Also try videos collection (if it exists)
+    try {
+      const videosSnapshot = await db.collection('videos')
+        .where('status', '==', 'completed')
+        .limit(limit)
+        .get();
+
+      videosSnapshot.forEach(doc => {
+        const data = doc.data();
         videos.push({
           videoId: doc.id,
           jobId: data.jobId || doc.id,
-          artist: data.artist,
-          mixTitle: data.metadata?.mixTitle,
-          duration: data.duration,
-          fileSize: data.metadata?.fileSize,
+          artist: data.artist || 'Unknown',
+          mixTitle: data.mixTitle || null,
+          duration: data.duration || 30,
+          fileSize: data.fileSize || null,
           videoUrl: data.videoUrl,
-          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt
+          status: 'completed',
+          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString()
         });
-      }
-    });
+      });
+    } catch (videosError) {
+      // Videos collection might not exist yet, that's okay
+      console.warn('[Videos] Videos collection query failed (may not exist yet):', videosError.message);
+    }
 
-    // Remove duplicates and sort
+    // Remove duplicates and sort by creation date
     const uniqueVideos = videos.filter((video, index, self) =>
       index === self.findIndex(v => v.videoId === video.videoId)
-    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    ).sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0);
+      const dateB = new Date(b.createdAt || 0);
+      return dateB - dateA; // Newest first
+    });
 
     return res.status(200).json({
       success: true,
@@ -95,6 +132,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('[Videos] Error:', error.message);
+    console.error('[Videos] Stack:', error.stack);
     return res.status(500).json({ 
       success: false,
       error: 'Failed to get videos list',
