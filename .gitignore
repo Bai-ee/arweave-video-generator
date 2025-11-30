@@ -46,3 +46,5 @@ outputs/
 # Credentials file (contains sensitive data)
 FIREBASE_CREDENTIALS.md
 
+.vercel
+.env*.local
