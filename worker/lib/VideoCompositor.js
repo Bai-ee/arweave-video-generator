@@ -196,15 +196,19 @@ export class VideoCompositor {
       const opacity = Math.round((layer.opacity || 1.0) * 255);
       let textFilter;
       
-      // CRITICAL: Output label must be separated from filter parameters with a space or semicolon
-      // FFmpeg interprets everything after '=' as the parameter value, so we need proper separation
+      // CRITICAL: In FFmpeg filter_complex, the output label must be properly separated
+      // The format is: [input]filter=params[output]
+      // The issue: bordercolor=black[output] gets parsed as color 'black[output]'
+      // Solution: Use hex format AND ensure output label is on a new filter or properly separated
+      // Actually, the output label should work directly after the filter params
+      // But we need to use hex format to avoid name conflicts
       if (isCentered) {
         // Center text horizontally using FFmpeg expression: (w-text_w)/2
-        // Note: Output label goes at the END, separated properly
-        textFilter = `${currentInput}drawtext=text='${escapedText}':fontsize=${fontSize}:fontcolor=white:x=(w-text_w)/2:y=${yPos}:alpha=${opacity}:borderw=2:bordercolor=0x000000${outputLabel}`;
+        // Use hex color format (0x000000) - more reliable than named colors
+        textFilter = `${currentInput}drawtext=text='${escapedText}':fontsize=${fontSize}:fontcolor=0xFFFFFF:x=(w-text_w)/2:y=${yPos}:alpha=${opacity}:borderw=2:bordercolor=0x000000${outputLabel}`;
       } else {
         // Use specified x position
-        textFilter = `${currentInput}drawtext=text='${escapedText}':fontsize=${fontSize}:fontcolor=white:x=${xPos}:y=${yPos}:alpha=${opacity}:borderw=2:bordercolor=0x000000${outputLabel}`;
+        textFilter = `${currentInput}drawtext=text='${escapedText}':fontsize=${fontSize}:fontcolor=0xFFFFFF:x=${xPos}:y=${yPos}:alpha=${opacity}:borderw=2:bordercolor=0x000000${outputLabel}`;
       }
       
       filters.push(textFilter);
