@@ -226,9 +226,7 @@ export class VideoCompositor {
     const filterComplex = filters.join(';');
     console.log(`[VideoCompositor] Filter complex: ${filterComplex.substring(0, 200)}...`);
     
-    // Debug: Log all output labels created
-    const textLayers = config.layers.filter(layer => layer.type === 'text');
-    const imageLayers = config.layers.filter(layer => layer.type !== 'text' && layer.type !== 'background');
+    // Debug: Log all output labels created (reuse textLayers and imageLayers from above)
     if (textLayers.length > 0) {
       console.log(`[VideoCompositor] Text layers: ${textLayers.length}, final output will be: [text_layer${textLayers.length - 1}]`);
     } else if (imageLayers.length > 0) {
