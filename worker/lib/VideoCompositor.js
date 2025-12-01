@@ -2,11 +2,42 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 import fs from 'fs-extra';
 import path from 'path';
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 
 // Configure FFmpeg path
-if (ffmpegStatic) {
-  ffmpeg.setFfmpegPath(ffmpegStatic);
+// In GitHub Actions, prefer system FFmpeg (has drawtext filter)
+// Otherwise use ffmpeg-static
+let ffmpegPath = 'ffmpeg'; // Default to system FFmpeg
+
+if (process.env.GITHUB_ACTIONS === 'true') {
+  // In GitHub Actions, use system FFmpeg (installed via apt-get)
+  // It has drawtext filter support
+  try {
+    execSync('ffmpeg -version', { stdio: 'ignore' });
+    ffmpegPath = 'ffmpeg'; // Use system FFmpeg
+    console.log('[VideoCompositor] Using system FFmpeg (GitHub Actions)');
+  } catch (error) {
+    // Fallback to ffmpeg-static if system FFmpeg not found
+    if (ffmpegStatic && fs.existsSync(ffmpegStatic)) {
+      ffmpegPath = ffmpegStatic;
+      console.log('[VideoCompositor] Using ffmpeg-static (fallback)');
+    }
+  }
+} else {
+  // Local development: try ffmpeg-static first, fallback to system
+  if (ffmpegStatic && fs.existsSync(ffmpegStatic)) {
+    ffmpegPath = ffmpegStatic;
+    ffmpeg.setFfmpegPath(ffmpegStatic);
+    console.log('[VideoCompositor] Using ffmpeg-static');
+  } else {
+    try {
+      execSync('ffmpeg -version', { stdio: 'ignore' });
+      ffmpegPath = 'ffmpeg';
+      console.log('[VideoCompositor] Using system FFmpeg');
+    } catch (error) {
+      console.warn('[VideoCompositor] No FFmpeg found');
+    }
+  }
 }
 
 /**
@@ -187,7 +218,8 @@ export class VideoCompositor {
    * Build FFmpeg command array
    */
   buildFFmpegCommand(config, filterComplex) {
-    const ffmpegPath = ffmpegStatic || 'ffmpeg';
+    // Use the ffmpegPath determined at module load
+    // In GitHub Actions, this will be system FFmpeg (has drawtext)
     const command = [ffmpegPath];
 
     // Input base image/video
