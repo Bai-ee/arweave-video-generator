@@ -94,34 +94,50 @@ export default async function handler(req, res) {
       videos.push(videoData);
     });
 
-    // Also try videos collection (if it exists) for completed videos
+    // Also get videos from videos collection to get actual artist names for completed videos
+    const videosCollectionData = new Map(); // jobId -> video data
     try {
       const videosSnapshot = await db.collection('videos')
-        .limit(limit)
+        .limit(limit * 2)
         .get();
 
       videosSnapshot.forEach(doc => {
         const data = doc.data();
-        videos.push({
-          videoId: doc.id,
-          jobId: data.jobId || doc.id,
-          artist: data.artist || 'Unknown',
-          mixTitle: data.mixTitle || null,
-          duration: data.duration || 30,
-          fileSize: data.fileSize || null,
+        const jobId = data.jobId || doc.id;
+        videosCollectionData.set(jobId, {
+          artist: data.artist,
+          mixTitle: data.mixTitle,
+          fileSize: data.fileSize,
           videoUrl: data.videoUrl,
-          status: data.status || 'completed',
-          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString()
+          status: data.status || 'completed'
         });
       });
+      console.log(`[Videos] Loaded ${videosCollectionData.size} videos from videos collection`);
     } catch (videosError) {
       // Videos collection might not exist yet, that's okay
       console.warn('[Videos] Videos collection query failed (may not exist yet):', videosError.message);
     }
 
+    // Merge data: use videos collection data for completed videos (has actual artist name)
+    videos = videos.map(video => {
+      const videosData = videosCollectionData.get(video.jobId);
+      if (videosData && video.status === 'completed') {
+        // For completed videos, use artist from videos collection (actual artist name)
+        return {
+          ...video,
+          artist: videosData.artist || video.artist || 'Unknown',
+          mixTitle: videosData.mixTitle || video.mixTitle,
+          fileSize: videosData.fileSize || video.fileSize,
+          videoUrl: videosData.videoUrl || video.videoUrl,
+          status: videosData.status || video.status
+        };
+      }
+      return video;
+    });
+
     // Remove duplicates and sort by creation date
     const uniqueVideos = videos.filter((video, index, self) =>
-      index === self.findIndex(v => v.videoId === video.videoId)
+      index === self.findIndex(v => (v.videoId === video.videoId || v.jobId === video.jobId))
     ).sort((a, b) => {
       const dateA = new Date(a.createdAt || 0);
       const dateB = new Date(b.createdAt || 0);
