@@ -32,8 +32,10 @@ let currentJobId = null;
 /**
  * Process a single video job
  */
-async function processVideoJob(jobId, jobData) {
-  console.log(`\n🎬 Processing video job: ${jobId}`);
+async function processVideoJob(jobId, jobData, documentId = null) {
+  // Use documentId if provided (from snapshot), otherwise use jobId
+  const docId = documentId || jobId;
+  console.log(`\n🎬 Processing video job: ${jobId} (Document ID: ${docId})`);
   console.log(`   Artist: ${jobData.artist}, Duration: ${jobData.duration}s`);
 
   const db = getFirestore();
@@ -42,10 +44,12 @@ async function processVideoJob(jobId, jobData) {
 
   try {
     // Update status to processing
-    await db.collection('videoJobs').doc(jobId).update({
+    console.log(`📝 Updating status to 'processing' for document: ${docId}`);
+    await db.collection('videoJobs').doc(docId).update({
       status: 'processing',
       startedAt: admin.firestore.FieldValue.serverTimestamp()
     });
+    console.log(`✅ Status updated to 'processing'`);
 
     // Generate video
     const videoResult = await videoGenerator.generateVideoWithAudio({
@@ -91,14 +95,42 @@ async function processVideoJob(jobId, jobData) {
 
     // Update job status to completed
     // IMPORTANT: status must be at root level, not in metadata
-    await db.collection('videoJobs').doc(jobId).update({
-      status: 'completed',
-      completedAt: admin.firestore.FieldValue.serverTimestamp(),
-      videoUrl: videoUrl,
-      'metadata.fileName': videoResult.fileName,
-      'metadata.fileSize': videoResult.fileSize,
-      'metadata.mixTitle': videoResult.mixTitle
-    });
+    try {
+      // Remove old metadata.status if it exists, set status at root level
+      const updateData = {
+        status: 'completed',
+        completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        videoUrl: videoUrl,
+        'metadata.fileName': videoResult.fileName,
+        'metadata.fileSize': videoResult.fileSize,
+        'metadata.mixTitle': videoResult.mixTitle,
+        'metadata.status': admin.firestore.FieldValue.delete() // Remove old nested status
+      };
+      
+      console.log(`📝 Updating Firestore document ${docId} with:`, {
+        status: 'completed',
+        videoUrl: videoUrl,
+        fileName: videoResult.fileName
+      });
+      
+      await db.collection('videoJobs').doc(docId).update(updateData);
+      
+      // Verify the update
+      const updatedDoc = await db.collection('videoJobs').doc(docId).get();
+      if (!updatedDoc.exists) {
+        throw new Error(`Document ${docId} does not exist after update!`);
+      }
+      const updatedData = updatedDoc.data();
+      console.log(`✅ Firestore update verified - Status: ${updatedData.status}, VideoUrl: ${updatedData.videoUrl || 'null'}`);
+      
+      if (updatedData.status !== 'completed') {
+        console.error(`⚠️ WARNING: Status update failed! Expected 'completed', got '${updatedData.status}'`);
+      }
+    } catch (updateError) {
+      console.error(`❌ Failed to update Firestore for job ${jobId}:`, updateError.message);
+      console.error('Update error details:', updateError);
+      throw updateError; // Re-throw to trigger error handling
+    }
 
     // Also create/update video document in videos collection
     await db.collection('videos').doc(jobId).set({
@@ -130,13 +162,17 @@ async function processVideoJob(jobId, jobData) {
     // Update job status to failed
     // IMPORTANT: status must be at root level, not in metadata
     try {
-      await db.collection('videoJobs').doc(jobId).update({
+      const docId = documentId || jobId;
+      console.log(`📝 Updating status to 'failed' for document: ${docId}`);
+      await db.collection('videoJobs').doc(docId).update({
         status: 'failed',
         completedAt: admin.firestore.FieldValue.serverTimestamp(),
         error: error.message
       });
+      console.log(`✅ Status updated to 'failed'`);
     } catch (updateError) {
       console.error(`❌ Failed to update job status: ${updateError.message}`);
+      console.error('Update error details:', updateError);
     }
   }
 }
@@ -200,13 +236,18 @@ async function pollForPendingJobs() {
 
     // Process the first pending job
     const jobDoc = pendingJobsSnapshot.docs[0];
-    const jobId = jobDoc.id;
     const jobData = jobDoc.data();
+    const documentId = jobDoc.id; // Firestore document ID
+    // Use jobId from data if available, otherwise use document ID
+    const jobId = jobData.jobId || documentId;
+    
+    console.log(`[Processor] Processing job - Document ID: ${documentId}, JobId from data: ${jobData.jobId || 'none'}, Using jobId: ${jobId}`);
 
     isProcessing = true;
     currentJobId = jobId;
 
-    await processVideoJob(jobId, jobData);
+    // Pass documentId to ensure we update the correct document
+    await processVideoJob(jobId, jobData, documentId);
 
     isProcessing = false;
     currentJobId = null;
