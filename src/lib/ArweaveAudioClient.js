@@ -1,30 +1,40 @@
-import ffmpeg from 'fluent-ffmpeg';
-import axios from 'axios';
-import fs from 'fs-extra';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
-import { execSync } from 'child_process';
-import ffmpegStatic from 'ffmpeg-static';
+const ffmpeg = require('fluent-ffmpeg');
+const axios = require('axios');
+const fs = require('fs-extra');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 // Configure FFmpeg - try multiple sources
 let ffmpegConfigured = false;
 
 // Try system FFmpeg first
 try {
+  const { execSync } = require('child_process');
   execSync('ffmpeg -version', { stdio: 'ignore' });
   console.log('[ArweaveAudioClient] Using system FFmpeg');
   ffmpegConfigured = true;
 } catch (error) {
   // Try ffmpeg-static (npm package)
   try {
-    if (ffmpegStatic && fs.existsSync(ffmpegStatic)) {
-      ffmpeg.setFfmpegPath(ffmpegStatic);
-      console.log('[ArweaveAudioClient] Using ffmpeg-static:', ffmpegStatic);
+    const ffmpegPath = require('ffmpeg-static');
+    if (ffmpegPath && fs.existsSync(ffmpegPath)) {
+      ffmpeg.setFfmpegPath(ffmpegPath);
+      console.log('[ArweaveAudioClient] Using ffmpeg-static:', ffmpegPath);
       ffmpegConfigured = true;
     }
   } catch (staticError) {
-    console.error('[ArweaveAudioClient] No FFmpeg found - audio generation will fail');
-    console.error('[ArweaveAudioClient] Tried: system, ffmpeg-static');
+    // Try @ffmpeg-installer as fallback
+    try {
+      const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+      if (fs.existsSync(ffmpegPath)) {
+        ffmpeg.setFfmpegPath(ffmpegPath);
+        console.log('[ArweaveAudioClient] Using @ffmpeg-installer/ffmpeg:', ffmpegPath);
+        ffmpegConfigured = true;
+      }
+    } catch (installerError) {
+      console.error('[ArweaveAudioClient] No FFmpeg found - audio generation will fail');
+      console.error('[ArweaveAudioClient] Tried: system, ffmpeg-static, @ffmpeg-installer');
+    }
   }
 }
 
@@ -361,7 +371,7 @@ class ArweaveAudioClient {
     
     try {
       // First try: Generate a simple sine wave using FFmpeg
-      // execSync already imported at top
+      const { execSync } = require('child_process');
       const command = `ffmpeg -f lavfi -i "sine=frequency=440:duration=${duration}" -c:a aac -b:a 128k "${outputPath}"`;
       execSync(command, { stdio: 'pipe' });
       
@@ -462,7 +472,7 @@ class ArweaveAudioClient {
   async createMinimalAACFile(outputPath, duration) {
     // Create a minimal AAC file structure
     // This is a very basic AAC file with minimal headers
-    // fs already imported as fs-extra at top
+    const fs = require('fs');
     
     // AAC file structure (simplified)
     const aacHeader = Buffer.from([
@@ -710,4 +720,4 @@ class ArweaveAudioClient {
   }
 }
 
-export { ArweaveAudioClient }; 
+module.exports = { ArweaveAudioClient }; 

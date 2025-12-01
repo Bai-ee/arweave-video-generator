@@ -139,7 +139,6 @@
               <tr style="border: none;">
                 <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center; border: none;">ARTIST</th>
                 <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">DURATION</th>
-                <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">REQUESTED</th>
                 <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">STATUS</th>
                 <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">ACTIONS</th>
               </tr>
@@ -147,7 +146,7 @@
             <tbody id="videosTable">
               <!-- Video rows will be populated dynamically -->
               <tr>
-                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
                   No videos generated yet. Click "GENERATE VIDEO" to create your first video!
                 </td>
               </tr>
@@ -166,25 +165,7 @@
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', () => {
       loadVideos();
-      
-      // Restore polling for any pending/processing jobs
-      setTimeout(() => {
-        restoreActiveJobs();
-      }, 1000);
     });
-
-    /**
-     * Restore polling for pending/processing jobs after page load
-     */
-    function restoreActiveJobs() {
-      videos.forEach(video => {
-        const status = video.status || 'completed';
-        if (status === 'pending' || status === 'processing') {
-          console.log(`Restoring polling for job: ${video.jobId}`);
-          startPollingJob(video.jobId);
-        }
-      });
-    }
 
     /**
      * Generate a new video (one-click, always 30s, random artist)
@@ -229,8 +210,7 @@
             artist: 'Random',
             duration: 30,
             status: 'pending',
-            videoUrl: null,
-            createdAt: new Date().toISOString()
+            videoUrl: null
           });
         } else {
           throw new Error(data.error || 'Failed to create video job');
@@ -303,18 +283,7 @@
 
         if (data.success) {
           videos = data.videos || [];
-          console.log(`📹 Loaded ${videos.length} videos from API`);
-          console.log(`📹 Videos with status 'completed':`, videos.filter(v => v.status === 'completed').length);
-          console.log(`📹 Videos with videoUrl:`, videos.filter(v => v.videoUrl).length);
           displayVideos();
-          
-          // Restore polling for any pending/processing jobs
-          videos.forEach(video => {
-            const status = video.status || 'completed';
-            if ((status === 'pending' || status === 'processing') && !activeJobs.has(video.jobId)) {
-              startPollingJob(video.jobId);
-            }
-          });
         } else {
           throw new Error(data.error || 'Failed to load videos');
         }
@@ -338,7 +307,7 @@
       if (videos.length === 0) {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="5" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+            <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
               No videos generated yet. Click "GENERATE VIDEO" to create your first video!
             </td>
           </tr>
@@ -353,50 +322,10 @@
         return dateB - dateA;
       });
 
-      console.log(`📺 Displaying ${sortedVideos.length} videos in table`);
-      sortedVideos.forEach((video, index) => {
-        console.log(`📺 Video ${index + 1}:`, {
-          jobId: video.jobId,
-          status: video.status,
-          videoUrl: video.videoUrl || 'NO URL',
-          artist: video.artist,
-          fullVideo: video // Log full object for debugging
-        });
+      sortedVideos.forEach(video => {
         const row = createVideoRow(video);
         tableBody.appendChild(row);
       });
-    }
-
-    /**
-     * Format timestamp for display
-     */
-    function formatTimestamp(timestamp) {
-      if (!timestamp) return 'N/A';
-      
-      try {
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-        
-        // Show relative time if recent, otherwise show date
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        
-        // Show formatted date for older items
-        return date.toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        });
-      } catch (error) {
-        return 'N/A';
-      }
     }
 
     /**
@@ -410,7 +339,6 @@
       const status = video.status || 'completed';
       const statusDisplay = getStatusDisplay(status);
       const actions = getActionsHtml(video);
-      const requestedTime = formatTimestamp(video.createdAt);
 
       row.innerHTML = `
         <td class="px-2" style="padding: 1rem; text-align: center; color: var(--color-yellow-75); font-family: var(--font-mathias);">
@@ -418,9 +346,6 @@
         </td>
         <td class="px-2" style="padding: 1rem; text-align: center; color: var(--color-yellow-75);">
           ${video.duration || 30}s
-        </td>
-        <td class="px-2" style="padding: 1rem; text-align: center; color: var(--color-yellow-75); font-size: 0.875rem;">
-          ${requestedTime}
         </td>
         <td class="px-2" style="padding: 1rem; text-align: center;">
           ${statusDisplay}
@@ -450,64 +375,31 @@
      * Get actions HTML
      */
     function getActionsHtml(video) {
-      const jobId = video.videoId || video.jobId;
-      const deleteBtn = `
-        <button 
-          onclick="deleteVideo('${jobId}')" 
-          style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 0.25rem 0.5rem; font-size: 1.25rem; line-height: 1;"
-          title="Delete video"
-        >
-          ×
-        </button>
-      `;
-      
-      // Debug logging
-      if (video.status === 'completed') {
-        console.log(`[getActionsHtml] Video ${jobId}: status=${video.status}, videoUrl=${video.videoUrl || 'NULL'}`);
-      }
-      
       if (video.status === 'completed' && video.videoUrl) {
-        // Escape single quotes in URL for onclick handler
-        const escapedUrl = (video.videoUrl || '').replace(/'/g, "\\'");
-        const filename = `${video.artist || 'video'}_${video.duration || 30}s.mp4`.replace(/'/g, "\\'");
-        
-        console.log(`[getActionsHtml] Creating VIEW/DOWNLOAD buttons for job ${jobId}, URL: ${escapedUrl.substring(0, 50)}...`);
-        
         return `
-          <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+          <div style="display: flex; gap: 0.5rem; justify-content: center;">
             <button 
-              onclick="viewVideo('${escapedUrl}')" 
+              onclick="viewVideo('${video.videoUrl}')" 
               class="btn-base btn-secondary px-3 py-1 text-xs rounded"
               style="background: var(--color-yellow-75); color: black; border: none; cursor: pointer; font-family: var(--font-mathias);"
             >
               VIEW
             </button>
             <button 
-              onclick="downloadVideo('${escapedUrl}', '${filename}')" 
+              onclick="downloadVideo('${video.videoUrl}', '${video.artist || 'video'}_${video.duration || 30}s.mp4')" 
               class="btn-base btn-secondary px-3 py-1 text-xs rounded"
               style="background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias);"
             >
               DOWNLOAD
             </button>
-            ${deleteBtn}
           </div>
         `;
       } else if (video.status === 'pending' || video.status === 'processing') {
-        return `
-          <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
-            <span style="color: #6b7280; font-size: 0.75rem;">Processing...</span>
-            ${deleteBtn}
-          </div>
-        `;
+        return '<span style="color: #6b7280; font-size: 0.75rem;">Processing...</span>';
       } else if (video.status === 'failed') {
-        return `
-          <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
-            <span style="color: #ef4444; font-size: 0.75rem;">Failed</span>
-            ${deleteBtn}
-          </div>
-        `;
+        return '<span style="color: #ef4444; font-size: 0.75rem;">Failed</span>';
       }
-      return deleteBtn;
+      return '-';
     }
 
     /**
@@ -517,7 +409,7 @@
       const tableBody = document.getElementById('videosTable');
       
       // Remove empty state message if present
-      if (tableBody.querySelector('td[colspan="5"]')) {
+      if (tableBody.querySelector('td[colspan="4"]')) {
         tableBody.innerHTML = '';
       }
 
@@ -530,32 +422,25 @@
      */
     function updateVideoRowStatus(jobId, status, videoUrl, error) {
       const row = document.getElementById(`video-row-${jobId}`);
-      if (!row) {
-        console.warn(`[updateVideoRowStatus] Row not found for jobId: ${jobId}`);
-        return;
-      }
+      if (!row) return;
 
-      console.log(`[updateVideoRowStatus] Updating job ${jobId}: status=${status}, videoUrl=${videoUrl || 'NULL'}`);
-
-      // Update status cell (now at index 3)
-      const statusCell = row.cells[3];
+      // Update status cell
+      const statusCell = row.cells[2];
       if (statusCell) {
         statusCell.innerHTML = getStatusDisplay(status);
       }
 
-      // Update actions cell (now at index 4)
-      const actionsCell = row.cells[4];
+      // Update actions cell
+      const actionsCell = row.cells[3];
       if (actionsCell) {
         const video = {
           videoId: jobId,
           jobId: jobId,
           status: status,
-          videoUrl: videoUrl, // Pass the actual videoUrl
+          videoUrl: videoUrl,
           artist: row.cells[0].textContent.trim(),
-          duration: parseInt(row.cells[1].textContent) || 30,
-          createdAt: row.cells[2].textContent.trim() // Preserve timestamp
+          duration: parseInt(row.cells[1].textContent) || 30
         };
-        console.log(`[updateVideoRowStatus] Creating actions HTML with videoUrl: ${video.videoUrl || 'NULL'}`);
         actionsCell.innerHTML = getActionsHtml(video);
       }
     }
@@ -575,44 +460,6 @@
       link.href = videoUrl;
       link.download = filename;
       link.click();
-    }
-
-    /**
-     * Delete video from table
-     */
-    function deleteVideo(jobId) {
-      if (!confirm('Are you sure you want to delete this video?')) {
-        return;
-      }
-
-      // Remove from local videos array
-      videos = videos.filter(v => (v.videoId || v.jobId) !== jobId);
-
-      // Remove row from table
-      const row = document.getElementById(`video-row-${jobId}`);
-      if (row) {
-        row.remove();
-      }
-
-      // Stop polling if active
-      if (activeJobs.has(jobId)) {
-        clearInterval(activeJobs.get(jobId));
-        activeJobs.delete(jobId);
-      }
-
-      // Show empty state if no videos left
-      const tableBody = document.getElementById('videosTable');
-      if (tableBody.children.length === 0) {
-        tableBody.innerHTML = `
-          <tr>
-            <td colspan="5" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-              No videos generated yet. Click "GENERATE VIDEO" to create your first video!
-            </td>
-          </tr>
-        `;
-      }
-
-      showToast('Video removed from list', 'success');
     }
 
     /**

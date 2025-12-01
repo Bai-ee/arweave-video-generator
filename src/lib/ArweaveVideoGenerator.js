@@ -1,14 +1,12 @@
-import ffmpeg from 'fluent-ffmpeg';
-import ffmpegStatic from 'ffmpeg-static';
-import fs from 'fs-extra';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
-import { ArweaveAudioClient } from './ArweaveAudioClient.js';
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegPath = require('ffmpeg-static');
+const fs = require('fs-extra');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+const { ArweaveAudioClient } = require('./ArweaveAudioClient.js');
 
 // Configure FFmpeg path
-if (ffmpegStatic) {
-  ffmpeg.setFfmpegPath(ffmpegStatic);
-}
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 /**
  * Arweave Video Generator - Creates videos with real Arweave audio and artist visuals
@@ -399,4 +397,4 @@ class ArweaveVideoGenerator {
     }
 }
 
-export { ArweaveVideoGenerator }; 
+module.exports = { ArweaveVideoGenerator }; 

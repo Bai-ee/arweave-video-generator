@@ -2,11 +2,10 @@ name: Process Video Jobs
 
 on:
   schedule:
-    # Run every minute (fallback if webhook fails)
-    - cron: '*/1 * * * *'
+    - cron: '*/1 * * * *' # Run every minute
   workflow_dispatch: # Allow manual triggering
-  repository_dispatch: # Triggered via GitHub API webhook
-    types: [process-video-job]
+  repository_dispatch: # Allow triggering via GitHub API (webhook)
+    types: [process-video-job, test-webhook-trigger] # Custom event types
 
 jobs:
   process-videos:
@@ -36,6 +35,6 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
           FIREBASE_STORAGE_BUCKET: editvideos-63486.firebasestorage.app
-          GITHUB_ACTIONS: 'true'
+          GITHUB_ACTIONS: 'true' # Indicate that it's running in GitHub Actions
         run: node processor.js
 

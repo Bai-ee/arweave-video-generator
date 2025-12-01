@@ -3,6 +3,10 @@ import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+
+// Configure FFmpeg - try multiple sources
+let ffmpegConfigured = false;
+
 import { execSync } from 'child_process';
 import ffmpegStatic from 'ffmpeg-static';
 
@@ -244,58 +248,34 @@ class ArweaveAudioClient {
         console.log(`[ArweaveAudioClient] 🔧 FFmpeg configuration: System FFmpeg in Docker`);
         
         return await new Promise((resolve, reject) => {
-          // For GitHub Actions, use direct execSync to avoid fluent-ffmpeg SIGSEGV issues
-          if (process.env.GITHUB_ACTIONS) {
-            console.log('[ArweaveAudioClient] Using direct FFmpeg execSync for GitHub Actions');
-            try {
-              // Build minimal FFmpeg command string - absolute simplest possible
-              const ffmpegCmd = `ffmpeg -ss ${startTime} -i "${url}" -t ${duration} -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
-              console.log(`[ArweaveAudioClient] FFmpeg command: ${ffmpegCmd.substring(0, 150)}...`);
-              
-              // Execute directly - this avoids fluent-ffmpeg wrapper issues
-              execSync(ffmpegCmd, { 
-                stdio: ['ignore', 'pipe', 'pipe'],
-                maxBuffer: 10 * 1024 * 1024 // 10MB buffer
-              });
-              
-              console.log(`[ArweaveAudioClient] Segment download completed: ${path.basename(outputPath)}`);
-              resolve(outputPath);
-              return;
-            } catch (error) {
-              console.error(`[ArweaveAudioClient] Direct FFmpeg execSync failed:`, error.message);
-              reject(error);
-              return;
-            }
-          }
-          
           let command;
           
-          if (useSimpleCommand) {
-            // Simple command for Railway - no complex filters
-            console.log('[ArweaveAudioClient] Using simple FFmpeg command for Railway compatibility');
-            command = ffmpeg(url)
-              .setStartTime(startTime)
-              .duration(duration)
-              .audioCodec('aac')
-              .audioBitrate('128k')
-              .audioChannels(2)
-              .audioFrequency(44100)
-              .output(outputPath);
-          } else {
-            // Full featured command for local development
-            command = ffmpeg(url)
-              .setStartTime(startTime)
-              .duration(duration)
-              .audioFilters([
-                `afade=t=in:st=0:d=${fadeInDuration}`,
-                `afade=t=out:st=${duration - fadeOutDuration}:d=${fadeOutDuration}`
-              ])
-              .audioCodec('aac')
-              .audioBitrate('128k')
-              .audioChannels(2)
-              .audioFrequency(44100)
-              .output(outputPath);
-          }
+                           if (useSimpleCommand) {
+                   // Simple command for Railway - no complex filters
+                   console.log('[ArweaveAudioClient] Using simple FFmpeg command for Railway compatibility');
+                   command = ffmpeg(url)
+                     .setStartTime(startTime)
+                     .duration(duration)
+                     .audioCodec('aac')
+                     .audioBitrate('128k')
+                     .audioChannels(2)
+                     .audioFrequency(44100)
+                     .output(outputPath);
+                 } else {
+                   // Full featured command for local development
+                   command = ffmpeg(url)
+                     .setStartTime(startTime)
+                     .duration(duration)
+                     .audioFilters([
+                       `afade=t=in:st=0:d=${fadeInDuration}`,
+                       `afade=t=out:st=${duration - fadeOutDuration}:d=${fadeOutDuration}`
+                     ])
+                     .audioCodec('aac')
+                     .audioBitrate('128k')
+                     .audioChannels(2)
+                     .audioFrequency(44100)
+                     .output(outputPath);
+                 }
 
           // Add metadata if provided
           if (metadata) {
@@ -305,18 +285,17 @@ class ArweaveAudioClient {
             if (metadata.genre) command.outputOptions('-metadata', `genre=${metadata.genre}`);
           }
 
-          // Network options for local/Railway (GitHub Actions handled above)
-          if (!process.env.GITHUB_ACTIONS) {
-            // Enhanced network connection options for local/Railway
-            command.inputOptions([
-              '-timeout', '30000000', // 30 second timeout
-              '-reconnect', '1',
-              '-reconnect_streamed', '1',
-              '-reconnect_delay_max', '5',
-              '-reconnect_at_eof', '1',
-              '-reconnect_on_network_error', '1'
-            ]);
-          }
+          // Enhanced network connection options for reliability
+          // Key: -ss before -i enables efficient HTTP range requests (only downloads needed segment)
+          // The -ss flag before input tells FFmpeg to seek in the HTTP stream, which triggers range requests
+          command.inputOptions([
+            '-timeout', '30000000', // 30 second timeout (reduced for faster failures)
+            '-reconnect', '1',
+            '-reconnect_streamed', '1',
+            '-reconnect_delay_max', '5', // Reduced delay for faster retries
+            '-reconnect_at_eof', '1',
+            '-reconnect_on_network_error', '1'
+          ]);
 
           // Capture stderr for better error diagnostics
           let stderrOutput = '';

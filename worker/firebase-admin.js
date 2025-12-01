@@ -1,5 +1,6 @@
 /**
- * Firebase Admin SDK Setup for Railway Worker
+ * Firebase Admin SDK Initialization for Worker
+ * Used by GitHub Actions worker
  */
 
 import admin from 'firebase-admin';
@@ -15,26 +16,19 @@ export function initializeFirebaseAdmin() {
   }
 
   try {
-    // Initialize with service account credentials from environment
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
       
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET
-      });
-    } else if (process.env.FIREBASE_PROJECT_ID) {
-      // Alternative: Initialize with individual env vars
-      admin.initializeApp({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'editvideos-63486.firebasestorage.app'
       });
     } else {
-      throw new Error('Firebase credentials not configured. Set FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_PROJECT_ID');
+      throw new Error('Firebase credentials not configured. Set FIREBASE_SERVICE_ACCOUNT_KEY');
     }
 
     firebaseAdminInitialized = true;
-    console.log('✅ Firebase Admin initialized for worker');
+    console.log('✅ Firebase Admin initialized');
     return admin;
   } catch (error) {
     console.error('❌ Firebase Admin initialization failed:', error.message);
@@ -43,12 +37,16 @@ export function initializeFirebaseAdmin() {
 }
 
 export function getFirestore() {
-  const admin = initializeFirebaseAdmin();
+  if (!firebaseAdminInitialized) {
+    initializeFirebaseAdmin();
+  }
   return admin.firestore();
 }
 
 export function getStorage() {
-  const admin = initializeFirebaseAdmin();
+  if (!firebaseAdminInitialized) {
+    initializeFirebaseAdmin();
+  }
   return admin.storage();
 }
 

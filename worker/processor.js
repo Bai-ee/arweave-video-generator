@@ -1,8 +1,8 @@
 /**
- * Railway Worker: Async Video Processor
+ * GitHub Actions Worker: Async Video Processor
  * 
- * Continuously polls Firestore for pending video jobs,
- * processes them using ArweaveVideoGenerator,
+ * Processes pending video jobs from Firestore,
+ * generates videos using ArweaveVideoGenerator,
  * uploads to Firebase Storage,
  * and updates job status.
  */
@@ -23,7 +23,6 @@ const __dirname = path.dirname(__filename);
 const videoGenerator = new ArweaveVideoGenerator();
 
 // Polling configuration
-const POLL_INTERVAL = 3000; // Check every 3 seconds
 const MAX_CONCURRENT_JOBS = 1; // Process one at a time for MVP
 
 let isProcessing = false;
@@ -114,31 +113,11 @@ async function processVideoJob(jobId, jobData, documentId = null) {
         'metadata.status': admin.firestore.FieldValue.delete() // Remove old nested status
       };
       
-      console.log(`📝 Updating Firestore document ${docId} (jobId: ${jobId}) with:`, {
+      console.log(`📝 Updating Firestore document ${docId} with:`, {
         status: 'completed',
         videoUrl: videoUrl,
         fileName: videoResult.fileName
       });
-      
-      // Check document exists before update
-      const docBefore = await db.collection('videoJobs').doc(docId).get();
-      if (!docBefore.exists) {
-        console.error(`❌ Document ${docId} does not exist! Trying with jobId ${jobId}...`);
-        // Try with jobId if documentId doesn't work
-        const docById = await db.collection('videoJobs').doc(jobId).get();
-        if (docById.exists) {
-          console.log(`✅ Found document using jobId ${jobId}, updating that instead`);
-          await db.collection('videoJobs').doc(jobId).update(updateData);
-          const updatedDoc = await db.collection('videoJobs').doc(jobId).get();
-          const updatedData = updatedDoc.data();
-          console.log(`✅ Firestore update verified - Status: ${updatedData.status}, VideoUrl: ${updatedData.videoUrl || 'null'}`);
-          return; // Exit early since we updated with jobId
-        } else {
-          throw new Error(`Document ${docId} and ${jobId} both do not exist!`);
-        }
-      }
-      
-      console.log(`📄 Document ${docId} exists. Current status: ${docBefore.data().status || docBefore.data().metadata?.status || 'unknown'}`);
       
       await db.collection('videoJobs').doc(docId).update(updateData);
       
@@ -152,7 +131,9 @@ async function processVideoJob(jobId, jobData, documentId = null) {
       
       if (updatedData.status !== 'completed') {
         console.error(`⚠️ WARNING: Status update failed! Expected 'completed', got '${updatedData.status}'`);
-        console.error(`⚠️ Full document data:`, JSON.stringify(updatedData, null, 2));
+      }
+      if (!updatedData.videoUrl) {
+        console.error(`⚠️ WARNING: VideoUrl update failed! videoUrl is null`);
       }
     } catch (updateError) {
       console.error(`❌ Failed to update Firestore for job ${jobId}:`, updateError.message);
@@ -195,7 +176,8 @@ async function processVideoJob(jobId, jobData, documentId = null) {
       await db.collection('videoJobs').doc(docId).update({
         status: 'failed',
         completedAt: admin.firestore.FieldValue.serverTimestamp(),
-        error: error.message
+        error: error.message,
+        'metadata.status': admin.firestore.FieldValue.delete() // Remove old nested status
       });
       console.log(`✅ Status updated to 'failed'`);
     } catch (updateError) {
@@ -217,8 +199,6 @@ async function pollForPendingJobs() {
     const db = getFirestore();
 
     // Query for pending jobs
-    // Handle both old structure (status in metadata) and new structure (status at root)
-    // For now, get all jobs and filter in memory to avoid index issues
     let pendingJobsSnapshot;
     try {
       // Try with where clause first (status at root level)
@@ -264,22 +244,16 @@ async function pollForPendingJobs() {
 
     // Process the first pending job
     const jobDoc = pendingJobsSnapshot.docs[0];
-    const jobData = jobDoc.data();
     const documentId = jobDoc.id; // Firestore document ID
-    // Use jobId from data if available, otherwise use document ID
-    const jobId = jobData.jobId || documentId;
-    
-    console.log(`[Processor] Processing job:`);
-    console.log(`   Document ID (from snapshot): ${documentId}`);
-    console.log(`   JobId from data: ${jobData.jobId || 'none'}`);
-    console.log(`   Using jobId: ${jobId}`);
-    console.log(`   Will update document: ${documentId} (NOT ${jobId} unless they match)`);
+    const jobData = jobDoc.data();
+    const jobId = jobData.jobId || documentId; // Use jobId from data, fallback to documentId
+
+    console.log(`[Processor] Processing job - Document ID: ${documentId}, JobId from data: ${jobData.jobId || 'none'}, Using jobId: ${jobId}`);
 
     isProcessing = true;
     currentJobId = jobId;
 
     // Pass documentId to ensure we update the correct document
-    // CRITICAL: Always use documentId (from snapshot) for Firestore updates
     await processVideoJob(jobId, jobData, documentId);
 
     isProcessing = false;
@@ -313,37 +287,19 @@ async function startWorker() {
       process.exit(1);
     }
   } else {
-    // Continuous mode: poll every few seconds (for Railway/Render)
-    console.log('🚀 Continuous Video Worker starting...');
-    console.log(`📊 Polling interval: ${POLL_INTERVAL}ms`);
+    // Continuous polling mode (for local dev or other platforms)
+    console.log('🔄 Starting continuous polling for video jobs...');
+    console.log(`⚙️ Polling interval: 3000 seconds`);
     console.log(`⚙️ Max concurrent jobs: ${MAX_CONCURRENT_JOBS}`);
-
+    
     // Initial poll
-    await pollForPendingJobs();
-
-    // Set up polling interval
-    setInterval(async () => {
-      await pollForPendingJobs();
-    }, POLL_INTERVAL);
-
-    console.log('✅ Worker started and polling for jobs');
+    pollForPendingJobs();
+    
+    // Start polling interval
+    setInterval(pollForPendingJobs, 3000);
   }
 }
 
 // Start the worker
-startWorker().catch(error => {
-  console.error('❌ Fatal error starting worker:', error);
-  process.exit(1);
-});
-
-// Graceful shutdown (only for continuous mode)
-process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully...');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('🛑 SIGINT received, shutting down gracefully...');
-  process.exit(0);
-});
+startWorker().catch(console.error);
 
