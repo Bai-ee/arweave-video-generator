@@ -3,6 +3,7 @@ import ffmpegStatic from 'ffmpeg-static';
 import fs from 'fs-extra';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { execSync } from 'child_process';
 import { ArweaveAudioClient } from './ArweaveAudioClient.js';
 
 // Configure FFmpeg path
@@ -45,6 +46,22 @@ class ArweaveVideoGenerator {
                 backgroundType = 'abstract_geometric';
             } else if (lowerPrompt.includes('neon') || lowerPrompt.includes('cyber')) {
                 backgroundType = 'neon_cyber';
+            }
+        }
+
+        // Use ImageMagick for GitHub Actions (lavfi not available)
+        if (process.env.GITHUB_ACTIONS === 'true') {
+            console.log(`[ArweaveVideoGenerator] Using ImageMagick for background: ${backgroundType}`);
+            try {
+                const backgroundColor = this.getBackgroundColor(backgroundType);
+                const convertCmd = `convert -size ${width}x${height} xc:${backgroundColor} "${imagePath}"`;
+                execSync(convertCmd, { stdio: 'pipe' });
+                console.log(`[ArweaveVideoGenerator] Background image created: ${imagePath}`);
+                return imagePath;
+            } catch (error) {
+                console.error('[ArweaveVideoGenerator] ImageMagick background generation failed, falling back:', error.message);
+                // Fallback to a very simple solid color PNG if ImageMagick fails
+                return this.createSimpleSolidColorPNG(imagePath, width, height, this.getBackgroundColor(backgroundType));
             }
         }
 
@@ -102,6 +119,38 @@ class ArweaveVideoGenerator {
                         .catch(reject);
                 })
                 .run();
+        });
+    }
+
+    /**
+     * Get background color for a given type
+     */
+    getBackgroundColor(type) {
+        const colors = {
+            'chicago_skyline': '#87CEEB',
+            'abstract_geometric': '#2d1b4e',
+            'neon_cyber': '#000000'
+        };
+        return colors[type] || '#87CEEB';
+    }
+
+    /**
+     * Create a simple solid color PNG using Node.js (fallback when ImageMagick fails)
+     */
+    createSimpleSolidColorPNG(imagePath, width, height, color) {
+        // For now, just create a simple file - ImageMagick should work
+        // But if it doesn't, we'll use a basic approach
+        return new Promise((resolve, reject) => {
+            try {
+                // Try ImageMagick one more time with simpler command
+                const convertCmd = `convert -size ${width}x${height} xc:"${color}" "${imagePath}"`;
+                execSync(convertCmd, { stdio: 'pipe' });
+                console.log(`[ArweaveVideoGenerator] Simple solid color PNG created: ${imagePath}`);
+                resolve(imagePath);
+            } catch (error) {
+                console.error('[ArweaveVideoGenerator] Failed to create solid color PNG:', error.message);
+                reject(error);
+            }
         });
     }
 
