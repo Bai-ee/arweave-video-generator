@@ -66,7 +66,7 @@ export default async function handler(req, res) {
       // Handle both old structure (status in metadata) and new structure (status at root)
       const status = data.status || data.metadata?.status || 'pending';
       
-      videos.push({
+      const videoData = {
         videoId: doc.id,
         jobId: data.jobId || doc.id,
         artist: data.artist || 'Unknown',
@@ -77,7 +77,14 @@ export default async function handler(req, res) {
         status: status,
         createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString(),
         completedAt: data.completedAt?.toDate?.()?.toISOString() || data.completedAt || null
-      });
+      };
+      
+      // Log completed videos for debugging
+      if (status === 'completed' && data.videoUrl) {
+        console.log(`[Videos] Found completed video: ${videoData.jobId}, URL: ${data.videoUrl}`);
+      }
+      
+      videos.push(videoData);
     });
 
     // Also try videos collection (if it exists) for completed videos

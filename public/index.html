@@ -303,6 +303,9 @@
 
         if (data.success) {
           videos = data.videos || [];
+          console.log(`📹 Loaded ${videos.length} videos from API`);
+          console.log(`📹 Videos with status 'completed':`, videos.filter(v => v.status === 'completed').length);
+          console.log(`📹 Videos with videoUrl:`, videos.filter(v => v.videoUrl).length);
           displayVideos();
           
           // Restore polling for any pending/processing jobs
@@ -350,7 +353,14 @@
         return dateB - dateA;
       });
 
-      sortedVideos.forEach(video => {
+      console.log(`📺 Displaying ${sortedVideos.length} videos in table`);
+      sortedVideos.forEach((video, index) => {
+        console.log(`📺 Video ${index + 1}:`, {
+          jobId: video.jobId,
+          status: video.status,
+          videoUrl: video.videoUrl ? 'has URL' : 'no URL',
+          artist: video.artist
+        });
         const row = createVideoRow(video);
         tableBody.appendChild(row);
       });
