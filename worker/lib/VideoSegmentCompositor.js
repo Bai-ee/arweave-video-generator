@@ -68,12 +68,18 @@ export class VideoSegmentCompositor {
       console.log(`[VideoSegmentCompositor] Extracting ${segmentDuration}s segment from ${path.basename(videoPath)} (start: ${startTime.toFixed(1)}s)`);
 
       // Extract segment using FFmpeg
+      // Re-encode to ensure compatibility with concatenation
       await this.executeFFmpeg([
         ffmpegPath,
         '-i', videoPath,
         '-ss', startTime.toString(),
         '-t', segmentDuration.toString(),
-        '-c', 'copy', // Copy codec (fast, no re-encoding)
+        '-c:v', 'libx264', // Re-encode for compatibility
+        '-preset', 'fast',
+        '-crf', '23',
+        '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac', // Re-encode audio
+        '-b:a', '128k',
         '-avoid_negative_ts', 'make_zero',
         '-y',
         segmentPath
