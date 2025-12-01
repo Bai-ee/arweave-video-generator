@@ -153,11 +153,36 @@ async function pollForPendingJobs() {
     const db = getFirestore();
 
     // Query for pending jobs
-    const pendingJobsSnapshot = await db.collection('videoJobs')
-      .where('status', '==', 'pending')
-      .orderBy('createdAt', 'asc')
-      .limit(MAX_CONCURRENT_JOBS)
-      .get();
+    // Handle both old structure (status in metadata) and new structure (status at root)
+    // For now, get all jobs and filter in memory to avoid index issues
+    let pendingJobsSnapshot;
+    try {
+      // Try with where clause first
+      pendingJobsSnapshot = await db.collection('videoJobs')
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'asc')
+        .limit(MAX_CONCURRENT_JOBS)
+        .get();
+    } catch (queryError) {
+      // If query fails (missing index or status in metadata), get all and filter
+      console.warn('[Processor] Status query failed, fetching all and filtering:', queryError.message);
+      const allJobsSnapshot = await db.collection('videoJobs')
+        .limit(10)
+        .get();
+      
+      // Filter for pending jobs (check both root and metadata)
+      const pendingDocs = allJobsSnapshot.docs.filter(doc => {
+        const data = doc.data();
+        const status = data.status || data.metadata?.status;
+        return status === 'pending';
+      });
+      
+      // Create a fake snapshot-like object
+      pendingJobsSnapshot = {
+        empty: pendingDocs.length === 0,
+        docs: pendingDocs.slice(0, MAX_CONCURRENT_JOBS)
+      };
+    }
 
     if (pendingJobsSnapshot.empty) {
       return; // No pending jobs

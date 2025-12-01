@@ -39,9 +39,10 @@ export default async function handler(req, res) {
     const db = getFirestore();
 
     // Create job document in Firestore
+    // Note: status is at root level (not in metadata) for easier querying
     const jobData = {
       jobId,
-      status: 'pending',
+      status: 'pending', // Root level for easy querying
       artist,
       duration,
       createdAt: new Date(),

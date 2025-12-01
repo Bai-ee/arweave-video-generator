@@ -52,11 +52,14 @@ export default async function handler(req, res) {
 
     const jobData = jobDoc.data();
 
+    // Handle both old structure (status in metadata) and new structure (status at root)
+    const status = jobData.status || jobData.metadata?.status || 'pending';
+
     // Return job status
     return res.status(200).json({
       success: true,
       jobId,
-      status: jobData.status,
+      status: status,
       artist: jobData.artist,
       duration: jobData.duration,
       videoUrl: jobData.videoUrl || null,
