@@ -286,7 +286,16 @@
           console.log(`📹 Loaded ${videos.length} videos from API`);
           console.log(`📹 Videos with status 'completed':`, videos.filter(v => v.status === 'completed').length);
           console.log(`📹 Videos with videoUrl:`, videos.filter(v => v.videoUrl).length);
-          console.log(`📹 Sample completed video:`, videos.find(v => v.status === 'completed' && v.videoUrl));
+          
+          // Log all completed videos with their URLs
+          const completedVideos = videos.filter(v => v.status === 'completed');
+          console.log(`📹 All completed videos:`, completedVideos.map(v => ({
+            jobId: v.jobId,
+            videoUrl: v.videoUrl || 'MISSING',
+            hasUrl: !!v.videoUrl
+          })));
+          
+          console.log(`📹 Sample completed video (full):`, videos.find(v => v.status === 'completed' && v.videoUrl));
           displayVideos();
         } else {
           throw new Error(data.error || 'Failed to load videos');
@@ -331,8 +340,11 @@
         console.log(`📺 Video ${index + 1}:`, {
           jobId: video.jobId,
           status: video.status,
-          videoUrl: video.videoUrl ? 'HAS URL' : 'NO URL',
-          artist: video.artist
+          videoUrl: video.videoUrl || 'NO URL',
+          videoUrlType: typeof video.videoUrl,
+          videoUrlLength: video.videoUrl ? video.videoUrl.length : 0,
+          artist: video.artist,
+          fullVideoObject: video // Log entire object
         });
         const row = createVideoRow(video);
         tableBody.appendChild(row);
@@ -386,7 +398,13 @@
      * Get actions HTML
      */
     function getActionsHtml(video) {
-      console.log(`[getActionsHtml] Video ${video.jobId}: status=${video.status}, videoUrl=${video.videoUrl ? 'EXISTS' : 'NULL'}`);
+      console.log(`[getActionsHtml] Video ${video.jobId}:`, {
+        status: video.status,
+        videoUrl: video.videoUrl || 'NULL',
+        videoUrlType: typeof video.videoUrl,
+        hasVideoUrl: !!video.videoUrl,
+        fullVideo: video
+      });
       
       if (video.status === 'completed' && video.videoUrl) {
         // Escape single quotes in URL for onclick handler
