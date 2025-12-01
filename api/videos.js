@@ -119,21 +119,35 @@ export default async function handler(req, res) {
     }
 
     // Merge data: use videos collection data for completed videos (has actual artist name)
-    videos = videos.map(video => {
-      const videosData = videosCollectionData.get(video.jobId);
-      if (videosData && video.status === 'completed') {
-        // For completed videos, use artist from videos collection (actual artist name)
-        return {
-          ...video,
-          artist: videosData.artist || video.artist || 'Unknown',
-          mixTitle: videosData.mixTitle || video.mixTitle,
-          fileSize: videosData.fileSize || video.fileSize,
-          videoUrl: videosData.videoUrl || video.videoUrl,
-          status: videosData.status || video.status
-        };
-      }
-      return video;
-    });
+    try {
+      videos = videos.map(video => {
+        try {
+          const videosData = videosCollectionData.get(video.jobId);
+          if (videosData && video.status === 'completed') {
+            // For completed videos, use artist from videos collection (actual artist name)
+            return {
+              videoId: video.videoId,
+              jobId: video.jobId,
+              artist: videosData.artist || video.artist || 'Unknown',
+              mixTitle: videosData.mixTitle || video.mixTitle || null,
+              duration: video.duration || 30,
+              fileSize: videosData.fileSize || video.fileSize || null,
+              videoUrl: videosData.videoUrl || video.videoUrl || null,
+              status: videosData.status || video.status || 'completed',
+              createdAt: video.createdAt,
+              completedAt: video.completedAt
+            };
+          }
+          return video;
+        } catch (mapError) {
+          console.warn(`[Videos] Error merging video ${video.jobId}:`, mapError.message);
+          return video; // Return original if merge fails
+        }
+      });
+    } catch (mergeError) {
+      console.error('[Videos] Error during merge:', mergeError.message);
+      // Continue with original videos if merge fails
+    }
 
     // Remove duplicates and sort by creation date
     const uniqueVideos = videos.filter((video, index, self) =>
