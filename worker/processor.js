@@ -33,9 +33,16 @@ let currentJobId = null;
  * Process a single video job
  */
 async function processVideoJob(jobId, jobData, documentId = null) {
-  // Use documentId if provided (from snapshot), otherwise use jobId
-  const docId = documentId || jobId;
-  console.log(`\n🎬 Processing video job: ${jobId} (Document ID: ${docId})`);
+  // CRITICAL: Always use documentId (from Firestore snapshot) for updates
+  // The documentId is the actual Firestore document ID, which may differ from jobId
+  if (!documentId) {
+    console.error(`❌ ERROR: documentId is required! Got jobId: ${jobId}`);
+    throw new Error('documentId is required for Firestore updates');
+  }
+  const docId = documentId; // Always use documentId, never jobId for Firestore doc reference
+  console.log(`\n🎬 Processing video job:`);
+  console.log(`   JobId: ${jobId}`);
+  console.log(`   Document ID (for Firestore): ${docId}`);
   console.log(`   Artist: ${jobData.artist}, Duration: ${jobData.duration}s`);
 
   const db = getFirestore();
@@ -107,11 +114,31 @@ async function processVideoJob(jobId, jobData, documentId = null) {
         'metadata.status': admin.firestore.FieldValue.delete() // Remove old nested status
       };
       
-      console.log(`📝 Updating Firestore document ${docId} with:`, {
+      console.log(`📝 Updating Firestore document ${docId} (jobId: ${jobId}) with:`, {
         status: 'completed',
         videoUrl: videoUrl,
         fileName: videoResult.fileName
       });
+      
+      // Check document exists before update
+      const docBefore = await db.collection('videoJobs').doc(docId).get();
+      if (!docBefore.exists) {
+        console.error(`❌ Document ${docId} does not exist! Trying with jobId ${jobId}...`);
+        // Try with jobId if documentId doesn't work
+        const docById = await db.collection('videoJobs').doc(jobId).get();
+        if (docById.exists) {
+          console.log(`✅ Found document using jobId ${jobId}, updating that instead`);
+          await db.collection('videoJobs').doc(jobId).update(updateData);
+          const updatedDoc = await db.collection('videoJobs').doc(jobId).get();
+          const updatedData = updatedDoc.data();
+          console.log(`✅ Firestore update verified - Status: ${updatedData.status}, VideoUrl: ${updatedData.videoUrl || 'null'}`);
+          return; // Exit early since we updated with jobId
+        } else {
+          throw new Error(`Document ${docId} and ${jobId} both do not exist!`);
+        }
+      }
+      
+      console.log(`📄 Document ${docId} exists. Current status: ${docBefore.data().status || docBefore.data().metadata?.status || 'unknown'}`);
       
       await db.collection('videoJobs').doc(docId).update(updateData);
       
@@ -125,6 +152,7 @@ async function processVideoJob(jobId, jobData, documentId = null) {
       
       if (updatedData.status !== 'completed') {
         console.error(`⚠️ WARNING: Status update failed! Expected 'completed', got '${updatedData.status}'`);
+        console.error(`⚠️ Full document data:`, JSON.stringify(updatedData, null, 2));
       }
     } catch (updateError) {
       console.error(`❌ Failed to update Firestore for job ${jobId}:`, updateError.message);
@@ -241,12 +269,17 @@ async function pollForPendingJobs() {
     // Use jobId from data if available, otherwise use document ID
     const jobId = jobData.jobId || documentId;
     
-    console.log(`[Processor] Processing job - Document ID: ${documentId}, JobId from data: ${jobData.jobId || 'none'}, Using jobId: ${jobId}`);
+    console.log(`[Processor] Processing job:`);
+    console.log(`   Document ID (from snapshot): ${documentId}`);
+    console.log(`   JobId from data: ${jobData.jobId || 'none'}`);
+    console.log(`   Using jobId: ${jobId}`);
+    console.log(`   Will update document: ${documentId} (NOT ${jobId} unless they match)`);
 
     isProcessing = true;
     currentJobId = jobId;
 
     // Pass documentId to ensure we update the correct document
+    // CRITICAL: Always use documentId (from snapshot) for Firestore updates
     await processVideoJob(jobId, jobData, documentId);
 
     isProcessing = false;
