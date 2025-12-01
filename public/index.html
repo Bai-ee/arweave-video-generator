@@ -283,6 +283,10 @@
 
         if (data.success) {
           videos = data.videos || [];
+          console.log(`📹 Loaded ${videos.length} videos from API`);
+          console.log(`📹 Videos with status 'completed':`, videos.filter(v => v.status === 'completed').length);
+          console.log(`📹 Videos with videoUrl:`, videos.filter(v => v.videoUrl).length);
+          console.log(`📹 Sample completed video:`, videos.find(v => v.status === 'completed' && v.videoUrl));
           displayVideos();
         } else {
           throw new Error(data.error || 'Failed to load videos');
@@ -322,7 +326,14 @@
         return dateB - dateA;
       });
 
-      sortedVideos.forEach(video => {
+      console.log(`📺 Displaying ${sortedVideos.length} videos in table`);
+      sortedVideos.forEach((video, index) => {
+        console.log(`📺 Video ${index + 1}:`, {
+          jobId: video.jobId,
+          status: video.status,
+          videoUrl: video.videoUrl ? 'HAS URL' : 'NO URL',
+          artist: video.artist
+        });
         const row = createVideoRow(video);
         tableBody.appendChild(row);
       });
@@ -375,18 +386,26 @@
      * Get actions HTML
      */
     function getActionsHtml(video) {
+      console.log(`[getActionsHtml] Video ${video.jobId}: status=${video.status}, videoUrl=${video.videoUrl ? 'EXISTS' : 'NULL'}`);
+      
       if (video.status === 'completed' && video.videoUrl) {
+        // Escape single quotes in URL for onclick handler
+        const escapedUrl = video.videoUrl.replace(/'/g, "\\'");
+        const filename = `${video.artist || 'video'}_${video.duration || 30}s.mp4`.replace(/'/g, "\\'");
+        
+        console.log(`[getActionsHtml] Creating VIEW/DOWNLOAD buttons for ${video.jobId}`);
+        
         return `
           <div style="display: flex; gap: 0.5rem; justify-content: center;">
             <button 
-              onclick="viewVideo('${video.videoUrl}')" 
+              onclick="viewVideo('${escapedUrl}')" 
               class="btn-base btn-secondary px-3 py-1 text-xs rounded"
               style="background: var(--color-yellow-75); color: black; border: none; cursor: pointer; font-family: var(--font-mathias);"
             >
               VIEW
             </button>
             <button 
-              onclick="downloadVideo('${video.videoUrl}', '${video.artist || 'video'}_${video.duration || 30}s.mp4')" 
+              onclick="downloadVideo('${escapedUrl}', '${filename}')" 
               class="btn-base btn-secondary px-3 py-1 text-xs rounded"
               style="background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias);"
             >
