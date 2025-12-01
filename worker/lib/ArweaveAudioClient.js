@@ -246,32 +246,47 @@ class ArweaveAudioClient {
         return await new Promise((resolve, reject) => {
           let command;
           
-                           if (useSimpleCommand) {
-                   // Simple command for Railway - no complex filters
-                   console.log('[ArweaveAudioClient] Using simple FFmpeg command for Railway compatibility');
-                   command = ffmpeg(url)
-                     .setStartTime(startTime)
-                     .duration(duration)
-                     .audioCodec('aac')
-                     .audioBitrate('128k')
-                     .audioChannels(2)
-                     .audioFrequency(44100)
-                     .output(outputPath);
-                 } else {
-                   // Full featured command for local development
-                   command = ffmpeg(url)
-                     .setStartTime(startTime)
-                     .duration(duration)
-                     .audioFilters([
-                       `afade=t=in:st=0:d=${fadeInDuration}`,
-                       `afade=t=out:st=${duration - fadeOutDuration}:d=${fadeOutDuration}`
-                     ])
-                     .audioCodec('aac')
-                     .audioBitrate('128k')
-                     .audioChannels(2)
-                     .audioFrequency(44100)
-                     .output(outputPath);
-                 }
+          // For GitHub Actions, use minimal command to avoid SIGSEGV crashes
+          if (process.env.GITHUB_ACTIONS) {
+            // Ultra-simple command for GitHub Actions - no reconnect options
+            console.log('[ArweaveAudioClient] Using minimal FFmpeg command for GitHub Actions');
+            command = ffmpeg()
+              .input(url)
+              .inputOptions([
+                '-ss', startTime.toString(), // Seek BEFORE input for HTTP range requests
+                '-t', duration.toString()   // Duration limit
+              ])
+              .audioCodec('aac')
+              .audioBitrate('128k')
+              .audioChannels(2)
+              .audioFrequency(44100)
+              .output(outputPath);
+          } else if (useSimpleCommand) {
+            // Simple command for Railway - no complex filters
+            console.log('[ArweaveAudioClient] Using simple FFmpeg command for Railway compatibility');
+            command = ffmpeg(url)
+              .setStartTime(startTime)
+              .duration(duration)
+              .audioCodec('aac')
+              .audioBitrate('128k')
+              .audioChannels(2)
+              .audioFrequency(44100)
+              .output(outputPath);
+          } else {
+            // Full featured command for local development
+            command = ffmpeg(url)
+              .setStartTime(startTime)
+              .duration(duration)
+              .audioFilters([
+                `afade=t=in:st=0:d=${fadeInDuration}`,
+                `afade=t=out:st=${duration - fadeOutDuration}:d=${fadeOutDuration}`
+              ])
+              .audioCodec('aac')
+              .audioBitrate('128k')
+              .audioChannels(2)
+              .audioFrequency(44100)
+              .output(outputPath);
+          }
 
           // Add metadata if provided
           if (metadata) {
@@ -281,17 +296,22 @@ class ArweaveAudioClient {
             if (metadata.genre) command.outputOptions('-metadata', `genre=${metadata.genre}`);
           }
 
-          // Enhanced network connection options for reliability
-          // Key: -ss before -i enables efficient HTTP range requests (only downloads needed segment)
-          // The -ss flag before input tells FFmpeg to seek in the HTTP stream, which triggers range requests
-          command.inputOptions([
-            '-timeout', '30000000', // 30 second timeout (reduced for faster failures)
-            '-reconnect', '1',
-            '-reconnect_streamed', '1',
-            '-reconnect_delay_max', '5', // Reduced delay for faster retries
-            '-reconnect_at_eof', '1',
-            '-reconnect_on_network_error', '1'
-          ]);
+          // Network options - minimal for GitHub Actions to avoid SIGSEGV
+          if (process.env.GITHUB_ACTIONS) {
+            // No additional input options - already set above
+            // Just add a reasonable timeout
+            command.inputOptions(['-timeout', '30000000']); // 30 seconds
+          } else {
+            // Enhanced network connection options for local/Railway
+            command.inputOptions([
+              '-timeout', '30000000', // 30 second timeout
+              '-reconnect', '1',
+              '-reconnect_streamed', '1',
+              '-reconnect_delay_max', '5',
+              '-reconnect_at_eof', '1',
+              '-reconnect_on_network_error', '1'
+            ]);
+          }
 
           // Capture stderr for better error diagnostics
           let stderrOutput = '';
