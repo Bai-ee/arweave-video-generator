@@ -136,23 +136,44 @@ async function processVideoJob(jobId, jobData, documentId = null) {
         videoUrl: videoUrl,
         fileName: videoResult.fileName
       });
+      console.log(`📝 Full update data:`, JSON.stringify(updateData, null, 2));
       
+      // Perform the update
       await db.collection('videoJobs').doc(docId).update(updateData);
+      console.log(`✅ Update call completed`);
       
-      // Verify the update
-      const updatedDoc = await db.collection('videoJobs').doc(docId).get();
+      // Wait a moment for Firestore to propagate
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Verify the update - read the document multiple times to ensure consistency
+      let updatedDoc = await db.collection('videoJobs').doc(docId).get();
       if (!updatedDoc.exists) {
         throw new Error(`Document ${docId} does not exist after update!`);
       }
-      const updatedData = updatedDoc.data();
-      console.log(`✅ Firestore update verified - Status: ${updatedData.status}, VideoUrl: ${updatedData.videoUrl || 'null'}`);
       
+      let updatedData = updatedDoc.data();
+      console.log(`📖 First read - Full document data:`, JSON.stringify(updatedData, null, 2));
+      console.log(`📖 First read - Status: ${updatedData.status}, VideoUrl: ${updatedData.videoUrl || 'null'}`);
+      
+      // Read again to confirm
+      await new Promise(resolve => setTimeout(resolve, 500));
+      updatedDoc = await db.collection('videoJobs').doc(docId).get();
+      updatedData = updatedDoc.data();
+      console.log(`📖 Second read - Status: ${updatedData.status}, VideoUrl: ${updatedData.videoUrl || 'null'}`);
+      
+      // Final verification
       if (updatedData.status !== 'completed') {
-        console.error(`⚠️ WARNING: Status update failed! Expected 'completed', got '${updatedData.status}'`);
+        console.error(`❌ CRITICAL: Status update failed! Expected 'completed', got '${updatedData.status}'`);
+        console.error(`❌ Full document:`, JSON.stringify(updatedData, null, 2));
+        throw new Error(`Status update verification failed: expected 'completed', got '${updatedData.status}'`);
       }
       if (!updatedData.videoUrl) {
-        console.error(`⚠️ WARNING: VideoUrl update failed! videoUrl is null`);
+        console.error(`❌ CRITICAL: VideoUrl update failed! videoUrl is null`);
+        console.error(`❌ Full document:`, JSON.stringify(updatedData, null, 2));
+        throw new Error(`VideoUrl update verification failed: videoUrl is null`);
       }
+      
+      console.log(`✅✅✅ Firestore update VERIFIED - Status: ${updatedData.status}, VideoUrl: ${updatedData.videoUrl}`);
     } catch (updateError) {
       console.error(`❌ Failed to update Firestore for job ${jobId}:`, updateError.message);
       console.error('Update error details:', updateError);
@@ -160,6 +181,7 @@ async function processVideoJob(jobId, jobData, documentId = null) {
     }
 
     // Also create/update video document in videos collection
+    console.log(`📝 Creating/updating document in 'videos' collection: ${jobId}`);
     await db.collection('videos').doc(jobId).set({
       videoId: jobId,
       jobId: jobId,
@@ -171,6 +193,16 @@ async function processVideoJob(jobId, jobData, documentId = null) {
       status: 'completed',
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
+    console.log(`✅ Document created/updated in 'videos' collection`);
+    
+    // Verify videos collection document
+    const videoDoc = await db.collection('videos').doc(jobId).get();
+    if (videoDoc.exists) {
+      const videoData = videoDoc.data();
+      console.log(`✅ Verified 'videos' collection document - Status: ${videoData.status}, VideoUrl: ${videoData.videoUrl || 'null'}`);
+    } else {
+      console.error(`❌ WARNING: Document not found in 'videos' collection after creation!`);
+    }
 
     // Cleanup local video file
     try {
