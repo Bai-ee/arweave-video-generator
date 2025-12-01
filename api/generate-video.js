@@ -5,7 +5,7 @@
  * Creates a video generation job and returns immediately (async processing)
  */
 
-import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
+import { initializeFirebaseAdmin, getFirestore, admin } from '../lib/firebase-admin.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export default async function handler(req, res) {
@@ -39,13 +39,14 @@ export default async function handler(req, res) {
     const db = getFirestore();
 
     // Create job document in Firestore
+    // Use Firestore Timestamp for proper date handling
     // Note: status is at root level (not in metadata) for easier querying
     const jobData = {
       jobId,
       status: 'pending', // Root level for easy querying
       artist,
       duration,
-      createdAt: new Date(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
       completedAt: null,
       videoUrl: null,
       error: null,

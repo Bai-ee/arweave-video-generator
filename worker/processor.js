@@ -10,7 +10,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getFirestore, getStorage } from './firebase-admin.js';
+import { getFirestore, getStorage, admin } from './firebase-admin.js';
 import { ArweaveVideoGenerator } from './lib/ArweaveVideoGenerator.js';
 import fs from 'fs-extra';
 
@@ -44,7 +44,7 @@ async function processVideoJob(jobId, jobData) {
     // Update status to processing
     await db.collection('videoJobs').doc(jobId).update({
       status: 'processing',
-      startedAt: new Date()
+      startedAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
     // Generate video
@@ -90,15 +90,14 @@ async function processVideoJob(jobId, jobData) {
     console.log(`✅ Video uploaded: ${videoUrl}`);
 
     // Update job status to completed
+    // IMPORTANT: status must be at root level, not in metadata
     await db.collection('videoJobs').doc(jobId).update({
       status: 'completed',
-      completedAt: new Date(),
+      completedAt: admin.firestore.FieldValue.serverTimestamp(),
       videoUrl: videoUrl,
-      metadata: {
-        fileName: videoResult.fileName,
-        fileSize: videoResult.fileSize,
-        mixTitle: videoResult.mixTitle
-      }
+      'metadata.fileName': videoResult.fileName,
+      'metadata.fileSize': videoResult.fileSize,
+      'metadata.mixTitle': videoResult.mixTitle
     });
 
     // Also create/update video document in videos collection
@@ -111,7 +110,7 @@ async function processVideoJob(jobId, jobData) {
       fileSize: videoResult.fileSize,
       videoUrl: videoUrl,
       status: 'completed',
-      createdAt: new Date()
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
     // Cleanup local video file
@@ -129,10 +128,11 @@ async function processVideoJob(jobId, jobData) {
     console.error(error.stack);
 
     // Update job status to failed
+    // IMPORTANT: status must be at root level, not in metadata
     try {
       await db.collection('videoJobs').doc(jobId).update({
         status: 'failed',
-        completedAt: new Date(),
+        completedAt: admin.firestore.FieldValue.serverTimestamp(),
         error: error.message
       });
     } catch (updateError) {
@@ -157,25 +157,35 @@ async function pollForPendingJobs() {
     // For now, get all jobs and filter in memory to avoid index issues
     let pendingJobsSnapshot;
     try {
-      // Try with where clause first
+      // Try with where clause first (status at root level)
       pendingJobsSnapshot = await db.collection('videoJobs')
         .where('status', '==', 'pending')
         .orderBy('createdAt', 'asc')
         .limit(MAX_CONCURRENT_JOBS)
         .get();
+      
+      console.log(`[Processor] Found ${pendingJobsSnapshot.size} pending job(s) via query`);
     } catch (queryError) {
       // If query fails (missing index or status in metadata), get all and filter
       console.warn('[Processor] Status query failed, fetching all and filtering:', queryError.message);
       const allJobsSnapshot = await db.collection('videoJobs')
-        .limit(10)
+        .limit(20)
         .get();
+      
+      console.log(`[Processor] Fetched ${allJobsSnapshot.size} total jobs, filtering for pending...`);
       
       // Filter for pending jobs (check both root and metadata)
       const pendingDocs = allJobsSnapshot.docs.filter(doc => {
         const data = doc.data();
         const status = data.status || data.metadata?.status;
-        return status === 'pending';
+        const isPending = status === 'pending';
+        if (isPending) {
+          console.log(`[Processor] Found pending job: ${doc.id}, status location: ${data.status ? 'root' : 'metadata'}`);
+        }
+        return isPending;
       });
+      
+      console.log(`[Processor] Filtered to ${pendingDocs.length} pending job(s)`);
       
       // Create a fake snapshot-like object
       pendingJobsSnapshot = {
