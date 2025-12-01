@@ -358,8 +358,9 @@
         console.log(`📺 Video ${index + 1}:`, {
           jobId: video.jobId,
           status: video.status,
-          videoUrl: video.videoUrl ? 'has URL' : 'no URL',
-          artist: video.artist
+          videoUrl: video.videoUrl || 'NO URL',
+          artist: video.artist,
+          fullVideo: video // Log full object for debugging
         });
         const row = createVideoRow(video);
         tableBody.appendChild(row);
@@ -459,6 +460,11 @@
           ×
         </button>
       `;
+      
+      // Debug logging
+      if (video.status === 'completed') {
+        console.log(`[getActionsHtml] Video ${jobId}: status=${video.status}, videoUrl=${video.videoUrl || 'NULL'}`);
+      }
       
       if (video.status === 'completed' && video.videoUrl) {
         return `

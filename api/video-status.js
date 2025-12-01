@@ -40,8 +40,22 @@ export default async function handler(req, res) {
     initializeFirebaseAdmin();
     const db = getFirestore();
 
-    // Get job document
-    const jobDoc = await db.collection('videoJobs').doc(jobId).get();
+    // Try to get job document by jobId first
+    let jobDoc = await db.collection('videoJobs').doc(jobId).get();
+    
+    // If not found, try querying by jobId field (in case document ID is different)
+    if (!jobDoc.exists) {
+      console.log(`[Video Status] Document ${jobId} not found, querying by jobId field...`);
+      const querySnapshot = await db.collection('videoJobs')
+        .where('jobId', '==', jobId)
+        .limit(1)
+        .get();
+      
+      if (!querySnapshot.empty) {
+        jobDoc = querySnapshot.docs[0];
+        console.log(`[Video Status] Found job by jobId field, document ID: ${jobDoc.id}`);
+      }
+    }
 
     if (!jobDoc.exists) {
       return res.status(404).json({ 
@@ -51,6 +65,7 @@ export default async function handler(req, res) {
     }
 
     const jobData = jobDoc.data();
+    console.log(`[Video Status] Job ${jobId} status: ${jobData.status || 'unknown'}, videoUrl: ${jobData.videoUrl ? 'exists' : 'null'}`);
 
     // Handle both old structure (status in metadata) and new structure (status at root)
     const status = jobData.status || jobData.metadata?.status || 'pending';
