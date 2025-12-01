@@ -65,10 +65,14 @@ export default async function handler(req, res) {
     }
 
     const jobData = jobDoc.data();
-    console.log(`[Video Status] Job ${jobId} status: ${jobData.status || 'unknown'}, videoUrl: ${jobData.videoUrl ? 'exists' : 'null'}`);
-
+    
     // Handle both old structure (status in metadata) and new structure (status at root)
     const status = jobData.status || jobData.metadata?.status || 'pending';
+    
+    // Handle videoUrl in both root and metadata (for backwards compatibility)
+    const videoUrl = jobData.videoUrl || jobData.metadata?.videoUrl || null;
+    
+    console.log(`[Video Status] Job ${jobId} status: ${status}, videoUrl: ${videoUrl ? 'exists' : 'null'} (root: ${jobData.videoUrl || 'null'}, metadata: ${jobData.metadata?.videoUrl || 'null'})`);
 
     // Return job status
     return res.status(200).json({
@@ -77,7 +81,7 @@ export default async function handler(req, res) {
       status: status,
       artist: jobData.artist,
       duration: jobData.duration,
-      videoUrl: jobData.videoUrl || null,
+      videoUrl: videoUrl,
       error: jobData.error || null,
       createdAt: jobData.createdAt?.toDate?.()?.toISOString() || jobData.createdAt,
       completedAt: jobData.completedAt?.toDate?.()?.toISOString() || jobData.completedAt,

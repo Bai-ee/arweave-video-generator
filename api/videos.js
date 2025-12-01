@@ -66,6 +66,9 @@ export default async function handler(req, res) {
       // Handle both old structure (status in metadata) and new structure (status at root)
       const status = data.status || data.metadata?.status || 'pending';
       
+      // Handle videoUrl in both root and metadata (for backwards compatibility)
+      const videoUrl = data.videoUrl || data.metadata?.videoUrl || null;
+      
       const videoData = {
         videoId: doc.id,
         jobId: data.jobId || doc.id,
@@ -73,15 +76,17 @@ export default async function handler(req, res) {
         mixTitle: data.metadata?.mixTitle || null,
         duration: data.duration || 30,
         fileSize: data.metadata?.fileSize || null,
-        videoUrl: data.videoUrl || null,
+        videoUrl: videoUrl,
         status: status,
         createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString(),
         completedAt: data.completedAt?.toDate?.()?.toISOString() || data.completedAt || null
       };
       
       // Log completed videos for debugging
-      if (status === 'completed' && data.videoUrl) {
-        console.log(`[Videos] Found completed video: ${videoData.jobId}, URL: ${data.videoUrl}`);
+      if (status === 'completed' && videoUrl) {
+        console.log(`[Videos] Found completed video: ${videoData.jobId}, URL: ${videoUrl}`);
+      } else if (status === 'completed' && !videoUrl) {
+        console.warn(`[Videos] WARNING: Completed video ${videoData.jobId} has no videoUrl! Root: ${data.videoUrl || 'null'}, Metadata: ${data.metadata?.videoUrl || 'null'}`);
       }
       
       videos.push(videoData);
