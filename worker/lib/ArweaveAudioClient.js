@@ -237,7 +237,9 @@ class ArweaveAudioClient {
       console.log('[ArweaveAudioClient] Using direct FFmpeg execSync for GitHub Actions');
       try {
         // Simple direct command - -ss before -i enables HTTP range requests
-        const ffmpegCommand = `ffmpeg -ss ${startTime} -i "${url}" -t ${duration} -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
+        // -vn disables video (ignores embedded cover art)
+        // -map 0:a maps only audio stream
+        const ffmpegCommand = `ffmpeg -ss ${startTime} -i "${url}" -t ${duration} -vn -map 0:a -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
         console.log(`[ArweaveAudioClient] FFmpeg command: ${ffmpegCommand.substring(0, 150)}...`);
         execSync(ffmpegCommand, { stdio: 'pipe' });
         console.log(`[ArweaveAudioClient] Segment download completed: ${path.basename(outputPath)}`);
@@ -268,6 +270,7 @@ class ArweaveAudioClient {
             command = ffmpeg(url)
               .setStartTime(startTime)
               .duration(duration)
+              .noVideo() // Ignore embedded cover art/video streams
               .audioCodec('aac')
               .audioBitrate('128k')
               .audioChannels(2)
@@ -278,6 +281,7 @@ class ArweaveAudioClient {
             command = ffmpeg(url)
               .setStartTime(startTime)
               .duration(duration)
+              .noVideo() // Ignore embedded cover art/video streams
               .audioFilters([
                 `afade=t=in:st=0:d=${fadeInDuration}`,
                 `afade=t=out:st=${duration - fadeOutDuration}:d=${fadeOutDuration}`
