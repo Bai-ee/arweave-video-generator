@@ -166,17 +166,27 @@ export class VideoSegmentCompositor {
   async concatenateSegments(segmentPaths, outputPath, targetDuration) {
     // Create a file list for FFmpeg concat
     const concatListPath = path.join(this.tempDir, `concat_list_${Date.now()}.txt`);
-    const concatList = segmentPaths.map(seg => `file '${seg.replace(/'/g, "'\\''")}'`).join('\n');
+    // Use absolute paths and escape properly
+    const concatList = segmentPaths.map(seg => {
+      const absPath = path.resolve(seg);
+      return `file '${absPath.replace(/'/g, "'\\''")}'`;
+    }).join('\n');
     await fs.writeFile(concatListPath, concatList);
 
     try {
-      // Use concat demuxer for fast concatenation
+      // Re-encode segments to ensure compatibility (concat demuxer with copy can fail)
+      // Use concat filter instead for better compatibility
       await this.executeFFmpeg([
         ffmpegPath,
         '-f', 'concat',
         '-safe', '0',
         '-i', concatListPath,
-        '-c', 'copy', // Copy codec (fast, no re-encoding)
+        '-c:v', 'libx264', // Re-encode video for compatibility
+        '-preset', 'fast',
+        '-crf', '23',
+        '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac', // Re-encode audio
+        '-b:a', '128k',
         '-t', targetDuration.toString(), // Ensure exact duration
         '-y',
         outputPath

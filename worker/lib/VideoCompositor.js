@@ -225,6 +225,18 @@ export class VideoCompositor {
 
     const filterComplex = filters.join(';');
     console.log(`[VideoCompositor] Filter complex: ${filterComplex.substring(0, 200)}...`);
+    
+    // Debug: Log all output labels created
+    const textLayers = config.layers.filter(layer => layer.type === 'text');
+    const imageLayers = config.layers.filter(layer => layer.type !== 'text' && layer.type !== 'background');
+    if (textLayers.length > 0) {
+      console.log(`[VideoCompositor] Text layers: ${textLayers.length}, final output will be: [text_layer${textLayers.length - 1}]`);
+    } else if (imageLayers.length > 0) {
+      console.log(`[VideoCompositor] Image layers: ${imageLayers.length}, final output will be: [layer${imageLayers.length - 1}]`);
+    } else {
+      console.log(`[VideoCompositor] No layers, final output will be: [base_scaled]`);
+    }
+    
     return filterComplex;
   }
 
@@ -270,18 +282,29 @@ export class VideoCompositor {
 
       // Determine final output label
       const textLayers = config.layers.filter(layer => layer.type === 'text');
+      const imageLayers = config.layers.filter(layer => layer.type !== 'text' && layer.type !== 'background');
       let finalOutput;
 
       if (textLayers.length > 0) {
+        // Use the last text layer (index is length - 1)
         finalOutput = `[text_layer${textLayers.length - 1}]`;
+        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${textLayers.length} text layers)`);
       } else if (imageLayers.length > 0) {
         finalOutput = `[layer${imageLayers.length - 1}]`;
+        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${imageLayers.length} image layers)`);
       } else {
         finalOutput = '[base_scaled]';
+        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (no layers)`);
       }
 
+      // Map the final output from filter_complex
+      // The output label from filter_complex becomes a stream that can be mapped
       command.push('-map', finalOutput);
       command.push('-map', '1:a'); // Map audio from input 1
+    } else {
+      // No filter complex - map base video directly
+      command.push('-map', '0:v');
+      command.push('-map', '1:a');
     }
 
     // Video codec settings
