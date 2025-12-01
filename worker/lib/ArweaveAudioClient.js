@@ -3,10 +3,6 @@ import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-
-// Configure FFmpeg - try multiple sources
-let ffmpegConfigured = false;
-
 import { execSync } from 'child_process';
 import ffmpegStatic from 'ffmpeg-static';
 
