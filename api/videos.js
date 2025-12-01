@@ -35,30 +35,59 @@ export default async function handler(req, res) {
 
     const videos = [];
 
-    // Get from videoJobs collection (primary source)
+    // Get ALL jobs (including pending/processing) for frontend status tracking
     try {
-      const jobsSnapshot = await db.collection('videoJobs')
-        .where('status', '==', 'completed')
-        .orderBy('completedAt', 'desc')
-        .limit(limit)
+      const allJobsSnapshot = await db.collection('videoJobs')
+        .orderBy('createdAt', 'desc')
+        .limit(limit * 2) // Get more to filter
         .get();
 
-      jobsSnapshot.forEach(doc => {
+      allJobsSnapshot.forEach(doc => {
         const data = doc.data();
-        if (data.videoUrl) {
-          videos.push({
-            videoId: doc.id,
-            jobId: data.jobId || doc.id,
-            artist: data.artist || 'Unknown',
-            mixTitle: data.metadata?.mixTitle || null,
-            duration: data.duration || 30,
-            fileSize: data.metadata?.fileSize || null,
-            videoUrl: data.videoUrl,
-            status: 'completed',
-            createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString()
-          });
-        }
+        videos.push({
+          videoId: doc.id,
+          jobId: data.jobId || doc.id,
+          artist: data.artist || 'Unknown',
+          mixTitle: data.metadata?.mixTitle || null,
+          duration: data.duration || 30,
+          fileSize: data.metadata?.fileSize || null,
+          videoUrl: data.videoUrl || null,
+          status: data.status || 'pending',
+          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString(),
+          completedAt: data.completedAt?.toDate?.()?.toISOString() || data.completedAt || null
+        });
       });
+    } catch (allJobsError) {
+      console.warn('[Videos] All jobs query failed, trying completed only:', allJobsError.message);
+      
+      // Fallback: Get only completed jobs
+      try {
+        const jobsSnapshot = await db.collection('videoJobs')
+          .where('status', '==', 'completed')
+          .orderBy('completedAt', 'desc')
+          .limit(limit)
+          .get();
+
+        jobsSnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.videoUrl) {
+            videos.push({
+              videoId: doc.id,
+              jobId: data.jobId || doc.id,
+              artist: data.artist || 'Unknown',
+              mixTitle: data.metadata?.mixTitle || null,
+              duration: data.duration || 30,
+              fileSize: data.metadata?.fileSize || null,
+              videoUrl: data.videoUrl,
+              status: 'completed',
+              createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString()
+            });
+          }
+        });
+      } catch (fallbackError) {
+        console.warn('[Videos] Fallback query also failed:', fallbackError.message);
+      }
+    }
     } catch (jobsError) {
       // If query fails (e.g., missing index), try without orderBy
       console.warn('[Videos] Jobs query with orderBy failed, trying without:', jobsError.message);

@@ -165,7 +165,25 @@
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', () => {
       loadVideos();
+      
+      // Restore polling for any pending/processing jobs
+      setTimeout(() => {
+        restoreActiveJobs();
+      }, 1000);
     });
+
+    /**
+     * Restore polling for pending/processing jobs after page load
+     */
+    function restoreActiveJobs() {
+      videos.forEach(video => {
+        const status = video.status || 'completed';
+        if (status === 'pending' || status === 'processing') {
+          console.log(`Restoring polling for job: ${video.jobId}`);
+          startPollingJob(video.jobId);
+        }
+      });
+    }
 
     /**
      * Generate a new video (one-click, always 30s, random artist)
@@ -284,6 +302,14 @@
         if (data.success) {
           videos = data.videos || [];
           displayVideos();
+          
+          // Restore polling for any pending/processing jobs
+          videos.forEach(video => {
+            const status = video.status || 'completed';
+            if ((status === 'pending' || status === 'processing') && !activeJobs.has(video.jobId)) {
+              startPollingJob(video.jobId);
+            }
+          });
         } else {
           throw new Error(data.error || 'Failed to load videos');
         }
