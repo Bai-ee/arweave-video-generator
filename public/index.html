@@ -165,6 +165,12 @@
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', () => {
       loadVideos();
+      
+      // Auto-refresh video list every 30 seconds to catch completed videos
+      setInterval(() => {
+        console.log('🔄 Auto-refreshing video list...');
+        loadVideos();
+      }, 30000); // Refresh every 30 seconds
     });
 
     /**
@@ -314,6 +320,15 @@
           
           console.log(`📹 Sample completed video (full):`, videos.find(v => v.status === 'completed' && v.videoUrl));
           displayVideos();
+          
+          // Resume polling for any pending/processing jobs that aren't being polled yet
+          videos.forEach(video => {
+            const status = video.status || 'completed';
+            if ((status === 'pending' || status === 'processing') && !activeJobs.has(video.jobId)) {
+              console.log(`🔄 Resuming polling for job: ${video.jobId}`);
+              startPollingJob(video.jobId);
+            }
+          });
         } else {
           throw new Error(data.error || 'Failed to load videos');
         }

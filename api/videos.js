@@ -41,15 +41,17 @@ export default async function handler(req, res) {
     try {
       allJobsSnapshot = await db.collection('videoJobs')
         .orderBy('createdAt', 'desc')
-        .limit(limit * 2)
+        .limit(limit * 3) // Increased limit to get more videos
         .get();
+      console.log(`[Videos] Fetched ${allJobsSnapshot.size} jobs from videoJobs collection`);
     } catch (orderByError) {
       // If orderBy fails (missing index), get all and sort in memory
       console.warn('[Videos] orderBy failed, fetching all and sorting:', orderByError.message);
       try {
         allJobsSnapshot = await db.collection('videoJobs')
-          .limit(limit * 2)
+          .limit(limit * 3) // Increased limit
           .get();
+        console.log(`[Videos] Fetched ${allJobsSnapshot.size} jobs (without orderBy)`);
       } catch (fetchError) {
         console.error('[Videos] Failed to fetch jobs:', fetchError.message);
         // Return empty array if we can't fetch
