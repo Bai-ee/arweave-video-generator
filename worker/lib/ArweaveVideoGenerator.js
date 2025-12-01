@@ -5,6 +5,9 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { execSync } from 'child_process';
 import { ArweaveAudioClient } from './ArweaveAudioClient.js';
+import { DALLEImageGenerator } from './DALLEImageGenerator.js';
+import { ImageLoader } from './ImageLoader.js';
+import { VideoCompositor, CompositionConfig, LayerConfig } from './VideoCompositor.js';
 
 // Configure FFmpeg path
 if (ffmpegStatic) {
@@ -18,6 +21,9 @@ if (ffmpegStatic) {
 class ArweaveVideoGenerator {
     constructor() {
         this.audioClient = new ArweaveAudioClient();
+        this.dalleGenerator = new DALLEImageGenerator();
+        this.imageLoader = new ImageLoader();
+        this.videoCompositor = new VideoCompositor();
         this.tempDir = path.join(process.cwd(), 'temp-uploads');
         this.videosDir = path.join(process.cwd(), 'outputs', 'videos');
         this.backgroundsDir = path.join(process.cwd(), 'outputs', 'backgrounds');
@@ -234,6 +240,42 @@ class ArweaveVideoGenerator {
     }
 
     /**
+     * Generate text layers for video overlay
+     */
+    generateTextLayers(artist, mixTitle, width, height) {
+        const layers = [];
+        const fontSize = Math.round(height * 0.08); // 8% of canvas height
+        const padding = Math.round(height * 0.05); // 5% padding
+
+        // Artist name at top-center
+        // x = width/2 signals to VideoCompositor to center the text
+        if (artist) {
+            layers.push(new LayerConfig(
+                'text',
+                artist,
+                { x: width / 2, y: padding + fontSize }, // Center horizontally (VideoCompositor will handle centering)
+                { width: width * 0.9, height: fontSize * 1.5 },
+                1.0, // opacity
+                100 // z-index (high, on top)
+            ));
+        }
+
+        // Mix title at bottom-center
+        if (mixTitle) {
+            layers.push(new LayerConfig(
+                'text',
+                mixTitle,
+                { x: width / 2, y: height - padding - fontSize * 1.5 }, // Center horizontally, bottom
+                { width: width * 0.9, height: fontSize * 1.2 },
+                1.0, // opacity
+                101 // z-index (highest, on top)
+            ));
+        }
+
+        return layers;
+    }
+
+    /**
      * Generate video with audio and proper visuals
      */
     async generateVideoWithAudio(options = {}, existingAudioResult = null) {
@@ -275,12 +317,78 @@ class ArweaveVideoGenerator {
             const audioDuration = audioResult.duration;
             const audioArweaveUrl = audioResult.arweaveUrl;
 
-            // Step 2: Create visual layout
-            console.log('[ArweaveVideoGenerator] Step 2: Creating visual layout...');
-            const backgroundPath = await this.generateBackgroundImage(audioArtist, prompt, width, height);
+            // Step 2: Generate DALL-E background image
+            console.log('[ArweaveVideoGenerator] Step 2: Generating DALL-E background...');
+            let backgroundPath = await this.dalleGenerator.generateBackgroundImage(audioArtist, prompt, width, height);
+            
+            // Fallback to simple background if DALL-E fails
+            if (!backgroundPath) {
+                console.log('[ArweaveVideoGenerator] DALL-E failed, using fallback background...');
+                backgroundPath = await this.generateBackgroundImage(audioArtist, prompt, width, height);
+            }
 
-            // Step 3: Compose final video
-            console.log('[ArweaveVideoGenerator] Step 3: Composing final video...');
+            // Step 3: Collect image layers
+            console.log('[ArweaveVideoGenerator] Step 3: Collecting image layers...');
+            const layers = [];
+
+            // Generate 1-3 random DALL-E overlay images
+            const randomImageCount = Math.floor(Math.random() * 3) + 1; // 1-3 images
+            console.log(`[ArweaveVideoGenerator] Generating ${randomImageCount} random DALL-E overlay images...`);
+            const randomImages = await this.dalleGenerator.generateRandomImages(audioArtist, randomImageCount, width * 0.4, height * 0.4);
+            
+            // Add random DALL-E images as layers
+            randomImages.forEach((imagePath, index) => {
+                if (imagePath) {
+                    // Position randomly on canvas
+                    const x = Math.floor(Math.random() * (width * 0.6)); // Random x, leave 40% margin
+                    const y = Math.floor(Math.random() * (height * 0.6)); // Random y, leave 40% margin
+                    const layerSize = Math.min(width * 0.3, height * 0.3); // 30% of canvas
+                    
+                    layers.push(new LayerConfig(
+                        'image',
+                        imagePath,
+                        { x, y },
+                        { width: layerSize, height: layerSize },
+                        0.7 + Math.random() * 0.2, // Opacity between 0.7-0.9
+                        10 + index, // z-index
+                        1.0
+                    ));
+                }
+            });
+
+            // Load images from artist JSON
+            try {
+                const { artist: artistData, mix: mixData } = this.audioClient.getArtistMix(audioArtist);
+                const jsonImages = await this.imageLoader.loadFromArtistJSON(artistData, mixData);
+                
+                jsonImages.forEach((img, index) => {
+                    if (img && img.path) {
+                        const layerSize = Math.min(width * 0.25, height * 0.25); // 25% of canvas
+                        const x = width * 0.1 + (index * width * 0.3); // Stagger horizontally
+                        const y = height * 0.1;
+                        
+                        layers.push(new LayerConfig(
+                            'image',
+                            img.path,
+                            { x, y },
+                            { width: layerSize, height: layerSize },
+                            0.8, // opacity
+                            20 + index, // z-index
+                            1.0
+                        ));
+                    }
+                });
+            } catch (error) {
+                console.warn('[ArweaveVideoGenerator] Could not load images from JSON:', error.message);
+            }
+
+            // Step 4: Generate text layers
+            console.log('[ArweaveVideoGenerator] Step 4: Generating text layers...');
+            const textLayers = this.generateTextLayers(audioArtist, audioMixTitle, width, height);
+            layers.push(...textLayers);
+
+            // Step 5: Compose final video with all layers
+            console.log('[ArweaveVideoGenerator] Step 5: Composing final video with layers...');
             
             // Generate temp video path
             const tempVideoPath = path.join(this.tempDir, `${audioArtist.replace(/[^a-zA-Z0-9]/g, '_')}_video_${Date.now()}.mp4`);
@@ -288,8 +396,19 @@ class ArweaveVideoGenerator {
             // Generate permanent video path
             const permanentVideoPath = path.join(this.videosDir, `${audioArtist.replace(/[^a-zA-Z0-9]/g, '_')}_video_${Date.now()}.mp4`);
 
-            // Create video from components
-            await this.createVideoFromComponents(backgroundPath, audioFilePath, tempVideoPath, duration, width, height);
+            // Create composition config
+            const compositionConfig = new CompositionConfig(
+                backgroundPath,
+                audioFilePath,
+                layers,
+                tempVideoPath,
+                duration,
+                width,
+                height
+            );
+
+            // Use VideoCompositor to create video with all layers
+            await this.videoCompositor.composeVideo(compositionConfig);
 
             // Copy to permanent location
             await fs.copy(tempVideoPath, permanentVideoPath);
@@ -304,6 +423,17 @@ class ArweaveVideoGenerator {
             try {
                 await fs.remove(backgroundPath);
                 await fs.remove(tempVideoPath);
+                
+                // Cleanup DALL-E generated overlay images
+                randomImages.forEach(async (imagePath) => {
+                    if (imagePath && await fs.pathExists(imagePath)) {
+                        try {
+                            await fs.remove(imagePath);
+                        } catch (err) {
+                            console.warn(`[ArweaveVideoGenerator] Could not cleanup image ${imagePath}:`, err.message);
+                        }
+                    }
+                });
             } catch (cleanupError) {
                 console.warn('[ArweaveVideoGenerator] Cleanup warning:', cleanupError.message);
             }
