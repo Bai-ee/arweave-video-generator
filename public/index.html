@@ -284,6 +284,22 @@
         if (data.success) {
           videos = data.videos || [];
           console.log(`📹 Loaded ${videos.length} videos from API`);
+          console.log(`📹 Raw API response sample:`, videos[0]);
+          
+          // Normalize videoUrl - ensure it's always a string or null
+          videos = videos.map(v => {
+            // If videoUrl is an object, try to extract the URL
+            if (v.videoUrl && typeof v.videoUrl === 'object') {
+              console.warn(`⚠️ Normalizing videoUrl for ${v.jobId}:`, v.videoUrl);
+              v.videoUrl = v.videoUrl.url || v.videoUrl.value || null;
+            }
+            // Ensure videoUrl is a string or null
+            if (v.videoUrl && typeof v.videoUrl !== 'string') {
+              v.videoUrl = String(v.videoUrl);
+            }
+            return v;
+          });
+          
           console.log(`📹 Videos with status 'completed':`, videos.filter(v => v.status === 'completed').length);
           console.log(`📹 Videos with videoUrl:`, videos.filter(v => v.videoUrl).length);
           
@@ -292,6 +308,7 @@
           console.log(`📹 All completed videos:`, completedVideos.map(v => ({
             jobId: v.jobId,
             videoUrl: v.videoUrl || 'MISSING',
+            videoUrlType: typeof v.videoUrl,
             hasUrl: !!v.videoUrl
           })));
           
@@ -337,6 +354,12 @@
 
       console.log(`📺 Displaying ${sortedVideos.length} videos in table`);
       sortedVideos.forEach((video, index) => {
+        // Ensure videoUrl is a string, not an object
+        if (video.videoUrl && typeof video.videoUrl === 'object') {
+          console.warn(`⚠️ Video ${video.jobId} has videoUrl as object:`, video.videoUrl);
+          video.videoUrl = null; // Reset to null if it's an object
+        }
+        
         console.log(`📺 Video ${index + 1}:`, {
           jobId: video.jobId,
           status: video.status,
