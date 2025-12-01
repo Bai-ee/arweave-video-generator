@@ -104,15 +104,23 @@ export default async function handler(req, res) {
       videosSnapshot.forEach(doc => {
         const data = doc.data();
         const jobId = data.jobId || doc.id;
-        videosCollectionData.set(jobId, {
+        const videoData = {
           artist: data.artist,
           mixTitle: data.mixTitle,
           fileSize: data.fileSize,
           videoUrl: data.videoUrl,
           status: data.status || 'completed'
-        });
+        };
+        videosCollectionData.set(jobId, videoData);
+        console.log(`[Videos] Loaded video from videos collection: jobId=${jobId}, artist=${data.artist || 'null'}`);
       });
       console.log(`[Videos] Loaded ${videosCollectionData.size} videos from videos collection`);
+      
+      // Log sample entries for debugging
+      if (videosCollectionData.size > 0) {
+        const sampleEntry = Array.from(videosCollectionData.entries())[0];
+        console.log(`[Videos] Sample videos collection entry: jobId=${sampleEntry[0]}, artist=${sampleEntry[1].artist}`);
+      }
     } catch (videosError) {
       // Videos collection might not exist yet, that's okay
       console.warn('[Videos] Videos collection query failed (may not exist yet):', videosError.message);
@@ -120,15 +128,19 @@ export default async function handler(req, res) {
 
     // Merge data: use videos collection data for completed videos (has actual artist name)
     try {
+      console.log(`[Videos] Merging data from ${videosCollectionData.size} videos collection entries`);
       videos = videos.map(video => {
         try {
+          // Try to find matching video in videos collection by jobId
           const videosData = videosCollectionData.get(video.jobId);
-          if (videosData && video.status === 'completed') {
-            // For completed videos, use artist from videos collection (actual artist name)
+          
+          if (videosData) {
+            console.log(`[Videos] Found videos collection data for ${video.jobId}: artist=${videosData.artist || 'null'}`);
+            // Use artist from videos collection (actual artist name) for ALL videos that have it
             return {
               videoId: video.videoId,
               jobId: video.jobId,
-              artist: videosData.artist || video.artist || 'Unknown',
+              artist: videosData.artist || video.artist || 'Unknown', // Prioritize videos collection artist
               mixTitle: videosData.mixTitle || video.mixTitle || null,
               duration: video.duration || 30,
               fileSize: videosData.fileSize || video.fileSize || null,
@@ -137,6 +149,14 @@ export default async function handler(req, res) {
               createdAt: video.createdAt,
               completedAt: video.completedAt
             };
+          } else if (video.status === 'completed' && video.videoUrl) {
+            // For completed videos without videos collection entry, check metadata
+            console.log(`[Videos] No videos collection data for ${video.jobId}, checking metadata`);
+            const metadata = video.mixTitle ? { mixTitle: video.mixTitle } : {};
+            return {
+              ...video,
+              ...metadata
+            };
           }
           return video;
         } catch (mapError) {
@@ -144,8 +164,10 @@ export default async function handler(req, res) {
           return video; // Return original if merge fails
         }
       });
+      console.log(`[Videos] Merge complete. Sample merged video:`, videos.find(v => v.status === 'completed' && v.videoUrl));
     } catch (mergeError) {
       console.error('[Videos] Error during merge:', mergeError.message);
+      console.error('[Videos] Merge error stack:', mergeError.stack);
       // Continue with original videos if merge fails
     }
 
