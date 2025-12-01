@@ -34,5 +34,6 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
           FIREBASE_STORAGE_BUCKET: editvideos-63486.firebasestorage.app
+          GITHUB_ACTIONS: 'true'
         run: node processor.js
 
