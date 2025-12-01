@@ -298,7 +298,20 @@ export class VideoCompositor {
       }
 
       // Map the final output from filter_complex
-      // The output label from filter_complex becomes a stream that can be mapped
+      // IMPORTANT: When using filter_complex, the output label must be mapped correctly
+      // The format is: -map [output_label] where output_label is from filter_complex
+      // However, FFmpeg requires the label to be properly defined in the filter graph
+      // If the label doesn't exist, we'll get "does not exist in any defined filter graph"
+      
+      // Verify the output label is in the filter complex
+      if (!filterComplex.includes(finalOutput)) {
+        console.error(`[VideoCompositor] ⚠️ Output label ${finalOutput} not found in filter complex!`);
+        console.error(`[VideoCompositor] Filter complex contains: ${filterComplex.match(/\[text_layer\d+\]|\[layer\d+\]|\[base_scaled\]/g)?.join(', ') || 'none'}`);
+        // Fallback to base_scaled if text layer doesn't exist
+        finalOutput = '[base_scaled]';
+        console.log(`[VideoCompositor] Using fallback output: ${finalOutput}`);
+      }
+      
       command.push('-map', finalOutput);
       command.push('-map', '1:a'); // Map audio from input 1
     } else {
