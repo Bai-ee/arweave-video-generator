@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     initializeFirebaseAdmin();
     const db = getFirestore();
 
-    const videos = [];
+    let videos = [];
 
     // Get ALL jobs (including pending/processing) for frontend status tracking
     // Try with orderBy first, fallback to without if index missing
