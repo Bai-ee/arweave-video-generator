@@ -72,14 +72,29 @@ async function processVideoJob(jobId, jobData, documentId = null) {
     }
 
     console.log(`✅ Video generated: ${videoResult.fileName}`);
+    console.log(`📁 Video file path: ${videoResult.videoPath}`);
+    console.log(`📊 Video result keys:`, Object.keys(videoResult));
+
+    // Verify video file exists
+    const videoFilePath = videoResult.videoPath;
+    if (!videoFilePath) {
+      throw new Error('Video file path is missing from videoResult');
+    }
+    
+    const fileExists = await fs.pathExists(videoFilePath);
+    if (!fileExists) {
+      throw new Error(`Video file does not exist at path: ${videoFilePath}`);
+    }
+    console.log(`✅ Video file exists: ${videoFilePath}`);
 
     // Upload to Firebase Storage
-    const videoFilePath = videoResult.videoPath;
     const storagePath = `videos/${videoResult.fileName}`;
     
     console.log(`📤 Uploading to Firebase Storage: ${storagePath}`);
+    console.log(`📦 Bucket name: ${bucket.name}`);
     
-    await bucket.upload(videoFilePath, {
+    try {
+      await bucket.upload(videoFilePath, {
       destination: storagePath,
       metadata: {
         contentType: 'video/mp4',
@@ -91,12 +106,15 @@ async function processVideoJob(jobId, jobData, documentId = null) {
         }
       }
     });
+    console.log(`✅ File uploaded to Storage successfully`);
 
     // Get public URL
     const file = bucket.file(storagePath);
+    console.log(`🔓 Making file public: ${storagePath}`);
     await file.makePublic(); // Make file publicly accessible
+    console.log(`✅ File is now public`);
+    
     const videoUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
-
     console.log(`✅ Video uploaded: ${videoUrl}`);
 
     // Update job status to completed
