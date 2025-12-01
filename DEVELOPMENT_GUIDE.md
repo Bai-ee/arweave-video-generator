@@ -430,6 +430,209 @@ const width = duration > 60 ? 480 : 720;
 const height = duration > 60 ? 480 : 720;
 ```
 
+### 8. **Video Concatenation Failures**
+
+#### Problem: "Output file does not contain any stream" or "Invalid argument"
+```javascript
+// ❌ BAD: Using -c copy with incompatible video segments
+await executeFFmpeg([
+    '-f', 'concat',
+    '-safe', '0',
+    '-i', concatListPath,
+    '-c', 'copy',  // ← Fails if segments have different codecs
+    outputPath
+]);
+```
+
+#### Solution: Re-encode Segments for Compatibility
+```javascript
+// ✅ GOOD: Re-encode segments to ensure compatibility
+await executeFFmpeg([
+    '-f', 'concat',
+    '-safe', '0',
+    '-i', concatListPath,
+    '-c:v', 'libx264',  // ← Re-encode video
+    '-preset', 'fast',
+    '-crf', '23',
+    '-pix_fmt', 'yuv420p',
+    '-c:a', 'aac',      // ← Re-encode audio
+    '-b:a', '128k',
+    outputPath
+]);
+```
+
+**Why This Works**: Video segments from different sources may have different codecs, frame rates, or pixel formats. Using `-c copy` (stream copy) only works when all segments are identical. Re-encoding normalizes everything.
+
+**Performance Note**: Re-encoding is slower but ensures compatibility. For production, this is the safe approach.
+
+### 9. **Video Segment Extraction Issues**
+
+#### Problem: Segments extracted with `-c copy` fail during concatenation
+```javascript
+// ❌ BAD: Copy codec during extraction
+await executeFFmpeg([
+    '-i', videoPath,
+    '-ss', startTime,
+    '-t', duration,
+    '-c', 'copy',  // ← May create incompatible segments
+    segmentPath
+]);
+```
+
+#### Solution: Re-encode During Extraction
+```javascript
+// ✅ GOOD: Re-encode during extraction
+await executeFFmpeg([
+    '-i', videoPath,
+    '-ss', startTime,
+    '-t', duration,
+    '-c:v', 'libx264',  // ← Re-encode for compatibility
+    '-preset', 'fast',
+    '-crf', '23',
+    '-pix_fmt', 'yuv420p',
+    '-c:a', 'aac',
+    '-b:a', '128k',
+    segmentPath
+]);
+```
+
+**Best Practice**: Always re-encode segments that will be concatenated, even if it's slower. This prevents mysterious concatenation failures.
+
+### 10. **Filter Complex Output Label Mapping Errors**
+
+#### Problem: "Output with label 'text_layer1' does not exist in any defined filter graph"
+```javascript
+// ❌ BAD: Trying to map output label that doesn't exist
+const finalOutput = `[text_layer${textLayers.length - 1}]`;
+command.push('-map', finalOutput);
+// Error if textLayers.length is 0 or filter chain is broken
+```
+
+#### Solution: Validate Output Label Before Mapping
+```javascript
+// ✅ GOOD: Verify output label exists in filter complex
+const textLayers = config.layers.filter(layer => layer.type === 'text');
+let finalOutput;
+
+if (textLayers.length > 0) {
+    finalOutput = `[text_layer${textLayers.length - 1}]`;
+} else if (imageLayers.length > 0) {
+    finalOutput = `[layer${imageLayers.length - 1}]`;
+} else {
+    finalOutput = '[base_scaled]';
+}
+
+// Validate the label exists in filter complex
+if (!filterComplex.includes(finalOutput)) {
+    console.error(`⚠️ Output label ${finalOutput} not found in filter complex!`);
+    // Fallback to base_scaled
+    finalOutput = '[base_scaled]';
+}
+
+command.push('-map', finalOutput);
+```
+
+**Why This Happens**: If the filter chain fails to create a text layer (e.g., due to a syntax error), the output label won't exist. Always validate before mapping.
+
+### 11. **Duplicate Variable Declarations**
+
+#### Problem: "Identifier 'textLayers' has already been declared"
+```javascript
+// ❌ BAD: Declaring same variable twice in same scope
+buildFilterComplex(config) {
+    const textLayers = config.layers.filter(...);  // Line 144
+    // ... processing ...
+    const textLayers = config.layers.filter(...);  // Line 230 - ERROR!
+}
+```
+
+#### Solution: Reuse Existing Variables
+```javascript
+// ✅ GOOD: Declare once, reuse everywhere
+buildFilterComplex(config) {
+    const textLayers = config.layers.filter(...);  // Declare once
+    const imageLayers = config.layers.filter(...);
+    
+    // ... processing ...
+    
+    // Reuse existing variables (don't redeclare)
+    if (textLayers.length > 0) {
+        console.log(`Text layers: ${textLayers.length}`);
+    }
+}
+```
+
+**Common Mistake**: Adding debug logging and accidentally redeclaring variables. Always check if a variable already exists before declaring it.
+
+### 12. **Video Segment Composition from Multiple Sources**
+
+#### Problem: Creating 30-second videos from 5-second segments fails
+```javascript
+// ❌ BAD: Not handling video loading from multiple Firebase folders
+const videos = await loadVideosFromFolder('skyline');  // Only one folder
+```
+
+#### Solution: Load from Multiple Folders and Combine
+```javascript
+// ✅ GOOD: Load from multiple Firebase Storage folders
+async loadAllSkylineVideos() {
+    const videos = [];
+    
+    // Load from skyline folder (user uploads)
+    const skylineVideos = await this.getAllVideosInFolder('skyline');
+    videos.push(...skylineVideos);
+    
+    // Load from chicago-skyline-videos folder (existing assets)
+    const chicagoVideos = await this.getAllVideosInFolder('assets/chicago-skyline-videos');
+    videos.push(...chicagoVideos);
+    
+    // Download and cache all videos
+    const cachedPaths = await Promise.all(
+        videos.map(v => this.loadFromURL(v.publicUrl))
+    );
+    
+    return cachedPaths.filter(Boolean);
+}
+```
+
+**Best Practice**: When combining videos from multiple sources, always:
+1. Load from all relevant folders
+2. Cache downloads locally
+3. Handle missing videos gracefully
+4. Use random selection for variety
+
+### 13. **Firebase Storage Folder Structure**
+
+#### Problem: Videos uploaded but not accessible or organized
+```javascript
+// ❌ BAD: No folder structure, everything in root
+await bucket.upload(file, { destination: fileName });
+```
+
+#### Solution: Use Organized Folder Structure
+```javascript
+// ✅ GOOD: Organize by folder type
+const folders = ['skyline', 'artist', 'decks', 'equipment', 'family', 'neighborhood'];
+const folderPath = `${selectedFolder}/${fileName}`;
+
+await bucket.upload(file, {
+    destination: folderPath,
+    metadata: { contentType: 'video/mp4' },
+    public: true
+});
+```
+
+**Folder Organization**:
+- `skyline/` - User-uploaded skyline videos
+- `artist/` - Artist-related videos
+- `decks/` - DJ equipment videos
+- `equipment/` - Music equipment videos
+- `family/` - Personal/family videos
+- `neighborhood/` - Neighborhood/community videos
+- `assets/chicago-skyline-videos/` - Pre-generated Chicago skyline videos
+
+**Security**: Update Firebase Storage rules to allow writes to specific folders only.
+
 ---
 
 ## 🚀 Adding New Features
@@ -744,6 +947,15 @@ node upload-chicago-videos.js
 - **Scaling**: Use `force_original_aspect_ratio` to maintain aspect
 - **Opacity**: Use `format=rgba` and `geq` for alpha channel manipulation
 - **Text Positioning**: Use FFmpeg expressions for centering: `x=(w-text_w)/2`
+- **Segment Concatenation**: Always re-encode segments (never use `-c copy`) for compatibility
+- **Output Label Validation**: Always verify filter output labels exist before mapping
+
+### Video Segment Processing
+- **Extraction**: Re-encode during extraction (libx264/aac) for compatibility
+- **Concatenation**: Use `-f concat` with re-encoding, never stream copy
+- **Multiple Sources**: Load from multiple Firebase folders and combine
+- **Random Selection**: Use random segments from available videos for variety
+- **Duration Control**: Use `-t` flag to ensure exact target duration
 
 ---
 
@@ -805,6 +1017,20 @@ new CompositionConfig(
 - ✅ Multi-layer video composition
 - ✅ Text overlay system
 - ✅ Local testing script
+- ✅ Video segment composition (5-second segments → 30-second videos)
+- ✅ Video concatenation with re-encoding for compatibility
+- ✅ Filter complex output label validation
+- ✅ Firebase Storage folder organization
+- ✅ Client-side video upload with optimization
+- ✅ Video segment extraction and composition from multiple sources
+
+### Recent Fixes (2025-01-30)
+- **Video Concatenation**: Changed from `-c copy` to re-encoding (libx264/aac) to ensure compatibility
+- **Segment Extraction**: Re-encode segments during extraction for concatenation compatibility
+- **Text Layer Mapping**: Added validation to check if output label exists before mapping
+- **Duplicate Declarations**: Fixed duplicate `textLayers` variable declaration in `buildFilterComplex()`
+- **Video Loading**: Enhanced `VideoLoader` to load from multiple Firebase Storage folders
+- **Error Handling**: Improved error messages and fallback logic for video composition
 
 ---
 
