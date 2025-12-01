@@ -9,6 +9,7 @@ import { DALLEImageGenerator } from './DALLEImageGenerator.js';
 import { ImageLoader } from './ImageLoader.js';
 import { VideoLoader } from './VideoLoader.js';
 import { VideoCompositor, CompositionConfig, LayerConfig } from './VideoCompositor.js';
+import { VideoSegmentCompositor } from './VideoSegmentCompositor.js';
 
 // Configure FFmpeg path
 if (ffmpegStatic) {
@@ -26,6 +27,7 @@ class ArweaveVideoGenerator {
         this.imageLoader = new ImageLoader();
         this.videoLoader = new VideoLoader();
         this.videoCompositor = new VideoCompositor();
+        this.segmentCompositor = new VideoSegmentCompositor();
         this.tempDir = path.join(process.cwd(), 'temp-uploads');
         this.videosDir = path.join(process.cwd(), 'outputs', 'videos');
         this.backgroundsDir = path.join(process.cwd(), 'outputs', 'backgrounds');
@@ -319,29 +321,33 @@ class ArweaveVideoGenerator {
             const audioDuration = audioResult.duration;
             const audioArweaveUrl = audioResult.arweaveUrl;
 
-            // Step 2: Get background (prefer Chicago skyline video, then DALL-E, then fallback)
-            console.log('[ArweaveVideoGenerator] Step 2: Loading background...');
+            // Step 2: Create 30-second video from 5-second segments
+            console.log('[ArweaveVideoGenerator] Step 2: Creating video from skyline segments...');
             let backgroundPath = null;
             let useVideoBackground = false;
             
-            // Try to load a random Chicago skyline video from Firebase
-            // Only use video backgrounds if prompt mentions Chicago/skyline or if DALL-E is not available
-            const shouldUseVideoBackground = !prompt || 
-                prompt.toLowerCase().includes('chicago') || 
-                prompt.toLowerCase().includes('skyline') ||
-                !process.env.OPENAI_API_KEY;
+            // Load all videos from skyline and chicago-skyline-videos folders
+            const skylineVideos = await this.videoLoader.loadAllSkylineVideos();
             
-            if (shouldUseVideoBackground) {
-                console.log('[ArweaveVideoGenerator] Attempting to load Chicago skyline video background...');
-                const videoBackgroundPath = await this.videoLoader.loadRandomChicagoSkylineVideo();
-                if (videoBackgroundPath) {
-                    backgroundPath = videoBackgroundPath;
+            if (skylineVideos.length > 0) {
+                console.log(`[ArweaveVideoGenerator] Found ${skylineVideos.length} skyline videos, creating ${duration}s video from 5s segments...`);
+                
+                try {
+                    // Create 30-second video from random 5-second segments
+                    backgroundPath = await this.segmentCompositor.createVideoFromSegments(
+                        skylineVideos,
+                        duration,
+                        5 // 5-second segments
+                    );
                     useVideoBackground = true;
-                    console.log('[ArweaveVideoGenerator] ✅ Using Chicago skyline video background');
+                    console.log('[ArweaveVideoGenerator] ✅ Created video background from skyline segments');
+                } catch (error) {
+                    console.error('[ArweaveVideoGenerator] Failed to create segment video:', error.message);
+                    // Fall through to DALL-E or simple background
                 }
             }
             
-            // Fallback to DALL-E background if video not available
+            // Fallback to DALL-E background if video segments not available
             if (!backgroundPath && process.env.OPENAI_API_KEY) {
                 console.log('[ArweaveVideoGenerator] Generating DALL-E background...');
                 backgroundPath = await this.dalleGenerator.generateBackgroundImage(audioArtist, prompt, width, height);

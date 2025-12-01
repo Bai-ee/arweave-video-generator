@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow public read access to all files
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+    
+    // Allow public write access to specific upload folders
+    match /skyline/{fileName} {
+      allow write: if request.resource.size < 500 * 1024 * 1024  // 500MB limit
+                   && request.resource.contentType.matches('video/.*');
+    }
+    
+    match /artist/{fileName} {
+      allow write: if request.resource.size < 500 * 1024 * 1024  // 500MB limit
+                   && request.resource.contentType.matches('video/.*');
+    }
+    
+    match /decks/{fileName} {
+      allow write: if request.resource.size < 500 * 1024 * 1024  // 500MB limit
+                   && request.resource.contentType.matches('video/.*');
+    }
+    
+    match /equipment/{fileName} {
+      allow write: if request.resource.size < 500 * 1024 * 1024  // 500MB limit
+                   && request.resource.contentType.matches('video/.*');
+    }
+    
+    match /family/{fileName} {
+      allow write: if request.resource.size < 500 * 1024 * 1024  // 500MB limit
+                   && request.resource.contentType.matches('video/.*');
+    }
+    
+    match /neighborhood/{fileName} {
+      allow write: if request.resource.size < 500 * 1024 * 1024  // 500MB limit
+                   && request.resource.contentType.matches('video/.*');
+    }
+    
+    // Allow writes to user-uploads folder (legacy support)
+    match /user-uploads/{fileName} {
+      allow write: if request.resource.size < 500 * 1024 * 1024  // 500MB limit
+                   && request.resource.contentType.matches('video/.*');
+    }
+    
+    // Allow writes to chicago-skyline-videos folder (for video generator)
+    match /chicago-skyline-videos/{fileName} {
+      allow write: if request.resource.size < 500 * 1024 * 1024
+                   && request.resource.contentType.matches('video/.*');
+    }
+    
+    // Deny all other writes
+    match /{allPaths=**} {
+      allow write: if false;
+    }
+  }
+}
+
