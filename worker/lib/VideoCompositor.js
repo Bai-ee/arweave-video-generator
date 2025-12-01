@@ -196,12 +196,15 @@ export class VideoCompositor {
       const opacity = Math.round((layer.opacity || 1.0) * 255);
       let textFilter;
       
+      // CRITICAL: Output label must be separated from filter parameters with a space or semicolon
+      // FFmpeg interprets everything after '=' as the parameter value, so we need proper separation
       if (isCentered) {
         // Center text horizontally using FFmpeg expression: (w-text_w)/2
-        textFilter = `${currentInput}drawtext=text='${escapedText}':fontsize=${fontSize}:fontcolor=white:x=(w-text_w)/2:y=${yPos}:alpha=${opacity}:borderw=2:bordercolor=black${outputLabel}`;
+        // Note: Output label goes at the END, separated properly
+        textFilter = `${currentInput}drawtext=text='${escapedText}':fontsize=${fontSize}:fontcolor=white:x=(w-text_w)/2:y=${yPos}:alpha=${opacity}:borderw=2:bordercolor=0x000000${outputLabel}`;
       } else {
         // Use specified x position
-        textFilter = `${currentInput}drawtext=text='${escapedText}':fontsize=${fontSize}:fontcolor=white:x=${xPos}:y=${yPos}:alpha=${opacity}:borderw=2:bordercolor=black${outputLabel}`;
+        textFilter = `${currentInput}drawtext=text='${escapedText}':fontsize=${fontSize}:fontcolor=white:x=${xPos}:y=${yPos}:alpha=${opacity}:borderw=2:bordercolor=0x000000${outputLabel}`;
       }
       
       filters.push(textFilter);
