@@ -467,17 +467,23 @@
       }
       
       if (video.status === 'completed' && video.videoUrl) {
+        // Escape single quotes in URL for onclick handler
+        const escapedUrl = (video.videoUrl || '').replace(/'/g, "\\'");
+        const filename = `${video.artist || 'video'}_${video.duration || 30}s.mp4`.replace(/'/g, "\\'");
+        
+        console.log(`[getActionsHtml] Creating VIEW/DOWNLOAD buttons for job ${jobId}, URL: ${escapedUrl.substring(0, 50)}...`);
+        
         return `
           <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
             <button 
-              onclick="viewVideo('${video.videoUrl}')" 
+              onclick="viewVideo('${escapedUrl}')" 
               class="btn-base btn-secondary px-3 py-1 text-xs rounded"
               style="background: var(--color-yellow-75); color: black; border: none; cursor: pointer; font-family: var(--font-mathias);"
             >
               VIEW
             </button>
             <button 
-              onclick="downloadVideo('${video.videoUrl}', '${video.artist || 'video'}_${video.duration || 30}s.mp4')" 
+              onclick="downloadVideo('${escapedUrl}', '${filename}')" 
               class="btn-base btn-secondary px-3 py-1 text-xs rounded"
               style="background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias);"
             >
@@ -524,7 +530,12 @@
      */
     function updateVideoRowStatus(jobId, status, videoUrl, error) {
       const row = document.getElementById(`video-row-${jobId}`);
-      if (!row) return;
+      if (!row) {
+        console.warn(`[updateVideoRowStatus] Row not found for jobId: ${jobId}`);
+        return;
+      }
+
+      console.log(`[updateVideoRowStatus] Updating job ${jobId}: status=${status}, videoUrl=${videoUrl || 'NULL'}`);
 
       // Update status cell (now at index 3)
       const statusCell = row.cells[3];
@@ -539,11 +550,12 @@
           videoId: jobId,
           jobId: jobId,
           status: status,
-          videoUrl: videoUrl,
+          videoUrl: videoUrl, // Pass the actual videoUrl
           artist: row.cells[0].textContent.trim(),
           duration: parseInt(row.cells[1].textContent) || 30,
           createdAt: row.cells[2].textContent.trim() // Preserve timestamp
         };
+        console.log(`[updateVideoRowStatus] Creating actions HTML with videoUrl: ${video.videoUrl || 'NULL'}`);
         actionsCell.innerHTML = getActionsHtml(video);
       }
     }
