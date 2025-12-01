@@ -93,8 +93,7 @@ async function processVideoJob(jobId, jobData, documentId = null) {
     console.log(`📤 Uploading to Firebase Storage: ${storagePath}`);
     console.log(`📦 Bucket name: ${bucket.name}`);
     
-    try {
-      await bucket.upload(videoFilePath, {
+    await bucket.upload(videoFilePath, {
       destination: storagePath,
       metadata: {
         contentType: 'video/mp4',
