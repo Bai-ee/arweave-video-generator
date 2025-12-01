@@ -202,18 +202,18 @@ export class VideoCompositor {
       
       // CRITICAL: In FFmpeg filter_complex, the output label must be properly separated
       // The format is: [input]filter=params[output]
-      // The issue: FFmpeg parses bordercolor=0x000000[output] as color '0x000000[output]'
-      // Solution: Use named color 'black' instead of hex, or ensure proper separation
-      // Actually, let's use a simpler approach: build params as array and join
+      // The issue: FFmpeg parses bordercolor=value[output] as color 'value[output]'
+      // Solution: Put border parameters in the MIDDLE of the param list, not at the end
+      // This ensures the output label comes after a parameter that FFmpeg can clearly parse
       const drawtextParams = [
         `text='${escapedText}'`,
         `fontsize=${fontSize}`,
         `fontcolor=0xFFFFFF`,
+        `borderw=2`, // Move border params earlier to avoid parsing issues
+        `bordercolor=0x000000`, // Use hex format without alpha
         isCentered ? `x=(w-text_w)/2` : `x=${xPos}`,
         `y=${yPos}`,
-        `alpha=${opacity}`,
-        `borderw=2`,
-        `bordercolor=black` // Use named color to avoid parsing issues
+        `alpha=${opacity}` // Put alpha last - it's a simple numeric value
       ].join(':');
       
       textFilter = `${currentInput}drawtext=${drawtextParams}${outputLabel}`;
