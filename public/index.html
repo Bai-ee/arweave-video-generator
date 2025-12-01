@@ -195,17 +195,21 @@
           
           <div>
             <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Upload Folder (optional)
+              Upload Folder
             </label>
-            <input 
-              type="text" 
-              id="folderInput" 
-              placeholder="user-uploads" 
-              value="user-uploads"
-              style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
-            />
+            <select 
+              id="folderSelect"
+              style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); cursor: pointer;"
+            >
+              <option value="skyline">🌆 Skyline</option>
+              <option value="artist">🎨 Artist</option>
+              <option value="decks">🎧 Decks</option>
+              <option value="equipment">🎛️ Equipment</option>
+              <option value="family">👨‍👩‍👧‍👦 Family</option>
+              <option value="neighborhood">🏘️ Neighborhood</option>
+            </select>
             <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
-              Videos will be stored in this Firebase Storage folder
+              Select the folder where your video will be stored
             </p>
           </div>
           
@@ -715,7 +719,7 @@
       
       const fileInput = document.getElementById('videoFileInput');
       const orientation = document.getElementById('orientationSelect').value;
-      const folder = document.getElementById('folderInput').value || 'user-uploads';
+      const folder = document.getElementById('folderSelect').value;
       const file = fileInput.files[0];
       
       if (!file) {
