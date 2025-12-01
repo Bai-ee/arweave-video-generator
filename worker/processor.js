@@ -120,16 +120,36 @@ async function processVideoJob(jobId, jobData, documentId = null) {
     // Update job status to completed
     // IMPORTANT: status must be at root level, not in metadata
     try {
-      // Remove old metadata.status if it exists, set status at root level
+      // Update with status at root level and metadata fields
+      // Use set with merge for nested fields to ensure they update correctly
       const updateData = {
         status: 'completed',
         completedAt: admin.firestore.FieldValue.serverTimestamp(),
         videoUrl: videoUrl,
-        'metadata.fileName': videoResult.fileName,
-        'metadata.fileSize': videoResult.fileSize,
-        'metadata.mixTitle': videoResult.mixTitle,
-        'metadata.status': admin.firestore.FieldValue.delete() // Remove old nested status
+        metadata: {
+          fileName: videoResult.fileName,
+          fileSize: videoResult.fileSize,
+          mixTitle: videoResult.mixTitle
+          // Don't include status in metadata - it's at root level now
+        }
       };
+      
+      // First, try to remove old metadata.status if it exists
+      try {
+        const currentDoc = await db.collection('videoJobs').doc(docId).get();
+        if (currentDoc.exists) {
+          const currentData = currentDoc.data();
+          if (currentData.metadata && currentData.metadata.status) {
+            // Use update with field path to delete nested field
+            await db.collection('videoJobs').doc(docId).update({
+              'metadata.status': admin.firestore.FieldValue.delete()
+            });
+            console.log(`🧹 Removed old metadata.status field`);
+          }
+        }
+      } catch (cleanupError) {
+        console.warn(`⚠️ Could not cleanup old metadata.status:`, cleanupError.message);
+      }
       
       console.log(`📝 Updating Firestore document ${docId} with:`, {
         status: 'completed',
