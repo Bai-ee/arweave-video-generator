@@ -16,8 +16,10 @@ export class DALLEImageGenerator {
             apiKey: process.env.OPENAI_API_KEY
         }) : null;
 
+        // Use process.cwd() which will be the worker directory in GitHub Actions
         this.outputDir = path.join(process.cwd(), 'outputs', 'dalle-images');
         fs.ensureDirSync(this.outputDir);
+        console.log(`[DALLEImageGenerator] Output directory: ${this.outputDir}`);
     }
 
     /**
