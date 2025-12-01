@@ -2,9 +2,11 @@ name: Process Video Jobs
 
 on:
   schedule:
-    # Run every minute
+    # Run every minute (fallback if webhook fails)
     - cron: '*/1 * * * *'
   workflow_dispatch: # Allow manual triggering
+  repository_dispatch: # Triggered via GitHub API webhook
+    types: [process-video-job]
 
 jobs:
   process-videos:

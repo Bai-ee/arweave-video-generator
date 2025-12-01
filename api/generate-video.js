@@ -7,6 +7,7 @@
 
 import { initializeFirebaseAdmin, getFirestore, admin } from '../lib/firebase-admin.js';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -61,6 +62,35 @@ export default async function handler(req, res) {
     await db.collection('videoJobs').doc(jobId).set(jobData);
 
     console.log(`[Generate Video] Job created: ${jobId}`);
+
+    // Trigger GitHub Actions workflow immediately via webhook
+    try {
+      if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO) {
+        const [owner, repo] = process.env.GITHUB_REPO.split('/');
+        const githubApiUrl = `https://api.github.com/repos/${owner}/${repo}/dispatches`;
+        
+        await axios.post(githubApiUrl, {
+          event_type: 'process-video-job',
+          client_payload: {
+            jobId: jobId,
+            timestamp: new Date().toISOString()
+          }
+        }, {
+          headers: {
+            'Authorization': `token ${process.env.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log(`[Generate Video] GitHub Actions workflow triggered for job: ${jobId}`);
+      } else {
+        console.log('[Generate Video] GitHub token not configured - workflow will run on schedule');
+      }
+    } catch (webhookError) {
+      // Don't fail the request if webhook fails - scheduled run will pick it up
+      console.warn('[Generate Video] Failed to trigger webhook (will use scheduled run):', webhookError.message);
+    }
 
     // Return immediately with job ID
     return res.status(200).json({
