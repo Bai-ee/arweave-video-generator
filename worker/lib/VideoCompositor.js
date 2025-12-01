@@ -130,7 +130,11 @@ export class VideoCompositor {
     const canvasWidth = config.width;
     const canvasHeight = config.height;
 
+    // Check if base is a video file (not an image)
+    const isVideoFile = config.baseVideo.match(/\.(mp4|mov|avi|mkv|webm)$/i);
+
     // Scale base image/video to canvas size
+    // For video backgrounds, the loop will be handled by -stream_loop in the input
     filters.push(`[0:v]scale=${canvasWidth}:${canvasHeight}:force_original_aspect_ratio=increase,crop=${canvasWidth}:${canvasHeight}[base_scaled]`);
 
     let currentInput = '[base_scaled]';
@@ -198,18 +202,21 @@ export class VideoCompositor {
       
       // CRITICAL: In FFmpeg filter_complex, the output label must be properly separated
       // The format is: [input]filter=params[output]
-      // The issue: bordercolor=black[output] gets parsed as color 'black[output]'
-      // Solution: Use hex format AND ensure output label is on a new filter or properly separated
-      // Actually, the output label should work directly after the filter params
-      // But we need to use hex format to avoid name conflicts
-      if (isCentered) {
-        // Center text horizontally using FFmpeg expression: (w-text_w)/2
-        // Use hex color format (0x000000) - more reliable than named colors
-        textFilter = `${currentInput}drawtext=text='${escapedText}':fontsize=${fontSize}:fontcolor=0xFFFFFF:x=(w-text_w)/2:y=${yPos}:alpha=${opacity}:borderw=2:bordercolor=0x000000${outputLabel}`;
-      } else {
-        // Use specified x position
-        textFilter = `${currentInput}drawtext=text='${escapedText}':fontsize=${fontSize}:fontcolor=0xFFFFFF:x=${xPos}:y=${yPos}:alpha=${opacity}:borderw=2:bordercolor=0x000000${outputLabel}`;
-      }
+      // The issue: FFmpeg parses bordercolor=0x000000[output] as color '0x000000[output]'
+      // Solution: Use named color 'black' instead of hex, or ensure proper separation
+      // Actually, let's use a simpler approach: build params as array and join
+      const drawtextParams = [
+        `text='${escapedText}'`,
+        `fontsize=${fontSize}`,
+        `fontcolor=0xFFFFFF`,
+        isCentered ? `x=(w-text_w)/2` : `x=${xPos}`,
+        `y=${yPos}`,
+        `alpha=${opacity}`,
+        `borderw=2`,
+        `bordercolor=black` // Use named color to avoid parsing issues
+      ].join(':');
+      
+      textFilter = `${currentInput}drawtext=${drawtextParams}${outputLabel}`;
       
       filters.push(textFilter);
 
@@ -230,11 +237,18 @@ export class VideoCompositor {
     const command = [ffmpegPath];
 
     // Input base image/video
-    // If it's an image, add input options before -i
-    if (config.baseVideo.match(/\.(jpg|jpeg|png|webp)$/i)) {
+    const isImage = config.baseVideo.match(/\.(jpg|jpeg|png|webp)$/i);
+    const isVideo = config.baseVideo.match(/\.(mp4|mov|avi|mkv|webm)$/i);
+    
+    if (isImage) {
       // If it's an image, loop it to create video
       command.push('-loop', '1');
       command.push('-framerate', '30');
+    } else if (isVideo) {
+      // For video backgrounds, we may need to loop it if it's shorter than duration
+      // FFmpeg will handle this with the loop filter in filter_complex
+      // Just ensure we read the full video
+      command.push('-stream_loop', '-1'); // Loop input video if needed
     }
     command.push('-i', config.baseVideo);
 

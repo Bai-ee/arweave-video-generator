@@ -7,6 +7,7 @@ import { execSync } from 'child_process';
 import { ArweaveAudioClient } from './ArweaveAudioClient.js';
 import { DALLEImageGenerator } from './DALLEImageGenerator.js';
 import { ImageLoader } from './ImageLoader.js';
+import { VideoLoader } from './VideoLoader.js';
 import { VideoCompositor, CompositionConfig, LayerConfig } from './VideoCompositor.js';
 
 // Configure FFmpeg path
@@ -23,6 +24,7 @@ class ArweaveVideoGenerator {
         this.audioClient = new ArweaveAudioClient();
         this.dalleGenerator = new DALLEImageGenerator();
         this.imageLoader = new ImageLoader();
+        this.videoLoader = new VideoLoader();
         this.videoCompositor = new VideoCompositor();
         this.tempDir = path.join(process.cwd(), 'temp-uploads');
         this.videosDir = path.join(process.cwd(), 'outputs', 'videos');
@@ -317,13 +319,37 @@ class ArweaveVideoGenerator {
             const audioDuration = audioResult.duration;
             const audioArweaveUrl = audioResult.arweaveUrl;
 
-            // Step 2: Generate DALL-E background image
-            console.log('[ArweaveVideoGenerator] Step 2: Generating DALL-E background...');
-            let backgroundPath = await this.dalleGenerator.generateBackgroundImage(audioArtist, prompt, width, height);
+            // Step 2: Get background (prefer Chicago skyline video, then DALL-E, then fallback)
+            console.log('[ArweaveVideoGenerator] Step 2: Loading background...');
+            let backgroundPath = null;
+            let useVideoBackground = false;
             
-            // Fallback to simple background if DALL-E fails
+            // Try to load a random Chicago skyline video from Firebase
+            // Only use video backgrounds if prompt mentions Chicago/skyline or if DALL-E is not available
+            const shouldUseVideoBackground = !prompt || 
+                prompt.toLowerCase().includes('chicago') || 
+                prompt.toLowerCase().includes('skyline') ||
+                !process.env.OPENAI_API_KEY;
+            
+            if (shouldUseVideoBackground) {
+                console.log('[ArweaveVideoGenerator] Attempting to load Chicago skyline video background...');
+                const videoBackgroundPath = await this.videoLoader.loadRandomChicagoSkylineVideo();
+                if (videoBackgroundPath) {
+                    backgroundPath = videoBackgroundPath;
+                    useVideoBackground = true;
+                    console.log('[ArweaveVideoGenerator] ✅ Using Chicago skyline video background');
+                }
+            }
+            
+            // Fallback to DALL-E background if video not available
+            if (!backgroundPath && process.env.OPENAI_API_KEY) {
+                console.log('[ArweaveVideoGenerator] Generating DALL-E background...');
+                backgroundPath = await this.dalleGenerator.generateBackgroundImage(audioArtist, prompt, width, height);
+            }
+            
+            // Final fallback to simple background generation
             if (!backgroundPath) {
-                console.log('[ArweaveVideoGenerator] DALL-E failed, using fallback background...');
+                console.log('[ArweaveVideoGenerator] Using fallback background generation...');
                 backgroundPath = await this.generateBackgroundImage(audioArtist, prompt, width, height);
             }
 
