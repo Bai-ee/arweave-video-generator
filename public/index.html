@@ -147,7 +147,8 @@
           </div>
         </div>
         
-        <!-- Filter Selection -->
+        <!-- Filter Selection - COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity -->
+        <!--
         <div style="width: 100%; max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem;">
           <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
             🎨 SELECT VIDEO FILTER (Required)
@@ -184,6 +185,7 @@
             You must select a filter before generating a video
           </p>
         </div>
+        -->
         
         <!-- Action Buttons -->
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
@@ -355,11 +357,12 @@
     // Video generation state
     let activeJobs = new Map(); // jobId -> polling interval
     let videos = []; // Cached video list
-    let selectedFilter = null; // Currently selected video filter
+    // Always use Hard B&W Street Doc filter at 80% intensity
+    const selectedFilter = 'look_hard_bw_street_doc'; // Always use Hard B&W Street Doc
+    const filterIntensity = 0.8; // Always use 80% intensity (0.8)
     let selectedAudioSource = null; // 'mixes' or 'tracks'
     let selectedArtist = 'random'; // Selected artist (or 'random')
     let availableArtists = []; // List of available artists
-    let filterIntensity = 0.4; // Filter intensity 0.0-1.0 (default 0.4 = 40%)
 
     // Video filter definitions (must match backend)
     const VIDEO_FILTERS = {
@@ -376,7 +379,8 @@
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', () => {
-      initializeFilterButtons();
+      // Filter initialization commented out - always using Hard B&W Street Doc @ 80%
+      // initializeFilterButtons();
       loadArtists();
       loadVideos();
       
@@ -469,7 +473,9 @@
 
     /**
      * Initialize filter selection buttons
+     * COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity
      */
+    /*
     function initializeFilterButtons() {
       const container = document.getElementById('filterButtons');
       if (!container) return;
@@ -503,9 +509,6 @@
       });
     }
 
-    /**
-     * Select a video filter
-     */
     function selectFilter(filterKey) {
       selectedFilter = filterKey;
       
@@ -531,9 +534,6 @@
       console.log(`✅ Selected filter: ${VIDEO_FILTERS[filterKey].name}`);
     }
 
-    /**
-     * Update filter intensity
-     */
     function updateFilterIntensity(value) {
       filterIntensity = parseFloat(value) / 100; // Convert 0-100 to 0.0-1.0
       const intensityValue = document.getElementById('filterIntensityValue');
@@ -542,6 +542,7 @@
       }
       console.log(`✅ Filter intensity: ${value}%`);
     }
+    */
 
     /**
      * Generate a new video
@@ -553,11 +554,7 @@
         return;
       }
       
-      // Check if filter is selected
-      if (!selectedFilter) {
-        showToast('Please select a video filter first!', 'error');
-        return;
-      }
+      // Filter check removed - always using Hard B&W Street Doc @ 80%
 
       const btn = document.getElementById('generateVideoBtn');
       const btnText = document.getElementById('generateBtnText');
@@ -570,10 +567,11 @@
 
       try {
         // Prepare request body
+        // Always use Hard B&W Street Doc filter at 80% intensity
         const requestBody = {
           duration: 30,
-          videoFilter: selectedFilter,
-          filterIntensity: filterIntensity, // 0.0-1.0 (default 0.4)
+          videoFilter: selectedFilter, // Always 'look_hard_bw_street_doc'
+          filterIntensity: filterIntensity, // Always 0.8 (80%)
           useTrax: selectedAudioSource === 'tracks' // true for tracks, false for mixes
         };
         
