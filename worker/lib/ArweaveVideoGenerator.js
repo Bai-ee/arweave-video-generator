@@ -480,10 +480,11 @@ class ArweaveVideoGenerator {
                         writer.on('error', reject);
                     });
                     
-                    // Same as serial_logo: 100% width, maintain aspect ratio
-                    const logoWidth = width; // 100% width
-                    const logoHeight = height; // Full height (will maintain aspect ratio)
-                    const logoX = 0; // Start at left edge (100% width fills entire canvas)
+                    // Second logo: 30% width, maintain aspect ratio, centered horizontally
+                    const logoWidth = Math.round(width * 0.30); // 30% width
+                    const logoHeight = Math.round(logoWidth * 1.0); // Will be adjusted by aspect ratio
+                    // Center horizontally
+                    const logoX = Math.round((width - logoWidth) / 2); // Center horizontally
                     // Position at 40% down from top
                     const logoY = Math.round(height * 0.4); // 40% down from top
                     
