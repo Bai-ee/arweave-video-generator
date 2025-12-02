@@ -109,7 +109,8 @@ async function generateMixArchiveVideo() {
         const videoLoader = new VideoLoader();
         videoLoader.cacheDir = testCacheDir;
         
-        const skylineVideos = await videoLoader.loadAllSkylineVideos();
+        // Use flat array for test (backward compatibility)
+        const skylineVideos = await videoLoader.loadAllSkylineVideos(false);
         
         if (skylineVideos.length === 0) {
             throw new Error('No skyline videos found');

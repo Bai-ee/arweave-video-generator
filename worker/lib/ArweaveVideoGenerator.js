@@ -341,21 +341,23 @@ class ArweaveVideoGenerator {
             let backgroundPath = null;
             let useVideoBackground = false;
             
-            // Load all videos from skyline and chicago-skyline-videos folders
-            const skylineVideos = await this.videoLoader.loadAllSkylineVideos();
+            // Load all videos from skyline and chicago-skyline-videos folders (grouped structure)
+            const groupedVideos = await this.videoLoader.loadAllSkylineVideos(true);
+            const totalVideos = groupedVideos.skyline.length + groupedVideos.chicago.length;
             
-            if (skylineVideos.length > 0) {
-                console.log(`[ArweaveVideoGenerator] Found ${skylineVideos.length} skyline videos, creating ${duration}s video from 5s segments...`);
+            if (totalVideos > 0) {
+                console.log(`[ArweaveVideoGenerator] Found ${groupedVideos.skyline.length} skyline + ${groupedVideos.chicago.length} chicago = ${totalVideos} total videos`);
+                console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with 50/50 distribution...`);
                 
                 try {
-                    // Create 30-second video from random 5-second segments
+                    // Create 30-second video from random 5-second segments with 50/50 distribution
                     backgroundPath = await this.segmentCompositor.createVideoFromSegments(
-                        skylineVideos,
+                        groupedVideos, // Pass grouped structure for 50/50 selection
                         duration,
                         5 // 5-second segments
                     );
                     useVideoBackground = true;
-                    console.log('[ArweaveVideoGenerator] ✅ Created video background from skyline segments');
+                    console.log('[ArweaveVideoGenerator] ✅ Created video background from skyline segments (50/50 distribution)');
                 } catch (error) {
                     console.error('[ArweaveVideoGenerator] Failed to create segment video:', error.message);
                     // Fall through to DALL-E or simple background

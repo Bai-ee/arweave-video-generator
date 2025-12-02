@@ -128,46 +128,126 @@ export class VideoSegmentCompositor {
 
   /**
    * Create a 30-second video from multiple 5-second segments
-   * @param {string[]} videoPaths - Array of source video paths
+   * @param {string[]|Object} videoPaths - Array of source video paths OR grouped object { skyline: [...], chicago: [...] }
    * @param {number} targetDuration - Target duration in seconds (default: 30)
    * @param {number} segmentDuration - Duration of each segment in seconds (default: 5)
    * @returns {Promise<string>} Path to concatenated video
    */
   async createVideoFromSegments(videoPaths, targetDuration = 30, segmentDuration = 5) {
-    if (videoPaths.length === 0) {
-      throw new Error('No video paths provided');
+    // Handle both grouped structure and flat array (backward compatibility)
+    let skylineVideos = [];
+    let chicagoVideos = [];
+    let isGrouped = false;
+
+    if (videoPaths && typeof videoPaths === 'object' && !Array.isArray(videoPaths)) {
+      // Grouped structure: { skyline: [...], chicago: [...] }
+      isGrouped = true;
+      skylineVideos = videoPaths.skyline || [];
+      chicagoVideos = videoPaths.chicago || [];
+      
+      if (skylineVideos.length === 0 && chicagoVideos.length === 0) {
+        throw new Error('No video paths provided');
+      }
+      
+      console.log(`[VideoSegmentCompositor] Using grouped videos: ${skylineVideos.length} skyline + ${chicagoVideos.length} chicago`);
+    } else if (Array.isArray(videoPaths)) {
+      // Flat array (backward compatibility)
+      if (videoPaths.length === 0) {
+        throw new Error('No video paths provided');
+      }
+      // For backward compatibility, treat all as available videos
+      skylineVideos = videoPaths;
+      chicagoVideos = [];
+      console.log(`[VideoSegmentCompositor] Using flat array: ${videoPaths.length} videos`);
+    } else {
+      throw new Error('Invalid videoPaths format');
     }
 
     const segmentsNeeded = Math.ceil(targetDuration / segmentDuration);
-    console.log(`[VideoSegmentCompositor] Creating ${targetDuration}s video from ${segmentsNeeded} segments`);
+    console.log(`[VideoSegmentCompositor] Creating ${targetDuration}s video from ${segmentsNeeded} segments with 50/50 distribution`);
 
-    // Extract random segments from available videos
+    // Extract random segments with 50/50 distribution
     const segmentPaths = [];
-    const usedVideos = new Set();
+    const usedSkylineVideos = new Set();
+    const usedChicagoVideos = new Set();
 
     for (let i = 0; i < segmentsNeeded; i++) {
-      // Select a random video (can reuse videos if needed)
-      let selectedVideo = videoPaths[Math.floor(Math.random() * videoPaths.length)];
-      
-      // Try to use different videos when possible
-      if (videoPaths.length > 1 && usedVideos.size < videoPaths.length) {
-        const unusedVideos = videoPaths.filter(v => !usedVideos.has(v));
-        if (unusedVideos.length > 0) {
-          selectedVideo = unusedVideos[Math.floor(Math.random() * unusedVideos.length)];
+      let selectedVideo = null;
+      let sourceFolder = '';
+
+      // 50/50 random selection between folders
+      if (isGrouped && skylineVideos.length > 0 && chicagoVideos.length > 0) {
+        // Both folders available: 50% chance for each
+        const useSkyline = Math.random() < 0.5;
+        
+        if (useSkyline) {
+          // Select from skyline folder
+          let availableSkyline = skylineVideos.filter(v => !usedSkylineVideos.has(v));
+          if (availableSkyline.length === 0) {
+            // All skyline videos used, reset and reuse
+            availableSkyline = skylineVideos;
+            usedSkylineVideos.clear();
+          }
+          selectedVideo = availableSkyline[Math.floor(Math.random() * availableSkyline.length)];
+          usedSkylineVideos.add(selectedVideo);
+          sourceFolder = 'skyline';
+        } else {
+          // Select from chicago folder
+          let availableChicago = chicagoVideos.filter(v => !usedChicagoVideos.has(v));
+          if (availableChicago.length === 0) {
+            // All chicago videos used, reset and reuse
+            availableChicago = chicagoVideos;
+            usedChicagoVideos.clear();
+          }
+          selectedVideo = availableChicago[Math.floor(Math.random() * availableChicago.length)];
+          usedChicagoVideos.add(selectedVideo);
+          sourceFolder = 'chicago';
         }
+      } else if (skylineVideos.length > 0) {
+        // Only skyline available
+        let availableSkyline = skylineVideos.filter(v => !usedSkylineVideos.has(v));
+        if (availableSkyline.length === 0) {
+          availableSkyline = skylineVideos;
+          usedSkylineVideos.clear();
+        }
+        selectedVideo = availableSkyline[Math.floor(Math.random() * availableSkyline.length)];
+        usedSkylineVideos.add(selectedVideo);
+        sourceFolder = 'skyline';
+      } else if (chicagoVideos.length > 0) {
+        // Only chicago available
+        let availableChicago = chicagoVideos.filter(v => !usedChicagoVideos.has(v));
+        if (availableChicago.length === 0) {
+          availableChicago = chicagoVideos;
+          usedChicagoVideos.clear();
+        }
+        selectedVideo = availableChicago[Math.floor(Math.random() * availableChicago.length)];
+        usedChicagoVideos.add(selectedVideo);
+        sourceFolder = 'chicago';
+      } else {
+        throw new Error('No valid videos available for segment extraction');
       }
-      usedVideos.add(selectedVideo);
 
       try {
         const segmentPath = await this.extractRandomSegment(selectedVideo, segmentDuration);
         segmentPaths.push(segmentPath);
-        console.log(`[VideoSegmentCompositor] Segment ${i + 1}/${segmentsNeeded} extracted`);
+        console.log(`[VideoSegmentCompositor] Segment ${i + 1}/${segmentsNeeded} extracted from ${sourceFolder} folder`);
       } catch (error) {
         console.warn(`[VideoSegmentCompositor] Failed to extract segment from ${path.basename(selectedVideo)}, trying another...`);
-        // Try another video
-        const otherVideos = videoPaths.filter(v => v !== selectedVideo);
-        if (otherVideos.length > 0) {
-          const fallbackVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
+        // Try another video from the same folder
+        let fallbackVideo = null;
+        if (sourceFolder === 'skyline' && skylineVideos.length > 1) {
+          const otherVideos = skylineVideos.filter(v => v !== selectedVideo);
+          if (otherVideos.length > 0) {
+            fallbackVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
+          }
+        } else if (sourceFolder === 'chicago' && chicagoVideos.length > 1) {
+          const otherVideos = chicagoVideos.filter(v => v !== selectedVideo);
+          if (otherVideos.length > 0) {
+            fallbackVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
+          }
+        }
+        
+        if (fallbackVideo) {
           const segmentPath = await this.extractRandomSegment(fallbackVideo, segmentDuration);
           segmentPaths.push(segmentPath);
         } else {

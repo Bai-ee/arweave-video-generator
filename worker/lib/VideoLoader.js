@@ -16,47 +16,41 @@ export class VideoLoader {
 
     /**
      * Load videos from both skyline and chicago-skyline-videos folders
-     * Returns list of video paths from both sources
+     * Returns grouped structure: { skyline: [...], chicago: [...] }
+     * Also maintains backward compatibility by returning flat array if needed
      */
-    async loadAllSkylineVideos() {
+    async loadAllSkylineVideos(returnGrouped = true) {
         try {
             const storage = getStorage();
             const bucket = storage.bucket();
-            const videos = [];
+            const skylineVideos = [];
+            const chicagoVideos = [];
 
             // Load from skyline folder (user uploads)
             console.log(`[VideoLoader] 📥 Loading videos from skyline folder...`);
             const [skylineFiles] = await bucket.getFiles({ prefix: 'skyline/' });
-            const skylineVideos = skylineFiles.filter(file => 
+            const skylineFileList = skylineFiles.filter(file => 
                 file.name.endsWith('.mp4') && !file.name.endsWith('.keep')
             );
-            console.log(`[VideoLoader] Found ${skylineVideos.length} videos in skyline folder`);
+            console.log(`[VideoLoader] Found ${skylineFileList.length} videos in skyline folder`);
 
             // Load from chicago-skyline-videos folder
             console.log(`[VideoLoader] 📥 Loading videos from chicago-skyline-videos folder...`);
             const [chicagoFiles] = await bucket.getFiles({ prefix: 'assets/chicago-skyline-videos/' });
-            const chicagoVideos = chicagoFiles.filter(file => 
+            const chicagoFileList = chicagoFiles.filter(file => 
                 file.name.endsWith('.mp4')
             );
-            console.log(`[VideoLoader] Found ${chicagoVideos.length} videos in chicago-skyline-videos folder`);
+            console.log(`[VideoLoader] Found ${chicagoFileList.length} videos in chicago-skyline-videos folder`);
 
-            // Combine both lists
-            const allVideos = [...skylineVideos, ...chicagoVideos];
-
-            if (allVideos.length === 0) {
-                console.warn(`[VideoLoader] ⚠️ No skyline videos found in Firebase Storage`);
-                return [];
-            }
-
-            // Download and cache all videos
-            for (const file of allVideos) {
+            // Download and cache skyline videos
+            for (const file of skylineFileList) {
                 const fileName = path.basename(file.name);
                 const cacheKey = `skyline_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
                 const cachedPath = path.join(this.cacheDir, cacheKey);
 
                 // Check cache first
                 if (await fs.pathExists(cachedPath)) {
-                    videos.push(cachedPath);
+                    skylineVideos.push(cachedPath);
                     continue;
                 }
 
@@ -70,19 +64,64 @@ export class VideoLoader {
                     });
 
                     await fs.writeFile(cachedPath, Buffer.from(response.data));
-                    videos.push(cachedPath);
-                    console.log(`[VideoLoader] ✅ Cached: ${fileName}`);
+                    skylineVideos.push(cachedPath);
+                    console.log(`[VideoLoader] ✅ Cached skyline: ${fileName}`);
                 } catch (error) {
                     console.warn(`[VideoLoader] ⚠️ Failed to download ${fileName}:`, error.message);
                 }
             }
 
-            console.log(`[VideoLoader] ✅ Loaded ${videos.length} total skyline videos`);
-            return videos;
+            // Download and cache chicago videos
+            for (const file of chicagoFileList) {
+                const fileName = path.basename(file.name);
+                const cacheKey = `chicago_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                const cachedPath = path.join(this.cacheDir, cacheKey);
+
+                // Check cache first
+                if (await fs.pathExists(cachedPath)) {
+                    chicagoVideos.push(cachedPath);
+                    continue;
+                }
+
+                // Download from Firebase
+                try {
+                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+                    const response = await axios.get(publicUrl, {
+                        responseType: 'arraybuffer',
+                        timeout: 60000,
+                        maxContentLength: 100 * 1024 * 1024
+                    });
+
+                    await fs.writeFile(cachedPath, Buffer.from(response.data));
+                    chicagoVideos.push(cachedPath);
+                    console.log(`[VideoLoader] ✅ Cached chicago: ${fileName}`);
+                } catch (error) {
+                    console.warn(`[VideoLoader] ⚠️ Failed to download ${fileName}:`, error.message);
+                }
+            }
+
+            const totalVideos = skylineVideos.length + chicagoVideos.length;
+            console.log(`[VideoLoader] ✅ Loaded ${skylineVideos.length} skyline + ${chicagoVideos.length} chicago = ${totalVideos} total videos`);
+
+            if (totalVideos === 0) {
+                console.warn(`[VideoLoader] ⚠️ No skyline videos found in Firebase Storage`);
+                return returnGrouped ? { skyline: [], chicago: [] } : [];
+            }
+
+            // Return grouped structure or flat array for backward compatibility
+            if (returnGrouped) {
+                return {
+                    skyline: skylineVideos,
+                    chicago: chicagoVideos
+                };
+            } else {
+                // Backward compatibility: return flat array
+                return [...skylineVideos, ...chicagoVideos];
+            }
 
         } catch (error) {
             console.error(`[VideoLoader] ❌ Error loading skyline videos:`, error.message);
-            return [];
+            return returnGrouped ? { skyline: [], chicago: [] } : [];
         }
     }
 
@@ -91,7 +130,8 @@ export class VideoLoader {
      * Downloads and caches the video locally for FFmpeg to use
      */
     async loadRandomChicagoSkylineVideo() {
-        const videos = await this.loadAllSkylineVideos();
+        // Use flat array for backward compatibility
+        const videos = await this.loadAllSkylineVideos(false);
         if (videos.length === 0) {
             return null;
         }
