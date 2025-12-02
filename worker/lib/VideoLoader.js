@@ -29,17 +29,24 @@ export class VideoLoader {
             // Load from skyline folder (user uploads)
             console.log(`[VideoLoader] 📥 Loading videos from skyline folder...`);
             const [skylineFiles] = await bucket.getFiles({ prefix: 'skyline/' });
-            const skylineFileList = skylineFiles.filter(file => 
-                file.name.endsWith('.mp4') && !file.name.endsWith('.keep')
-            );
+            // Support multiple video formats: .mp4, .mov, .m4v, .avi, .mkv, .webm
+            const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
+            const skylineFileList = skylineFiles.filter(file => {
+                const fileName = file.name.toLowerCase();
+                const isVideo = videoExtensions.some(ext => fileName.endsWith(ext));
+                const isNotKeep = !fileName.endsWith('.keep');
+                return isVideo && isNotKeep;
+            });
             console.log(`[VideoLoader] Found ${skylineFileList.length} videos in skyline folder`);
 
             // Load from chicago-skyline-videos folder
             console.log(`[VideoLoader] 📥 Loading videos from chicago-skyline-videos folder...`);
             const [chicagoFiles] = await bucket.getFiles({ prefix: 'assets/chicago-skyline-videos/' });
-            const chicagoFileList = chicagoFiles.filter(file => 
-                file.name.endsWith('.mp4')
-            );
+            // Support multiple video formats: .mp4, .mov, .m4v, .avi, .mkv, .webm
+            const chicagoFileList = chicagoFiles.filter(file => {
+                const fileName = file.name.toLowerCase();
+                return videoExtensions.some(ext => fileName.endsWith(ext));
+            });
             console.log(`[VideoLoader] Found ${chicagoFileList.length} videos in chicago-skyline-videos folder`);
 
             // Download and cache skyline videos
