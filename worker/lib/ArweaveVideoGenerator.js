@@ -342,8 +342,7 @@ class ArweaveVideoGenerator {
             let useVideoBackground = false;
             
             // Check if we're using tracks (original music) or mixes (DJ mixes)
-            const useTrax = options.useTrax === true;
-            
+            // useTrax is already extracted from options at line 303
             if (useTrax) {
                 // For tracks: Load videos from equipment, decks, skyline, chicago-skyline, neighborhood folders
                 console.log('[ArweaveVideoGenerator] Loading track videos from multiple folders...');
