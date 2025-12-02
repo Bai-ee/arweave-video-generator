@@ -62,10 +62,11 @@ async function processVideoJob(jobId, jobData, documentId = null) {
     // Get video filter from job data
     let videoFilter = null;
     if (jobData.videoFilter) {
-      const filterDef = getFilter(jobData.videoFilter);
+      const filterIntensity = jobData.filterIntensity !== undefined ? parseFloat(jobData.filterIntensity) : 0.4;
+      const filterDef = getFilter(jobData.videoFilter, filterIntensity);
       if (filterDef) {
         videoFilter = filterDef.filter;
-        console.log(`[Processor] Using video filter: ${filterDef.name}`);
+        console.log(`[Processor] Using video filter: ${filterDef.name} (intensity: ${(filterIntensity * 100).toFixed(0)}%)`);
       } else {
         console.warn(`[Processor] Unknown filter key: ${jobData.videoFilter}, using default`);
       }

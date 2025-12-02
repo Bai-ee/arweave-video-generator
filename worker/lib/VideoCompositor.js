@@ -161,6 +161,109 @@ export class VideoCompositor {
     const imageLayers = config.layers.filter(layer => layer.type !== 'text' && layer.type !== 'background');
     const textLayers = config.layers.filter(layer => layer.type === 'text');
 
+    // IMPORTANT: Process ALL layers together, sorted by z-index, to ensure proper ordering
+    // Higher z-index layers must be processed AFTER lower z-index layers (so they appear on top)
+    const allLayers = [...imageLayers, ...textLayers].sort((a, b) => a.zIndex - b.zIndex);
+    
+    // Track which layers are images vs text for input indexing
+    let imageLayerIndex = 0; // Track image layer index for input numbering
+    let textLayerIndex = 0; // Track text layer index for label numbering
+
+    // Process all layers in z-index order
+    allLayers.forEach((layer) => {
+      if (layer.type === 'text') {
+        // Process text layer
+        const outputLabel = `[text_layer${textLayerIndex}]`;
+
+        // Calculate font size based on layer height
+        const fontSize = Math.round(layer.size.height * 0.7); // 70% of layer height
+
+        // Escape text for FFmpeg
+        const escapedText = layer.source.replace(/'/g, "\\'").replace(/:/g, "\\:");
+
+        // FFmpeg drawtext uses x,y for top-left corner
+        let xPos = layer.position.x;
+        let yPos = layer.position.y;
+        
+        // Check if x is at canvas center (within 10px tolerance)
+        const isCentered = Math.abs(xPos - (canvasWidth / 2)) < 10;
+        
+        // Create drawtext filter with centering if needed
+        const opacity = Math.round((layer.opacity || 1.0) * 255);
+        
+        // Build drawtext parameters
+        const drawtextParams = [
+          `text='${escapedText}'`,
+          `fontsize=${fontSize}`,
+          `fontcolor=0x000000`, // Black text
+          `borderw=4`, // Thicker border
+          `bordercolor=0xFFFFFF`, // White border
+          isCentered ? `x=(w-text_w)/2` : `x=${xPos}`,
+          `y=${yPos}`,
+          `alpha=${opacity}`
+        ];
+        
+        // Add custom font if provided
+        if (layer.fontPath && fs.existsSync(layer.fontPath)) {
+          const absFontPath = path.resolve(layer.fontPath);
+          let escapedFontPath = absFontPath.replace(/\\/g, '/');
+          escapedFontPath = escapedFontPath.replace(/:/g, '\\:');
+          escapedFontPath = escapedFontPath.replace(/([ '()\[\]])/g, '\\$1');
+          drawtextParams.splice(2, 0, `fontfile=${escapedFontPath}`);
+          console.log(`[VideoCompositor] ✅ Using custom font: ${path.basename(layer.fontPath)}`);
+        }
+        
+        const textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
+        console.log(`[VideoCompositor] Text filter for layer ${textLayerIndex}: ${textFilter.substring(0, 150)}...`);
+        filters.push(textFilter);
+        currentInput = outputLabel;
+        textLayerIndex++;
+      } else {
+        // Process image layer
+        const inputIndex = imageLayerIndex + 2; // +2 because 0=base, 1=audio
+        const outputLabel = `[layer${imageLayerIndex}]`;
+
+        // Calculate final size with scale
+        const finalWidth = Math.round(layer.size.width * (layer.scale || 1));
+        const finalHeight = Math.round(layer.size.height * (layer.scale || 1));
+
+        // Scale filter - maintain aspect ratio for images
+        const scaleFilter = `[${inputIndex}:v]scale=${finalWidth}:${finalHeight}:force_original_aspect_ratio=decrease[scaled${imageLayerIndex}]`;
+        filters.push(scaleFilter);
+
+        // Overlay filter with opacity and optional timing
+        const opacity = layer.opacity || 1.0;
+        
+        let overlayFilter;
+        if (opacity < 1.0) {
+          // For opacity < 1.0, add alpha channel and adjust it
+          filters.push(`[scaled${imageLayerIndex}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*${opacity}'[scaled${imageLayerIndex}_alpha]`);
+          
+          // Add timing if specified (enable overlay only at startTime)
+          if (layer.startTime !== null && layer.startTime !== undefined) {
+            const endTime = layer.startTime + (layer.duration || config.duration);
+            overlayFilter = `${currentInput}[scaled${imageLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+          } else {
+            overlayFilter = `${currentInput}[scaled${imageLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+          }
+        } else {
+          // Full opacity - simple overlay
+          if (layer.startTime !== null && layer.startTime !== undefined) {
+            const endTime = layer.startTime + (layer.duration || config.duration);
+            overlayFilter = `${currentInput}[scaled${imageLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+          } else {
+            overlayFilter = `${currentInput}[scaled${imageLayerIndex}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+          }
+        }
+        filters.push(overlayFilter);
+        currentInput = outputLabel;
+        imageLayerIndex++;
+      }
+    });
+
+    // OLD CODE - REMOVED: Separate processing of image and text layers
+    // This caused z-index ordering issues
+    /*
     // Sort image layers by z-index (lower z-index first, so they're rendered in order)
     const sortedImageLayers = imageLayers.sort((a, b) => a.zIndex - b.zIndex);
 
@@ -209,82 +312,7 @@ export class VideoCompositor {
 
       currentInput = outputLabel;
     });
-
-    // Sort text layers by z-index to ensure proper rendering order
-    const sortedTextLayers = textLayers.sort((a, b) => a.zIndex - b.zIndex);
-
-    // Process text layers
-    const createdTextLabels = []; // Track which text layer labels were actually created
-    sortedTextLayers.forEach((layer, index) => {
-      const outputLabel = `[text_layer${index}]`;
-
-      // Calculate font size based on layer height
-      const fontSize = Math.round(layer.size.height * 0.7); // 70% of layer height
-
-      // Escape text for FFmpeg
-      const escapedText = layer.source.replace(/'/g, "\\'").replace(/:/g, "\\:");
-
-      // FFmpeg drawtext uses x,y for top-left corner
-      // If x is at canvas center (width/2), center the text using FFmpeg expression
-      let xPos = layer.position.x;
-      let yPos = layer.position.y;
-      
-      // Check if x is at canvas center (within 10px tolerance)
-      const isCentered = Math.abs(xPos - (canvasWidth / 2)) < 10;
-      
-      // Create drawtext filter with centering if needed
-      const opacity = Math.round((layer.opacity || 1.0) * 255);
-      let textFilter;
-      
-      // Build drawtext parameters
-      // Use black text for better visibility on white paper
-      const drawtextParams = [
-        `text='${escapedText}'`,
-        `fontsize=${fontSize}`,
-        `fontcolor=0x000000`, // Black text for visibility on white paper
-        `borderw=4`, // Thicker border for better visibility
-        `bordercolor=0xFFFFFF`, // White border for contrast
-        isCentered ? `x=(w-text_w)/2` : `x=${xPos}`,
-        `y=${yPos}`,
-        `alpha=${opacity}` // Put alpha last - it's a simple numeric value
-      ];
-      
-      // Add custom font if provided
-      if (layer.fontPath && fs.existsSync(layer.fontPath)) {
-        // Escape font path for FFmpeg drawtext filter
-        // FFmpeg drawtext fontfile parameter needs special escaping:
-        // - Use absolute path
-        // - Escape colons with \: (for Windows paths)
-        // - Escape spaces, parentheses, and single quotes
-        // - Don't wrap in quotes - FFmpeg handles the path directly
-        const absFontPath = path.resolve(layer.fontPath);
-        // Replace backslashes with forward slashes (Windows compatibility)
-        let escapedFontPath = absFontPath.replace(/\\/g, '/');
-        // Escape colons (needed for Windows paths like C:)
-        escapedFontPath = escapedFontPath.replace(/:/g, '\\:');
-        // Escape spaces, parentheses, brackets, and other special chars that might break the filter
-        escapedFontPath = escapedFontPath.replace(/([ '()\[\]])/g, '\\$1');
-        // Add fontfile parameter (no quotes around the path - FFmpeg parses it directly)
-        drawtextParams.splice(2, 0, `fontfile=${escapedFontPath}`);
-        console.log(`[VideoCompositor] ✅ Using custom font: ${path.basename(layer.fontPath)}`);
-        console.log(`[VideoCompositor] Font path (absolute): ${absFontPath}`);
-        console.log(`[VideoCompositor] Font path (escaped for FFmpeg): ${escapedFontPath}`);
-        console.log(`[VideoCompositor] Font exists: ${fs.existsSync(layer.fontPath)}`);
-      } else {
-        console.warn(`[VideoCompositor] ⚠️ No font path provided or font not found for text layer ${index}`);
-        if (layer.fontPath) {
-          console.warn(`[VideoCompositor] Font path was: ${layer.fontPath}`);
-        }
-      }
-      
-      textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
-      
-      console.log(`[VideoCompositor] Text filter for layer ${index}: ${textFilter.substring(0, 150)}...`);
-      filters.push(textFilter);
-      createdTextLabels.push(outputLabel); // Track that this label was created
-
-      currentInput = outputLabel;
-    });
+    */
 
     // Apply video fade to black (22-25 seconds: fade out over 3 seconds, starting 8 seconds before end)
     // For 30 second video: start at 22s, fade duration 3s (ends at 25s)
@@ -310,18 +338,31 @@ export class VideoCompositor {
     const uniqueLabels = [...new Set(allLabels)];
     console.log(`[VideoCompositor] All labels in filter complex: ${uniqueLabels.join(', ')}`);
     
+    // Track labels from the unified processing
+    const createdTextLabels = [];
+    const createdImageLabels = [];
+    allLayers.forEach((layer, idx) => {
+      if (layer.type === 'text') {
+        const textIdx = allLayers.slice(0, idx).filter(l => l.type === 'text').length;
+        createdTextLabels.push(`[text_layer${textIdx}]`);
+      } else {
+        const imgIdx = allLayers.slice(0, idx).filter(l => l.type !== 'text' && l.type !== 'background').length;
+        createdImageLabels.push(`[layer${imgIdx}]`);
+      }
+    });
+    
     if (createdTextLabels.length > 0) {
       const lastTextLabel = createdTextLabels[createdTextLabels.length - 1];
       console.log(`[VideoCompositor] Text layers created: ${createdTextLabels.length}, final output should be: ${lastTextLabel}`);
-    } else if (imageLayers.length > 0) {
-      console.log(`[VideoCompositor] Image layers: ${imageLayers.length}, final output will be: [layer${imageLayers.length - 1}]`);
+    } else if (createdImageLabels.length > 0) {
+      console.log(`[VideoCompositor] Image layers: ${createdImageLabels.length}, final output will be: [layer${createdImageLabels.length - 1}]`);
     } else {
       console.log(`[VideoCompositor] No layers, final output will be: [base_scaled]`);
     }
     
     // Store created labels in config for later validation
     config._createdTextLabels = createdTextLabels;
-    config._createdImageLabels = imageLayers.map((_, i) => `[layer${i}]`);
+    config._createdImageLabels = createdImageLabels;
     
     return filterComplex;
   }

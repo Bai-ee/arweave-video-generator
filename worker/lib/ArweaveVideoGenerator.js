@@ -531,22 +531,25 @@ class ArweaveVideoGenerator {
                     const logoWidth = Math.round(width * 0.35);
                     const logoHeight = Math.round(logoWidth * 1.0); // Will be adjusted by aspect ratio
                     
-                    // Center position (horizontally and vertically)
+                    // Center position (horizontally and vertically) - use canvas center
+                    // FFmpeg overlay uses top-left corner, so center = (width - logoWidth) / 2
                     const logoX = Math.round((width - logoWidth) / 2);
                     const logoY = Math.round((height - logoHeight) / 2);
                     
                     console.log(`[ArweaveVideoGenerator] ✅ Logo downloaded: ${logoFileName}`);
                     console.log(`[ArweaveVideoGenerator] Logo size: ${logoWidth}x${logoHeight}, position: (${logoX}, ${logoY})`);
                     console.log(`[ArweaveVideoGenerator] Logo appears at: ${logoStartTime}s (5 seconds before end)`);
+                    console.log(`[ArweaveVideoGenerator] Logo z-index: 300 (HIGHEST - above text and serial logo)`);
                     
                     // Add logo as timed overlay layer (appears at 25s, stays until end)
+                    // Use z-index 300 to ensure it's processed LAST and appears on top of everything
                     layers.push(new LayerConfig(
                         'image',
                         logoCachePath,
                         { x: logoX, y: logoY },
                         { width: logoWidth, height: logoHeight },
                         1.0, // Full opacity
-                        200, // Highest z-index (above everything)
+                        300, // HIGHEST z-index (above everything including text at 100)
                         1.0, // scale
                         null, // no font path
                         logoStartTime, // start at 25 seconds

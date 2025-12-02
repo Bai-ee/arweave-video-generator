@@ -155,6 +155,31 @@
           <div id="filterButtons" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
             <!-- Filter buttons will be populated by JavaScript -->
           </div>
+          
+          <!-- Filter Intensity Slider (shown only when filter is selected) -->
+          <div id="filterIntensityContainer" style="display: none; margin-top: 1.5rem; margin-bottom: 1rem;">
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
+              🎚️ FILTER INTENSITY: <span id="filterIntensityValue">40%</span>
+            </label>
+            <div style="max-width: 600px; margin: 0 auto;">
+              <input 
+                type="range" 
+                id="filterIntensitySlider" 
+                min="0" 
+                max="100" 
+                value="40" 
+                step="1"
+                style="width: 100%; height: 8px; background: #0a0a0a; border: 2px solid var(--color-yellow-75); border-radius: 5px; outline: none; cursor: pointer;"
+                oninput="updateFilterIntensity(this.value)"
+              />
+              <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; color: #888; font-size: 0.75rem; font-family: var(--font-mathias);">
+                <span>0% (None)</span>
+                <span>40% (Current)</span>
+                <span>100% (Extreme)</span>
+              </div>
+            </div>
+          </div>
+          
           <p style="color: #888; font-size: 0.75rem; text-align: center; margin-top: 0.5rem;">
             You must select a filter before generating a video
           </p>
@@ -334,6 +359,7 @@
     let selectedAudioSource = null; // 'mixes' or 'tracks'
     let selectedArtist = 'random'; // Selected artist (or 'random')
     let availableArtists = []; // List of available artists
+    let filterIntensity = 0.4; // Filter intensity 0.0-1.0 (default 0.4 = 40%)
 
     // Video filter definitions (must match backend)
     const VIDEO_FILTERS = {
@@ -496,7 +522,25 @@
         }
       });
       
+      // Show intensity slider
+      const intensityContainer = document.getElementById('filterIntensityContainer');
+      if (intensityContainer) {
+        intensityContainer.style.display = 'block';
+      }
+      
       console.log(`✅ Selected filter: ${VIDEO_FILTERS[filterKey].name}`);
+    }
+
+    /**
+     * Update filter intensity
+     */
+    function updateFilterIntensity(value) {
+      filterIntensity = parseFloat(value) / 100; // Convert 0-100 to 0.0-1.0
+      const intensityValue = document.getElementById('filterIntensityValue');
+      if (intensityValue) {
+        intensityValue.textContent = `${value}%`;
+      }
+      console.log(`✅ Filter intensity: ${value}%`);
     }
 
     /**
@@ -529,6 +573,7 @@
         const requestBody = {
           duration: 30,
           videoFilter: selectedFilter,
+          filterIntensity: filterIntensity, // 0.0-1.0 (default 0.4)
           useTrax: selectedAudioSource === 'tracks' // true for tracks, false for mixes
         };
         
