@@ -90,14 +90,14 @@ export const VIDEO_FILTERS = {
   'look_gritty_neon_club': {
     name: 'Gritty Neon Club',
     description: 'Punchy contrast, slight neon saturation, dirty grain',
-    baseFilter: 'scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.2:brightness=-0.03:saturation=1.15,curves=preset=medium_contrast,noise=alls=8:allf=t+u,vignette=0.35',
-    getFilter: (intensity = 0.4) => applyFilterIntensity('scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.2:brightness=-0.03:saturation=1.15,curves=preset=medium_contrast,noise=alls=8:allf=t+u,vignette=0.35', intensity)
+    baseFilter: 'scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.2:brightness=-0.03:saturation=1.15,curves=all=\'0/0 0.25/0.2 0.5/0.5 0.75/0.8 1/1\',noise=alls=8:allf=t+u,vignette=0.35',
+    getFilter: (intensity = 0.4) => applyFilterIntensity('scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.2:brightness=-0.03:saturation=1.15,curves=all=\'0/0 0.25/0.2 0.5/0.5 0.75/0.8 1/1\',noise=alls=8:allf=t+u,vignette=0.35', intensity)
   },
   'look_faded_90s_tape': {
     name: 'Faded 90s Tape',
     description: 'Washed, low-contrast tape feel with motion smear',
-    baseFilter: 'scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=0.95:brightness=0.02:saturation=1.05,curves=preset=washed_out,noise=alls=12:allf=t+u,tmix=frames=3:weights=\'1 2 1\'',
-    getFilter: (intensity = 0.4) => applyFilterIntensity('scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=0.95:brightness=0.02:saturation=1.05,curves=preset=washed_out,noise=alls=12:allf=t+u,tmix=frames=3:weights=\'1 2 1\'', intensity)
+    baseFilter: 'scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=0.95:brightness=0.02:saturation=1.05,curves=all=\'0/0.1 0.25/0.3 0.5/0.5 0.75/0.7 1/0.9\',noise=alls=12:allf=t+u,tmix=frames=3:weights=\'1 2 1\'',
+    getFilter: (intensity = 0.4) => applyFilterIntensity('scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=0.95:brightness=0.02:saturation=1.05,curves=all=\'0/0.1 0.25/0.3 0.5/0.5 0.75/0.7 1/0.9\',noise=alls=12:allf=t+u,tmix=frames=3:weights=\'1 2 1\'', intensity)
   },
   'look_hard_bw_street_doc': {
     name: 'Hard B&W Street Doc',
@@ -114,8 +114,8 @@ export const VIDEO_FILTERS = {
   'look_club_cinematic_dirty': {
     name: 'Club Cinematic Dirty',
     description: 'Cinematic contrast but still grimy',
-    baseFilter: 'scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.18:brightness=-0.025:saturation=1.1,curves=preset=medium_contrast,noise=alls=6:allf=t+u,vignette=0.32',
-    getFilter: (intensity = 0.4) => applyFilterIntensity('scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.18:brightness=-0.025:saturation=1.1,curves=preset=medium_contrast,noise=alls=6:allf=t+u,vignette=0.32', intensity)
+    baseFilter: 'scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.18:brightness=-0.025:saturation=1.1,curves=all=\'0/0 0.25/0.2 0.5/0.5 0.75/0.8 1/1\',noise=alls=6:allf=t+u,vignette=0.32',
+    getFilter: (intensity = 0.4) => applyFilterIntensity('scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.18:brightness=-0.025:saturation=1.1,curves=all=\'0/0 0.25/0.2 0.5/0.5 0.75/0.8 1/1\',noise=alls=6:allf=t+u,vignette=0.32', intensity)
   },
   'look_neon_nightclub': {
     name: 'Neon Nightclub',

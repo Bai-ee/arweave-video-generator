@@ -157,20 +157,25 @@ export class VideoCompositor {
 
     let currentInput = '[base_scaled]';
 
-    // Separate layers by type
+    // Separate layers by type and by whether they should be added after fade
     const imageLayers = config.layers.filter(layer => layer.type !== 'text' && layer.type !== 'background');
     const textLayers = config.layers.filter(layer => layer.type === 'text');
 
-    // IMPORTANT: Process ALL layers together, sorted by z-index, to ensure proper ordering
-    // Higher z-index layers must be processed AFTER lower z-index layers (so they appear on top)
-    const allLayers = [...imageLayers, ...textLayers].sort((a, b) => a.zIndex - b.zIndex);
+    // IMPORTANT: Separate layers into "before fade" and "after fade" groups
+    // Layers with addAfterFade=true should be processed AFTER the fade filter
+    const layersBeforeFade = [...imageLayers, ...textLayers].filter(layer => !layer.addAfterFade);
+    const layersAfterFade = [...imageLayers, ...textLayers].filter(layer => layer.addAfterFade === true);
+    
+    // Sort each group by z-index
+    const allLayersBeforeFade = layersBeforeFade.sort((a, b) => a.zIndex - b.zIndex);
+    const allLayersAfterFade = layersAfterFade.sort((a, b) => a.zIndex - b.zIndex);
     
     // Track which layers are images vs text for input indexing
     let imageLayerIndex = 0; // Track image layer index for input numbering
     let textLayerIndex = 0; // Track text layer index for label numbering
 
-    // Process all layers in z-index order
-    allLayers.forEach((layer) => {
+    // Process layers that should appear BEFORE fade
+    allLayersBeforeFade.forEach((layer) => {
       if (layer.type === 'text') {
         // Process text layer
         const outputLabel = `[text_layer${textLayerIndex}]`;
@@ -349,6 +354,93 @@ export class VideoCompositor {
       currentInput = '[faded_video]';
       finalVideoLabel = '[faded_video]';
       console.log(`[VideoCompositor] Adding video fade to black: ${videoFadeStart}s-${videoFadeStart + videoFadeDuration}s`);
+    }
+
+    // Process layers that should appear AFTER fade (these won't fade out)
+    if (allLayersAfterFade.length > 0) {
+      console.log(`[VideoCompositor] Processing ${allLayersAfterFade.length} layer(s) after fade (won't fade out)`);
+      allLayersAfterFade.forEach((layer) => {
+        if (layer.type === 'text') {
+          // Process text layer (same as before, but on faded video)
+          const outputLabel = `[text_layer_after${textLayerIndex}]`;
+          const fontSize = layer.fontSize || Math.round(layer.size.height * 0.7);
+          const escapedText = layer.source.replace(/'/g, "\\'").replace(/:/g, "\\:");
+          let xPos = layer.position.x;
+          let yPos = layer.position.y;
+          const isCentered = Math.abs(xPos - (canvasWidth / 2)) < 10;
+          const opacity = Math.round((layer.opacity || 1.0) * 255);
+          const textColor = layer.textColor || '0x000000';
+          const actualFontSize = layer.fontSize || fontSize;
+          const borderColor = textColor === '0xFFFFFF' ? '0x000000' : '0xFFFFFF';
+          const borderWidth = actualFontSize < 30 ? 1 : 2;
+          
+          const drawtextParams = [
+            `text='${escapedText}'`,
+            `fontsize=${actualFontSize}`,
+            `fontcolor=${textColor}`,
+            `borderw=${borderWidth}`,
+            `bordercolor=${borderColor}`,
+            isCentered ? `x=(w-text_w)/2` : `x=${xPos}`,
+            `y=${yPos}`
+          ];
+          
+          if (layer.fontPath && fs.existsSync(layer.fontPath)) {
+            const absFontPath = path.resolve(layer.fontPath);
+            let escapedFontPath = absFontPath.replace(/\\/g, '/');
+            escapedFontPath = escapedFontPath.replace(/:/g, '\\:');
+            escapedFontPath = escapedFontPath.replace(/([ '()\[\]])/g, '\\$1');
+            drawtextParams.splice(2, 0, `fontfile=${escapedFontPath}`);
+          }
+          
+          let textFilter;
+          if (layer.startTime !== null && layer.startTime !== undefined) {
+            const endTime = layer.startTime + (layer.duration || config.duration);
+            const fadeDuration = 1.0;
+            const fadeAlpha = `if(lt(t,${layer.startTime}),0,min(255,(t-${layer.startTime})/${fadeDuration}*255))`;
+            drawtextParams.push(`alpha='${fadeAlpha}'`);
+            drawtextParams.push(`enable='between(t,${layer.startTime},${endTime})'`);
+            textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
+          } else {
+            drawtextParams.push(`alpha=${opacity}`);
+            textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
+          }
+          
+          filters.push(textFilter);
+          currentInput = outputLabel;
+          textLayerIndex++;
+        } else {
+          // Process image layer (same as before, but on faded video)
+          const inputIndex = imageLayerIndex + 2; // +2 because 0=base, 1=audio
+          const outputLabel = `[layer_after${imageLayerIndex}]`;
+          const finalWidth = Math.round(layer.size.width * (layer.scale || 1));
+          const finalHeight = Math.round(layer.size.height * (layer.scale || 1));
+          const scaleFilter = `[${inputIndex}:v]scale=${finalWidth}:${finalHeight}:force_original_aspect_ratio=decrease[scaled_after${imageLayerIndex}]`;
+          filters.push(scaleFilter);
+          
+          const opacity = layer.opacity || 1.0;
+          let overlayFilter;
+          if (opacity < 1.0) {
+            filters.push(`[scaled_after${imageLayerIndex}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*${opacity}'[scaled_after${imageLayerIndex}_alpha]`);
+            if (layer.startTime !== null && layer.startTime !== undefined) {
+              const endTime = layer.startTime + (layer.duration || config.duration);
+              overlayFilter = `${currentInput}[scaled_after${imageLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+            } else {
+              overlayFilter = `${currentInput}[scaled_after${imageLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+            }
+          } else {
+            if (layer.startTime !== null && layer.startTime !== undefined) {
+              const endTime = layer.startTime + (layer.duration || config.duration);
+              overlayFilter = `${currentInput}[scaled_after${imageLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+            } else {
+              overlayFilter = `${currentInput}[scaled_after${imageLayerIndex}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+            }
+          }
+          filters.push(overlayFilter);
+          currentInput = outputLabel;
+          imageLayerIndex++;
+        }
+      });
+      finalVideoLabel = currentInput; // Update final label to include after-fade layers
     }
 
     const filterComplex = filters.join(';');
