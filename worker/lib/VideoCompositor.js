@@ -195,16 +195,19 @@ export class VideoCompositor {
         const textColor = layer.textColor || '0x000000';
         const actualFontSize = layer.fontSize || fontSize;
         
+        // Determine border color based on text color (black border for white text, white border for black text)
+        const borderColor = textColor === '0xFFFFFF' ? '0x000000' : '0xFFFFFF';
+        const borderWidth = actualFontSize < 30 ? 1 : 2; // Thinner border for small text
+        
         // Build drawtext parameters
         const drawtextParams = [
           `text='${escapedText}'`,
           `fontsize=${actualFontSize}`,
           `fontcolor=${textColor}`, // Use layer's text color (default black)
-          `borderw=2`, // Thinner border for small text
-          `bordercolor=0x000000`, // Black border for white text visibility
+          `borderw=${borderWidth}`, // Border width
+          `bordercolor=${borderColor}`, // Border color (opposite of text color)
           isCentered ? `x=(w-text_w)/2` : `x=${xPos}`,
-          `y=${yPos}`,
-          `alpha=${opacity}`
+          `y=${yPos}`
         ];
         
         // Add custom font if provided
@@ -222,13 +225,15 @@ export class VideoCompositor {
         if (layer.startTime !== null && layer.startTime !== undefined) {
           const endTime = layer.startTime + (layer.duration || config.duration);
           // Use enable expression with fade-in: opacity goes from 0 to full over 1 second
-          // Formula: opacity = clamp((t - startTime) / 1.0, 0, 1) * fullOpacity
+          // Formula: alpha = clamp((t - startTime) / 1.0, 0, 1) * 255
           const fadeDuration = 1.0; // 1 second fade-in
-          const fadeAlpha = `clamp((t-${layer.startTime})/${fadeDuration},0,1)*${opacity}`;
-          drawtextParams[drawtextParams.length - 1] = `alpha='${fadeAlpha}'`; // Replace alpha with dynamic fade
+          const fadeAlpha = `clamp((t-${layer.startTime})/${fadeDuration},0,1)*255`;
+          drawtextParams.push(`alpha='${fadeAlpha}'`); // Add dynamic fade alpha
           drawtextParams.push(`enable='between(t,${layer.startTime},${endTime})'`);
           textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
         } else {
+          // No timing - add static alpha
+          drawtextParams.push(`alpha=${opacity}`);
           textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
         }
         
