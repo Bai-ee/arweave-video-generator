@@ -12,6 +12,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { getFirestore, getStorage, admin } from './firebase-admin.js';
 import { ArweaveVideoGenerator } from './lib/ArweaveVideoGenerator.js';
+import { getFilter } from './lib/VideoFilters.js';
 import fs from 'fs-extra';
 
 dotenv.config();
@@ -58,13 +59,26 @@ async function processVideoJob(jobId, jobData, documentId = null) {
     console.log(`✅ Status updated to 'processing'`);
 
     // Generate video
+    // Get video filter from job data
+    let videoFilter = null;
+    if (jobData.videoFilter) {
+      const filterDef = getFilter(jobData.videoFilter);
+      if (filterDef) {
+        videoFilter = filterDef.filter;
+        console.log(`[Processor] Using video filter: ${filterDef.name}`);
+      } else {
+        console.warn(`[Processor] Unknown filter key: ${jobData.videoFilter}, using default`);
+      }
+    }
+    
     const videoResult = await videoGenerator.generateVideoWithAudio({
       duration: jobData.duration,
       artist: jobData.artist === 'random' ? null : jobData.artist,
       width: 720,
       height: 720,
       fadeIn: 2,
-      fadeOut: 2
+      fadeOut: 2,
+      videoFilter: videoFilter
     });
 
     if (!videoResult.success) {

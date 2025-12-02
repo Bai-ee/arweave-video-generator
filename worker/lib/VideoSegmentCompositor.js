@@ -3,11 +3,10 @@
  * Creates a 30-second video from multiple 5-second video segments
  */
 
-import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 import fs from 'fs-extra';
 import path from 'path';
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 
 // Configure FFmpeg path
 let ffmpegPath = 'ffmpeg';
@@ -24,19 +23,48 @@ export class VideoSegmentCompositor {
   }
 
   /**
-   * Get video duration
+   * Get video duration using ffmpeg (via execSync)
+   * Works in both local and GitHub Actions environments
    */
   async getVideoDuration(videoPath) {
-    return new Promise((resolve, reject) => {
-      ffmpeg.ffprobe(videoPath, (err, metadata) => {
-        if (err) {
-          reject(err);
-          return;
+    try {
+      // Try using ffprobe first (more reliable, available in GitHub Actions)
+      try {
+        const ffprobePath = process.env.GITHUB_ACTIONS === 'true' ? 'ffprobe' : 'ffprobe';
+        const command = `${ffprobePath} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
+        const duration = parseFloat(execSync(command, { encoding: 'utf8' }).trim());
+        if (!isNaN(duration) && duration > 0) {
+          return duration;
         }
-        const duration = metadata.format.duration;
-        resolve(duration);
-      });
-    });
+      } catch (ffprobeError) {
+        // Fall through to ffmpeg method
+      }
+      
+      // Fallback: Use ffmpeg to get duration (works even if ffprobe not available)
+      // This method parses ffmpeg output which works in both environments
+      const command = `${ffmpegPath} -i "${videoPath}" 2>&1`;
+      const output = execSync(command, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }).trim();
+      
+      // Extract duration from ffmpeg output: "Duration: HH:MM:SS.mmm"
+      const durationMatch = output.match(/Duration:\s*(\d{2}):(\d{2}):(\d{2}\.?\d*)/);
+      if (durationMatch) {
+        const hours = parseFloat(durationMatch[1]);
+        const minutes = parseFloat(durationMatch[2]);
+        const seconds = parseFloat(durationMatch[3]);
+        const duration = hours * 3600 + minutes * 60 + seconds;
+        
+        if (!isNaN(duration) && duration > 0) {
+          return duration;
+        }
+      }
+      
+      throw new Error('Could not parse duration from ffmpeg output');
+    } catch (error) {
+      console.error(`[VideoSegmentCompositor] Error getting video duration:`, error.message);
+      // Fallback: assume 30 seconds if we can't determine (safe default)
+      console.warn(`[VideoSegmentCompositor] Using fallback duration: 30s`);
+      return 30;
+    }
   }
 
   /**
@@ -69,16 +97,21 @@ export class VideoSegmentCompositor {
 
       // Extract segment using FFmpeg
       // Re-encode to ensure compatibility with concatenation
+      // Extract segment with video and audio (add silent audio if missing)
       await this.executeFFmpeg([
         ffmpegPath,
         '-i', videoPath,
+        '-f', 'lavfi',
+        '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
         '-ss', startTime.toString(),
         '-t', segmentDuration.toString(),
-        '-c:v', 'libx264', // Re-encode for compatibility
+        '-filter_complex', '[0:v]scale=720:720:force_original_aspect_ratio=increase,crop=720:720,format=yuv420p[v];[1:a]atrim=0:' + segmentDuration.toString() + '[a]',
+        '-map', '[v]',
+        '-map', '[a]',
+        '-c:v', 'libx264',
         '-preset', 'fast',
         '-crf', '23',
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac', // Re-encode audio
+        '-c:a', 'aac',
         '-b:a', '128k',
         '-avoid_negative_ts', 'make_zero',
         '-y',
@@ -170,9 +203,20 @@ export class VideoSegmentCompositor {
    * Concatenate video segments using FFmpeg
    */
   async concatenateSegments(segmentPaths, outputPath, targetDuration) {
-    // Create a file list for FFmpeg concat
+    // Verify all segments exist and are valid
+    for (const segPath of segmentPaths) {
+      if (!await fs.pathExists(segPath)) {
+        throw new Error(`Segment not found: ${segPath}`);
+      }
+      const stats = await fs.stat(segPath);
+      if (stats.size === 0) {
+        throw new Error(`Segment is empty: ${segPath}`);
+      }
+    }
+
+    // Segments are already normalized during extraction (720x720, yuv420p, with audio)
+    // Use concat demuxer directly
     const concatListPath = path.join(this.tempDir, `concat_list_${Date.now()}.txt`);
-    // Use absolute paths and escape properly
     const concatList = segmentPaths.map(seg => {
       const absPath = path.resolve(seg);
       return `file '${absPath.replace(/'/g, "'\\''")}'`;
@@ -180,32 +224,37 @@ export class VideoSegmentCompositor {
     await fs.writeFile(concatListPath, concatList);
 
     try {
-      // Re-encode segments to ensure compatibility (concat demuxer with copy can fail)
-      // Use concat filter instead for better compatibility
       await this.executeFFmpeg([
         ffmpegPath,
         '-f', 'concat',
         '-safe', '0',
         '-i', concatListPath,
-        '-c:v', 'libx264', // Re-encode video for compatibility
-        '-preset', 'fast',
-        '-crf', '23',
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac', // Re-encode audio
-        '-b:a', '128k',
-        '-t', targetDuration.toString(), // Ensure exact duration
+        '-c', 'copy', // Can use copy now since all segments are normalized
+        '-t', targetDuration.toString(),
         '-y',
         outputPath
       ]);
 
-      console.log(`[VideoSegmentCompositor] ✅ Concatenated video created: ${path.basename(outputPath)}`);
+      // Verify output
+      if (!await fs.pathExists(outputPath)) {
+        throw new Error('Concatenated video was not created');
+      }
+      const outputStats = await fs.stat(outputPath);
+      if (outputStats.size === 0) {
+        throw new Error('Concatenated video is empty');
+      }
 
+      console.log(`[VideoSegmentCompositor] ✅ Concatenated video created: ${path.basename(outputPath)} (${(outputStats.size / 1024 / 1024).toFixed(2)}MB)`);
+
+    } catch (error) {
+      console.error(`[VideoSegmentCompositor] ❌ Concatenation failed:`, error.message);
+      throw error;
     } finally {
-      // Cleanup concat list file
+      // Cleanup concat list
       try {
         await fs.remove(concatListPath);
       } catch (error) {
-        console.warn(`[VideoSegmentCompositor] Could not cleanup concat list:`, error.message);
+        // Ignore cleanup errors
       }
     }
   }

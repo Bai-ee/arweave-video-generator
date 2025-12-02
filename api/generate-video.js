@@ -31,6 +31,7 @@ export default async function handler(req, res) {
     // Default to 30 seconds, random artist (MVP simplification)
     const duration = 30;
     const artist = 'random'; // Always random for MVP
+    const videoFilter = req.body.videoFilter || null; // Optional video filter
 
     // Generate unique job ID
     const jobId = uuidv4();
@@ -47,6 +48,7 @@ export default async function handler(req, res) {
       status: 'pending', // Root level for easy querying
       artist,
       duration,
+      videoFilter: videoFilter, // Optional video filter key
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       completedAt: null,
       videoUrl: null,

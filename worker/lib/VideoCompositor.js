@@ -44,7 +44,7 @@ if (process.env.GITHUB_ACTIONS === 'true') {
  * Layer configuration interface
  */
 export class LayerConfig {
-  constructor(type, source, position, size, opacity, zIndex, scale = 1) {
+  constructor(type, source, position, size, opacity, zIndex, scale = 1, fontPath = null) {
     this.type = type; // 'background' | 'image' | 'text'
     this.source = source; // file path or text content
     this.position = position; // { x: number, y: number }
@@ -52,6 +52,7 @@ export class LayerConfig {
     this.opacity = opacity; // 0.0 to 1.0
     this.zIndex = zIndex; // layer order
     this.scale = scale || 1; // scale factor
+    this.fontPath = fontPath; // custom font path for text layers (optional)
   }
 }
 
@@ -59,7 +60,7 @@ export class LayerConfig {
  * Composition configuration
  */
 export class CompositionConfig {
-  constructor(baseVideo, audio, layers, outputPath, duration, width, height) {
+  constructor(baseVideo, audio, layers, outputPath, duration, width, height, videoFilter = null) {
     this.baseVideo = baseVideo; // background image/video path
     this.audio = audio; // audio file path
     this.layers = layers; // array of LayerConfig
@@ -67,6 +68,7 @@ export class CompositionConfig {
     this.duration = duration; // video duration in seconds
     this.width = width || 720; // canvas width
     this.height = height || 720; // canvas height
+    this.videoFilter = videoFilter; // Optional FFmpeg video filter string
   }
 }
 
@@ -135,7 +137,21 @@ export class VideoCompositor {
 
     // Scale base image/video to canvas size
     // For video backgrounds, the loop will be handled by -stream_loop in the input
-    filters.push(`[0:v]scale=${canvasWidth}:${canvasHeight}:force_original_aspect_ratio=increase,crop=${canvasWidth}:${canvasHeight}[base_scaled]`);
+    // Apply video filter if provided, otherwise apply default black and white
+    let baseFilter;
+    
+    if (config.videoFilter) {
+      // Apply custom video filter
+      // Custom filters already include scale/pad operations, so apply directly to input
+      baseFilter = `[0:v]${config.videoFilter}[base_scaled]`;
+      console.log(`[VideoCompositor] Applying custom video filter: ${config.videoFilter.substring(0, 100)}...`);
+    } else {
+      // Default: scale to canvas and apply black and white
+      baseFilter = `[0:v]scale=${canvasWidth}:${canvasHeight}:force_original_aspect_ratio=increase,crop=${canvasWidth}:${canvasHeight},hue=s=0[base_scaled]`;
+      console.log(`[VideoCompositor] Applying default black and white filter`);
+    }
+    
+    filters.push(baseFilter);
 
     let currentInput = '[base_scaled]';
 
@@ -143,7 +159,7 @@ export class VideoCompositor {
     const imageLayers = config.layers.filter(layer => layer.type !== 'text' && layer.type !== 'background');
     const textLayers = config.layers.filter(layer => layer.type === 'text');
 
-    // Sort image layers by z-index
+    // Sort image layers by z-index (lower z-index first, so they're rendered in order)
     const sortedImageLayers = imageLayers.sort((a, b) => a.zIndex - b.zIndex);
 
     // Process image layers
@@ -178,8 +194,12 @@ export class VideoCompositor {
       currentInput = outputLabel;
     });
 
+    // Sort text layers by z-index to ensure proper rendering order
+    const sortedTextLayers = textLayers.sort((a, b) => a.zIndex - b.zIndex);
+
     // Process text layers
-    textLayers.forEach((layer, index) => {
+    const createdTextLabels = []; // Track which text layer labels were actually created
+    sortedTextLayers.forEach((layer, index) => {
       const outputLabel = `[text_layer${index}]`;
 
       // Calculate font size based on layer height
@@ -200,25 +220,52 @@ export class VideoCompositor {
       const opacity = Math.round((layer.opacity || 1.0) * 255);
       let textFilter;
       
-      // CRITICAL: In FFmpeg filter_complex, the output label must be properly separated
-      // The format is: [input]filter=params[output]
-      // The issue: FFmpeg parses bordercolor=value[output] as color 'value[output]'
-      // Solution: Put border parameters in the MIDDLE of the param list, not at the end
-      // This ensures the output label comes after a parameter that FFmpeg can clearly parse
+      // Build drawtext parameters
+      // Use black text for better visibility on white paper
       const drawtextParams = [
         `text='${escapedText}'`,
         `fontsize=${fontSize}`,
-        `fontcolor=0xFFFFFF`,
-        `borderw=2`, // Move border params earlier to avoid parsing issues
-        `bordercolor=0x000000`, // Use hex format without alpha
+        `fontcolor=0x000000`, // Black text for visibility on white paper
+        `borderw=4`, // Thicker border for better visibility
+        `bordercolor=0xFFFFFF`, // White border for contrast
         isCentered ? `x=(w-text_w)/2` : `x=${xPos}`,
         `y=${yPos}`,
         `alpha=${opacity}` // Put alpha last - it's a simple numeric value
-      ].join(':');
+      ];
       
-      textFilter = `${currentInput}drawtext=${drawtextParams}${outputLabel}`;
+      // Add custom font if provided
+      if (layer.fontPath && fs.existsSync(layer.fontPath)) {
+        // Escape font path for FFmpeg drawtext filter
+        // FFmpeg drawtext fontfile parameter needs special escaping:
+        // - Use absolute path
+        // - Escape colons with \: (for Windows paths)
+        // - Escape spaces, parentheses, and single quotes
+        // - Don't wrap in quotes - FFmpeg handles the path directly
+        const absFontPath = path.resolve(layer.fontPath);
+        // Replace backslashes with forward slashes (Windows compatibility)
+        let escapedFontPath = absFontPath.replace(/\\/g, '/');
+        // Escape colons (needed for Windows paths like C:)
+        escapedFontPath = escapedFontPath.replace(/:/g, '\\:');
+        // Escape spaces, parentheses, brackets, and other special chars that might break the filter
+        escapedFontPath = escapedFontPath.replace(/([ '()\[\]])/g, '\\$1');
+        // Add fontfile parameter (no quotes around the path - FFmpeg parses it directly)
+        drawtextParams.splice(2, 0, `fontfile=${escapedFontPath}`);
+        console.log(`[VideoCompositor] ✅ Using custom font: ${path.basename(layer.fontPath)}`);
+        console.log(`[VideoCompositor] Font path (absolute): ${absFontPath}`);
+        console.log(`[VideoCompositor] Font path (escaped for FFmpeg): ${escapedFontPath}`);
+        console.log(`[VideoCompositor] Font exists: ${fs.existsSync(layer.fontPath)}`);
+      } else {
+        console.warn(`[VideoCompositor] ⚠️ No font path provided or font not found for text layer ${index}`);
+        if (layer.fontPath) {
+          console.warn(`[VideoCompositor] Font path was: ${layer.fontPath}`);
+        }
+      }
       
+      textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
+      
+      console.log(`[VideoCompositor] Text filter for layer ${index}: ${textFilter.substring(0, 150)}...`);
       filters.push(textFilter);
+      createdTextLabels.push(outputLabel); // Track that this label was created
 
       currentInput = outputLabel;
     });
@@ -226,14 +273,23 @@ export class VideoCompositor {
     const filterComplex = filters.join(';');
     console.log(`[VideoCompositor] Filter complex: ${filterComplex.substring(0, 200)}...`);
     
-    // Debug: Log all output labels created (reuse textLayers and imageLayers from above)
-    if (textLayers.length > 0) {
-      console.log(`[VideoCompositor] Text layers: ${textLayers.length}, final output will be: [text_layer${textLayers.length - 1}]`);
+    // Debug: Log all output labels created
+    const allLabels = filterComplex.match(/\[[^\]]+\]/g) || [];
+    const uniqueLabels = [...new Set(allLabels)];
+    console.log(`[VideoCompositor] All labels in filter complex: ${uniqueLabels.join(', ')}`);
+    
+    if (createdTextLabels.length > 0) {
+      const lastTextLabel = createdTextLabels[createdTextLabels.length - 1];
+      console.log(`[VideoCompositor] Text layers created: ${createdTextLabels.length}, final output should be: ${lastTextLabel}`);
     } else if (imageLayers.length > 0) {
       console.log(`[VideoCompositor] Image layers: ${imageLayers.length}, final output will be: [layer${imageLayers.length - 1}]`);
     } else {
       console.log(`[VideoCompositor] No layers, final output will be: [base_scaled]`);
     }
+    
+    // Store created labels in config for later validation
+    config._createdTextLabels = createdTextLabels;
+    config._createdImageLabels = imageLayers.map((_, i) => `[layer${i}]`);
     
     return filterComplex;
   }
@@ -278,21 +334,33 @@ export class VideoCompositor {
     if (filterComplex) {
       command.push('-filter_complex', filterComplex);
 
-      // Determine final output label
-      const textLayers = config.layers.filter(layer => layer.type === 'text');
-      const imageLayers = config.layers.filter(layer => layer.type !== 'text' && layer.type !== 'background');
+      // Determine final output label - use the labels that were actually created
       let finalOutput;
 
-      if (textLayers.length > 0) {
-        // Use the last text layer (index is length - 1)
-        finalOutput = `[text_layer${textLayers.length - 1}]`;
-        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${textLayers.length} text layers)`);
-      } else if (imageLayers.length > 0) {
-        finalOutput = `[layer${imageLayers.length - 1}]`;
-        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${imageLayers.length} image layers)`);
+      // Use the tracked labels from buildFilterComplex if available
+      if (config._createdTextLabels && config._createdTextLabels.length > 0) {
+        // Use the last text layer that was actually created
+        finalOutput = config._createdTextLabels[config._createdTextLabels.length - 1];
+        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${config._createdTextLabels.length} text layers created)`);
+      } else if (config._createdImageLabels && config._createdImageLabels.length > 0) {
+        // Use the last image layer that was actually created
+        finalOutput = config._createdImageLabels[config._createdImageLabels.length - 1];
+        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${config._createdImageLabels.length} image layers created)`);
       } else {
-        finalOutput = '[base_scaled]';
-        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (no layers)`);
+        // Fallback: determine from layer counts
+        const textLayers = config.layers.filter(layer => layer.type === 'text');
+        const imageLayers = config.layers.filter(layer => layer.type !== 'text' && layer.type !== 'background');
+        
+        if (textLayers.length > 0) {
+          finalOutput = `[text_layer${textLayers.length - 1}]`;
+          console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${textLayers.length} text layers, fallback)`);
+        } else if (imageLayers.length > 0) {
+          finalOutput = `[layer${imageLayers.length - 1}]`;
+          console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${imageLayers.length} image layers, fallback)`);
+        } else {
+          finalOutput = '[base_scaled]';
+          console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (no layers)`);
+        }
       }
 
       // Map the final output from filter_complex
@@ -304,10 +372,28 @@ export class VideoCompositor {
       // Verify the output label is in the filter complex
       if (!filterComplex.includes(finalOutput)) {
         console.error(`[VideoCompositor] ⚠️ Output label ${finalOutput} not found in filter complex!`);
-        console.error(`[VideoCompositor] Filter complex contains: ${filterComplex.match(/\[text_layer\d+\]|\[layer\d+\]|\[base_scaled\]/g)?.join(', ') || 'none'}`);
-        // Fallback to base_scaled if text layer doesn't exist
-        finalOutput = '[base_scaled]';
-        console.log(`[VideoCompositor] Using fallback output: ${finalOutput}`);
+        const foundLabels = filterComplex.match(/\[[^\]]+\]/g) || [];
+        const uniqueLabels = [...new Set(foundLabels)];
+        console.error(`[VideoCompositor] Filter complex contains: ${uniqueLabels.join(', ')}`);
+        
+        // Try to find the last valid label
+        if (config._createdTextLabels && config._createdTextLabels.length > 0) {
+          // Try each text label in reverse order
+          for (let i = config._createdTextLabels.length - 1; i >= 0; i--) {
+            const label = config._createdTextLabels[i];
+            if (filterComplex.includes(label)) {
+              finalOutput = label;
+              console.log(`[VideoCompositor] Using valid text layer label: ${finalOutput}`);
+              break;
+            }
+          }
+        }
+        
+        // If still not found, fallback to base_scaled
+        if (!filterComplex.includes(finalOutput)) {
+          finalOutput = '[base_scaled]';
+          console.log(`[VideoCompositor] Using fallback output: ${finalOutput}`);
+        }
       }
       
       command.push('-map', finalOutput);

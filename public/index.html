@@ -110,6 +110,19 @@
           <h1 style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 1.5rem; text-transform: uppercase;">Arweave Video Generator</h1>
         </div>
         
+        <!-- Filter Selection -->
+        <div style="width: 100%; max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem;">
+          <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
+            🎨 SELECT VIDEO FILTER (Required)
+          </label>
+          <div id="filterButtons" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+            <!-- Filter buttons will be populated by JavaScript -->
+          </div>
+          <p style="color: #888; font-size: 0.75rem; text-align: center; margin-top: 0.5rem;">
+            You must select a filter before generating a video
+          </p>
+        </div>
+        
         <!-- Action Buttons -->
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
           <button 
@@ -280,9 +293,24 @@
     // Video generation state
     let activeJobs = new Map(); // jobId -> polling interval
     let videos = []; // Cached video list
+    let selectedFilter = null; // Currently selected video filter
+
+    // Video filter definitions (must match backend)
+    const VIDEO_FILTERS = {
+      'look_gritty_neon_club': { name: 'Gritty Neon Club', description: 'Punchy contrast, slight neon saturation, dirty grain' },
+      'look_faded_90s_tape': { name: 'Faded 90s Tape', description: 'Washed, low-contrast tape feel with motion smear' },
+      'look_hard_bw_street_doc': { name: 'Hard B&W Street Doc', description: 'Aggro black & white, doc-style club footage' },
+      'look_camcorder_ghost': { name: 'Camcorder Ghost', description: 'Cheap DV / camcorder vibe, great for crowd shots' },
+      'look_club_cinematic_dirty': { name: 'Club Cinematic Dirty', description: 'Cinematic contrast but still grimy' },
+      'look_neon_nightclub': { name: 'Neon Nightclub', description: 'Crushed blacks, neon mids, for laser / LED-heavy shots' },
+      'look_zine_posterized_color': { name: 'Zine Posterized Color', description: 'Posterized, graphic, zine / sticker-pack feel' },
+      'look_pixel_grit_vertical': { name: 'Pixel Grit', description: 'Low-fi pixelated alley vibe, still readable faces' },
+      'look_sodium_streetlight': { name: 'Sodium Streetlight', description: 'Warm orange club/street lighting, gritty and moody' }
+    };
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', () => {
+      initializeFilterButtons();
       loadVideos();
       
       // Auto-refresh video list every 30 seconds to catch completed videos
@@ -293,9 +321,73 @@
     });
 
     /**
+     * Initialize filter selection buttons
+     */
+    function initializeFilterButtons() {
+      const container = document.getElementById('filterButtons');
+      if (!container) return;
+
+      Object.keys(VIDEO_FILTERS).forEach(filterKey => {
+        const filter = VIDEO_FILTERS[filterKey];
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.filterKey = filterKey;
+        button.className = 'filter-btn';
+        button.style.cssText = `
+          padding: 0.75rem 1rem;
+          border: 2px solid var(--color-yellow-75);
+          border-radius: 5px;
+          background: #0a0a0a;
+          color: var(--color-yellow-75);
+          font-family: var(--font-mathias);
+          font-size: 0.875rem;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-align: left;
+        `;
+        button.innerHTML = `
+          <div style="font-weight: bold; margin-bottom: 0.25rem;">${filter.name}</div>
+          <div style="font-size: 0.75rem; opacity: 0.8; font-weight: normal;">${filter.description}</div>
+        `;
+        
+        button.addEventListener('click', () => selectFilter(filterKey));
+        container.appendChild(button);
+      });
+    }
+
+    /**
+     * Select a video filter
+     */
+    function selectFilter(filterKey) {
+      selectedFilter = filterKey;
+      
+      // Update button styles
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.dataset.filterKey === filterKey) {
+          btn.style.background = 'var(--color-yellow-75)';
+          btn.style.color = 'black';
+          btn.style.borderColor = 'var(--color-yellow-75)';
+        } else {
+          btn.style.background = '#0a0a0a';
+          btn.style.color = 'var(--color-yellow-75)';
+          btn.style.borderColor = 'var(--color-yellow-75)';
+        }
+      });
+      
+      console.log(`✅ Selected filter: ${VIDEO_FILTERS[filterKey].name}`);
+    }
+
+    /**
      * Generate a new video (one-click, always 30s, random artist)
      */
     async function generateVideo() {
+      // Check if filter is selected
+      if (!selectedFilter) {
+        showToast('Please select a video filter first!', 'error');
+        return;
+      }
+
       const btn = document.getElementById('generateVideoBtn');
       const btnText = document.getElementById('generateBtnText');
       const btnLoading = document.getElementById('generateBtnLoading');
@@ -314,7 +406,8 @@
           },
           body: JSON.stringify({
             duration: 30,
-            artist: 'random'
+            artist: 'random',
+            videoFilter: selectedFilter
           })
         });
 

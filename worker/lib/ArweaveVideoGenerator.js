@@ -5,11 +5,15 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { execSync } from 'child_process';
 import { ArweaveAudioClient } from './ArweaveAudioClient.js';
-import { DALLEImageGenerator } from './DALLEImageGenerator.js';
-import { ImageLoader } from './ImageLoader.js';
 import { VideoLoader } from './VideoLoader.js';
 import { VideoCompositor, CompositionConfig, LayerConfig } from './VideoCompositor.js';
 import { VideoSegmentCompositor } from './VideoSegmentCompositor.js';
+import axios from 'axios';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Configure FFmpeg path
 if (ffmpegStatic) {
@@ -23,19 +27,23 @@ if (ffmpegStatic) {
 class ArweaveVideoGenerator {
     constructor() {
         this.audioClient = new ArweaveAudioClient();
-        this.dalleGenerator = new DALLEImageGenerator();
-        this.imageLoader = new ImageLoader();
+        // DALLEImageGenerator only used for fallback background generation (not overlays)
+        // Main video generation uses Mix Archive configuration: paper overlay + "Mix Archive" text
+        // NO DALL-E overlay images, NO artist/mix images, NO old text layers
+        this.dalleGenerator = null; // Lazy load only if needed for fallback
         this.videoLoader = new VideoLoader();
         this.videoCompositor = new VideoCompositor();
         this.segmentCompositor = new VideoSegmentCompositor();
         this.tempDir = path.join(process.cwd(), 'temp-uploads');
         this.videosDir = path.join(process.cwd(), 'outputs', 'videos');
         this.backgroundsDir = path.join(process.cwd(), 'outputs', 'backgrounds');
+        this.cacheDir = path.join(process.cwd(), 'outputs', 'image-cache');
         
         // Ensure directories exist
         fs.ensureDirSync(this.tempDir);
         fs.ensureDirSync(this.videosDir);
         fs.ensureDirSync(this.backgroundsDir);
+        fs.ensureDirSync(this.cacheDir);
     }
 
     /**
@@ -290,10 +298,13 @@ class ArweaveVideoGenerator {
             width = 720,
             height = 720,
             fadeIn = 2,
-            fadeOut = 2
+            fadeOut = 2,
+            videoFilter = null
         } = options;
 
         console.log(`[ArweaveVideoGenerator] Starting video generation - ${duration}s for ${artist || 'random artist'}`);
+        console.log(`[ArweaveVideoGenerator] 🎬 Using Mix Archive configuration: paper overlay + "Mix Archive" text`);
+        console.log(`[ArweaveVideoGenerator] 🎨 Filter: ${videoFilter ? 'Custom filter applied' : 'Default (B&W)'}`);
 
         try {
             let audioResult;
@@ -347,9 +358,14 @@ class ArweaveVideoGenerator {
                 }
             }
             
-            // Fallback to DALL-E background if video segments not available
+            // Fallback to DALL-E background if video segments not available (background only, NOT overlays)
             if (!backgroundPath && process.env.OPENAI_API_KEY) {
-                console.log('[ArweaveVideoGenerator] Generating DALL-E background...');
+                console.log('[ArweaveVideoGenerator] Generating DALL-E background (fallback only, no overlays)...');
+                // Lazy load DALLEImageGenerator only if needed
+                if (!this.dalleGenerator) {
+                    const { DALLEImageGenerator } = await import('./DALLEImageGenerator.js');
+                    this.dalleGenerator = new DALLEImageGenerator();
+                }
                 backgroundPath = await this.dalleGenerator.generateBackgroundImage(audioArtist, prompt, width, height);
             }
             
@@ -359,65 +375,111 @@ class ArweaveVideoGenerator {
                 backgroundPath = await this.generateBackgroundImage(audioArtist, prompt, width, height);
             }
 
-            // Step 3: Collect image layers
-            console.log('[ArweaveVideoGenerator] Step 3: Collecting image layers...');
+            // Step 3: Load paper background from Firebase
+            console.log('[ArweaveVideoGenerator] Step 3: Loading paper background...');
             const layers = [];
-
-            // Generate 1-3 random DALL-E overlay images
-            const randomImageCount = Math.floor(Math.random() * 3) + 1; // 1-3 images
-            console.log(`[ArweaveVideoGenerator] Generating ${randomImageCount} random DALL-E overlay images...`);
-            const randomImages = await this.dalleGenerator.generateRandomImages(audioArtist, randomImageCount, width * 0.4, height * 0.4);
+            let paperCachePath = null; // Declare outside try block for cleanup
             
-            // Add random DALL-E images as layers
-            randomImages.forEach((imagePath, index) => {
-                if (imagePath) {
-                    // Position randomly on canvas
-                    const x = Math.floor(Math.random() * (width * 0.6)); // Random x, leave 40% margin
-                    const y = Math.floor(Math.random() * (height * 0.6)); // Random y, leave 40% margin
-                    const layerSize = Math.min(width * 0.3, height * 0.3); // 30% of canvas
-                    
-                    layers.push(new LayerConfig(
-                        'image',
-                        imagePath,
-                        { x, y },
-                        { width: layerSize, height: layerSize },
-                        0.7 + Math.random() * 0.2, // Opacity between 0.7-0.9
-                        10 + index, // z-index
-                        1.0
-                    ));
-                }
-            });
-
-            // Load images from artist JSON
+            // Paper background configuration (Mix Archive style)
+            const paperWidthPercent = 1.5; // 150% of video width
+            const paperTopPercent = 0.65; // 65% from top
+            const paperWidth = Math.round(width * paperWidthPercent);
+            const paperTopY = Math.round(height * paperTopPercent);
+            const paperHeight = Math.round(paperWidth * 1.4); // Approximate aspect ratio
+            const paperX = Math.round((width - paperWidth) / 2);
+            const paperY = paperTopY;
+            
+            // Paper background URLs from Firebase Storage
+            const paperBackgrounds = [
+                'https://storage.googleapis.com/editvideos-63486.firebasestorage.app/paper_backgrounds/sheet-paper.png',
+                'https://storage.googleapis.com/editvideos-63486.firebasestorage.app/paper_backgrounds/sheet-paper-1.png',
+                'https://storage.googleapis.com/editvideos-63486.firebasestorage.app/paper_backgrounds/sheet-paper-2.png'
+            ];
+            
+            // Select random paper background
+            const paperUrl = paperBackgrounds[Math.floor(Math.random() * paperBackgrounds.length)];
+            console.log(`[ArweaveVideoGenerator] Selected paper: ${paperUrl.split('/').pop()}`);
+            
+            // Download and cache paper background
+            paperCachePath = path.join(this.cacheDir, `paper_${Date.now()}.png`);
             try {
-                const { artist: artistData, mix: mixData } = this.audioClient.getArtistMix(audioArtist);
-                const jsonImages = await this.imageLoader.loadFromArtistJSON(artistData, mixData);
-                
-                jsonImages.forEach((img, index) => {
-                    if (img && img.path) {
-                        const layerSize = Math.min(width * 0.25, height * 0.25); // 25% of canvas
-                        const x = width * 0.1 + (index * width * 0.3); // Stagger horizontally
-                        const y = height * 0.1;
-                        
-                        layers.push(new LayerConfig(
-                            'image',
-                            img.path,
-                            { x, y },
-                            { width: layerSize, height: layerSize },
-                            0.8, // opacity
-                            20 + index, // z-index
-                            1.0
-                        ));
-                    }
+                const response = await axios({
+                    url: paperUrl,
+                    method: 'GET',
+                    responseType: 'stream'
                 });
+                
+                const writer = fs.createWriteStream(paperCachePath);
+                response.data.pipe(writer);
+                
+                await new Promise((resolve, reject) => {
+                    writer.on('finish', resolve);
+                    writer.on('error', reject);
+                });
+                
+                console.log(`[ArweaveVideoGenerator] ✅ Paper background cached`);
+                
+                // Add paper background as image layer
+                layers.push(new LayerConfig(
+                    'image',
+                    paperCachePath,
+                    { x: paperX, y: paperY },
+                    { width: paperWidth, height: paperHeight },
+                    1.0, // Full opacity
+                    10, // z-index (above video background)
+                    1.0 // scale
+                ));
             } catch (error) {
-                console.warn('[ArweaveVideoGenerator] Could not load images from JSON:', error.message);
+                console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load paper background:`, error.message);
+                paperCachePath = null; // Clear if failed
+                // Continue without paper if it fails
             }
 
-            // Step 4: Generate text layers
-            console.log('[ArweaveVideoGenerator] Step 4: Generating text layers...');
-            const textLayers = this.generateTextLayers(audioArtist, audioMixTitle, width, height);
-            layers.push(...textLayers);
+            // Step 4: Add "Mix Archive" text layer
+            console.log('[ArweaveVideoGenerator] Step 4: Adding Mix Archive text...');
+            const textContent = 'Mix Archive';
+            const fontSize = Math.round(paperHeight * 0.15);
+            const textCenterX = width / 2; // Canvas center
+            const textCenterY = height * 0.5; // 50% down from top
+            
+            // Get font path - try multiple possible locations
+            const possibleFontPaths = [
+                path.join(process.cwd(), 'worker', 'assets', 'fonts', 'ShantellSans-Bold.ttf'),
+                path.join(process.cwd(), 'worker', 'assets', 'fonts', 'ShantellSans-Regular.ttf'),
+                path.join(__dirname, '..', 'assets', 'fonts', 'ShantellSans-Bold.ttf'),
+                path.join(__dirname, '..', 'assets', 'fonts', 'ShantellSans-Regular.ttf'),
+                path.join(process.cwd(), 'assets', 'fonts', 'ShantellSans-Bold.ttf'),
+                path.join(process.cwd(), 'assets', 'fonts', 'ShantellSans-Regular.ttf')
+            ];
+            
+            // Check if font exists, try each path
+            let actualFontPath = null;
+            for (const fontPath of possibleFontPaths) {
+                if (await fs.pathExists(fontPath)) {
+                    actualFontPath = fontPath;
+                    console.log(`[ArweaveVideoGenerator] Found font at: ${fontPath}`);
+                    break;
+                }
+            }
+            
+            if (actualFontPath) {
+                console.log(`[ArweaveVideoGenerator] Using font: ${path.basename(actualFontPath)}`);
+                
+                // Add text layer with custom font - HIGHEST z-index to ensure it's on top
+                const textLayer = new LayerConfig(
+                    'text',
+                    textContent,
+                    { x: textCenterX, y: textCenterY },
+                    { width: paperWidth, height: fontSize * 2 }, // Larger bounding box
+                    1.0, // Full opacity
+                    100, // HIGHEST z-index (above everything, including paper)
+                    1.0, // scale
+                    actualFontPath // Pass font path as 8th parameter
+                );
+                layers.push(textLayer);
+            } else {
+                console.warn(`[ArweaveVideoGenerator] ⚠️ Font not found, skipping text overlay`);
+            }
 
             // Step 5: Compose final video with all layers
             console.log('[ArweaveVideoGenerator] Step 5: Composing final video with layers...');
@@ -428,7 +490,10 @@ class ArweaveVideoGenerator {
             // Generate permanent video path
             const permanentVideoPath = path.join(this.videosDir, `${audioArtist.replace(/[^a-zA-Z0-9]/g, '_')}_video_${Date.now()}.mp4`);
 
-            // Create composition config
+            // Create composition config with filter
+            console.log(`[ArweaveVideoGenerator] 🎨 Video filter received: ${videoFilter ? `"${videoFilter.substring(0, 100)}..."` : 'null (will use default B&W)'}`);
+            console.log(`[ArweaveVideoGenerator] 📊 Layers count: ${layers.length} (should be 2: paper + text)`);
+            
             const compositionConfig = new CompositionConfig(
                 backgroundPath,
                 audioFilePath,
@@ -436,8 +501,11 @@ class ArweaveVideoGenerator {
                 tempVideoPath,
                 duration,
                 width,
-                height
+                height,
+                videoFilter // Pass the filter to CompositionConfig
             );
+            
+            console.log(`[ArweaveVideoGenerator] ✅ CompositionConfig created with filter: ${compositionConfig.videoFilter ? 'YES' : 'NO'}`);
 
             // Use VideoCompositor to create video with all layers
             await this.videoCompositor.composeVideo(compositionConfig);
@@ -453,19 +521,16 @@ class ArweaveVideoGenerator {
 
             // Cleanup temp files
             try {
-                await fs.remove(backgroundPath);
-                await fs.remove(tempVideoPath);
-                
-                // Cleanup DALL-E generated overlay images
-                randomImages.forEach(async (imagePath) => {
-                    if (imagePath && await fs.pathExists(imagePath)) {
-                        try {
-                            await fs.remove(imagePath);
-                        } catch (err) {
-                            console.warn(`[ArweaveVideoGenerator] Could not cleanup image ${imagePath}:`, err.message);
-                        }
-                    }
-                });
+                if (backgroundPath && await fs.pathExists(backgroundPath)) {
+                    await fs.remove(backgroundPath);
+                }
+                if (tempVideoPath && await fs.pathExists(tempVideoPath)) {
+                    await fs.remove(tempVideoPath);
+                }
+                // Cleanup paper background cache
+                if (paperCachePath && await fs.pathExists(paperCachePath)) {
+                    await fs.remove(paperCachePath);
+                }
             } catch (cleanupError) {
                 console.warn('[ArweaveVideoGenerator] Cleanup warning:', cleanupError.message);
             }

@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+worker/node_modules/
+
+# Environment variables
+.env
+worker/.env
+*.env
+
+# Output files
+worker/outputs/
+worker/test-output/
+worker/temp-uploads/
+worker/content/
+
+# Graphics and large assets (don't push images/videos)
+worker/assets/**/*.png
+worker/assets/**/*.jpg
+worker/assets/**/*.jpeg
+worker/assets/**/*.svg
+worker/assets/**/*.gif
+worker/assets/**/*.mp4
+worker/assets/**/*.mov
+worker/assets/**/*.m4v
+
+# Fonts (large files, don't push)
+worker/assets/fonts/**/*.ttf
+worker/assets/fonts/**/*.otf
+worker/assets/fonts/**/*.woff
+worker/assets/fonts/**/*.woff2
+
+# Keep folder structure but ignore contents
+!worker/assets/
+!worker/assets/**/
+!worker/assets/**/.gitkeep
+
+# Paper backgrounds (also ignored as images)
+worker/assets/paper_backgrounds/**/*.png
+
+# Large video files
+assets/**/*.mp4
+assets/**/*.mov
+assets/**/*.m4v
+
+# Firebase credentials
+firebase-key.json
+firebase-credentials.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
