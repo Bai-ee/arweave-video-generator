@@ -78,7 +78,8 @@ async function processVideoJob(jobId, jobData, documentId = null) {
       height: 720,
       fadeIn: 2,
       fadeOut: 2,
-      videoFilter: videoFilter
+      videoFilter: videoFilter,
+      useTrax: jobData.useTrax === true // Pass useTrax flag to video generator
     });
 
     if (!videoResult.success) {

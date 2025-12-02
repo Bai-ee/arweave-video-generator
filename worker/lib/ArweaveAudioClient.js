@@ -219,6 +219,61 @@ class ArweaveAudioClient {
   }
 
   /**
+   * Get a random track (trax) from an artist
+   * Similar to getArtistMix but for original music tracks
+   */
+  getArtistTrax(artistName = null) {
+    let selectedArtist;
+    
+    if (artistName) {
+      // Find specific artist
+      const normalizedSearch = artistName.toLowerCase().trim();
+      selectedArtist = this.artistsData.find(artist => {
+        const normalizedName = artist.artistName.toLowerCase().trim();
+        return normalizedName === normalizedSearch ||
+               normalizedSearch.includes(normalizedName) ||
+               normalizedName.includes(normalizedSearch);
+      });
+      
+      if (selectedArtist) {
+        console.log(`[ArweaveAudioClient] Found specific artist: ${selectedArtist.artistName}`);
+      } else {
+        console.warn(`[ArweaveAudioClient] Artist "${artistName}" not found, using random selection`);
+      }
+    }
+    
+    // Fallback to random artist if not found
+    if (!selectedArtist) {
+      selectedArtist = this.artistsData[Math.floor(Math.random() * this.artistsData.length)];
+    }
+    
+    // Get random track from that artist
+    if (!selectedArtist.trax || selectedArtist.trax.length === 0) {
+      throw new Error(`Artist ${selectedArtist.artistName} has no trax`);
+    }
+    
+    // Filter trax that have valid URLs (Arweave or GitHub)
+    const validTrax = selectedArtist.trax.filter(track => 
+      track.trackArweaveURL && 
+      track.trackArweaveURL.startsWith('http') && 
+      (track.trackArweaveURL.includes('arweave.net') || track.trackArweaveURL.includes('github.com'))
+    );
+    
+    if (validTrax.length === 0) {
+      throw new Error(`Artist ${selectedArtist.artistName} has no trax with valid URLs`);
+    }
+    
+    const randomTrack = validTrax[Math.floor(Math.random() * validTrax.length)];
+    
+    console.log(`[ArweaveAudioClient] Selected track: ${randomTrack.trackTitle} (${validTrax.length} valid trax available)`);
+    
+    return {
+      artist: selectedArtist,
+      track: randomTrack
+    };
+  }
+
+  /**
    * Download only the requested segment directly from Arweave URL
    * Core efficiency feature - downloads ONLY what's needed
    * Enhanced with retry logic and better error handling
@@ -506,6 +561,8 @@ class ArweaveAudioClient {
    * Enhanced with fallback mechanisms for better reliability
    */
   async generateAudioClip(duration = 30, fadeInDuration = 2, fadeOutDuration = 2, prompt = null, options = {}) {
+    // Check if we should use trax (original music) instead of mixes (DJ mixes)
+    const useTrax = options.useTrax === true;
     console.log(`[ArweaveAudioClient] 🎵 Starting audio clip generation - ${duration}s clip`);
     console.log(`[ArweaveAudioClient] 📍 Current working directory: ${process.cwd()}`);
     console.log(`[ArweaveAudioClient] 🔧 Environment: ${process.env.NODE_ENV}`);
@@ -533,23 +590,53 @@ class ArweaveAudioClient {
       
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
-          console.log(`[ArweaveAudioClient] Attempt ${attempt}/${maxAttempts} for artist/mix selection`);
+          console.log(`[ArweaveAudioClient] Attempt ${attempt}/${maxAttempts} for artist/${useTrax ? 'track' : 'mix'} selection`);
           
-          // Get artist and mix
-          const { artist, mix } = this.getArtistMix(requestedArtist);
+          let audioSource, audioUrl, audioTitle, audioDateYear, audioDuration, selectedArtist;
           
-          // Validate that we have a valid mix
-          if (!mix || !mix.mixArweaveURL) {
-            throw new Error(`No valid mix found for artist: ${artist?.artistName || requestedArtist || 'random'}`);
+          if (useTrax) {
+            // Get artist and track (original music)
+            const result = this.getArtistTrax(requestedArtist);
+            selectedArtist = result.artist;
+            const track = result.track;
+            
+            // Validate that we have a valid track
+            if (!track || !track.trackArweaveURL) {
+              throw new Error(`No valid track found for artist: ${selectedArtist?.artistName || requestedArtist || 'random'}`);
+            }
+            
+            audioSource = track;
+            audioUrl = track.trackArweaveURL;
+            audioTitle = track.trackTitle;
+            audioDateYear = track.trackDateYear;
+            audioDuration = track.trackDuration;
+            
+            console.log(`[ArweaveAudioClient] 🎵 Selected track: ${selectedArtist.artistName} - "${track.trackTitle}" (${track.trackDuration})`);
+          } else {
+            // Get artist and mix (DJ mixes)
+            const result = this.getArtistMix(requestedArtist);
+            selectedArtist = result.artist;
+            const mix = result.mix;
+            
+            // Validate that we have a valid mix
+            if (!mix || !mix.mixArweaveURL) {
+              throw new Error(`No valid mix found for artist: ${selectedArtist?.artistName || requestedArtist || 'random'}`);
+            }
+            
+            audioSource = mix;
+            audioUrl = mix.mixArweaveURL;
+            audioTitle = mix.mixTitle;
+            audioDateYear = mix.mixDateYear;
+            audioDuration = mix.mixDuration;
+            
+            console.log(`[ArweaveAudioClient] 🎧 Selected mix: ${selectedArtist.artistName} - "${mix.mixTitle}" (${mix.mixDuration})`);
           }
           
-          // Parse total duration of source mix
-          const totalDurationSeconds = this.parseDuration(mix.mixDuration);
+          // Parse total duration of source audio
+          const totalDurationSeconds = this.parseDuration(audioDuration);
           
-          console.log(`[ArweaveAudioClient] Selected: ${artist.artistName} - "${mix.mixTitle}" (${mix.mixDuration}, ${totalDurationSeconds}s total)`);
-
           // Generate output path
-          const fileName = `arweave_clip_${artist.artistName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.m4a`;
+          const fileName = `arweave_clip_${selectedArtist.artistName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.m4a`;
           const finalPath = path.join(this.outputDir, fileName);
 
           // Calculate random start time for variety
@@ -561,16 +648,16 @@ class ArweaveAudioClient {
 
           // Create metadata
           const metadata = {
-            artist: artist.artistName,
-            title: mix.mixTitle,
-            album: `${mix.mixDateYear} Mix`,
-            genre: artist.artistGenre
+            artist: selectedArtist.artistName,
+            title: audioTitle,
+            album: `${audioDateYear} ${useTrax ? 'Track' : 'Mix'}`,
+            genre: selectedArtist.artistGenre
           };
 
           try {
             // Download only the requested segment
             await this.downloadSegmentDirectly(
-              mix.mixArweaveURL,
+              audioUrl,
               startTime,
               requestedDuration,
               finalPath,
@@ -590,16 +677,19 @@ class ArweaveAudioClient {
             return {
               audioPath: finalPath,
               fileName: fileName,
-              artist: artist.artistName,
-              artistData: artist,
-              mixTitle: mix.mixTitle,
-              mixData: mix,
+              artist: metadata.artist,
+              artistData: selectedArtist,
+              mixTitle: audioTitle, // Keep mixTitle for backward compatibility
+              trackTitle: useTrax ? audioTitle : undefined, // Add trackTitle for trax
+              mixData: useTrax ? undefined : audioSource, // Keep mixData for backward compatibility
+              trackData: useTrax ? audioSource : undefined, // Add trackData for trax
               duration: requestedDuration,
               startTime: startTime,
-              arweaveUrl: mix.mixArweaveURL,
+              arweaveUrl: audioUrl,
               totalDuration: totalDurationSeconds,
               fileSize: fileStats.size,
-              metadata: metadata
+              metadata: metadata,
+              isTrax: useTrax // Flag to indicate if this is a track or mix
             };
 
           } catch (error) {

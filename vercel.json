@@ -18,6 +18,10 @@
       "dest": "/api/upload-video.js"
     },
     {
+      "src": "/api/artists",
+      "dest": "/api/artists.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/$1"
     }
@@ -34,6 +38,9 @@
     },
     "api/upload-video.js": {
       "maxDuration": 60
+    },
+    "api/artists.js": {
+      "maxDuration": 5
     }
   }
 }

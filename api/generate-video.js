@@ -28,10 +28,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Default to 30 seconds, random artist (MVP simplification)
-    const duration = 30;
-    const artist = 'random'; // Always random for MVP
+    // Get parameters from request body
+    const duration = req.body.duration || 30;
+    const artist = req.body.artist || 'random';
     const videoFilter = req.body.videoFilter || null; // Optional video filter
+    const useTrax = req.body.useTrax === true; // true for tracks, false for mixes
 
     // Generate unique job ID
     const jobId = uuidv4();
@@ -49,6 +50,7 @@ export default async function handler(req, res) {
       artist,
       duration,
       videoFilter: videoFilter, // Optional video filter key
+      useTrax: useTrax, // Flag to use tracks instead of mixes
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       completedAt: null,
       videoUrl: null,

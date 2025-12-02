@@ -113,6 +113,127 @@
         "mixDuration": "83:00",
         "mixImageFilename": "img/covers/lovemanifesto.jpg"
       }
+    ],
+    "trax": [
+      {
+        "trackTitle": "Fast Track",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/FastTrack_Clip.mp3",
+        "trackDateYear": "'21",
+        "trackDuration": "3:00",
+        "trackImageFilename": "https://i.ibb.co/wyG9DgH/IMG-6117.jpg"
+      },
+      {
+        "trackTitle": "No Mills",
+        "trackArweaveURL": "https://github.com/Bai-ee/edittrax_beta_dapp-crypto-angel/blob/master/src/assets/Bai-ee_(No_Mills)Preview.mp3?raw=true",
+        "trackDateYear": "'23",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/no_mills.jpg"
+      },
+      {
+        "trackTitle": "Acid Beach",
+        "trackArweaveURL": "https://github.com/Bai-ee/edittrax_beta_dapp-crypto-angel/blob/master/src/assets/Bai-ee_(Acid_Beach)Preview.mp3?raw=true",
+        "trackDateYear": "'21",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/acid_beach.jpg"
+      },
+      {
+        "trackTitle": "He Loves You",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/He_Loves_You_BAI-EE.mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/hlu.jpg"
+      },
+      {
+        "trackTitle": "Home Base",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/Home_Bass_(Secret_Studio_vs_Dmarc_Cantu)_SCS01.mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/homebase.jpg"
+      },
+      {
+        "trackTitle": "Summer City",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/Summer_City_(audioJazz)_preview.mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/summer.jpg"
+      },
+      {
+        "trackTitle": "The Groove",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/Bai-ee_Hancock_Groove_Poontin_Muzik.mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/groove.jpg"
+      },
+      {
+        "trackTitle": "Burnt",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/Bai-ee_(Burnt)Preview.mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/burnt.jpg"
+      },
+      {
+        "trackTitle": "Moment",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/Secret%20Studio%20-%20Moment.mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/moment.jpg"
+      },
+      {
+        "trackTitle": "Runner",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/Runner_Secret_Studio.mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/runner.jpg"
+      },
+      {
+        "trackTitle": "Decongestion",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/Secret%20Studio%20-%20Decongestion.mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/decongestion.jpg"
+      },
+      {
+        "trackTitle": "Tunnel Vision",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/Secret%20Studio%20-%20Tunnel%20Vision.mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/tunnel.jpg"
+      },
+      {
+        "trackTitle": "Let Me Hit It",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/LET%20ME%20HIT%20IT_Bai-ee_clip.mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/hitit.jpg"
+      },
+      {
+        "trackTitle": "Lifted",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/BAI-EE%20-%20LIFTED%20(SC%20Preview%20Clip).mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/lifted.jpg"
+      },
+      {
+        "trackTitle": "A Great Gift",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/A_GREAT_GIFT_(Bai-ee)_Clip.mp3?raw=true",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/greatgift.jpg"
+      },
+      {
+        "trackTitle": "Triggered",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/Secret%20Studio%20-%20Triggered.mp3?raw=true",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/triggered.jpg"
+      },
+      {
+        "trackTitle": "Walk",
+        "trackArweaveURL": "https://github.com/Bai-ee/public_audio/raw/main/Walk_Preview.mp3",
+        "trackDateYear": "'24",
+        "trackDuration": "3:00",
+        "trackImageFilename": "img/covers/walk.jpg"
+      }
     ]
   },
   {

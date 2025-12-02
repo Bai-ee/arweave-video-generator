@@ -110,6 +110,43 @@
           <h1 style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 1.5rem; text-transform: uppercase;">Arweave Video Generator</h1>
         </div>
         
+        <!-- Audio Source Selection (MIXES vs TRACKS) -->
+        <div style="width: 100%; max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem;">
+          <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
+            🎵 SELECT AUDIO SOURCE (Required)
+          </label>
+          <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 1.5rem;">
+            <button 
+              id="audioSourceMixes" 
+              onclick="selectAudioSource('mixes')"
+              style="padding: 0.75rem 2rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: var(--color-yellow-75); color: black; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+            >
+              🎧 DJ MIXES
+            </button>
+            <button 
+              id="audioSourceTracks" 
+              onclick="selectAudioSource('tracks')"
+              style="padding: 0.75rem 2rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+            >
+              🎵 ORIGINAL TRACKS
+            </button>
+          </div>
+          
+          <!-- Artist Selection (only shown for MIXES) -->
+          <div id="artistSelectionContainer" style="display: none; margin-bottom: 1.5rem;">
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
+              🎤 SELECT ARTIST
+            </label>
+            <select 
+              id="artistSelect"
+              style="width: 100%; max-width: 400px; margin: 0 auto; display: block; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); cursor: pointer;"
+            >
+              <option value="random">🎲 Random Artist</option>
+              <!-- Artists will be populated by JavaScript -->
+            </select>
+          </div>
+        </div>
+        
         <!-- Filter Selection -->
         <div style="width: 100%; max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem;">
           <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
@@ -294,6 +331,9 @@
     let activeJobs = new Map(); // jobId -> polling interval
     let videos = []; // Cached video list
     let selectedFilter = null; // Currently selected video filter
+    let selectedAudioSource = null; // 'mixes' or 'tracks'
+    let selectedArtist = 'random'; // Selected artist (or 'random')
+    let availableArtists = []; // List of available artists
 
     // Video filter definitions (must match backend)
     const VIDEO_FILTERS = {
@@ -311,6 +351,7 @@
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', () => {
       initializeFilterButtons();
+      loadArtists();
       loadVideos();
       
       // Auto-refresh video list every 30 seconds to catch completed videos
@@ -318,6 +359,86 @@
         console.log('🔄 Auto-refreshing video list...');
         loadVideos();
       }, 30000); // Refresh every 30 seconds
+    });
+
+    /**
+     * Load available artists from API
+     */
+    async function loadArtists() {
+      try {
+        const response = await fetch('/api/artists');
+        const data = await response.json();
+        
+        if (data.success && data.artists) {
+          availableArtists = data.artists;
+          populateArtistSelect();
+          console.log(`✅ Loaded ${availableArtists.length} artists`);
+        } else {
+          console.warn('⚠️ No artists data available');
+        }
+      } catch (error) {
+        console.error('❌ Error loading artists:', error);
+      }
+    }
+
+    /**
+     * Populate artist select dropdown
+     */
+    function populateArtistSelect() {
+      const select = document.getElementById('artistSelect');
+      if (!select) return;
+      
+      // Clear existing options (keep "Random Artist")
+      select.innerHTML = '<option value="random">🎲 Random Artist</option>';
+      
+      // Add each artist
+      availableArtists.forEach(artist => {
+        const option = document.createElement('option');
+        option.value = artist.name;
+        option.textContent = artist.name;
+        select.appendChild(option);
+      });
+    }
+
+    /**
+     * Select audio source (MIXES or TRACKS)
+     */
+    function selectAudioSource(source) {
+      selectedAudioSource = source;
+      
+      const mixesBtn = document.getElementById('audioSourceMixes');
+      const tracksBtn = document.getElementById('audioSourceTracks');
+      const artistContainer = document.getElementById('artistSelectionContainer');
+      
+      if (source === 'mixes') {
+        mixesBtn.style.background = 'var(--color-yellow-75)';
+        mixesBtn.style.color = 'black';
+        tracksBtn.style.background = '#0a0a0a';
+        tracksBtn.style.color = 'var(--color-yellow-75)';
+        artistContainer.style.display = 'block';
+      } else {
+        tracksBtn.style.background = 'var(--color-yellow-75)';
+        tracksBtn.style.color = 'black';
+        mixesBtn.style.background = '#0a0a0a';
+        mixesBtn.style.color = 'var(--color-yellow-75)';
+        artistContainer.style.display = 'none';
+        selectedArtist = 'random'; // Reset to random for tracks
+      }
+      
+      console.log(`✅ Selected audio source: ${source}`);
+    }
+
+    /**
+     * Handle artist selection change
+     */
+    document.addEventListener('DOMContentLoaded', () => {
+      const artistSelect = document.getElementById('artistSelect');
+      if (artistSelect) {
+        artistSelect.addEventListener('change', (e) => {
+          selectedArtist = e.target.value;
+          console.log(`✅ Selected artist: ${selectedArtist}`);
+        });
+      }
     });
 
     /**
@@ -379,9 +500,15 @@
     }
 
     /**
-     * Generate a new video (one-click, always 30s, random artist)
+     * Generate a new video
      */
     async function generateVideo() {
+      // Check if audio source is selected
+      if (!selectedAudioSource) {
+        showToast('Please select an audio source (MIXES or TRACKS) first!', 'error');
+        return;
+      }
+      
       // Check if filter is selected
       if (!selectedFilter) {
         showToast('Please select a video filter first!', 'error');
@@ -398,17 +525,28 @@
       btnLoading.style.display = 'inline';
 
       try {
+        // Prepare request body
+        const requestBody = {
+          duration: 30,
+          videoFilter: selectedFilter,
+          useTrax: selectedAudioSource === 'tracks' // true for tracks, false for mixes
+        };
+        
+        // Add artist selection only for mixes
+        if (selectedAudioSource === 'mixes') {
+          requestBody.artist = selectedArtist || 'random';
+        } else {
+          // For tracks, always use random (or BAI-EE if available)
+          requestBody.artist = 'random';
+        }
+
         // Call API to create job
         const response = await fetch('/api/generate-video', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            duration: 30,
-            artist: 'random',
-            videoFilter: selectedFilter
-          })
+          body: JSON.stringify(requestBody)
         });
 
         const data = await response.json();
