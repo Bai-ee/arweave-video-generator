@@ -455,15 +455,30 @@ export class VideoCompositor {
     console.log(`[VideoCompositor] All labels in filter complex: ${uniqueLabels.join(', ')}`);
     
     // Track labels from the unified processing
+    // Combine all layers (before and after fade) for label tracking
+    const allLayers = [...allLayersBeforeFade, ...allLayersAfterFade];
     const createdTextLabels = [];
     const createdImageLabels = [];
-    allLayers.forEach((layer, idx) => {
+    
+    // Track labels from before-fade layers
+    allLayersBeforeFade.forEach((layer, idx) => {
       if (layer.type === 'text') {
-        const textIdx = allLayers.slice(0, idx).filter(l => l.type === 'text').length;
+        const textIdx = allLayersBeforeFade.slice(0, idx).filter(l => l.type === 'text').length;
         createdTextLabels.push(`[text_layer${textIdx}]`);
       } else {
-        const imgIdx = allLayers.slice(0, idx).filter(l => l.type !== 'text' && l.type !== 'background').length;
+        const imgIdx = allLayersBeforeFade.slice(0, idx).filter(l => l.type !== 'text' && l.type !== 'background').length;
         createdImageLabels.push(`[layer${imgIdx}]`);
+      }
+    });
+    
+    // Track labels from after-fade layers (these use different label names)
+    allLayersAfterFade.forEach((layer, idx) => {
+      if (layer.type === 'text') {
+        const textIdx = allLayersAfterFade.slice(0, idx).filter(l => l.type === 'text').length;
+        createdTextLabels.push(`[text_layer_after${textIdx}]`);
+      } else {
+        const imgIdx = allLayersAfterFade.slice(0, idx).filter(l => l.type !== 'text' && l.type !== 'background').length;
+        createdImageLabels.push(`[layer_after${imgIdx}]`);
       }
     });
     
