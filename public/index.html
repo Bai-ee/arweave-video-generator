@@ -1452,6 +1452,11 @@
               const fileSizeMB = (video.size / (1024 * 1024)).toFixed(2);
               const updatedDate = video.updated ? new Date(video.updated).toLocaleDateString() : 'Unknown';
               
+              // Escape quotes in URLs and names for onclick handlers
+              const escapedUrl = video.publicUrl.replace(/'/g, "\\'");
+              const escapedName = video.name.replace(/'/g, "\\'");
+              const escapedFullPath = video.fullPath.replace(/'/g, "\\'");
+              
               videoCard.innerHTML = `
                 <div style="position: relative; width: 100%; padding-top: 56.25%; background: #0a0a0a;">
                   <video 
@@ -1459,6 +1464,7 @@
                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
                     controls
                     preload="metadata"
+                    onerror="this.parentElement.innerHTML='<div style=\\'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--color-yellow-75); text-align: center;\\'><div style=\\'font-size: 2rem; margin-bottom: 0.5rem;\\'>⚠️</div><div style=\\'font-size: 0.75rem;\\'>Video preview unavailable</div></div>'"
                   ></video>
                 </div>
                 <div style="padding: 1rem;">
@@ -1471,22 +1477,32 @@
                   <div style="color: #888; font-family: var(--font-mathias); font-size: 0.75rem;">
                     Updated: ${updatedDate}
                   </div>
-                  <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+                  <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button 
-                      onclick="window.open('${video.publicUrl}', '_blank')"
-                      style="flex: 1; padding: 0.5rem; background: var(--color-yellow-75); color: black; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
+                      onclick="window.open('${escapedUrl}', '_blank')"
+                      style="flex: 1; min-width: 80px; padding: 0.5rem; background: var(--color-yellow-75); color: black; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
                     >
                       View
                     </button>
                     <button 
-                      onclick="downloadVideo('${video.publicUrl}', '${video.name}')"
-                      style="flex: 1; padding: 0.5rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
+                      onclick="downloadVideo('${escapedUrl}', '${escapedName}')"
+                      style="flex: 1; min-width: 80px; padding: 0.5rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
                     >
                       Download
+                    </button>
+                    <button 
+                      onclick="deleteVideo('${currentFolder}', '${escapedName}', '${escapedFullPath}')"
+                      style="flex: 1; min-width: 80px; padding: 0.5rem; background: transparent; color: #ef4444; border: 2px solid #ef4444; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
+                    >
+                      Delete
                     </button>
                   </div>
                 </div>
               `;
+              
+              // Store video data on the card element for deletion
+              videoCard.dataset.videoName = video.name;
+              videoCard.dataset.videoFullPath = video.fullPath;
               
               videosGrid.appendChild(videoCard);
             });
@@ -1510,6 +1526,59 @@
       
       folderDetailView.style.display = 'none';
       folderListView.style.display = 'block';
+      
+      // Reload folders to update counts
+      loadFolders();
+    }
+
+    /**
+     * Delete a video from Firebase Storage and UI
+     */
+    async function deleteVideo(folderName, fileName, fullPath) {
+      if (!confirm(`Are you sure you want to delete "${fileName}"?\n\nThis action cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/delete-video?folder=${encodeURIComponent(folderName)}&file=${encodeURIComponent(fileName)}`, {
+          method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast(`Video "${fileName}" deleted successfully`, 'success');
+          
+          // Remove video card from UI
+          const videosGrid = document.getElementById('videosGrid');
+          const videoCards = videosGrid.querySelectorAll('[data-video-name]');
+          videoCards.forEach(card => {
+            if (card.dataset.videoName === fileName) {
+              card.style.opacity = '0';
+              card.style.transition = 'opacity 0.3s';
+              setTimeout(() => {
+                card.remove();
+                
+                // Check if grid is empty
+                if (videosGrid.children.length === 0) {
+                  const videosEmpty = document.getElementById('videosEmpty');
+                  videosEmpty.style.display = 'block';
+                }
+              }, 300);
+            }
+          });
+          
+          // Reload folders to update counts (in background)
+          setTimeout(() => {
+            loadFolders();
+          }, 500);
+        } else {
+          throw new Error(data.error || 'Failed to delete video');
+        }
+      } catch (error) {
+        console.error('Error deleting video:', error);
+        showToast(`Failed to delete video: ${error.message}`, 'error');
+      }
     }
   </script>
 

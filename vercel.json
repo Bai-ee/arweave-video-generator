@@ -26,6 +26,10 @@
       "dest": "/api/video-folders.js"
     },
     {
+      "src": "/api/delete-video",
+      "dest": "/api/delete-video.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/$1"
     }
@@ -47,6 +51,9 @@
       "maxDuration": 5
     },
     "api/video-folders.js": {
+      "maxDuration": 10
+    },
+    "api/delete-video.js": {
       "maxDuration": 10
     }
   }
