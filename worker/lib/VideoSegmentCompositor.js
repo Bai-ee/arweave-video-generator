@@ -202,9 +202,23 @@ export class VideoSegmentCompositor {
       neighborhood: new Set()
     };
 
-    for (let i = 0; i < segmentsNeeded; i++) {
+      // Check if we have file references (Firebase File objects) or paths (strings)
+      const hasFileReferences = equipmentVideos.length > 0 && typeof equipmentVideos[0] !== 'string' && 
+                                 typeof equipmentVideos[0].name === 'string';
+      
+      // If we have file references, we need to download them on-demand
+      // We'll need access to VideoLoader for downloading
+      let videoLoader = null;
+      if (hasFileReferences) {
+        // Lazy import VideoLoader only if needed
+        const { VideoLoader } = await import('./VideoLoader.js');
+        videoLoader = new VideoLoader();
+      }
+
+      for (let i = 0; i < segmentsNeeded; i++) {
       let selectedVideo = null;
       let sourceFolder = '';
+      let selectedFileRef = null; // For Firebase file references
 
       if (isTrackMode) {
         // Track mode: Equal distribution across 5 folders
@@ -225,14 +239,32 @@ export class VideoSegmentCompositor {
         sourceFolder = selectedFolder.name;
 
         // Select a video from that folder
-        let availableVideos = selectedFolder.videos.filter(v => !usedVideos[sourceFolder].has(v));
+        let availableVideos = selectedFolder.videos.filter(v => {
+          // For file references, compare by name; for paths, compare directly
+          if (hasFileReferences) {
+            return !usedVideos[sourceFolder].has(v.name);
+          } else {
+            return !usedVideos[sourceFolder].has(v);
+          }
+        });
+        
         if (availableVideos.length === 0) {
           // All videos from this folder used, reset and reuse
           availableVideos = selectedFolder.videos;
           usedVideos[sourceFolder].clear();
         }
-        selectedVideo = availableVideos[Math.floor(Math.random() * availableVideos.length)];
-        usedVideos[sourceFolder].add(selectedVideo);
+        
+        const selectedItem = availableVideos[Math.floor(Math.random() * availableVideos.length)];
+        
+        if (hasFileReferences) {
+          // Store file reference and download on-demand
+          selectedFileRef = selectedItem;
+          usedVideos[sourceFolder].add(selectedItem.name);
+        } else {
+          // Use path directly
+          selectedVideo = selectedItem;
+          usedVideos[sourceFolder].add(selectedItem);
+        }
       } else {
         // Mix mode: 50/50 distribution between skyline and chicago
         if (isGrouped && skylineVideos.length > 0 && chicagoVideos.length > 0) {
@@ -288,13 +320,21 @@ export class VideoSegmentCompositor {
       }
 
       try {
+        // Download video if we have a file reference
+        if (hasFileReferences && selectedFileRef) {
+          selectedVideo = await videoLoader.downloadVideoFile(selectedFileRef, sourceFolder);
+        }
+        
         const segmentPath = await this.extractRandomSegment(selectedVideo, segmentDuration);
         segmentPaths.push(segmentPath);
         console.log(`[VideoSegmentCompositor] Segment ${i + 1}/${segmentsNeeded} extracted from ${sourceFolder} folder`);
       } catch (error) {
-        console.warn(`[VideoSegmentCompositor] Failed to extract segment from ${path.basename(selectedVideo)}, trying another...`);
+        const videoName = hasFileReferences ? (selectedFileRef?.name || 'unknown') : path.basename(selectedVideo || 'unknown');
+        console.warn(`[VideoSegmentCompositor] Failed to extract segment from ${videoName}, trying another...`);
+        
         // Try another video from the same folder
         let fallbackVideo = null;
+        let fallbackFileRef = null;
         const folderMap = {
           equipment: equipmentVideos,
           decks: decksVideos,
@@ -305,13 +345,24 @@ export class VideoSegmentCompositor {
         
         const folderVideos = folderMap[sourceFolder] || [];
         if (folderVideos.length > 1) {
-          const otherVideos = folderVideos.filter(v => v !== selectedVideo);
-          if (otherVideos.length > 0) {
-            fallbackVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
+          if (hasFileReferences) {
+            const otherVideos = folderVideos.filter(v => v.name !== selectedFileRef?.name);
+            if (otherVideos.length > 0) {
+              fallbackFileRef = otherVideos[Math.floor(Math.random() * otherVideos.length)];
+            }
+          } else {
+            const otherVideos = folderVideos.filter(v => v !== selectedVideo);
+            if (otherVideos.length > 0) {
+              fallbackVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
+            }
           }
         }
         
-        if (fallbackVideo) {
+        if (fallbackFileRef) {
+          fallbackVideo = await videoLoader.downloadVideoFile(fallbackFileRef, sourceFolder);
+          const segmentPath = await this.extractRandomSegment(fallbackVideo, segmentDuration);
+          segmentPaths.push(segmentPath);
+        } else if (fallbackVideo) {
           const segmentPath = await this.extractRandomSegment(fallbackVideo, segmentDuration);
           segmentPaths.push(segmentPath);
         } else {

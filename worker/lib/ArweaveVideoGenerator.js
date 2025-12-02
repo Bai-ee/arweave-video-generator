@@ -344,26 +344,27 @@ class ArweaveVideoGenerator {
             // Check if we're using tracks (original music) or mixes (DJ mixes)
             // useTrax is already extracted from options at line 303
             if (useTrax) {
-                // For tracks: Load videos from equipment, decks, skyline, chicago-skyline, neighborhood folders
-                console.log('[ArweaveVideoGenerator] Loading track videos from multiple folders...');
-                const groupedVideos = await this.videoLoader.loadTrackVideos(true);
+                // For tracks: Get video file references (metadata only, no download yet)
+                console.log('[ArweaveVideoGenerator] Getting track video file references from multiple folders...');
+                const groupedVideos = await this.videoLoader.loadTrackVideoReferences(true);
                 const totalVideos = groupedVideos.equipment.length + groupedVideos.decks.length + 
                                    groupedVideos.skyline.length + groupedVideos.chicago.length + 
                                    groupedVideos.neighborhood.length;
                 
                 if (totalVideos > 0) {
-                    console.log(`[ArweaveVideoGenerator] Found ${groupedVideos.equipment.length} equipment + ${groupedVideos.decks.length} decks + ${groupedVideos.skyline.length} skyline + ${groupedVideos.chicago.length} chicago + ${groupedVideos.neighborhood.length} neighborhood = ${totalVideos} total videos`);
-                    console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with equal distribution across 5 folders...`);
+                    console.log(`[ArweaveVideoGenerator] Found ${groupedVideos.equipment.length} equipment + ${groupedVideos.decks.length} decks + ${groupedVideos.skyline.length} skyline + ${groupedVideos.chicago.length} chicago + ${groupedVideos.neighborhood.length} neighborhood = ${totalVideos} total video references`);
+                    console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with equal distribution across 5 folders (videos will be downloaded on-demand)...`);
                     
                     try {
                         // Create 30-second video from random 5-second segments with equal distribution
+                        // Videos will be downloaded on-demand in VideoSegmentCompositor
                         backgroundPath = await this.segmentCompositor.createVideoFromSegments(
-                            groupedVideos, // Pass grouped structure for equal distribution
+                            groupedVideos, // Pass grouped structure with file references (not paths)
                             duration,
                             5 // 5-second segments
                         );
                         useVideoBackground = true;
-                        console.log('[ArweaveVideoGenerator] ✅ Created video background from track videos (equal distribution)');
+                        console.log('[ArweaveVideoGenerator] ✅ Created video background from track videos (equal distribution, on-demand download)');
                     } catch (error) {
                         console.error('[ArweaveVideoGenerator] Failed to create segment video:', error.message);
                         // Fall through to DALL-E or simple background
