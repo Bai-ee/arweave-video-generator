@@ -44,7 +44,7 @@ if (process.env.GITHUB_ACTIONS === 'true') {
  * Layer configuration interface
  */
 export class LayerConfig {
-  constructor(type, source, position, size, opacity, zIndex, scale = 1, fontPath = null) {
+  constructor(type, source, position, size, opacity, zIndex, scale = 1, fontPath = null, startTime = null, duration = null) {
     this.type = type; // 'background' | 'image' | 'text'
     this.source = source; // file path or text content
     this.position = position; // { x: number, y: number }
@@ -53,6 +53,8 @@ export class LayerConfig {
     this.zIndex = zIndex; // layer order
     this.scale = scale || 1; // scale factor
     this.fontPath = fontPath; // custom font path for text layers (optional)
+    this.startTime = startTime; // start time in seconds (optional, for timed overlays)
+    this.duration = duration; // duration in seconds (optional, for timed overlays)
   }
 }
 
@@ -175,7 +177,7 @@ export class VideoCompositor {
       const scaleFilter = `[${inputIndex}:v]scale=${finalWidth}:${finalHeight}:force_original_aspect_ratio=decrease[scaled${index}]`;
       filters.push(scaleFilter);
 
-      // Overlay filter with opacity
+      // Overlay filter with opacity and optional timing
       // FFmpeg overlay handles opacity through format and alpha channel
       const opacity = layer.opacity || 1.0;
       
@@ -184,10 +186,24 @@ export class VideoCompositor {
         // For opacity < 1.0, add alpha channel and adjust it
         // Convert to rgba, then use geq to modify alpha channel
         filters.push(`[scaled${index}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*${opacity}'[scaled${index}_alpha]`);
-        overlayFilter = `${currentInput}[scaled${index}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+        
+        // Add timing if specified (enable overlay only at startTime)
+        if (layer.startTime !== null && layer.startTime !== undefined) {
+          const endTime = layer.startTime + (layer.duration || config.duration);
+          // Use overlay with enable expression to show only at specific time
+          overlayFilter = `${currentInput}[scaled${index}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+        } else {
+          overlayFilter = `${currentInput}[scaled${index}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+        }
       } else {
         // Full opacity - simple overlay
-        overlayFilter = `${currentInput}[scaled${index}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+        if (layer.startTime !== null && layer.startTime !== undefined) {
+          const endTime = layer.startTime + (layer.duration || config.duration);
+          // Use overlay with enable expression to show only at specific time
+          overlayFilter = `${currentInput}[scaled${index}]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+        } else {
+          overlayFilter = `${currentInput}[scaled${index}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+        }
       }
       filters.push(overlayFilter);
 
@@ -270,7 +286,23 @@ export class VideoCompositor {
       currentInput = outputLabel;
     });
 
+    // Apply video fade to black (22-25 seconds: fade out over 3 seconds, starting 8 seconds before end)
+    // For 30 second video: start at 22s, fade duration 3s (ends at 25s)
+    const videoFadeStart = config.duration - 8; // 22 seconds for 30s video
+    const videoFadeDuration = 3; // 3 second fade
+    let finalVideoLabel = currentInput; // Track final video label after fade
+    if (videoFadeStart > 0 && videoFadeDuration > 0) {
+      const fadeOutFilter = `${currentInput}fade=t=out:st=${videoFadeStart}:d=${videoFadeDuration}[faded_video]`;
+      filters.push(fadeOutFilter);
+      currentInput = '[faded_video]';
+      finalVideoLabel = '[faded_video]';
+      console.log(`[VideoCompositor] Adding video fade to black: ${videoFadeStart}s-${videoFadeStart + videoFadeDuration}s`);
+    }
+
     const filterComplex = filters.join(';');
+    
+    // Store final video label for output mapping
+    config._finalVideoLabel = finalVideoLabel;
     console.log(`[VideoCompositor] Filter complex: ${filterComplex.substring(0, 200)}...`);
     
     // Debug: Log all output labels created
@@ -338,7 +370,11 @@ export class VideoCompositor {
       let finalOutput;
 
       // Use the tracked labels from buildFilterComplex if available
-      if (config._createdTextLabels && config._createdTextLabels.length > 0) {
+      // Check if fade was applied first (highest priority)
+      if (config._finalVideoLabel && filterComplex.includes(config._finalVideoLabel)) {
+        finalOutput = config._finalVideoLabel;
+        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (after fade)`);
+      } else if (config._createdTextLabels && config._createdTextLabels.length > 0) {
         // Use the last text layer that was actually created
         finalOutput = config._createdTextLabels[config._createdTextLabels.length - 1];
         console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${config._createdTextLabels.length} text layers created)`);
@@ -410,7 +446,16 @@ export class VideoCompositor {
     command.push('-crf', '23');
     command.push('-pix_fmt', 'yuv420p');
 
-    // Audio codec
+    // Audio codec and fade out (last 3 seconds: 27-30s for 30s video)
+    const audioFadeStart = config.duration - 3; // 27 seconds for 30s video
+    const audioFadeDuration = 3; // 3 second fade
+    
+    if (audioFadeStart > 0 && audioFadeDuration > 0) {
+      // Apply audio fade out filter
+      command.push('-af', `afade=t=out:st=${audioFadeStart}:d=${audioFadeDuration}`);
+      console.log(`[VideoCompositor] Adding audio fade out: ${audioFadeStart}s-${audioFadeStart + audioFadeDuration}s`);
+    }
+    
     command.push('-c:a', 'aac');
     command.push('-b:a', '192k');
 

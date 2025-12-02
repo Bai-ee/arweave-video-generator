@@ -481,8 +481,77 @@ class ArweaveVideoGenerator {
                 console.warn(`[ArweaveVideoGenerator] ⚠️ Font not found, skipping text overlay`);
             }
 
-            // Step 5: Compose final video with all layers
-            console.log('[ArweaveVideoGenerator] Step 5: Composing final video with layers...');
+            // Step 5: Add logo overlay at 25 seconds (5 seconds before end)
+            console.log('[ArweaveVideoGenerator] Step 5: Loading random logo for end overlay...');
+            const logoStartTime = duration - 5; // 25 seconds for 30s video
+            let logoCachePath = null; // Declare outside try block for cleanup
+            
+            try {
+                logoCachePath = path.join(this.cacheDir, `logo_${Date.now()}.png`);
+                
+                // Get all logos except serial_logo.png
+                const logosDir = path.join(process.cwd(), 'worker', 'assets', 'logos');
+                const logosDirAlt = path.join(__dirname, '..', 'assets', 'logos');
+                
+                let actualLogosDir = null;
+                if (await fs.pathExists(logosDir)) {
+                    actualLogosDir = logosDir;
+                } else if (await fs.pathExists(logosDirAlt)) {
+                    actualLogosDir = logosDirAlt;
+                }
+                
+                if (actualLogosDir) {
+                    const logoFiles = await fs.readdir(actualLogosDir);
+                    const validLogos = logoFiles.filter(file => 
+                        (file.endsWith('.png') || file.endsWith('.svg') || file.endsWith('.jpg')) &&
+                        file !== 'serial_logo.png'
+                    );
+                    
+                    if (validLogos.length > 0) {
+                        const randomLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
+                        const logoPath = path.join(actualLogosDir, randomLogo);
+                        
+                        // Copy logo to cache (for consistent handling)
+                        await fs.copy(logoPath, logoCachePath);
+                        
+                        // Calculate logo size: 35% of width, maintain aspect ratio
+                        const logoWidth = Math.round(width * 0.35);
+                        const logoHeight = Math.round(logoWidth * 1.0); // Will be adjusted by aspect ratio
+                        
+                        // Center position (horizontally and vertically)
+                        const logoX = Math.round((width - logoWidth) / 2);
+                        const logoY = Math.round((height - logoHeight) / 2);
+                        
+                        console.log(`[ArweaveVideoGenerator] ✅ Selected logo: ${randomLogo}`);
+                        console.log(`[ArweaveVideoGenerator] Logo size: ${logoWidth}x${logoHeight}, position: (${logoX}, ${logoY})`);
+                        console.log(`[ArweaveVideoGenerator] Logo appears at: ${logoStartTime}s (5 seconds before end)`);
+                        
+                        // Add logo as timed overlay layer (appears at 25s, stays until end)
+                        layers.push(new LayerConfig(
+                            'image',
+                            logoCachePath,
+                            { x: logoX, y: logoY },
+                            { width: logoWidth, height: logoHeight },
+                            1.0, // Full opacity
+                            200, // Highest z-index (above everything)
+                            1.0, // scale
+                            null, // no font path
+                            logoStartTime, // start at 25 seconds
+                            duration - logoStartTime // duration until end (5 seconds)
+                        ));
+                    } else {
+                        console.warn(`[ArweaveVideoGenerator] ⚠️ No valid logos found (excluding serial_logo.png)`);
+                    }
+                } else {
+                    console.warn(`[ArweaveVideoGenerator] ⚠️ Logos directory not found`);
+                }
+            } catch (error) {
+                console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load logo:`, error.message);
+                // Continue without logo if it fails
+            }
+
+            // Step 6: Compose final video with all layers
+            console.log('[ArweaveVideoGenerator] Step 6: Composing final video with layers...');
             
             // Generate temp video path
             const tempVideoPath = path.join(this.tempDir, `${audioArtist.replace(/[^a-zA-Z0-9]/g, '_')}_video_${Date.now()}.mp4`);
@@ -492,7 +561,7 @@ class ArweaveVideoGenerator {
 
             // Create composition config with filter
             console.log(`[ArweaveVideoGenerator] 🎨 Video filter received: ${videoFilter ? `"${videoFilter.substring(0, 100)}..."` : 'null (will use default B&W)'}`);
-            console.log(`[ArweaveVideoGenerator] 📊 Layers count: ${layers.length} (should be 2: paper + text)`);
+            console.log(`[ArweaveVideoGenerator] 📊 Layers count: ${layers.length} (paper + text${logoCachePath ? ' + logo' : ''})`);
             
             const compositionConfig = new CompositionConfig(
                 backgroundPath,
@@ -530,6 +599,10 @@ class ArweaveVideoGenerator {
                 // Cleanup paper background cache
                 if (paperCachePath && await fs.pathExists(paperCachePath)) {
                     await fs.remove(paperCachePath);
+                }
+                // Cleanup logo cache
+                if (logoCachePath && await fs.pathExists(logoCachePath)) {
+                    await fs.remove(logoCachePath);
                 }
             } catch (cleanupError) {
                 console.warn('[ArweaveVideoGenerator] Cleanup warning:', cleanupError.message);
