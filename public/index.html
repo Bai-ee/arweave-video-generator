@@ -294,12 +294,8 @@
               id="folderSelect"
               style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); cursor: pointer;"
             >
-              <option value="skyline">🌆 Skyline</option>
-              <option value="artist">🎨 Artist</option>
-              <option value="decks">🎧 Decks</option>
-              <option value="equipment">🎛️ Equipment</option>
-              <option value="family">👨‍👩‍👧‍👦 Family</option>
-              <option value="neighborhood">🏘️ Neighborhood</option>
+              <!-- Options will be populated dynamically from API -->
+              <option value="">Loading folders...</option>
             </select>
             <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
               Select the folder where your video will be stored
@@ -469,6 +465,7 @@
       loadArtists();
       loadVideos();
       loadAvailableFolders();
+      populateUploadFolderSelect();
       
       // Auto-refresh video list every 30 seconds to catch completed videos
       setInterval(() => {
@@ -527,12 +524,59 @@
         if (data.success && data.folders) {
           availableFolders = data.folders;
           console.log(`✅ Loaded ${availableFolders.length} folders`);
+          // Populate upload folder select when folders are loaded
+          populateUploadFolderSelect();
         } else {
           console.warn('⚠️ No folders data available');
         }
       } catch (error) {
         console.error('❌ Error loading folders:', error);
       }
+    }
+
+    /**
+     * Populate upload folder select dropdown with all available folders
+     */
+    function populateUploadFolderSelect() {
+      const folderSelect = document.getElementById('folderSelect');
+      if (!folderSelect || availableFolders.length === 0) return;
+      
+      // Clear existing options
+      folderSelect.innerHTML = '';
+      
+      // Map folder names to emoji icons
+      const folderEmojis = {
+        'skyline': '🌆',
+        'artist': '🎨',
+        'decks': '🎧',
+        'equipment': '🎛️',
+        'family': '👨‍👩‍👧‍👦',
+        'neighborhood': '🏘️',
+        'chicago-skyline-videos': '🏙️',
+        'assets/chicago-skyline-videos': '🏙️'
+      };
+      
+      // Add all folders as options
+      availableFolders.forEach(folder => {
+        const option = document.createElement('option');
+        option.value = folder.name;
+        
+        // Get display name (remove 'assets/' prefix for display)
+        const displayName = folder.displayName || folder.name.replace('assets/', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        
+        // Get emoji (check both with and without 'assets/' prefix)
+        const emoji = folderEmojis[folder.name] || folderEmojis[folder.name.replace('assets/', '')] || '📁';
+        
+        option.textContent = `${emoji} ${displayName} (${folder.count || 0} videos)`;
+        folderSelect.appendChild(option);
+      });
+      
+      // Set default to first folder
+      if (folderSelect.options.length > 0) {
+        folderSelect.value = availableFolders[0].name;
+      }
+      
+      console.log(`✅ Populated upload folder select with ${availableFolders.length} folders`);
     }
 
     /**
@@ -1333,7 +1377,16 @@
           // Upload directly to Firebase Storage
           const { storage, ref, uploadBytesResumable, getDownloadURL } = window.firebase;
           const fileName = `user_upload_${Date.now()}_${i}_${file.name}`;
-          const storageRef = ref(storage, `${folder}/${fileName}`);
+          
+          // Handle special case for chicago-skyline-videos (needs assets/ prefix)
+          let storagePath;
+          if (folder === 'chicago-skyline-videos') {
+            storagePath = `assets/chicago-skyline-videos/${fileName}`;
+          } else {
+            storagePath = `${folder}/${fileName}`;
+          }
+          
+          const storageRef = ref(storage, storagePath);
           
           // Create upload task
           const uploadTask = uploadBytesResumable(storageRef, file, {
@@ -1632,7 +1685,7 @@
                       Download
                     </button>
                     <button 
-                      onclick="deleteVideo('${currentFolder}', '${escapedName}', '${escapedFullPath}')"
+                      onclick="deleteVideo('${currentFolder}', '${escapedName}')"
                       style="flex: 1; min-width: 80px; padding: 0.5rem; background: transparent; color: #ef4444; border: 2px solid #ef4444; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
                     >
                       Delete
@@ -1726,6 +1779,10 @@
           // Reload folders to update counts (in background)
           setTimeout(() => {
             loadFolders();
+            // Also reload the current folder view if we're in a folder
+            if (currentFolder) {
+              openFolder(currentFolder);
+            }
           }, 500);
         } else {
           throw new Error(data.error || 'Failed to delete video');

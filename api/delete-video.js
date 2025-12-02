@@ -35,7 +35,16 @@ export default async function handler(req, res) {
     const bucket = storage.bucket();
 
     // Construct the full path
-    const filePath = `${folder}/${file}`;
+    // Handle special case for chicago-skyline-videos which is under assets/
+    // If folder is 'chicago-skyline-videos' (without assets/), add it
+    // If folder is 'assets/chicago-skyline-videos', use as-is
+    let filePath;
+    if (folder === 'chicago-skyline-videos') {
+      filePath = `assets/chicago-skyline-videos/${file}`;
+    } else {
+      filePath = `${folder}/${file}`;
+    }
+    
     const fileRef = bucket.file(filePath);
 
     // Check if file exists
