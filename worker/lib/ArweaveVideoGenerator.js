@@ -555,7 +555,7 @@ class ArweaveVideoGenerator {
             layers.push(textLayer);
 
             // Step 6: Add random logo overlay at 25 seconds (5 seconds before end)
-            console.log('[ArweaveVideoGenerator] Step 5: Loading random logo for end overlay from Firebase...');
+            console.log('[ArweaveVideoGenerator] Step 6: Loading random logo for end overlay from Firebase...');
             const logoStartTime = duration - 5; // 25 seconds for 30s video
             let logoCachePath = null; // Declare outside try block for cleanup
             

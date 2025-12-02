@@ -225,9 +225,10 @@ export class VideoCompositor {
         if (layer.startTime !== null && layer.startTime !== undefined) {
           const endTime = layer.startTime + (layer.duration || config.duration);
           // Use enable expression with fade-in: opacity goes from 0 to full over 1 second
-          // Formula: alpha = clamp((t - startTime) / 1.0, 0, 1) * 255
+          // FFmpeg doesn't support clamp(), so use if() and min() instead
+          // Formula: alpha = if(t < startTime, 0, min(255, (t - startTime) / fadeDuration * 255))
           const fadeDuration = 1.0; // 1 second fade-in
-          const fadeAlpha = `clamp((t-${layer.startTime})/${fadeDuration},0,1)*255`;
+          const fadeAlpha = `if(lt(t,${layer.startTime}),0,min(255,(t-${layer.startTime})/${fadeDuration}*255))`;
           drawtextParams.push(`alpha='${fadeAlpha}'`); // Add dynamic fade alpha
           drawtextParams.push(`enable='between(t,${layer.startTime},${endTime})'`);
           textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
