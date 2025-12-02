@@ -37,23 +37,41 @@ export default async function handler(req, res) {
 
       // Filter for video files
       const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
-      const videos = files
-        .filter(file => {
-          const fileName = file.name.toLowerCase();
-          return videoExtensions.some(ext => fileName.endsWith(ext)) && 
-                 !fileName.endsWith('.keep');
-        })
-        .map(file => {
+      const videoFiles = files.filter(file => {
+        const fileName = file.name.toLowerCase();
+        return videoExtensions.some(ext => fileName.endsWith(ext)) && 
+               !fileName.endsWith('.keep');
+      });
+
+      // Generate URLs for each video (try public first, then signed URL)
+      const videos = await Promise.all(
+        videoFiles.map(async (file) => {
           const fileName = file.name.split('/').pop();
+          let publicUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+          
+          // Try to generate a signed URL (works for both public and private files)
+          // Signed URLs are valid for 1 hour
+          try {
+            const [signedUrl] = await file.getSignedUrl({
+              action: 'read',
+              expires: Date.now() + 60 * 60 * 1000 // 1 hour
+            });
+            publicUrl = signedUrl;
+          } catch (error) {
+            // If signed URL fails, try public URL
+            console.warn(`[VideoFolders] Could not generate signed URL for ${file.name}, using public URL`);
+          }
+          
           return {
             name: fileName,
             fullPath: file.name,
             size: file.metadata.size || 0,
             contentType: file.metadata.contentType || 'video/mp4',
             updated: file.metadata.updated || file.metadata.timeCreated,
-            publicUrl: `https://storage.googleapis.com/${bucket.name}/${file.name}`
+            publicUrl: publicUrl
           };
-        });
+        })
+      );
 
       return res.status(200).json({
         success: true,

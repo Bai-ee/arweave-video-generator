@@ -1532,9 +1532,23 @@
     }
 
     /**
+     * Handle video load error
+     */
+    function handleVideoError(videoElement) {
+      const container = videoElement.parentElement;
+      container.innerHTML = `
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--color-yellow-75); text-align: center; width: 90%;">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+          <div style="font-size: 0.75rem; font-family: var(--font-mathias);">Video preview unavailable</div>
+          <div style="font-size: 0.65rem; margin-top: 0.5rem; opacity: 0.7;">Click View to open in new tab</div>
+        </div>
+      `;
+    }
+
+    /**
      * Delete a video from Firebase Storage and UI
      */
-    async function deleteVideo(folderName, fileName, fullPath) {
+    async function deleteVideo(folderName, fileName) {
       if (!confirm(`Are you sure you want to delete "${fileName}"?\n\nThis action cannot be undone.`)) {
         return;
       }
@@ -1551,22 +1565,22 @@
           
           // Remove video card from UI
           const videosGrid = document.getElementById('videosGrid');
-          const videoCards = videosGrid.querySelectorAll('[data-video-name]');
-          videoCards.forEach(card => {
-            if (card.dataset.videoName === fileName) {
-              card.style.opacity = '0';
-              card.style.transition = 'opacity 0.3s';
-              setTimeout(() => {
-                card.remove();
-                
-                // Check if grid is empty
-                if (videosGrid.children.length === 0) {
-                  const videosEmpty = document.getElementById('videosEmpty');
-                  videosEmpty.style.display = 'block';
-                }
-              }, 300);
-            }
-          });
+          const videoCards = Array.from(videosGrid.querySelectorAll('[data-video-name]'));
+          const cardToRemove = videoCards.find(card => card.dataset.videoName === fileName);
+          
+          if (cardToRemove) {
+            cardToRemove.style.opacity = '0';
+            cardToRemove.style.transition = 'opacity 0.3s';
+            setTimeout(() => {
+              cardToRemove.remove();
+              
+              // Check if grid is empty
+              if (videosGrid.children.length === 0) {
+                const videosEmpty = document.getElementById('videosEmpty');
+                videosEmpty.style.display = 'block';
+              }
+            }, 300);
+          }
           
           // Reload folders to update counts (in background)
           setTimeout(() => {
