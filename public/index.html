@@ -145,6 +145,16 @@
               <!-- Artists will be populated by JavaScript -->
             </select>
           </div>
+          
+          <!-- Video Folder Selection -->
+          <div id="folderSelectionContainer" style="display: none; margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(230, 233, 224, 0.2);">
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
+              📁 SELECT VIDEO FOLDERS (at least one required):
+            </label>
+            <div id="folderCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; max-width: 800px; margin: 0 auto;">
+              <!-- Folders will be populated dynamically -->
+            </div>
+          </div>
         </div>
         
         <!-- Filter Selection - COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity -->
@@ -181,9 +191,6 @@
             </div>
           </div>
           
-          <p style="color: #888; font-size: 0.75rem; text-align: center; margin-top: 0.5rem;">
-            You must select a filter before generating a video
-          </p>
         </div>
         -->
         
