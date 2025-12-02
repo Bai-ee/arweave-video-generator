@@ -5,7 +5,6 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import axios from 'axios';
 import { getStorage } from '../firebase-admin.js';
 
 export class VideoLoader {
@@ -61,16 +60,14 @@ export class VideoLoader {
                     continue;
                 }
 
-                // Download from Firebase
+                // Download from Firebase using Admin SDK (works with private files)
                 try {
-                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
-                    const response = await axios.get(publicUrl, {
-                        responseType: 'arraybuffer',
-                        timeout: 60000,
-                        maxContentLength: 100 * 1024 * 1024
-                    });
-
-                    await fs.writeFile(cachedPath, Buffer.from(response.data));
+                    const fileRef = bucket.file(file.name);
+                    console.log(`[VideoLoader] 📥 Downloading skyline video: ${fileName}`);
+                    
+                    // Use Admin SDK download method (works with private files)
+                    await fileRef.download({ destination: cachedPath });
+                    
                     skylineVideos.push(cachedPath);
                     console.log(`[VideoLoader] ✅ Cached skyline: ${fileName}`);
                 } catch (error) {
@@ -90,16 +87,14 @@ export class VideoLoader {
                     continue;
                 }
 
-                // Download from Firebase
+                // Download from Firebase using Admin SDK (works with private files)
                 try {
-                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
-                    const response = await axios.get(publicUrl, {
-                        responseType: 'arraybuffer',
-                        timeout: 60000,
-                        maxContentLength: 100 * 1024 * 1024
-                    });
-
-                    await fs.writeFile(cachedPath, Buffer.from(response.data));
+                    const fileRef = bucket.file(file.name);
+                    console.log(`[VideoLoader] 📥 Downloading chicago video: ${fileName}`);
+                    
+                    // Use Admin SDK download method (works with private files)
+                    await fileRef.download({ destination: cachedPath });
+                    
                     chicagoVideos.push(cachedPath);
                     console.log(`[VideoLoader] ✅ Cached chicago: ${fileName}`);
                 } catch (error) {
@@ -162,17 +157,13 @@ export class VideoLoader {
                 return cachedPath;
             }
 
-            // Download from Firebase
-            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+            // Download from Firebase using Admin SDK (works with private files)
+            const fileRef = bucket.file(storagePath);
             console.log(`[VideoLoader] 📥 Downloading video from Firebase: ${fileName}`);
 
-            const response = await axios.get(publicUrl, {
-                responseType: 'arraybuffer',
-                timeout: 60000,
-                maxContentLength: 100 * 1024 * 1024
-            });
-
-            await fs.writeFile(cachedPath, Buffer.from(response.data));
+            // Use Admin SDK download method (works with private files)
+            await fileRef.download({ destination: cachedPath });
+            
             console.log(`[VideoLoader] ✅ Downloaded and cached: ${fileName}`);
 
             return cachedPath;
