@@ -22,6 +22,10 @@
       "dest": "/api/artists.js"
     },
     {
+      "src": "/api/video-folders",
+      "dest": "/api/video-folders.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/$1"
     }
@@ -41,6 +45,9 @@
     },
     "api/artists.js": {
       "maxDuration": 5
+    },
+    "api/video-folders.js": {
+      "maxDuration": 10
     }
   }
 }

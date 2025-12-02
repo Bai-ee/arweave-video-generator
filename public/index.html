@@ -189,15 +189,15 @@
         
         <!-- Action Buttons -->
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
-          <button 
-            id="generateVideoBtn" 
-            onclick="generateVideo()"
-            class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
-            style="transition: all 0.3s ease; background: var(--color-yellow-75); color: black; font-weight: bold; font-family: var(--font-mathias);"
-          >
-            <span id="generateBtnText">🎬 GENERATE VIDEO</span>
-            <span id="generateBtnLoading" style="display: none;">⏳ Generating...</span>
-          </button>
+        <button 
+          id="generateVideoBtn" 
+          onclick="generateVideo()"
+          class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
+          style="transition: all 0.3s ease; background: var(--color-yellow-75); color: black; font-weight: bold; font-family: var(--font-mathias);"
+        >
+          <span id="generateBtnText">🎬 GENERATE VIDEO</span>
+          <span id="generateBtnLoading" style="display: none;">⏳ Generating...</span>
+        </button>
           
           <button 
             id="uploadVideoBtn" 
@@ -333,6 +333,24 @@
       </div>
     </div>
 
+    <!-- Tab Navigation -->
+    <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem; padding: 0 1rem;">
+      <button 
+        id="tabGenerated" 
+        onclick="switchTab('generated')"
+        style="padding: 0.75rem 1.5rem; background: var(--color-yellow-75); color: black; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+      >
+        📹 Generated Videos
+      </button>
+      <button 
+        id="tabPreview" 
+        onclick="switchTab('preview')"
+        style="padding: 0.75rem 1.5rem; background: #0a0a0a; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+      >
+        📂 Uploaded Videos Preview
+      </button>
+    </div>
+
     <!-- Results Container -->
     <div id="resultsContainer" style="padding-left: 1rem; padding-right: 1rem;">
       
@@ -357,6 +375,55 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview Container -->
+    <div id="previewContainer" style="padding-left: 1rem; padding-right: 1rem; display: none;">
+      
+      <!-- Folder List View -->
+      <div id="folderListView" class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+        <div style="background-color: var(--color-yellow-75); padding: 1rem;">
+          <h2 style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0; text-align: center;">
+            📂 Video Folders
+          </h2>
+        </div>
+        <div style="padding: 1.5rem;">
+          <div id="foldersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+            <!-- Folders will be populated here -->
+          </div>
+          <div id="foldersLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+            Loading folders...
+          </div>
+        </div>
+      </div>
+
+      <!-- Folder Detail View -->
+      <div id="folderDetailView" style="display: none;">
+        <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+          <div style="background-color: var(--color-yellow-75); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <h2 id="folderDetailTitle" style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0;">
+              📂 Folder Name
+            </h2>
+            <button 
+              onclick="backToFolders()"
+              style="padding: 0.5rem 1rem; background: black; color: var(--color-yellow-75); border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+            >
+              ← Back
+            </button>
+          </div>
+          <div style="padding: 1.5rem;">
+            <div id="videosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+              <!-- Videos will be populated here -->
+            </div>
+            <div id="videosLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+              Loading videos...
+            </div>
+            <div id="videosEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
+              No videos found in this folder.
+            </div>
+          </div>
         </div>
       </div>
     </div>
