@@ -553,9 +553,6 @@
         tracksBtn.style.color = 'var(--color-yellow-75)';
         artistContainer.style.display = 'block';
         folderContainer.style.display = 'block';
-        
-        // For mixes: skyline and chicago-skyline-videos
-        populateFolderCheckboxes(['skyline', 'chicago-skyline-videos']);
       } else {
         tracksBtn.style.background = 'var(--color-yellow-75)';
         tracksBtn.style.color = 'black';
@@ -564,36 +561,48 @@
         artistContainer.style.display = 'none';
         folderContainer.style.display = 'block';
         selectedArtist = 'random'; // Reset to random for tracks
-        
-        // For tracks: equipment, decks, skyline, chicago-skyline-videos, neighborhood
-        populateFolderCheckboxes(['equipment', 'decks', 'skyline', 'chicago-skyline-videos', 'neighborhood']);
       }
+      
+      // Show ALL available folders for both modes
+      populateAllFolderCheckboxes();
       
       console.log(`✅ Selected audio source: ${source}`);
     }
 
     /**
-     * Populate folder checkboxes based on mode
+     * Populate folder checkboxes with ALL available folders
      */
-    function populateFolderCheckboxes(folderNames) {
+    function populateAllFolderCheckboxes() {
       const container = document.getElementById('folderCheckboxes');
       container.innerHTML = '';
       selectedFolders.clear();
       
-      // Map folder names to display names
+      // Map folder names to display names (includes all folders)
       const folderDisplayMap = {
         'equipment': 'Equipment',
         'decks': 'Decks',
         'skyline': 'Skyline',
         'chicago-skyline-videos': 'Chicago Skyline',
-        'neighborhood': 'Neighborhood'
+        'neighborhood': 'Neighborhood',
+        'artist': 'Artist',
+        'family': 'Family'
       };
       
-      folderNames.forEach(folderName => {
-        const folderInfo = availableFolders.find(f => f.name === folderName || f.name === `assets/${folderName}`);
+      // Use all available folders from the API
+      if (availableFolders.length === 0) {
+        console.warn('⚠️ No folders loaded yet, loading folders...');
+        loadAvailableFolders().then(() => {
+          populateAllFolderCheckboxes();
+        });
+        return;
+      }
+      
+      availableFolders.forEach(folderInfo => {
+        // Normalize folder name (remove 'assets/' prefix for display)
+        const folderName = folderInfo.name.replace('assets/', '');
         const displayName = folderDisplayMap[folderName] || folderName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        const count = folderInfo ? folderInfo.count : 0;
-        const actualFolderName = folderInfo ? folderInfo.name : folderName;
+        const count = folderInfo.count || 0;
+        const actualFolderName = folderInfo.name; // Use the actual folder name from API
         
         const checkboxContainer = document.createElement('div');
         checkboxContainer.style.cssText = `
@@ -656,7 +665,7 @@
         container.appendChild(checkboxContainer);
       });
       
-      console.log(`✅ Populated ${folderNames.length} folder checkboxes`);
+      console.log(`✅ Populated ${availableFolders.length} folder checkboxes (all folders)`);
     }
 
     /**

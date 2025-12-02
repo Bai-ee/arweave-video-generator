@@ -134,80 +134,74 @@ export class VideoSegmentCompositor {
    * @returns {Promise<string>} Path to concatenated video
    */
   async createVideoFromSegments(videoPaths, targetDuration = 30, segmentDuration = 5) {
-    // Handle both grouped structure (for tracks: 5 folders, for mixes: 2 folders) and flat array (backward compatibility)
-    let equipmentVideos = [];
-    let decksVideos = [];
-    let skylineVideos = [];
-    let chicagoVideos = [];
-    let neighborhoodVideos = [];
+    // Handle grouped structure with any folder combination
+    let folderMap = {}; // Dynamic folder map
     let isGrouped = false;
-    let isTrackMode = false; // Track mode uses 5 folders, mix mode uses 2 folders
+    let isTrackMode = false;
 
     if (videoPaths && typeof videoPaths === 'object' && !Array.isArray(videoPaths)) {
-      // Grouped structure
+      // Grouped structure - can have any combination of folders
       isGrouped = true;
       
-      // Check if this is track mode (5 folders) or mix mode (2 folders)
-      if (videoPaths.equipment !== undefined || videoPaths.decks !== undefined || videoPaths.neighborhood !== undefined) {
-        // Track mode: 5 folders
-        isTrackMode = true;
-        equipmentVideos = videoPaths.equipment || [];
-        decksVideos = videoPaths.decks || [];
-        skylineVideos = videoPaths.skyline || [];
-        chicagoVideos = videoPaths.chicago || [];
-        neighborhoodVideos = videoPaths.neighborhood || [];
-        
-        const total = equipmentVideos.length + decksVideos.length + skylineVideos.length + chicagoVideos.length + neighborhoodVideos.length;
-        if (total === 0) {
-          throw new Error('No video paths provided');
+      // Build dynamic folder map from whatever folders are present
+      folderMap = {};
+      const allFolderKeys = ['equipment', 'decks', 'skyline', 'chicago', 'neighborhood', 'artist', 'family'];
+      
+      for (const key of allFolderKeys) {
+        if (videoPaths[key] !== undefined && Array.isArray(videoPaths[key])) {
+          folderMap[key] = videoPaths[key];
         }
-        
-        console.log(`[VideoSegmentCompositor] Using track mode: ${equipmentVideos.length} equipment + ${decksVideos.length} decks + ${skylineVideos.length} skyline + ${chicagoVideos.length} chicago + ${neighborhoodVideos.length} neighborhood`);
-      } else {
-        // Mix mode: 2 folders (skyline + chicago)
-        isTrackMode = false;
-        skylineVideos = videoPaths.skyline || [];
-        chicagoVideos = videoPaths.chicago || [];
-        
-        if (skylineVideos.length === 0 && chicagoVideos.length === 0) {
-          throw new Error('No video paths provided');
-        }
-        
-        console.log(`[VideoSegmentCompositor] Using mix mode: ${skylineVideos.length} skyline + ${chicagoVideos.length} chicago`);
       }
+      
+      // Determine mode based on available folders
+      // If we have more than just skyline/chicago, treat as track mode (equal distribution)
+      const hasTrackFolders = folderMap.equipment || folderMap.decks || folderMap.neighborhood || folderMap.artist || folderMap.family;
+      isTrackMode = hasTrackFolders || Object.keys(folderMap).length > 2;
+      
+      const total = Object.values(folderMap).reduce((sum, arr) => sum + arr.length, 0);
+      if (total === 0) {
+        throw new Error('No video paths provided');
+      }
+      
+      const folderSummary = Object.entries(folderMap)
+        .map(([name, arr]) => `${arr.length} ${name}`)
+        .join(' + ');
+      console.log(`[VideoSegmentCompositor] Using ${isTrackMode ? 'track' : 'mix'} mode: ${folderSummary}`);
     } else if (Array.isArray(videoPaths)) {
       // Flat array (backward compatibility)
       if (videoPaths.length === 0) {
         throw new Error('No video paths provided');
       }
-      // For backward compatibility, treat all as available videos
-      skylineVideos = videoPaths;
-      chicagoVideos = [];
+      folderMap.skyline = videoPaths;
+      folderMap.chicago = [];
+      isGrouped = true;
+      isTrackMode = false;
       console.log(`[VideoSegmentCompositor] Using flat array: ${videoPaths.length} videos`);
     } else {
       throw new Error('Invalid videoPaths format');
     }
 
     const segmentsNeeded = Math.ceil(targetDuration / segmentDuration);
-    const distributionType = isTrackMode ? 'equal distribution across 5 folders' : '50/50 distribution';
+    const folderCount = Object.keys(folderMap).length;
+    const distributionType = isTrackMode ? `equal distribution across ${folderCount} folders` : '50/50 distribution';
     console.log(`[VideoSegmentCompositor] Creating ${targetDuration}s video from ${segmentsNeeded} segments with ${distributionType}`);
 
     // Extract random segments with equal distribution
     const segmentPaths = [];
-    const usedVideos = {
-      equipment: new Set(),
-      decks: new Set(),
-      skyline: new Set(),
-      chicago: new Set(),
-      neighborhood: new Set()
-    };
+    const usedVideos = {};
+    
+    // Initialize usedVideos sets for all folders
+    Object.keys(folderMap).forEach(folder => {
+      usedVideos[folder] = new Set();
+    });
 
       // Check if we have file references (Firebase File objects) or paths (strings)
-      const hasFileReferences = equipmentVideos.length > 0 && typeof equipmentVideos[0] !== 'string' && 
-                                 typeof equipmentVideos[0].name === 'string';
+      // Check first non-empty folder array
+      const firstFolderWithVideos = Object.values(folderMap).find(arr => arr.length > 0);
+      const hasFileReferences = firstFolderWithVideos && typeof firstFolderWithVideos[0] !== 'string' && 
+                                 typeof firstFolderWithVideos[0]?.name === 'string';
       
       // If we have file references, we need to download them on-demand
-      // We'll need access to VideoLoader for downloading
       let videoLoader = null;
       if (hasFileReferences) {
         // Lazy import VideoLoader only if needed
@@ -220,20 +214,17 @@ export class VideoSegmentCompositor {
       let sourceFolder = '';
       let selectedFileRef = null; // For Firebase file references
 
-      if (isTrackMode) {
-        // Track mode: Equal distribution across 5 folders
-        const allFolders = [
-          { name: 'equipment', videos: equipmentVideos },
-          { name: 'decks', videos: decksVideos },
-          { name: 'skyline', videos: skylineVideos },
-          { name: 'chicago', videos: chicagoVideos },
-          { name: 'neighborhood', videos: neighborhoodVideos }
-        ].filter(f => f.videos.length > 0);
+      // Convert folderMap to array of folder objects
+      const allFolders = Object.entries(folderMap)
+        .map(([name, videos]) => ({ name, videos }))
+        .filter(f => f.videos.length > 0);
 
-        if (allFolders.length === 0) {
-          throw new Error('No valid videos available for segment extraction');
-        }
+      if (allFolders.length === 0) {
+        throw new Error('No valid videos available for segment extraction');
+      }
 
+      if (isTrackMode || allFolders.length > 2) {
+        // Equal distribution across all folders
         // Randomly select a folder (equal chance for each)
         const selectedFolder = allFolders[Math.floor(Math.random() * allFolders.length)];
         sourceFolder = selectedFolder.name;
@@ -266,56 +257,35 @@ export class VideoSegmentCompositor {
           usedVideos[sourceFolder].add(selectedItem);
         }
       } else {
-        // Mix mode: 50/50 distribution between skyline and chicago
-        if (isGrouped && skylineVideos.length > 0 && chicagoVideos.length > 0) {
-          // Both folders available: 50% chance for each
-          const useSkyline = Math.random() < 0.5;
-          
-          if (useSkyline) {
-            // Select from skyline folder
-            let availableSkyline = skylineVideos.filter(v => !usedVideos.skyline.has(v));
-            if (availableSkyline.length === 0) {
-              // All skyline videos used, reset and reuse
-              availableSkyline = skylineVideos;
-              usedVideos.skyline.clear();
-            }
-            selectedVideo = availableSkyline[Math.floor(Math.random() * availableSkyline.length)];
-            usedVideos.skyline.add(selectedVideo);
-            sourceFolder = 'skyline';
+        // Mix mode: 50/50 distribution between first two folders (typically skyline and chicago)
+        const folder1 = allFolders[0];
+        const folder2 = allFolders[1] || folder1;
+        
+        const useFolder1 = Math.random() < 0.5;
+        const selectedFolder = useFolder1 ? folder1 : folder2;
+        sourceFolder = selectedFolder.name;
+        
+        let availableVideos = selectedFolder.videos.filter(v => {
+          if (hasFileReferences) {
+            return !usedVideos[sourceFolder].has(v.name);
           } else {
-            // Select from chicago folder
-            let availableChicago = chicagoVideos.filter(v => !usedVideos.chicago.has(v));
-            if (availableChicago.length === 0) {
-              // All chicago videos used, reset and reuse
-              availableChicago = chicagoVideos;
-              usedVideos.chicago.clear();
-            }
-            selectedVideo = availableChicago[Math.floor(Math.random() * availableChicago.length)];
-            usedVideos.chicago.add(selectedVideo);
-            sourceFolder = 'chicago';
+            return !usedVideos[sourceFolder].has(v);
           }
-        } else if (skylineVideos.length > 0) {
-          // Only skyline available
-          let availableSkyline = skylineVideos.filter(v => !usedVideos.skyline.has(v));
-          if (availableSkyline.length === 0) {
-            availableSkyline = skylineVideos;
-            usedVideos.skyline.clear();
-          }
-          selectedVideo = availableSkyline[Math.floor(Math.random() * availableSkyline.length)];
-          usedVideos.skyline.add(selectedVideo);
-          sourceFolder = 'skyline';
-        } else if (chicagoVideos.length > 0) {
-          // Only chicago available
-          let availableChicago = chicagoVideos.filter(v => !usedVideos.chicago.has(v));
-          if (availableChicago.length === 0) {
-            availableChicago = chicagoVideos;
-            usedVideos.chicago.clear();
-          }
-          selectedVideo = availableChicago[Math.floor(Math.random() * availableChicago.length)];
-          usedVideos.chicago.add(selectedVideo);
-          sourceFolder = 'chicago';
+        });
+        
+        if (availableVideos.length === 0) {
+          availableVideos = selectedFolder.videos;
+          usedVideos[sourceFolder].clear();
+        }
+        
+        const selectedItem = availableVideos[Math.floor(Math.random() * availableVideos.length)];
+        
+        if (hasFileReferences) {
+          selectedFileRef = selectedItem;
+          usedVideos[sourceFolder].add(selectedItem.name);
         } else {
-          throw new Error('No valid videos available for segment extraction');
+          selectedVideo = selectedItem;
+          usedVideos[sourceFolder].add(selectedItem);
         }
       }
 
@@ -335,14 +305,6 @@ export class VideoSegmentCompositor {
         // Try another video from the same folder
         let fallbackVideo = null;
         let fallbackFileRef = null;
-        const folderMap = {
-          equipment: equipmentVideos,
-          decks: decksVideos,
-          skyline: skylineVideos,
-          chicago: chicagoVideos,
-          neighborhood: neighborhoodVideos
-        };
-        
         const folderVideos = folderMap[sourceFolder] || [];
         if (folderVideos.length > 1) {
           if (hasFileReferences) {

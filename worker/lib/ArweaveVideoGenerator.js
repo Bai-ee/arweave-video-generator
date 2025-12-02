@@ -344,22 +344,23 @@ class ArweaveVideoGenerator {
             
             // Check if we're using tracks (original music) or mixes (DJ mixes)
             // useTrax is already extracted from options at line 303
+            // Both tracks and mixes now use the same unified approach with all folders
+            // For tracks: use file references (on-demand download)
+            // For mixes: download all videos upfront (backward compatibility)
             if (useTrax) {
                 // For tracks: Get video file references (metadata only, no download yet)
-                // Filter by selected folders if provided
                 console.log('[ArweaveVideoGenerator] Getting track video file references from selected folders...');
                 const groupedVideos = await this.videoLoader.loadTrackVideoReferences(true, selectedFolders);
                 
-                // Calculate totals from selected folders only
-                const equipmentCount = selectedFolders.length === 0 || selectedFolders.includes('equipment') || selectedFolders.some(f => f.includes('equipment')) ? groupedVideos.equipment.length : 0;
-                const decksCount = selectedFolders.length === 0 || selectedFolders.includes('decks') || selectedFolders.some(f => f.includes('decks')) ? groupedVideos.decks.length : 0;
-                const skylineCount = selectedFolders.length === 0 || selectedFolders.includes('skyline') || selectedFolders.some(f => f.includes('skyline')) ? groupedVideos.skyline.length : 0;
-                const chicagoCount = selectedFolders.length === 0 || selectedFolders.includes('chicago-skyline-videos') || selectedFolders.includes('assets/chicago-skyline-videos') || selectedFolders.some(f => f.includes('chicago')) ? groupedVideos.chicago.length : 0;
-                const neighborhoodCount = selectedFolders.length === 0 || selectedFolders.includes('neighborhood') || selectedFolders.some(f => f.includes('neighborhood')) ? groupedVideos.neighborhood.length : 0;
-                const totalVideos = equipmentCount + decksCount + skylineCount + chicagoCount + neighborhoodCount;
+                // Calculate totals from all folders
+                const totalVideos = Object.values(groupedVideos).reduce((sum, arr) => sum + arr.length, 0);
                 
                 if (totalVideos > 0) {
-                    console.log(`[ArweaveVideoGenerator] Found ${equipmentCount} equipment + ${decksCount} decks + ${skylineCount} skyline + ${chicagoCount} chicago + ${neighborhoodCount} neighborhood = ${totalVideos} total video references`);
+                    const folderSummary = Object.entries(groupedVideos)
+                        .filter(([_, arr]) => arr.length > 0)
+                        .map(([name, arr]) => `${arr.length} ${name}`)
+                        .join(' + ');
+                    console.log(`[ArweaveVideoGenerator] Found ${folderSummary} = ${totalVideos} total video references`);
                     console.log(`[ArweaveVideoGenerator] Selected folders: ${selectedFolders.length > 0 ? selectedFolders.join(', ') : 'all'}`);
                     console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with equal distribution across selected folders (videos will be downloaded on-demand)...`);
                     
@@ -379,25 +380,35 @@ class ArweaveVideoGenerator {
                     }
                 }
             } else {
-                // For mixes: Load videos from selected folders (default: skyline and chicago-skyline-videos)
+                // For mixes: Load videos from selected folders (downloads all upfront for backward compatibility)
                 const defaultFolders = selectedFolders.length > 0 ? selectedFolders : ['skyline', 'assets/chicago-skyline-videos'];
                 console.log(`[ArweaveVideoGenerator] Loading mix videos from selected folders: ${defaultFolders.join(', ')}`);
                 const groupedVideos = await this.videoLoader.loadAllSkylineVideos(true, defaultFolders);
-                const totalVideos = groupedVideos.skyline.length + groupedVideos.chicago.length;
+                
+                // Calculate totals from all folders
+                const totalVideos = Object.values(groupedVideos).reduce((sum, arr) => sum + arr.length, 0);
                 
                 if (totalVideos > 0) {
-                    console.log(`[ArweaveVideoGenerator] Found ${groupedVideos.skyline.length} skyline + ${groupedVideos.chicago.length} chicago = ${totalVideos} total videos`);
-                    console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with 50/50 distribution...`);
+                    const folderSummary = Object.entries(groupedVideos)
+                        .filter(([_, arr]) => arr.length > 0)
+                        .map(([name, arr]) => `${arr.length} ${name}`)
+                        .join(' + ');
+                    console.log(`[ArweaveVideoGenerator] Found ${folderSummary} = ${totalVideos} total videos`);
+                    
+                    // Determine distribution: if more than 2 folders, use equal distribution; otherwise 50/50
+                    const folderCount = Object.values(groupedVideos).filter(arr => arr.length > 0).length;
+                    const distributionType = folderCount > 2 ? `equal distribution across ${folderCount} folders` : '50/50 distribution';
+                    console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with ${distributionType}...`);
                     
                     try {
-                        // Create 30-second video from random 5-second segments with 50/50 distribution
+                        // Create 30-second video from random 5-second segments
                         backgroundPath = await this.segmentCompositor.createVideoFromSegments(
-                            groupedVideos, // Pass grouped structure for 50/50 selection
+                            groupedVideos, // Pass grouped structure
                             duration,
                             5 // 5-second segments
                         );
                         useVideoBackground = true;
-                        console.log('[ArweaveVideoGenerator] ✅ Created video background from skyline segments (50/50 distribution)');
+                        console.log(`[ArweaveVideoGenerator] ✅ Created video background from selected folders (${distributionType})`);
                     } catch (error) {
                         console.error('[ArweaveVideoGenerator] Failed to create segment video:', error.message);
                         // Fall through to DALL-E or simple background
