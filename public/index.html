@@ -241,18 +241,27 @@
         <form id="uploadForm" onsubmit="handleVideoUpload(event)" style="display: flex; flex-direction: column; gap: 1rem;">
           <div>
             <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Select Video File (.mov, .mp4, .m4v)
+              Select Video Files (.mov, .mp4, .m4v) - Multiple files supported
             </label>
             <input 
               type="file" 
               id="videoFileInput" 
               accept="video/*,.mov,.mp4,.m4v" 
+              multiple
               required
               style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
             />
             <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
-              Max file size: 500MB. Videos will be optimized automatically.
+              Max file size: 500MB per file. Videos will be optimized automatically. You can select multiple files at once.
             </p>
+            <div id="selectedFilesList" style="margin-top: 0.75rem; display: none;">
+              <p style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; margin-bottom: 0.5rem;">
+                Selected files:
+              </p>
+              <div id="selectedFilesContainer" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--color-yellow-75); border-radius: 5px; padding: 0.5rem; background: #0a0a0a;">
+                <!-- Selected files will be listed here -->
+              </div>
+            </div>
           </div>
           
           <div>
@@ -292,12 +301,12 @@
           
           <div id="uploadProgress" style="display: none;">
             <div style="background: #0a0a0a; border: 2px solid var(--color-yellow-75); border-radius: 5px; padding: 1rem; margin-bottom: 1rem;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                <span style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">Uploading...</span>
-                <span id="uploadPercent" style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">0%</span>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                <span style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem; font-weight: bold;">Uploading Files...</span>
+                <span id="uploadSummary" style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">0 / 0</span>
               </div>
-              <div style="background: #0a0a0a; border: 1px solid var(--color-yellow-75); border-radius: 3px; height: 20px; overflow: hidden;">
-                <div id="uploadProgressBar" style="background: var(--color-yellow-75); height: 100%; width: 0%; transition: width 0.3s;"></div>
+              <div id="uploadFilesList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <!-- Individual file progress bars will be added here -->
               </div>
             </div>
           </div>
@@ -976,7 +985,47 @@
       document.getElementById('uploadForm').reset();
       document.getElementById('uploadProgress').style.display = 'none';
       document.getElementById('uploadStatus').style.display = 'none';
+      document.getElementById('selectedFilesList').style.display = 'none';
+      document.getElementById('selectedFilesContainer').innerHTML = '';
     }
+
+    /**
+     * Update selected files list
+     */
+    function updateSelectedFilesList() {
+      const fileInput = document.getElementById('videoFileInput');
+      const selectedFilesList = document.getElementById('selectedFilesList');
+      const selectedFilesContainer = document.getElementById('selectedFilesContainer');
+      
+      if (fileInput.files.length === 0) {
+        selectedFilesList.style.display = 'none';
+        return;
+      }
+      
+      selectedFilesList.style.display = 'block';
+      selectedFilesContainer.innerHTML = '';
+      
+      Array.from(fileInput.files).forEach((file, index) => {
+        const fileItem = document.createElement('div');
+        fileItem.style.cssText = 'padding: 0.5rem; background: #1a1a1a; border-radius: 3px; margin-bottom: 0.25rem;';
+        fileItem.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem;">
+              ${index + 1}. ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)
+            </span>
+          </div>
+        `;
+        selectedFilesContainer.appendChild(fileItem);
+      });
+    }
+
+    // Add event listener for file selection
+    document.addEventListener('DOMContentLoaded', () => {
+      const fileInput = document.getElementById('videoFileInput');
+      if (fileInput) {
+        fileInput.addEventListener('change', updateSelectedFilesList);
+      }
+    });
 
     /**
      * Hide upload modal
@@ -986,7 +1035,7 @@
     }
 
     /**
-     * Handle video upload
+     * Handle video upload (supports multiple files)
      */
     async function handleVideoUpload(event) {
       event.preventDefault();
@@ -994,102 +1043,181 @@
       const fileInput = document.getElementById('videoFileInput');
       const orientation = document.getElementById('orientationSelect').value;
       const folder = document.getElementById('folderSelect').value;
-      const file = fileInput.files[0];
+      const files = Array.from(fileInput.files);
       
-      if (!file) {
-        showToast('Please select a video file', 'error');
+      if (files.length === 0) {
+        showToast('Please select at least one video file', 'error');
         return;
       }
 
-      // Validate file type
+      // Validate all files
       const allowedTypes = ['.mov', '.mp4', '.m4v', '.avi', '.mkv', '.webm'];
-      const fileExt = '.' + file.name.split('.').pop().toLowerCase();
-      if (!allowedTypes.includes(fileExt)) {
-        showToast(`Invalid file type. Allowed: ${allowedTypes.join(', ')}`, 'error');
-        return;
-      }
-
-      // Validate file size (500MB limit)
       const maxSize = 500 * 1024 * 1024; // 500MB
-      if (file.size > maxSize) {
-        showToast('File size exceeds 500MB limit', 'error');
+      const invalidFiles = [];
+      
+      files.forEach((file, index) => {
+        const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+        if (!allowedTypes.includes(fileExt)) {
+          invalidFiles.push(`${file.name} (invalid type)`);
+        }
+        if (file.size > maxSize) {
+          invalidFiles.push(`${file.name} (exceeds 500MB)`);
+        }
+      });
+
+      if (invalidFiles.length > 0) {
+        showToast(`Invalid files: ${invalidFiles.join(', ')}`, 'error');
         return;
       }
 
       // Show progress
-      document.getElementById('uploadProgress').style.display = 'block';
-      document.getElementById('uploadStatus').style.display = 'none';
-      document.getElementById('uploadSubmitBtn').disabled = true;
+      const uploadProgress = document.getElementById('uploadProgress');
+      const uploadFilesList = document.getElementById('uploadFilesList');
+      const uploadStatus = document.getElementById('uploadStatus');
+      const uploadSubmitBtn = document.getElementById('uploadSubmitBtn');
       
-      try {
-        // Upload directly to Firebase Storage
-        const { storage, ref, uploadBytesResumable, getDownloadURL } = window.firebase;
-        const fileName = `user_upload_${Date.now()}_${file.name}`;
-        const storageRef = ref(storage, `${folder}/${fileName}`);
-        
-        // Create upload task
-        const uploadTask = uploadBytesResumable(storageRef, file, {
-          contentType: file.type || 'video/mp4',
-          customMetadata: {
-            originalName: file.name,
-            orientation: orientation,
-            uploadedAt: new Date().toISOString()
-          }
+      uploadProgress.style.display = 'block';
+      uploadStatus.style.display = 'none';
+      uploadSubmitBtn.disabled = true;
+      uploadFilesList.innerHTML = '';
+      
+      // Create progress elements for each file
+      const fileProgressMap = new Map();
+      files.forEach((file, index) => {
+        const fileProgressDiv = document.createElement('div');
+        fileProgressDiv.id = `file-progress-${index}`;
+        fileProgressDiv.style.cssText = 'background: #1a1a1a; border: 1px solid var(--color-yellow-75); border-radius: 5px; padding: 0.75rem;';
+        fileProgressDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%;">
+              ${file.name}
+            </span>
+            <span id="file-percent-${index}" style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem;">0%</span>
+          </div>
+          <div style="background: #0a0a0a; border: 1px solid var(--color-yellow-75); border-radius: 3px; height: 12px; overflow: hidden;">
+            <div id="file-progress-bar-${index}" style="background: var(--color-yellow-75); height: 100%; width: 0%; transition: width 0.3s;"></div>
+          </div>
+          <div id="file-status-${index}" style="color: #888; font-family: var(--font-mathias); font-size: 0.7rem; margin-top: 0.25rem;">Waiting...</div>
+        `;
+        uploadFilesList.appendChild(fileProgressDiv);
+        fileProgressMap.set(index, {
+          file,
+          div: fileProgressDiv,
+          percent: document.getElementById(`file-percent-${index}`),
+          progressBar: document.getElementById(`file-progress-bar-${index}`),
+          status: document.getElementById(`file-status-${index}`)
         });
+      });
 
-        // Monitor upload progress
-        uploadTask.on('state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            document.getElementById('uploadPercent').textContent = Math.round(progress) + '%';
-            document.getElementById('uploadProgressBar').style.width = progress + '%';
-          },
-          (error) => {
-            console.error('Upload error:', error);
-            showToast('Upload failed: ' + error.message, 'error');
-            document.getElementById('uploadSubmitBtn').disabled = false;
-            document.getElementById('uploadProgress').style.display = 'none';
-          },
-          async () => {
-            // Upload complete
-            try {
-              // Get download URL
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              
-              // Show success
-              document.getElementById('uploadStatus').style.display = 'block';
-              document.getElementById('uploadStatus').innerHTML = `
-                <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1rem; color: #10b981;">
-                  <strong>✅ Upload Successful!</strong><br>
-                  <small>Video URL: <a href="${downloadURL}" target="_blank" style="color: #10b981; text-decoration: underline;">View</a></small>
-                </div>
-              `;
-              
-              showToast('Video uploaded successfully!', 'success');
-              
-              // Optionally trigger optimization
-              // Note: Optimization would happen server-side via API call
-              // For now, we just upload the original file
-              
-              // Reset form after 3 seconds
-              setTimeout(() => {
-                hideUploadModal();
-              }, 3000);
-              
-            } catch (error) {
-              console.error('Error getting download URL:', error);
-              showToast('Upload complete but failed to get URL', 'error');
+      // Upload files sequentially to avoid overwhelming the browser
+      const uploadResults = [];
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const progress = fileProgressMap.get(i);
+        
+        try {
+          progress.status.textContent = 'Uploading...';
+          progress.status.style.color = '#888';
+          
+          // Upload directly to Firebase Storage
+          const { storage, ref, uploadBytesResumable, getDownloadURL } = window.firebase;
+          const fileName = `user_upload_${Date.now()}_${i}_${file.name}`;
+          const storageRef = ref(storage, `${folder}/${fileName}`);
+          
+          // Create upload task
+          const uploadTask = uploadBytesResumable(storageRef, file, {
+            contentType: file.type || 'video/mp4',
+            customMetadata: {
+              originalName: file.name,
+              orientation: orientation,
+              uploadedAt: new Date().toISOString()
             }
-            
-            document.getElementById('uploadSubmitBtn').disabled = false;
-          }
-        );
+          });
 
-      } catch (error) {
-        console.error('Upload error:', error);
-        showToast('Upload failed: ' + error.message, 'error');
-        document.getElementById('uploadSubmitBtn').disabled = false;
-        document.getElementById('uploadProgress').style.display = 'none';
+          // Wait for upload to complete
+          await new Promise((resolve, reject) => {
+            uploadTask.on('state_changed',
+              (snapshot) => {
+                const progressPercent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                progress.percent.textContent = Math.round(progressPercent) + '%';
+                progress.progressBar.style.width = progressPercent + '%';
+              },
+              (error) => {
+                console.error(`Upload error for ${file.name}:`, error);
+                progress.status.textContent = `❌ Failed: ${error.message}`;
+                progress.status.style.color = '#ef4444';
+                progress.progressBar.style.background = '#ef4444';
+                reject(error);
+              },
+              async () => {
+                try {
+                  // Get download URL
+                  const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                  progress.status.textContent = '✅ Uploaded';
+                  progress.status.style.color = '#10b981';
+                  progress.progressBar.style.background = '#10b981';
+                  uploadResults.push({ file: file.name, success: true, url: downloadURL });
+                  successCount++;
+                  resolve();
+                } catch (error) {
+                  console.error(`Error getting download URL for ${file.name}:`, error);
+                  progress.status.textContent = '⚠️ Uploaded but URL failed';
+                  progress.status.style.color = '#fbbf24';
+                  uploadResults.push({ file: file.name, success: false, error: error.message });
+                  failCount++;
+                  resolve(); // Continue even if URL fetch fails
+                }
+              }
+            );
+          });
+        } catch (error) {
+          console.error(`Upload error for ${file.name}:`, error);
+          progress.status.textContent = `❌ Failed: ${error.message}`;
+          progress.status.style.color = '#ef4444';
+          progress.progressBar.style.background = '#ef4444';
+          uploadResults.push({ file: file.name, success: false, error: error.message });
+          failCount++;
+        }
+        
+        // Update summary
+        document.getElementById('uploadSummary').textContent = `${successCount + failCount} / ${files.length}`;
+      }
+
+      // Show final status
+      uploadStatus.style.display = 'block';
+      if (successCount === files.length) {
+        uploadStatus.innerHTML = `
+          <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1rem; color: #10b981;">
+            <strong>✅ All ${successCount} file(s) uploaded successfully!</strong>
+          </div>
+        `;
+        showToast(`Successfully uploaded ${successCount} file(s)!`, 'success');
+      } else if (successCount > 0) {
+        uploadStatus.innerHTML = `
+          <div style="background: #5d4a0a; border: 2px solid #fbbf24; border-radius: 5px; padding: 1rem; color: #fbbf24;">
+            <strong>⚠️ Partial success: ${successCount} succeeded, ${failCount} failed</strong>
+          </div>
+        `;
+        showToast(`Uploaded ${successCount} file(s), ${failCount} failed`, 'error');
+      } else {
+        uploadStatus.innerHTML = `
+          <div style="background: #5d0a0a; border: 2px solid #ef4444; border-radius: 5px; padding: 1rem; color: #ef4444;">
+            <strong>❌ All uploads failed</strong>
+          </div>
+        `;
+        showToast('All uploads failed', 'error');
+      }
+      
+      uploadSubmitBtn.disabled = false;
+      
+      // Reset form after 5 seconds if all succeeded
+      if (successCount === files.length) {
+        setTimeout(() => {
+          hideUploadModal();
+        }, 5000);
       }
     }
 
