@@ -134,22 +134,47 @@ export class VideoSegmentCompositor {
    * @returns {Promise<string>} Path to concatenated video
    */
   async createVideoFromSegments(videoPaths, targetDuration = 30, segmentDuration = 5) {
-    // Handle both grouped structure and flat array (backward compatibility)
+    // Handle both grouped structure (for tracks: 5 folders, for mixes: 2 folders) and flat array (backward compatibility)
+    let equipmentVideos = [];
+    let decksVideos = [];
     let skylineVideos = [];
     let chicagoVideos = [];
+    let neighborhoodVideos = [];
     let isGrouped = false;
+    let isTrackMode = false; // Track mode uses 5 folders, mix mode uses 2 folders
 
     if (videoPaths && typeof videoPaths === 'object' && !Array.isArray(videoPaths)) {
-      // Grouped structure: { skyline: [...], chicago: [...] }
+      // Grouped structure
       isGrouped = true;
-      skylineVideos = videoPaths.skyline || [];
-      chicagoVideos = videoPaths.chicago || [];
       
-      if (skylineVideos.length === 0 && chicagoVideos.length === 0) {
-        throw new Error('No video paths provided');
+      // Check if this is track mode (5 folders) or mix mode (2 folders)
+      if (videoPaths.equipment !== undefined || videoPaths.decks !== undefined || videoPaths.neighborhood !== undefined) {
+        // Track mode: 5 folders
+        isTrackMode = true;
+        equipmentVideos = videoPaths.equipment || [];
+        decksVideos = videoPaths.decks || [];
+        skylineVideos = videoPaths.skyline || [];
+        chicagoVideos = videoPaths.chicago || [];
+        neighborhoodVideos = videoPaths.neighborhood || [];
+        
+        const total = equipmentVideos.length + decksVideos.length + skylineVideos.length + chicagoVideos.length + neighborhoodVideos.length;
+        if (total === 0) {
+          throw new Error('No video paths provided');
+        }
+        
+        console.log(`[VideoSegmentCompositor] Using track mode: ${equipmentVideos.length} equipment + ${decksVideos.length} decks + ${skylineVideos.length} skyline + ${chicagoVideos.length} chicago + ${neighborhoodVideos.length} neighborhood`);
+      } else {
+        // Mix mode: 2 folders (skyline + chicago)
+        isTrackMode = false;
+        skylineVideos = videoPaths.skyline || [];
+        chicagoVideos = videoPaths.chicago || [];
+        
+        if (skylineVideos.length === 0 && chicagoVideos.length === 0) {
+          throw new Error('No video paths provided');
+        }
+        
+        console.log(`[VideoSegmentCompositor] Using mix mode: ${skylineVideos.length} skyline + ${chicagoVideos.length} chicago`);
       }
-      
-      console.log(`[VideoSegmentCompositor] Using grouped videos: ${skylineVideos.length} skyline + ${chicagoVideos.length} chicago`);
     } else if (Array.isArray(videoPaths)) {
       // Flat array (backward compatibility)
       if (videoPaths.length === 0) {
@@ -164,67 +189,102 @@ export class VideoSegmentCompositor {
     }
 
     const segmentsNeeded = Math.ceil(targetDuration / segmentDuration);
-    console.log(`[VideoSegmentCompositor] Creating ${targetDuration}s video from ${segmentsNeeded} segments with 50/50 distribution`);
+    const distributionType = isTrackMode ? 'equal distribution across 5 folders' : '50/50 distribution';
+    console.log(`[VideoSegmentCompositor] Creating ${targetDuration}s video from ${segmentsNeeded} segments with ${distributionType}`);
 
-    // Extract random segments with 50/50 distribution
+    // Extract random segments with equal distribution
     const segmentPaths = [];
-    const usedSkylineVideos = new Set();
-    const usedChicagoVideos = new Set();
+    const usedVideos = {
+      equipment: new Set(),
+      decks: new Set(),
+      skyline: new Set(),
+      chicago: new Set(),
+      neighborhood: new Set()
+    };
 
     for (let i = 0; i < segmentsNeeded; i++) {
       let selectedVideo = null;
       let sourceFolder = '';
 
-      // 50/50 random selection between folders
-      if (isGrouped && skylineVideos.length > 0 && chicagoVideos.length > 0) {
-        // Both folders available: 50% chance for each
-        const useSkyline = Math.random() < 0.5;
-        
-        if (useSkyline) {
-          // Select from skyline folder
-          let availableSkyline = skylineVideos.filter(v => !usedSkylineVideos.has(v));
+      if (isTrackMode) {
+        // Track mode: Equal distribution across 5 folders
+        const allFolders = [
+          { name: 'equipment', videos: equipmentVideos },
+          { name: 'decks', videos: decksVideos },
+          { name: 'skyline', videos: skylineVideos },
+          { name: 'chicago', videos: chicagoVideos },
+          { name: 'neighborhood', videos: neighborhoodVideos }
+        ].filter(f => f.videos.length > 0);
+
+        if (allFolders.length === 0) {
+          throw new Error('No valid videos available for segment extraction');
+        }
+
+        // Randomly select a folder (equal chance for each)
+        const selectedFolder = allFolders[Math.floor(Math.random() * allFolders.length)];
+        sourceFolder = selectedFolder.name;
+
+        // Select a video from that folder
+        let availableVideos = selectedFolder.videos.filter(v => !usedVideos[sourceFolder].has(v));
+        if (availableVideos.length === 0) {
+          // All videos from this folder used, reset and reuse
+          availableVideos = selectedFolder.videos;
+          usedVideos[sourceFolder].clear();
+        }
+        selectedVideo = availableVideos[Math.floor(Math.random() * availableVideos.length)];
+        usedVideos[sourceFolder].add(selectedVideo);
+      } else {
+        // Mix mode: 50/50 distribution between skyline and chicago
+        if (isGrouped && skylineVideos.length > 0 && chicagoVideos.length > 0) {
+          // Both folders available: 50% chance for each
+          const useSkyline = Math.random() < 0.5;
+          
+          if (useSkyline) {
+            // Select from skyline folder
+            let availableSkyline = skylineVideos.filter(v => !usedVideos.skyline.has(v));
+            if (availableSkyline.length === 0) {
+              // All skyline videos used, reset and reuse
+              availableSkyline = skylineVideos;
+              usedVideos.skyline.clear();
+            }
+            selectedVideo = availableSkyline[Math.floor(Math.random() * availableSkyline.length)];
+            usedVideos.skyline.add(selectedVideo);
+            sourceFolder = 'skyline';
+          } else {
+            // Select from chicago folder
+            let availableChicago = chicagoVideos.filter(v => !usedVideos.chicago.has(v));
+            if (availableChicago.length === 0) {
+              // All chicago videos used, reset and reuse
+              availableChicago = chicagoVideos;
+              usedVideos.chicago.clear();
+            }
+            selectedVideo = availableChicago[Math.floor(Math.random() * availableChicago.length)];
+            usedVideos.chicago.add(selectedVideo);
+            sourceFolder = 'chicago';
+          }
+        } else if (skylineVideos.length > 0) {
+          // Only skyline available
+          let availableSkyline = skylineVideos.filter(v => !usedVideos.skyline.has(v));
           if (availableSkyline.length === 0) {
-            // All skyline videos used, reset and reuse
             availableSkyline = skylineVideos;
-            usedSkylineVideos.clear();
+            usedVideos.skyline.clear();
           }
           selectedVideo = availableSkyline[Math.floor(Math.random() * availableSkyline.length)];
-          usedSkylineVideos.add(selectedVideo);
+          usedVideos.skyline.add(selectedVideo);
           sourceFolder = 'skyline';
-        } else {
-          // Select from chicago folder
-          let availableChicago = chicagoVideos.filter(v => !usedChicagoVideos.has(v));
+        } else if (chicagoVideos.length > 0) {
+          // Only chicago available
+          let availableChicago = chicagoVideos.filter(v => !usedVideos.chicago.has(v));
           if (availableChicago.length === 0) {
-            // All chicago videos used, reset and reuse
             availableChicago = chicagoVideos;
-            usedChicagoVideos.clear();
+            usedVideos.chicago.clear();
           }
           selectedVideo = availableChicago[Math.floor(Math.random() * availableChicago.length)];
-          usedChicagoVideos.add(selectedVideo);
+          usedVideos.chicago.add(selectedVideo);
           sourceFolder = 'chicago';
+        } else {
+          throw new Error('No valid videos available for segment extraction');
         }
-      } else if (skylineVideos.length > 0) {
-        // Only skyline available
-        let availableSkyline = skylineVideos.filter(v => !usedSkylineVideos.has(v));
-        if (availableSkyline.length === 0) {
-          availableSkyline = skylineVideos;
-          usedSkylineVideos.clear();
-        }
-        selectedVideo = availableSkyline[Math.floor(Math.random() * availableSkyline.length)];
-        usedSkylineVideos.add(selectedVideo);
-        sourceFolder = 'skyline';
-      } else if (chicagoVideos.length > 0) {
-        // Only chicago available
-        let availableChicago = chicagoVideos.filter(v => !usedChicagoVideos.has(v));
-        if (availableChicago.length === 0) {
-          availableChicago = chicagoVideos;
-          usedChicagoVideos.clear();
-        }
-        selectedVideo = availableChicago[Math.floor(Math.random() * availableChicago.length)];
-        usedChicagoVideos.add(selectedVideo);
-        sourceFolder = 'chicago';
-      } else {
-        throw new Error('No valid videos available for segment extraction');
       }
 
       try {
@@ -235,13 +295,17 @@ export class VideoSegmentCompositor {
         console.warn(`[VideoSegmentCompositor] Failed to extract segment from ${path.basename(selectedVideo)}, trying another...`);
         // Try another video from the same folder
         let fallbackVideo = null;
-        if (sourceFolder === 'skyline' && skylineVideos.length > 1) {
-          const otherVideos = skylineVideos.filter(v => v !== selectedVideo);
-          if (otherVideos.length > 0) {
-            fallbackVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
-          }
-        } else if (sourceFolder === 'chicago' && chicagoVideos.length > 1) {
-          const otherVideos = chicagoVideos.filter(v => v !== selectedVideo);
+        const folderMap = {
+          equipment: equipmentVideos,
+          decks: decksVideos,
+          skyline: skylineVideos,
+          chicago: chicagoVideos,
+          neighborhood: neighborhoodVideos
+        };
+        
+        const folderVideos = folderMap[sourceFolder] || [];
+        if (folderVideos.length > 1) {
+          const otherVideos = folderVideos.filter(v => v !== selectedVideo);
           if (otherVideos.length > 0) {
             fallbackVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
           }

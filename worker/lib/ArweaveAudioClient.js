@@ -596,13 +596,14 @@ class ArweaveAudioClient {
           
           if (useTrax) {
             // Get artist and track (original music)
-            const result = this.getArtistTrax(requestedArtist);
+            // For tracks, always use BAI-EE
+            const result = this.getArtistTrax('BAI-EE');
             selectedArtist = result.artist;
             const track = result.track;
             
             // Validate that we have a valid track
             if (!track || !track.trackArweaveURL) {
-              throw new Error(`No valid track found for artist: ${selectedArtist?.artistName || requestedArtist || 'random'}`);
+              throw new Error(`No valid track found for artist: ${selectedArtist?.artistName || 'BAI-EE'}`);
             }
             
             audioSource = track;
@@ -611,7 +612,7 @@ class ArweaveAudioClient {
             audioDateYear = track.trackDateYear;
             audioDuration = track.trackDuration;
             
-            console.log(`[ArweaveAudioClient] 🎵 Selected track: ${selectedArtist.artistName} - "${track.trackTitle}" (${track.trackDuration})`);
+            console.log(`[ArweaveAudioClient] 🎵 Selected track: BAI-EE - "${track.trackTitle}" (${track.trackDuration})`);
           } else {
             // Get artist and mix (DJ mixes)
             const result = this.getArtistMix(requestedArtist);
@@ -632,39 +633,73 @@ class ArweaveAudioClient {
             console.log(`[ArweaveAudioClient] 🎧 Selected mix: ${selectedArtist.artistName} - "${mix.mixTitle}" (${mix.mixDuration})`);
           }
           
-          // Parse total duration of source audio
-          const totalDurationSeconds = this.parseDuration(audioDuration);
+          // For tracks (30 sec max snippets), download the full file directly
+          // For mixes, parse duration and extract a segment
+          let totalDurationSeconds, startTime, finalPath, fileName;
           
-          // Generate output path
-          const fileName = `arweave_clip_${selectedArtist.artistName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.m4a`;
-          const finalPath = path.join(this.outputDir, fileName);
+          if (useTrax) {
+            // Tracks are already 30 sec max snippets - download full file
+            fileName = `track_${audioTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.m4a`;
+            finalPath = path.join(this.outputDir, fileName);
+            totalDurationSeconds = requestedDuration; // Use requested duration (usually 30s)
+            startTime = 0; // Start from beginning for tracks
+            
+            console.log(`[ArweaveAudioClient] Downloading full track (30s max snippet): ${audioTitle}`);
+          } else {
+            // Mixes: parse duration and extract a segment
+            totalDurationSeconds = this.parseDuration(audioDuration);
+            fileName = `arweave_clip_${selectedArtist.artistName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.m4a`;
+            finalPath = path.join(this.outputDir, fileName);
+            
+            // Calculate random start time for variety
+            const maxStartTime = Math.max(0, totalDurationSeconds - requestedDuration - 10);
+            startTime = totalDurationSeconds > requestedDuration ? 
+              Math.floor(Math.random() * maxStartTime) : 0;
+            
+            console.log(`[ArweaveAudioClient] Random sampling: ${requestedDuration}s from ${totalDurationSeconds}s total, starting at ${startTime}s`);
+          }
 
-          // Calculate random start time for variety
-          const maxStartTime = Math.max(0, totalDurationSeconds - requestedDuration - 10);
-          const startTime = totalDurationSeconds > requestedDuration ? 
-            Math.floor(Math.random() * maxStartTime) : 0;
-          
-          console.log(`[ArweaveAudioClient] Random sampling: ${requestedDuration}s from ${totalDurationSeconds}s total, starting at ${startTime}s`);
-
-          // Create metadata
+          // Create metadata - always use BAI-EE for tracks
           const metadata = {
-            artist: selectedArtist.artistName,
+            artist: useTrax ? 'BAI-EE' : selectedArtist.artistName,
             title: audioTitle,
             album: `${audioDateYear} ${useTrax ? 'Track' : 'Mix'}`,
             genre: selectedArtist.artistGenre
           };
 
           try {
-            // Download only the requested segment
-            await this.downloadSegmentDirectly(
-              audioUrl,
-              startTime,
-              requestedDuration,
-              finalPath,
-              fadeInDuration,
-              fadeOutDuration,
-              metadata
-            );
+            if (useTrax) {
+              // For tracks, download the full file directly (it's already a 30s snippet)
+              // Use axios to download directly since we don't need to segment
+              console.log(`[ArweaveAudioClient] Downloading track directly from: ${audioUrl}`);
+              const response = await axios({
+                url: audioUrl,
+                method: 'GET',
+                responseType: 'stream',
+                timeout: 60000
+              });
+              
+              const writer = fs.createWriteStream(finalPath);
+              response.data.pipe(writer);
+              
+              await new Promise((resolve, reject) => {
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+              });
+              
+              console.log(`[ArweaveAudioClient] Track downloaded: ${fileName}`);
+            } else {
+              // For mixes, download only the requested segment
+              await this.downloadSegmentDirectly(
+                audioUrl,
+                startTime,
+                requestedDuration,
+                finalPath,
+                fadeInDuration,
+                fadeOutDuration,
+                metadata
+              );
+            }
             
             // Verify the file was created and has content
             const fileStats = await fs.stat(finalPath);
@@ -677,10 +712,10 @@ class ArweaveAudioClient {
             return {
               audioPath: finalPath,
               fileName: fileName,
-              artist: metadata.artist,
+              artist: useTrax ? 'BAI-EE' : metadata.artist, // Always BAI-EE for tracks
               artistData: selectedArtist,
-              mixTitle: audioTitle, // Keep mixTitle for backward compatibility
-              trackTitle: useTrax ? audioTitle : undefined, // Add trackTitle for trax
+              mixTitle: useTrax ? undefined : audioTitle, // Only for mixes
+              trackTitle: useTrax ? audioTitle : undefined, // Track name from audio file
               mixData: useTrax ? undefined : audioSource, // Keep mixData for backward compatibility
               trackData: useTrax ? audioSource : undefined, // Add trackData for trax
               duration: requestedDuration,

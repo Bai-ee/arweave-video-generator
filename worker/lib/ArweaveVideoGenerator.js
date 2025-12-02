@@ -337,30 +337,61 @@ class ArweaveVideoGenerator {
             const audioArweaveUrl = audioResult.arweaveUrl;
 
             // Step 2: Create 30-second video from 5-second segments
-            console.log('[ArweaveVideoGenerator] Step 2: Creating video from skyline segments...');
+            console.log('[ArweaveVideoGenerator] Step 2: Creating video from segments...');
             let backgroundPath = null;
             let useVideoBackground = false;
             
-            // Load all videos from skyline and chicago-skyline-videos folders (grouped structure)
-            const groupedVideos = await this.videoLoader.loadAllSkylineVideos(true);
-            const totalVideos = groupedVideos.skyline.length + groupedVideos.chicago.length;
+            // Check if we're using tracks (original music) or mixes (DJ mixes)
+            const useTrax = options.useTrax === true;
             
-            if (totalVideos > 0) {
-                console.log(`[ArweaveVideoGenerator] Found ${groupedVideos.skyline.length} skyline + ${groupedVideos.chicago.length} chicago = ${totalVideos} total videos`);
-                console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with 50/50 distribution...`);
+            if (useTrax) {
+                // For tracks: Load videos from equipment, decks, skyline, chicago-skyline, neighborhood folders
+                console.log('[ArweaveVideoGenerator] Loading track videos from multiple folders...');
+                const groupedVideos = await this.videoLoader.loadTrackVideos(true);
+                const totalVideos = groupedVideos.equipment.length + groupedVideos.decks.length + 
+                                   groupedVideos.skyline.length + groupedVideos.chicago.length + 
+                                   groupedVideos.neighborhood.length;
                 
-                try {
-                    // Create 30-second video from random 5-second segments with 50/50 distribution
-                    backgroundPath = await this.segmentCompositor.createVideoFromSegments(
-                        groupedVideos, // Pass grouped structure for 50/50 selection
-                        duration,
-                        5 // 5-second segments
-                    );
-                    useVideoBackground = true;
-                    console.log('[ArweaveVideoGenerator] ✅ Created video background from skyline segments (50/50 distribution)');
-                } catch (error) {
-                    console.error('[ArweaveVideoGenerator] Failed to create segment video:', error.message);
-                    // Fall through to DALL-E or simple background
+                if (totalVideos > 0) {
+                    console.log(`[ArweaveVideoGenerator] Found ${groupedVideos.equipment.length} equipment + ${groupedVideos.decks.length} decks + ${groupedVideos.skyline.length} skyline + ${groupedVideos.chicago.length} chicago + ${groupedVideos.neighborhood.length} neighborhood = ${totalVideos} total videos`);
+                    console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with equal distribution across 5 folders...`);
+                    
+                    try {
+                        // Create 30-second video from random 5-second segments with equal distribution
+                        backgroundPath = await this.segmentCompositor.createVideoFromSegments(
+                            groupedVideos, // Pass grouped structure for equal distribution
+                            duration,
+                            5 // 5-second segments
+                        );
+                        useVideoBackground = true;
+                        console.log('[ArweaveVideoGenerator] ✅ Created video background from track videos (equal distribution)');
+                    } catch (error) {
+                        console.error('[ArweaveVideoGenerator] Failed to create segment video:', error.message);
+                        // Fall through to DALL-E or simple background
+                    }
+                }
+            } else {
+                // For mixes: Load videos from skyline and chicago-skyline-videos folders (grouped structure)
+                const groupedVideos = await this.videoLoader.loadAllSkylineVideos(true);
+                const totalVideos = groupedVideos.skyline.length + groupedVideos.chicago.length;
+                
+                if (totalVideos > 0) {
+                    console.log(`[ArweaveVideoGenerator] Found ${groupedVideos.skyline.length} skyline + ${groupedVideos.chicago.length} chicago = ${totalVideos} total videos`);
+                    console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with 50/50 distribution...`);
+                    
+                    try {
+                        // Create 30-second video from random 5-second segments with 50/50 distribution
+                        backgroundPath = await this.segmentCompositor.createVideoFromSegments(
+                            groupedVideos, // Pass grouped structure for 50/50 selection
+                            duration,
+                            5 // 5-second segments
+                        );
+                        useVideoBackground = true;
+                        console.log('[ArweaveVideoGenerator] ✅ Created video background from skyline segments (50/50 distribution)');
+                    } catch (error) {
+                        console.error('[ArweaveVideoGenerator] Failed to create segment video:', error.message);
+                        // Fall through to DALL-E or simple background
+                    }
                 }
             }
             
