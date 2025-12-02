@@ -175,8 +175,8 @@ export class VideoCompositor {
         // Process text layer
         const outputLabel = `[text_layer${textLayerIndex}]`;
 
-        // Calculate font size based on layer height
-        const fontSize = Math.round(layer.size.height * 0.7); // 70% of layer height
+        // Calculate font size based on layer height (or use stored fontSize)
+        const fontSize = layer.fontSize || Math.round(layer.size.height * 0.7); // 70% of layer height or stored value
 
         // Escape text for FFmpeg
         const escapedText = layer.source.replace(/'/g, "\\'").replace(/:/g, "\\:");
@@ -191,13 +191,17 @@ export class VideoCompositor {
         // Create drawtext filter with centering if needed
         const opacity = Math.round((layer.opacity || 1.0) * 255);
         
+        // Get text color from layer config (default to black)
+        const textColor = layer.textColor || '0x000000';
+        const actualFontSize = layer.fontSize || fontSize;
+        
         // Build drawtext parameters
         const drawtextParams = [
           `text='${escapedText}'`,
-          `fontsize=${fontSize}`,
-          `fontcolor=0x000000`, // Black text
-          `borderw=4`, // Thicker border
-          `bordercolor=0xFFFFFF`, // White border
+          `fontsize=${actualFontSize}`,
+          `fontcolor=${textColor}`, // Use layer's text color (default black)
+          `borderw=2`, // Thinner border for small text
+          `bordercolor=0x000000`, // Black border for white text visibility
           isCentered ? `x=(w-text_w)/2` : `x=${xPos}`,
           `y=${yPos}`,
           `alpha=${opacity}`
@@ -213,7 +217,21 @@ export class VideoCompositor {
           console.log(`[VideoCompositor] ✅ Using custom font: ${path.basename(layer.fontPath)}`);
         }
         
-        const textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
+        // Add timing if specified (enable text only at startTime with fade-in)
+        let textFilter;
+        if (layer.startTime !== null && layer.startTime !== undefined) {
+          const endTime = layer.startTime + (layer.duration || config.duration);
+          // Use enable expression with fade-in: opacity goes from 0 to full over 1 second
+          // Formula: opacity = clamp((t - startTime) / 1.0, 0, 1) * fullOpacity
+          const fadeDuration = 1.0; // 1 second fade-in
+          const fadeAlpha = `clamp((t-${layer.startTime})/${fadeDuration},0,1)*${opacity}`;
+          drawtextParams[drawtextParams.length - 1] = `alpha='${fadeAlpha}'`; // Replace alpha with dynamic fade
+          drawtextParams.push(`enable='between(t,${layer.startTime},${endTime})'`);
+          textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
+        } else {
+          textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
+        }
+        
         console.log(`[VideoCompositor] Text filter for layer ${textLayerIndex}: ${textFilter.substring(0, 150)}...`);
         filters.push(textFilter);
         currentInput = outputLabel;

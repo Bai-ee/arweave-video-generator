@@ -436,53 +436,125 @@ class ArweaveVideoGenerator {
                 // Continue without logo if it fails
             }
 
-            // Step 4: Add "Mix Archive" text layer
-            console.log('[ArweaveVideoGenerator] Step 4: Adding Mix Archive text...');
-            const textContent = 'Mix Archive';
-            const fontSize = Math.round(height * 0.1); // 10% of video height
-            const textCenterX = width / 2; // Canvas center
-            const textCenterY = height * 0.5; // 50% down from top
+            // Step 4: Add second logo at 40% down from top, appearing at 10 seconds
+            console.log('[ArweaveVideoGenerator] Step 4: Loading second logo for 10s overlay from Firebase...');
+            const secondLogoStartTime = 10; // 10 seconds into video
+            let secondLogoCachePath = null; // Declare outside try block for cleanup
             
-            // Get font path - try multiple possible locations
-            const possibleFontPaths = [
-                path.join(process.cwd(), 'worker', 'assets', 'fonts', 'ShantellSans-Bold.ttf'),
-                path.join(process.cwd(), 'worker', 'assets', 'fonts', 'ShantellSans-Regular.ttf'),
-                path.join(__dirname, '..', 'assets', 'fonts', 'ShantellSans-Bold.ttf'),
-                path.join(__dirname, '..', 'assets', 'fonts', 'ShantellSans-Regular.ttf'),
-                path.join(process.cwd(), 'assets', 'fonts', 'ShantellSans-Bold.ttf'),
-                path.join(process.cwd(), 'assets', 'fonts', 'ShantellSans-Regular.ttf')
-            ];
-            
-            // Check if font exists, try each path
-            let actualFontPath = null;
-            for (const fontPath of possibleFontPaths) {
-                if (await fs.pathExists(fontPath)) {
-                    actualFontPath = fontPath;
-                    console.log(`[ArweaveVideoGenerator] Found font at: ${fontPath}`);
-                    break;
-                }
-            }
-            
-            if (actualFontPath) {
-                console.log(`[ArweaveVideoGenerator] Using font: ${path.basename(actualFontPath)}`);
+            try {
+                secondLogoCachePath = path.join(this.cacheDir, `second_logo_${Date.now()}.png`);
                 
-                // Add text layer with custom font - HIGHEST z-index to ensure it's on top
-                const textLayer = new LayerConfig(
-                    'text',
-                    textContent,
-                    { x: textCenterX, y: textCenterY },
-                    { width: width, height: fontSize * 2 }, // Full width bounding box
-                    1.0, // Full opacity
-                    100, // HIGHEST z-index (above everything, including serial logo)
-                    1.0, // scale
-                    actualFontPath // Pass font path as 8th parameter
-                );
-                layers.push(textLayer);
-            } else {
-                console.warn(`[ArweaveVideoGenerator] ⚠️ Font not found, skipping text overlay`);
+                // Load logos from Firebase Storage (excluding serial_logo.png)
+                const { getStorage } = await import('../firebase-admin.js');
+                const storage = getStorage();
+                const bucket = storage.bucket();
+                
+                console.log(`[ArweaveVideoGenerator] 📥 Loading logos from Firebase Storage (logos/ folder)...`);
+                const [logoFiles] = await bucket.getFiles({ prefix: 'logos/' });
+                const validLogos = logoFiles.filter(file => {
+                    const fileName = path.basename(file.name);
+                    return (fileName.endsWith('.png') || fileName.endsWith('.svg') || fileName.endsWith('.jpg')) &&
+                           fileName !== 'serial_logo.png' &&
+                           !fileName.endsWith('.keep');
+                });
+                
+                if (validLogos.length > 0) {
+                    const randomLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
+                    const logoFileName = path.basename(randomLogo.name);
+                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${randomLogo.name}`;
+                    
+                    console.log(`[ArweaveVideoGenerator] Selected second logo: ${logoFileName}`);
+                    
+                    // Download and cache logo
+                    const response = await axios({
+                        url: publicUrl,
+                        method: 'GET',
+                        responseType: 'stream'
+                    });
+                    
+                    const writer = fs.createWriteStream(secondLogoCachePath);
+                    response.data.pipe(writer);
+                    
+                    await new Promise((resolve, reject) => {
+                        writer.on('finish', resolve);
+                        writer.on('error', reject);
+                    });
+                    
+                    // Same as serial_logo: 100% width, maintain aspect ratio
+                    const logoWidth = width; // 100% width
+                    const logoHeight = height; // Full height (will maintain aspect ratio)
+                    const logoX = 0; // Start at left edge (100% width fills entire canvas)
+                    // Position at 40% down from top
+                    const logoY = Math.round(height * 0.4); // 40% down from top
+                    
+                    console.log(`[ArweaveVideoGenerator] ✅ Second logo downloaded: ${logoFileName}`);
+                    console.log(`[ArweaveVideoGenerator] Second logo size: ${logoWidth}x${logoHeight}, position: (${logoX}, ${logoY})`);
+                    console.log(`[ArweaveVideoGenerator] Second logo appears at: ${secondLogoStartTime}s`);
+                    console.log(`[ArweaveVideoGenerator] Second logo z-index: 20 (above serial logo at 10)`);
+                    
+                    // Add second logo as timed overlay layer (appears at 10s, stays until end)
+                    layers.push(new LayerConfig(
+                        'image',
+                        secondLogoCachePath,
+                        { x: logoX, y: logoY },
+                        { width: logoWidth, height: logoHeight },
+                        1.0, // Full opacity
+                        20, // z-index (above serial logo at 10, below text)
+                        1.0, // scale
+                        null, // no font path
+                        secondLogoStartTime, // start at 10 seconds
+                        duration - secondLogoStartTime // duration until end (20 seconds)
+                    ));
+                } else {
+                    console.warn(`[ArweaveVideoGenerator] ⚠️ No valid logos found for second logo overlay`);
+                }
+            } catch (error) {
+                console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load second logo from Firebase:`, error.message);
+                // Continue without logo if it fails
             }
 
-            // Step 5: Add random logo overlay at 25 seconds (5 seconds before end)
+            // Step 5: Add white text overlay (Artist, Mix Title, UndergroundExistence.info) at bottom corner
+            console.log('[ArweaveVideoGenerator] Step 5: Adding artist/mix title text overlay...');
+            const textStartTime = 10; // Fade in at 10 seconds
+            const textWidthPercent = 0.15; // 15% of screen width
+            const textWidth = Math.round(width * textWidthPercent);
+            const textFontSize = Math.round(height * 0.03); // Small font (3% of height)
+            
+            // Position at bottom left corner
+            const textX = 10; // Small margin from left edge
+            const textY = height - (textFontSize * 4) - 10; // Bottom with margin (4 lines of text)
+            
+            // Build text content: Artist (line break) Mix Title (line break) UndergroundExistence.info
+            const textContent = `${audioArtist}\n${audioMixTitle}\nUndergroundExistence.info`;
+            
+            // Use system Arial/sans-serif (no custom font for this small text)
+            // FFmpeg will use default font if no fontfile specified
+            console.log(`[ArweaveVideoGenerator] Text content: ${textContent.replace(/\n/g, ' | ')}`);
+            console.log(`[ArweaveVideoGenerator] Text position: (${textX}, ${textY}), size: ${textWidth}x${textFontSize * 4}`);
+            console.log(`[ArweaveVideoGenerator] Text fades in at: ${textStartTime}s`);
+            console.log(`[ArweaveVideoGenerator] Text z-index: 400 (HIGHEST - above everything)`);
+            
+            // Add text layer with white color, small font, fade-in at 10 seconds
+            // Note: drawtext doesn't support fontcolor directly in enable expression, so we'll use white text
+            // We'll need to modify VideoCompositor to support white text color
+            const textLayer = new LayerConfig(
+                'text',
+                textContent,
+                { x: textX, y: textY },
+                { width: textWidth, height: textFontSize * 4 }, // Height for 3 lines
+                1.0, // Full opacity (fade handled by enable expression)
+                400, // HIGHEST z-index (above everything including logos)
+                1.0, // scale
+                null, // No custom font - use system Arial/sans-serif
+                textStartTime, // start at 10 seconds
+                duration - textStartTime // duration until end (20 seconds)
+            );
+            // Store text color in layer config (we'll need to add this to LayerConfig)
+            textLayer.textColor = '0xFFFFFF'; // White text
+            textLayer.fontSize = textFontSize; // Store font size
+            layers.push(textLayer);
+
+            // Step 6: Add random logo overlay at 25 seconds (5 seconds before end)
             console.log('[ArweaveVideoGenerator] Step 5: Loading random logo for end overlay from Firebase...');
             const logoStartTime = duration - 5; // 25 seconds for 30s video
             let logoCachePath = null; // Declare outside try block for cleanup
@@ -574,7 +646,7 @@ class ArweaveVideoGenerator {
 
             // Create composition config with filter
             console.log(`[ArweaveVideoGenerator] 🎨 Video filter received: ${videoFilter ? `"${videoFilter.substring(0, 100)}..."` : 'null (will use default B&W)'}`);
-            console.log(`[ArweaveVideoGenerator] 📊 Layers count: ${layers.length} (serial_logo + text${logoCachePath ? ' + end_logo' : ''})`);
+            console.log(`[ArweaveVideoGenerator] 📊 Layers count: ${layers.length} (serial_logo + second_logo + artist_text${logoCachePath ? ' + end_logo' : ''})`);
             
             const compositionConfig = new CompositionConfig(
                 backgroundPath,
@@ -616,6 +688,10 @@ class ArweaveVideoGenerator {
                 // Cleanup end logo cache
                 if (logoCachePath && await fs.pathExists(logoCachePath)) {
                     await fs.remove(logoCachePath);
+                }
+                // Cleanup second logo cache
+                if (secondLogoCachePath && await fs.pathExists(secondLogoCachePath)) {
+                    await fs.remove(secondLogoCachePath);
                 }
             } catch (cleanupError) {
                 console.warn('[ArweaveVideoGenerator] Cleanup warning:', cleanupError.message);
