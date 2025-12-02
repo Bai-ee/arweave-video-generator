@@ -27,25 +27,31 @@ export default async function handler(req, res) {
 
     const { folder } = req.query;
 
-    // Define available folders
-    const availableFolders = ['skyline', 'artist', 'decks', 'equipment', 'family', 'neighborhood', 'assets/chicago-skyline-videos'];
+    // Define available folders (videos and images)
+    const availableFolders = ['skyline', 'artist', 'decks', 'equipment', 'family', 'neighborhood', 'assets/chicago-skyline-videos', 'logos', 'paper_backgrounds'];
 
     if (folder) {
-      // Get videos from a specific folder
+      // Get files from a specific folder (videos or images)
       const folderPath = folder.endsWith('/') ? folder : `${folder}/`;
       const [files] = await bucket.getFiles({ prefix: folderPath });
 
-      // Filter for video files
+      // Filter for video and image files based on folder type
       const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
-      const videoFiles = files.filter(file => {
+      const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
+      
+      // Determine if this is an image folder or video folder
+      const isImageFolder = folder === 'logos' || folder === 'paper_backgrounds';
+      const allowedExtensions = isImageFolder ? imageExtensions : videoExtensions;
+      
+      const filteredFiles = files.filter(file => {
         const fileName = file.name.toLowerCase();
-        return videoExtensions.some(ext => fileName.endsWith(ext)) && 
+        return allowedExtensions.some(ext => fileName.endsWith(ext)) && 
                !fileName.endsWith('.keep');
       });
 
-      // Generate URLs for each video (try public first, then signed URL)
+      // Generate URLs for each file (try public first, then signed URL)
       const videos = await Promise.all(
-        videoFiles.map(async (file) => {
+        filteredFiles.map(async (file) => {
           const fileName = file.name.split('/').pop();
           let publicUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
           
@@ -86,17 +92,23 @@ export default async function handler(req, res) {
           const folderPath = folderName.endsWith('/') ? folderName : `${folderName}/`;
           const [files] = await bucket.getFiles({ prefix: folderPath });
           
+          // Determine file type based on folder
+          const isImageFolder = folderName === 'logos' || folderName === 'paper_backgrounds';
           const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
-          const videoCount = files.filter(file => {
+          const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
+          const allowedExtensions = isImageFolder ? imageExtensions : videoExtensions;
+          
+          const fileCount = files.filter(file => {
             const fileName = file.name.toLowerCase();
-            return videoExtensions.some(ext => fileName.endsWith(ext)) && 
+            return allowedExtensions.some(ext => fileName.endsWith(ext)) && 
                    !fileName.endsWith('.keep');
           }).length;
 
           return {
             name: folderName,
-            count: videoCount,
-            displayName: folderName.replace('assets/', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+            count: fileCount,
+            displayName: folderName.replace('assets/', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            type: isImageFolder ? 'image' : 'video'
           };
         })
       );

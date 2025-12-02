@@ -553,7 +553,9 @@
         'family': '👨‍👩‍👧‍👦',
         'neighborhood': '🏘️',
         'chicago-skyline-videos': '🏙️',
-        'assets/chicago-skyline-videos': '🏙️'
+        'assets/chicago-skyline-videos': '🏙️',
+        'logos': '🖼️',
+        'paper_backgrounds': '📄'
       };
       
       // Add all folders as options
@@ -1302,18 +1304,22 @@
         return;
       }
 
-      // Validate all files
-      const allowedTypes = ['.mov', '.mp4', '.m4v', '.avi', '.mkv', '.webm'];
-      const maxSize = 500 * 1024 * 1024; // 500MB
+      // Validate files based on folder type
+      // Determine if this is an image folder or video folder
+      const isImageFolder = folder === 'logos' || folder === 'paper_backgrounds';
+      const allowedTypes = isImageFolder 
+        ? ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'] 
+        : ['.mov', '.mp4', '.m4v', '.avi', '.mkv', '.webm'];
+      const maxSize = isImageFolder ? 50 * 1024 * 1024 : 500 * 1024 * 1024; // 50MB for images, 500MB for videos
       const invalidFiles = [];
       
       files.forEach((file, index) => {
         const fileExt = '.' + file.name.split('.').pop().toLowerCase();
         if (!allowedTypes.includes(fileExt)) {
-          invalidFiles.push(`${file.name} (invalid type)`);
+          invalidFiles.push(`${file.name} (invalid type - ${isImageFolder ? 'images only' : 'videos only'})`);
         }
         if (file.size > maxSize) {
-          invalidFiles.push(`${file.name} (exceeds 500MB)`);
+          invalidFiles.push(`${file.name} (exceeds ${isImageFolder ? '50MB' : '500MB'})`);
         }
       });
 
