@@ -80,7 +80,8 @@ async function processVideoJob(jobId, jobData, documentId = null) {
       fadeIn: 2,
       fadeOut: 2,
       videoFilter: videoFilter,
-      useTrax: jobData.useTrax === true // Pass useTrax flag to video generator
+      useTrax: jobData.useTrax === true, // Pass useTrax flag to video generator
+      selectedFolders: jobData.selectedFolders || [] // Pass selected folders array
     });
 
     if (!videoResult.success) {

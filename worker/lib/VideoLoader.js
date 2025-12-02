@@ -150,8 +150,10 @@ export class VideoLoader {
     /**
      * Load video file references (metadata only, no download)
      * Returns grouped structure with file references that can be downloaded on-demand
+     * @param {boolean} returnGrouped - Whether to return grouped structure or flat array
+     * @param {string[]} selectedFolders - Optional array of folder names to filter by (empty = all folders)
      */
-    async loadTrackVideoReferences(returnGrouped = true) {
+    async loadTrackVideoReferences(returnGrouped = true, selectedFolders = []) {
         try {
             const storage = getStorage();
             const bucket = storage.bucket();
@@ -164,51 +166,74 @@ export class VideoLoader {
             // Support multiple video formats
             const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
 
+            // Helper function to check if a folder should be included
+            const shouldIncludeFolder = (folderName) => {
+                if (selectedFolders.length === 0) return true; // No filter = include all
+                // Check if folder name matches any selected folder (handle both 'skyline' and 'assets/chicago-skyline-videos')
+                return selectedFolders.some(selected => {
+                    const normalizedSelected = selected.replace('assets/', '');
+                    const normalizedFolder = folderName.replace('assets/', '');
+                    return normalizedSelected === normalizedFolder || 
+                           selected.includes(folderName) || 
+                           folderName.includes(selected);
+                });
+            };
+
             // Get file references from each folder (metadata only, no download)
-            console.log(`[VideoLoader] 📋 Getting video file references from equipment folder...`);
-            const [equipmentFileList] = await bucket.getFiles({ prefix: 'equipment/' });
-            const equipmentFiltered = equipmentFileList.filter(file => {
-                const fileName = file.name.toLowerCase();
-                return videoExtensions.some(ext => fileName.endsWith(ext)) && !fileName.endsWith('.keep');
-            });
-            equipmentFiles.push(...equipmentFiltered);
-            console.log(`[VideoLoader] Found ${equipmentFiles.length} videos in equipment folder`);
+            if (shouldIncludeFolder('equipment')) {
+                console.log(`[VideoLoader] 📋 Getting video file references from equipment folder...`);
+                const [equipmentFileList] = await bucket.getFiles({ prefix: 'equipment/' });
+                const equipmentFiltered = equipmentFileList.filter(file => {
+                    const fileName = file.name.toLowerCase();
+                    return videoExtensions.some(ext => fileName.endsWith(ext)) && !fileName.endsWith('.keep');
+                });
+                equipmentFiles.push(...equipmentFiltered);
+                console.log(`[VideoLoader] Found ${equipmentFiles.length} videos in equipment folder`);
+            }
 
-            console.log(`[VideoLoader] 📋 Getting video file references from decks folder...`);
-            const [decksFileList] = await bucket.getFiles({ prefix: 'decks/' });
-            const decksFiltered = decksFileList.filter(file => {
-                const fileName = file.name.toLowerCase();
-                return videoExtensions.some(ext => fileName.endsWith(ext)) && !fileName.endsWith('.keep');
-            });
-            decksFiles.push(...decksFiltered);
-            console.log(`[VideoLoader] Found ${decksFiles.length} videos in decks folder`);
+            if (shouldIncludeFolder('decks')) {
+                console.log(`[VideoLoader] 📋 Getting video file references from decks folder...`);
+                const [decksFileList] = await bucket.getFiles({ prefix: 'decks/' });
+                const decksFiltered = decksFileList.filter(file => {
+                    const fileName = file.name.toLowerCase();
+                    return videoExtensions.some(ext => fileName.endsWith(ext)) && !fileName.endsWith('.keep');
+                });
+                decksFiles.push(...decksFiltered);
+                console.log(`[VideoLoader] Found ${decksFiles.length} videos in decks folder`);
+            }
 
-            console.log(`[VideoLoader] 📋 Getting video file references from skyline folder...`);
-            const [skylineFileList] = await bucket.getFiles({ prefix: 'skyline/' });
-            const skylineFiltered = skylineFileList.filter(file => {
-                const fileName = file.name.toLowerCase();
-                return videoExtensions.some(ext => fileName.endsWith(ext)) && !fileName.endsWith('.keep');
-            });
-            skylineFiles.push(...skylineFiltered);
-            console.log(`[VideoLoader] Found ${skylineFiles.length} videos in skyline folder`);
+            if (shouldIncludeFolder('skyline')) {
+                console.log(`[VideoLoader] 📋 Getting video file references from skyline folder...`);
+                const [skylineFileList] = await bucket.getFiles({ prefix: 'skyline/' });
+                const skylineFiltered = skylineFileList.filter(file => {
+                    const fileName = file.name.toLowerCase();
+                    return videoExtensions.some(ext => fileName.endsWith(ext)) && !fileName.endsWith('.keep');
+                });
+                skylineFiles.push(...skylineFiltered);
+                console.log(`[VideoLoader] Found ${skylineFiles.length} videos in skyline folder`);
+            }
 
-            console.log(`[VideoLoader] 📋 Getting video file references from chicago-skyline-videos folder...`);
-            const [chicagoFileList] = await bucket.getFiles({ prefix: 'assets/chicago-skyline-videos/' });
-            const chicagoFiltered = chicagoFileList.filter(file => {
-                const fileName = file.name.toLowerCase();
-                return videoExtensions.some(ext => fileName.endsWith(ext));
-            });
-            chicagoFiles.push(...chicagoFiltered);
-            console.log(`[VideoLoader] Found ${chicagoFiles.length} videos in chicago-skyline-videos folder`);
+            if (shouldIncludeFolder('chicago-skyline-videos') || shouldIncludeFolder('assets/chicago-skyline-videos')) {
+                console.log(`[VideoLoader] 📋 Getting video file references from chicago-skyline-videos folder...`);
+                const [chicagoFileList] = await bucket.getFiles({ prefix: 'assets/chicago-skyline-videos/' });
+                const chicagoFiltered = chicagoFileList.filter(file => {
+                    const fileName = file.name.toLowerCase();
+                    return videoExtensions.some(ext => fileName.endsWith(ext));
+                });
+                chicagoFiles.push(...chicagoFiltered);
+                console.log(`[VideoLoader] Found ${chicagoFiles.length} videos in chicago-skyline-videos folder`);
+            }
 
-            console.log(`[VideoLoader] 📋 Getting video file references from neighborhood folder...`);
-            const [neighborhoodFileList] = await bucket.getFiles({ prefix: 'neighborhood/' });
-            const neighborhoodFiltered = neighborhoodFileList.filter(file => {
-                const fileName = file.name.toLowerCase();
-                return videoExtensions.some(ext => fileName.endsWith(ext)) && !fileName.endsWith('.keep');
-            });
-            neighborhoodFiles.push(...neighborhoodFiltered);
-            console.log(`[VideoLoader] Found ${neighborhoodFiles.length} videos in neighborhood folder`);
+            if (shouldIncludeFolder('neighborhood')) {
+                console.log(`[VideoLoader] 📋 Getting video file references from neighborhood folder...`);
+                const [neighborhoodFileList] = await bucket.getFiles({ prefix: 'neighborhood/' });
+                const neighborhoodFiltered = neighborhoodFileList.filter(file => {
+                    const fileName = file.name.toLowerCase();
+                    return videoExtensions.some(ext => fileName.endsWith(ext)) && !fileName.endsWith('.keep');
+                });
+                neighborhoodFiles.push(...neighborhoodFiltered);
+                console.log(`[VideoLoader] Found ${neighborhoodFiles.length} videos in neighborhood folder`);
+            }
 
             const total = equipmentFiles.length + decksFiles.length + skylineFiles.length + chicagoFiles.length + neighborhoodFiles.length;
             console.log(`[VideoLoader] ✅ Found ${equipmentFiles.length} equipment + ${decksFiles.length} decks + ${skylineFiles.length} skyline + ${chicagoFiles.length} chicago + ${neighborhoodFiles.length} neighborhood = ${total} total video references`);
@@ -278,82 +303,103 @@ export class VideoLoader {
             const skylineVideos = [];
             const chicagoVideos = [];
 
-            // Load from skyline folder (user uploads)
-            console.log(`[VideoLoader] 📥 Loading videos from skyline folder...`);
-            const [skylineFiles] = await bucket.getFiles({ prefix: 'skyline/' });
             // Support multiple video formats: .mp4, .mov, .m4v, .avi, .mkv, .webm
             const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
-            const skylineFileList = skylineFiles.filter(file => {
-                const fileName = file.name.toLowerCase();
-                const isVideo = videoExtensions.some(ext => fileName.endsWith(ext));
-                const isNotKeep = !fileName.endsWith('.keep');
-                return isVideo && isNotKeep;
-            });
-            console.log(`[VideoLoader] Found ${skylineFileList.length} videos in skyline folder`);
+            
+            // Helper function to check if a folder should be included
+            const shouldIncludeFolder = (folderName) => {
+                if (selectedFolders.length === 0) return true; // No filter = include all
+                return selectedFolders.some(selected => {
+                    const normalizedSelected = selected.replace('assets/', '');
+                    const normalizedFolder = folderName.replace('assets/', '');
+                    return normalizedSelected === normalizedFolder || 
+                           selected.includes(folderName) || 
+                           folderName.includes(selected);
+                });
+            };
+            
+            // Initialize file lists
+            let skylineFileList = [];
+            let chicagoFileList = [];
 
-            // Load from chicago-skyline-videos folder
-            console.log(`[VideoLoader] 📥 Loading videos from chicago-skyline-videos folder...`);
-            const [chicagoFiles] = await bucket.getFiles({ prefix: 'assets/chicago-skyline-videos/' });
-            // Support multiple video formats: .mp4, .mov, .m4v, .avi, .mkv, .webm
-            const chicagoFileList = chicagoFiles.filter(file => {
-                const fileName = file.name.toLowerCase();
-                return videoExtensions.some(ext => fileName.endsWith(ext));
-            });
-            console.log(`[VideoLoader] Found ${chicagoFileList.length} videos in chicago-skyline-videos folder`);
+            // Load from skyline folder (user uploads) - if selected
+            if (shouldIncludeFolder('skyline')) {
+                console.log(`[VideoLoader] 📥 Loading videos from skyline folder...`);
+                const [skylineFiles] = await bucket.getFiles({ prefix: 'skyline/' });
+                const skylineFileList = skylineFiles.filter(file => {
+                    const fileName = file.name.toLowerCase();
+                    const isVideo = videoExtensions.some(ext => fileName.endsWith(ext));
+                    const isNotKeep = !fileName.endsWith('.keep');
+                    return isVideo && isNotKeep;
+                });
+                console.log(`[VideoLoader] Found ${skylineFileList.length} videos in skyline folder`);
+                
+                // Download and cache skyline videos
+                for (const file of skylineFileList) {
+                    const fileName = path.basename(file.name);
+                    const cacheKey = `skyline_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    const cachedPath = path.join(this.cacheDir, cacheKey);
 
-            // Download and cache skyline videos
-            for (const file of skylineFileList) {
-                const fileName = path.basename(file.name);
-                const cacheKey = `skyline_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
-                const cachedPath = path.join(this.cacheDir, cacheKey);
+                    // Check cache first
+                    if (await fs.pathExists(cachedPath)) {
+                        skylineVideos.push(cachedPath);
+                        continue;
+                    }
 
-                // Check cache first
-                if (await fs.pathExists(cachedPath)) {
-                    skylineVideos.push(cachedPath);
-                    continue;
+                    // Download from Firebase using Admin SDK (works with private files)
+                    try {
+                        const fileRef = bucket.file(file.name);
+                        console.log(`[VideoLoader] 📥 Downloading skyline video: ${fileName}`);
+                        
+                        // Use Admin SDK download method (works with private files)
+                        await fileRef.download({ destination: cachedPath });
+                        
+                        skylineVideos.push(cachedPath);
+                        console.log(`[VideoLoader] ✅ Cached skyline: ${fileName}`);
+                    } catch (error) {
+                        console.warn(`[VideoLoader] ⚠️ Failed to download ${fileName}:`, error.message);
+                    }
                 }
+            }
 
-                // Download from Firebase using Admin SDK (works with private files)
-                try {
-                    const fileRef = bucket.file(file.name);
-                    console.log(`[VideoLoader] 📥 Downloading skyline video: ${fileName}`);
-                    
-                    // Use Admin SDK download method (works with private files)
-                    await fileRef.download({ destination: cachedPath });
-                    
-                    skylineVideos.push(cachedPath);
-                    console.log(`[VideoLoader] ✅ Cached skyline: ${fileName}`);
-                } catch (error) {
-                    console.warn(`[VideoLoader] ⚠️ Failed to download ${fileName}:`, error.message);
+            // Load from chicago-skyline-videos folder - if selected
+            if (shouldIncludeFolder('chicago-skyline-videos') || shouldIncludeFolder('assets/chicago-skyline-videos')) {
+                console.log(`[VideoLoader] 📥 Loading videos from chicago-skyline-videos folder...`);
+                const [chicagoFiles] = await bucket.getFiles({ prefix: 'assets/chicago-skyline-videos/' });
+                const chicagoFileList = chicagoFiles.filter(file => {
+                    const fileName = file.name.toLowerCase();
+                    return videoExtensions.some(ext => fileName.endsWith(ext));
+                });
+                console.log(`[VideoLoader] Found ${chicagoFileList.length} videos in chicago-skyline-videos folder`);
+                
+                // Download and cache chicago videos
+                for (const file of chicagoFileList) {
+                    const fileName = path.basename(file.name);
+                    const cacheKey = `chicago_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    const cachedPath = path.join(this.cacheDir, cacheKey);
+
+                    // Check cache first
+                    if (await fs.pathExists(cachedPath)) {
+                        chicagoVideos.push(cachedPath);
+                        continue;
+                    }
+
+                    // Download from Firebase using Admin SDK (works with private files)
+                    try {
+                        const fileRef = bucket.file(file.name);
+                        console.log(`[VideoLoader] 📥 Downloading chicago video: ${fileName}`);
+                        
+                        // Use Admin SDK download method (works with private files)
+                        await fileRef.download({ destination: cachedPath });
+                        
+                        chicagoVideos.push(cachedPath);
+                        console.log(`[VideoLoader] ✅ Cached chicago: ${fileName}`);
+                    } catch (error) {
+                        console.warn(`[VideoLoader] ⚠️ Failed to download ${fileName}:`, error.message);
+                    }
                 }
             }
 
-            // Download and cache chicago videos
-            for (const file of chicagoFileList) {
-                const fileName = path.basename(file.name);
-                const cacheKey = `chicago_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
-                const cachedPath = path.join(this.cacheDir, cacheKey);
-
-                // Check cache first
-                if (await fs.pathExists(cachedPath)) {
-                    chicagoVideos.push(cachedPath);
-                    continue;
-                }
-
-                // Download from Firebase using Admin SDK (works with private files)
-                try {
-                    const fileRef = bucket.file(file.name);
-                    console.log(`[VideoLoader] 📥 Downloading chicago video: ${fileName}`);
-                    
-                    // Use Admin SDK download method (works with private files)
-                    await fileRef.download({ destination: cachedPath });
-                    
-                    chicagoVideos.push(cachedPath);
-                    console.log(`[VideoLoader] ✅ Cached chicago: ${fileName}`);
-                } catch (error) {
-                    console.warn(`[VideoLoader] ⚠️ Failed to download ${fileName}:`, error.message);
-                }
-            }
 
             const totalVideos = skylineVideos.length + chicagoVideos.length;
             console.log(`[VideoLoader] ✅ Loaded ${skylineVideos.length} skyline + ${chicagoVideos.length} chicago = ${totalVideos} total videos`);

@@ -439,6 +439,8 @@
     let selectedAudioSource = null; // 'mixes' or 'tracks'
     let selectedArtist = 'random'; // Selected artist (or 'random')
     let availableArtists = []; // List of available artists
+    let selectedFolders = new Set(); // Set of selected folder names
+    let availableFolders = []; // List of available folders for current mode
 
     // Video filter definitions (must match backend)
     const VIDEO_FILTERS = {
@@ -459,6 +461,7 @@
       // initializeFilterButtons();
       loadArtists();
       loadVideos();
+      loadAvailableFolders();
       
       // Auto-refresh video list every 30 seconds to catch completed videos
       setInterval(() => {
@@ -507,6 +510,25 @@
     }
 
     /**
+     * Load available folders from API
+     */
+    async function loadAvailableFolders() {
+      try {
+        const response = await fetch('/api/video-folders');
+        const data = await response.json();
+        
+        if (data.success && data.folders) {
+          availableFolders = data.folders;
+          console.log(`✅ Loaded ${availableFolders.length} folders`);
+        } else {
+          console.warn('⚠️ No folders data available');
+        }
+      } catch (error) {
+        console.error('❌ Error loading folders:', error);
+      }
+    }
+
+    /**
      * Select audio source (MIXES or TRACKS)
      */
     function selectAudioSource(source) {
@@ -515,6 +537,7 @@
       const mixesBtn = document.getElementById('audioSourceMixes');
       const tracksBtn = document.getElementById('audioSourceTracks');
       const artistContainer = document.getElementById('artistSelectionContainer');
+      const folderContainer = document.getElementById('folderSelectionContainer');
       
       if (source === 'mixes') {
         mixesBtn.style.background = 'var(--color-yellow-75)';
@@ -522,16 +545,111 @@
         tracksBtn.style.background = '#0a0a0a';
         tracksBtn.style.color = 'var(--color-yellow-75)';
         artistContainer.style.display = 'block';
+        folderContainer.style.display = 'block';
+        
+        // For mixes: skyline and chicago-skyline-videos
+        populateFolderCheckboxes(['skyline', 'chicago-skyline-videos']);
       } else {
         tracksBtn.style.background = 'var(--color-yellow-75)';
         tracksBtn.style.color = 'black';
         mixesBtn.style.background = '#0a0a0a';
         mixesBtn.style.color = 'var(--color-yellow-75)';
         artistContainer.style.display = 'none';
+        folderContainer.style.display = 'block';
         selectedArtist = 'random'; // Reset to random for tracks
+        
+        // For tracks: equipment, decks, skyline, chicago-skyline-videos, neighborhood
+        populateFolderCheckboxes(['equipment', 'decks', 'skyline', 'chicago-skyline-videos', 'neighborhood']);
       }
       
       console.log(`✅ Selected audio source: ${source}`);
+    }
+
+    /**
+     * Populate folder checkboxes based on mode
+     */
+    function populateFolderCheckboxes(folderNames) {
+      const container = document.getElementById('folderCheckboxes');
+      container.innerHTML = '';
+      selectedFolders.clear();
+      
+      // Map folder names to display names
+      const folderDisplayMap = {
+        'equipment': 'Equipment',
+        'decks': 'Decks',
+        'skyline': 'Skyline',
+        'chicago-skyline-videos': 'Chicago Skyline',
+        'neighborhood': 'Neighborhood'
+      };
+      
+      folderNames.forEach(folderName => {
+        const folderInfo = availableFolders.find(f => f.name === folderName || f.name === `assets/${folderName}`);
+        const displayName = folderDisplayMap[folderName] || folderName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const count = folderInfo ? folderInfo.count : 0;
+        const actualFolderName = folderInfo ? folderInfo.name : folderName;
+        
+        const checkboxContainer = document.createElement('div');
+        checkboxContainer.style.cssText = `
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem;
+          background: #1a1a1a;
+          border: 2px solid var(--color-yellow-75);
+          border-radius: 5px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        `;
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `folder-${folderName}`;
+        checkbox.value = actualFolderName;
+        checkbox.checked = true; // Default to all selected
+        selectedFolders.add(actualFolderName);
+        
+        checkbox.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            selectedFolders.add(actualFolderName);
+            checkboxContainer.style.background = '#2a2a2a';
+            checkboxContainer.style.borderColor = 'var(--color-yellow-75)';
+          } else {
+            selectedFolders.delete(actualFolderName);
+            checkboxContainer.style.background = '#1a1a1a';
+            checkboxContainer.style.borderColor = '#666';
+          }
+          console.log(`✅ Selected folders:`, Array.from(selectedFolders));
+        });
+        
+        const label = document.createElement('label');
+        label.htmlFor = `folder-${folderName}`;
+        label.style.cssText = `
+          color: var(--color-yellow-75);
+          font-family: var(--font-mathias);
+          font-size: 0.875rem;
+          font-weight: bold;
+          cursor: pointer;
+          flex: 1;
+        `;
+        label.textContent = `${displayName} (${count})`;
+        
+        checkboxContainer.appendChild(checkbox);
+        checkboxContainer.appendChild(label);
+        checkboxContainer.addEventListener('click', (e) => {
+          if (e.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change'));
+          }
+        });
+        
+        // Set initial style
+        checkboxContainer.style.background = '#2a2a2a';
+        checkboxContainer.style.borderColor = 'var(--color-yellow-75)';
+        
+        container.appendChild(checkboxContainer);
+      });
+      
+      console.log(`✅ Populated ${folderNames.length} folder checkboxes`);
     }
 
     /**
@@ -630,6 +748,12 @@
         return;
       }
       
+      // Check if at least one folder is selected
+      if (selectedFolders.size === 0) {
+        showToast('Please select at least one video folder!', 'error');
+        return;
+      }
+      
       // Filter check removed - always using Hard B&W Street Doc @ 80%
 
       const btn = document.getElementById('generateVideoBtn');
@@ -648,7 +772,8 @@
           duration: 30,
           videoFilter: selectedFilter, // Always 'look_hard_bw_street_doc'
           filterIntensity: filterIntensity, // Always 0.8 (80%)
-          useTrax: selectedAudioSource === 'tracks' // true for tracks, false for mixes
+          useTrax: selectedAudioSource === 'tracks', // true for tracks, false for mixes
+          selectedFolders: Array.from(selectedFolders) // Array of selected folder names
         };
         
         // Add artist selection only for mixes

@@ -300,7 +300,8 @@ class ArweaveVideoGenerator {
             fadeIn = 2,
             fadeOut = 2,
             videoFilter = null,
-            useTrax = false // Flag to use tracks instead of mixes
+            useTrax = false, // Flag to use tracks instead of mixes
+            selectedFolders = [] // Array of selected folder names
         } = options;
 
         console.log(`[ArweaveVideoGenerator] Starting video generation - ${duration}s for ${artist || 'random artist'}`);
@@ -345,15 +346,22 @@ class ArweaveVideoGenerator {
             // useTrax is already extracted from options at line 303
             if (useTrax) {
                 // For tracks: Get video file references (metadata only, no download yet)
-                console.log('[ArweaveVideoGenerator] Getting track video file references from multiple folders...');
-                const groupedVideos = await this.videoLoader.loadTrackVideoReferences(true);
-                const totalVideos = groupedVideos.equipment.length + groupedVideos.decks.length + 
-                                   groupedVideos.skyline.length + groupedVideos.chicago.length + 
-                                   groupedVideos.neighborhood.length;
+                // Filter by selected folders if provided
+                console.log('[ArweaveVideoGenerator] Getting track video file references from selected folders...');
+                const groupedVideos = await this.videoLoader.loadTrackVideoReferences(true, selectedFolders);
+                
+                // Calculate totals from selected folders only
+                const equipmentCount = selectedFolders.length === 0 || selectedFolders.includes('equipment') || selectedFolders.some(f => f.includes('equipment')) ? groupedVideos.equipment.length : 0;
+                const decksCount = selectedFolders.length === 0 || selectedFolders.includes('decks') || selectedFolders.some(f => f.includes('decks')) ? groupedVideos.decks.length : 0;
+                const skylineCount = selectedFolders.length === 0 || selectedFolders.includes('skyline') || selectedFolders.some(f => f.includes('skyline')) ? groupedVideos.skyline.length : 0;
+                const chicagoCount = selectedFolders.length === 0 || selectedFolders.includes('chicago-skyline-videos') || selectedFolders.includes('assets/chicago-skyline-videos') || selectedFolders.some(f => f.includes('chicago')) ? groupedVideos.chicago.length : 0;
+                const neighborhoodCount = selectedFolders.length === 0 || selectedFolders.includes('neighborhood') || selectedFolders.some(f => f.includes('neighborhood')) ? groupedVideos.neighborhood.length : 0;
+                const totalVideos = equipmentCount + decksCount + skylineCount + chicagoCount + neighborhoodCount;
                 
                 if (totalVideos > 0) {
-                    console.log(`[ArweaveVideoGenerator] Found ${groupedVideos.equipment.length} equipment + ${groupedVideos.decks.length} decks + ${groupedVideos.skyline.length} skyline + ${groupedVideos.chicago.length} chicago + ${groupedVideos.neighborhood.length} neighborhood = ${totalVideos} total video references`);
-                    console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with equal distribution across 5 folders (videos will be downloaded on-demand)...`);
+                    console.log(`[ArweaveVideoGenerator] Found ${equipmentCount} equipment + ${decksCount} decks + ${skylineCount} skyline + ${chicagoCount} chicago + ${neighborhoodCount} neighborhood = ${totalVideos} total video references`);
+                    console.log(`[ArweaveVideoGenerator] Selected folders: ${selectedFolders.length > 0 ? selectedFolders.join(', ') : 'all'}`);
+                    console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with equal distribution across selected folders (videos will be downloaded on-demand)...`);
                     
                     try {
                         // Create 30-second video from random 5-second segments with equal distribution
@@ -371,8 +379,10 @@ class ArweaveVideoGenerator {
                     }
                 }
             } else {
-                // For mixes: Load videos from skyline and chicago-skyline-videos folders (grouped structure)
-                const groupedVideos = await this.videoLoader.loadAllSkylineVideos(true);
+                // For mixes: Load videos from selected folders (default: skyline and chicago-skyline-videos)
+                const defaultFolders = selectedFolders.length > 0 ? selectedFolders : ['skyline', 'assets/chicago-skyline-videos'];
+                console.log(`[ArweaveVideoGenerator] Loading mix videos from selected folders: ${defaultFolders.join(', ')}`);
+                const groupedVideos = await this.videoLoader.loadAllSkylineVideos(true, defaultFolders);
                 const totalVideos = groupedVideos.skyline.length + groupedVideos.chicago.length;
                 
                 if (totalVideos > 0) {

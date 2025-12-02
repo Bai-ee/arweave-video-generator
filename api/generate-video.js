@@ -34,6 +34,7 @@ export default async function handler(req, res) {
     const videoFilter = req.body.videoFilter || null; // Optional video filter
     const useTrax = req.body.useTrax === true; // true for tracks, false for mixes
     const filterIntensity = req.body.filterIntensity !== undefined ? parseFloat(req.body.filterIntensity) : 0.4; // Filter intensity 0.0-1.0 (default 0.4 = 40%)
+    const selectedFolders = req.body.selectedFolders || []; // Array of selected folder names
 
     // Generate unique job ID
     const jobId = uuidv4();
@@ -53,6 +54,7 @@ export default async function handler(req, res) {
       videoFilter: videoFilter, // Optional video filter key
       filterIntensity: filterIntensity, // Filter intensity 0.0-1.0
       useTrax: useTrax, // Flag to use tracks instead of mixes
+      selectedFolders: selectedFolders, // Array of selected folder names
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       completedAt: null,
       videoUrl: null,
