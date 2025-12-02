@@ -206,7 +206,7 @@
             style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; font-family: var(--font-mathias);"
           >
             📤 UPLOAD VIDEO
-          </button>
+        </button>
         </div>
       </div>
     </div>
@@ -1294,6 +1294,223 @@
         hideUploadModal();
       }
     });
+
+    // Tab management
+    let currentTab = 'generated';
+    let currentFolder = null;
+
+    /**
+     * Switch between tabs
+     */
+    function switchTab(tab) {
+      currentTab = tab;
+      
+      const generatedTab = document.getElementById('tabGenerated');
+      const previewTab = document.getElementById('tabPreview');
+      const resultsContainer = document.getElementById('resultsContainer');
+      const previewContainer = document.getElementById('previewContainer');
+      
+      if (tab === 'generated') {
+        generatedTab.style.background = 'var(--color-yellow-75)';
+        generatedTab.style.color = 'black';
+        generatedTab.style.border = 'none';
+        previewTab.style.background = '#0a0a0a';
+        previewTab.style.color = 'var(--color-yellow-75)';
+        previewTab.style.border = '2px solid var(--color-yellow-75)';
+        
+        resultsContainer.style.display = 'block';
+        previewContainer.style.display = 'none';
+      } else {
+        previewTab.style.background = 'var(--color-yellow-75)';
+        previewTab.style.color = 'black';
+        previewTab.style.border = 'none';
+        generatedTab.style.background = '#0a0a0a';
+        generatedTab.style.color = 'var(--color-yellow-75)';
+        generatedTab.style.border = '2px solid var(--color-yellow-75)';
+        
+        resultsContainer.style.display = 'none';
+        previewContainer.style.display = 'block';
+        
+        // Load folders if not already loaded
+        if (currentFolder === null) {
+          loadFolders();
+        }
+      }
+    }
+
+    /**
+     * Load folders with video counts
+     */
+    async function loadFolders() {
+      const foldersGrid = document.getElementById('foldersGrid');
+      const foldersLoading = document.getElementById('foldersLoading');
+      
+      foldersGrid.innerHTML = '';
+      foldersLoading.style.display = 'block';
+      
+      try {
+        const response = await fetch('/api/video-folders');
+        const data = await response.json();
+        
+        if (data.success && data.folders) {
+          foldersLoading.style.display = 'none';
+          
+          data.folders.forEach(folder => {
+            const folderCard = document.createElement('div');
+            folderCard.style.cssText = `
+              background: #1a1a1a;
+              border: 2px solid var(--color-yellow-75);
+              border-radius: 8px;
+              padding: 1.5rem;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              text-align: center;
+            `;
+            folderCard.onmouseover = () => {
+              folderCard.style.background = '#2a2a2a';
+              folderCard.style.transform = 'scale(1.02)';
+            };
+            folderCard.onmouseout = () => {
+              folderCard.style.background = '#1a1a1a';
+              folderCard.style.transform = 'scale(1)';
+            };
+            folderCard.onclick = () => openFolder(folder.name);
+            
+            folderCard.innerHTML = `
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
+              <div style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; font-size: 1rem; margin-bottom: 0.5rem;">
+                ${folder.displayName}
+              </div>
+              <div style="color: #888; font-family: var(--font-mathias); font-size: 0.875rem;">
+                ${folder.count} video${folder.count !== 1 ? 's' : ''}
+              </div>
+            `;
+            
+            foldersGrid.appendChild(folderCard);
+          });
+        } else {
+          throw new Error(data.error || 'Failed to load folders');
+        }
+      } catch (error) {
+        console.error('Error loading folders:', error);
+        foldersLoading.innerHTML = `<div style="color: #ef4444;">Error loading folders: ${error.message}</div>`;
+      }
+    }
+
+    /**
+     * Open a folder to view its videos
+     */
+    async function openFolder(folderName) {
+      currentFolder = folderName;
+      
+      const folderListView = document.getElementById('folderListView');
+      const folderDetailView = document.getElementById('folderDetailView');
+      const folderDetailTitle = document.getElementById('folderDetailTitle');
+      const videosGrid = document.getElementById('videosGrid');
+      const videosLoading = document.getElementById('videosLoading');
+      const videosEmpty = document.getElementById('videosEmpty');
+      
+      folderListView.style.display = 'none';
+      folderDetailView.style.display = 'block';
+      
+      // Update title
+      const displayName = folderName.replace('assets/', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      folderDetailTitle.textContent = `📂 ${displayName}`;
+      
+      videosGrid.innerHTML = '';
+      videosLoading.style.display = 'block';
+      videosEmpty.style.display = 'none';
+      
+      try {
+        const response = await fetch(`/api/video-folders?folder=${encodeURIComponent(folderName)}`);
+        const data = await response.json();
+        
+        if (data.success && data.videos) {
+          videosLoading.style.display = 'none';
+          
+          if (data.videos.length === 0) {
+            videosEmpty.style.display = 'block';
+          } else {
+            data.videos.forEach(video => {
+              const videoCard = document.createElement('div');
+              videoCard.style.cssText = `
+                background: #1a1a1a;
+                border: 2px solid var(--color-yellow-75);
+                border-radius: 8px;
+                overflow: hidden;
+                transition: all 0.3s ease;
+              `;
+              videoCard.onmouseover = () => {
+                videoCard.style.transform = 'scale(1.02)';
+                videoCard.style.borderColor = '#fff';
+              };
+              videoCard.onmouseout = () => {
+                videoCard.style.transform = 'scale(1)';
+                videoCard.style.borderColor = 'var(--color-yellow-75)';
+              };
+              
+              const fileSizeMB = (video.size / (1024 * 1024)).toFixed(2);
+              const updatedDate = video.updated ? new Date(video.updated).toLocaleDateString() : 'Unknown';
+              
+              videoCard.innerHTML = `
+                <div style="position: relative; width: 100%; padding-top: 56.25%; background: #0a0a0a;">
+                  <video 
+                    src="${video.publicUrl}" 
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
+                    controls
+                    preload="metadata"
+                  ></video>
+                </div>
+                <div style="padding: 1rem;">
+                  <div style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; font-size: 0.875rem; margin-bottom: 0.5rem; word-break: break-word;">
+                    ${video.name}
+                  </div>
+                  <div style="color: #888; font-family: var(--font-mathias); font-size: 0.75rem; margin-bottom: 0.25rem;">
+                    Size: ${fileSizeMB} MB
+                  </div>
+                  <div style="color: #888; font-family: var(--font-mathias); font-size: 0.75rem;">
+                    Updated: ${updatedDate}
+                  </div>
+                  <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+                    <button 
+                      onclick="window.open('${video.publicUrl}', '_blank')"
+                      style="flex: 1; padding: 0.5rem; background: var(--color-yellow-75); color: black; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
+                    >
+                      View
+                    </button>
+                    <button 
+                      onclick="downloadVideo('${video.publicUrl}', '${video.name}')"
+                      style="flex: 1; padding: 0.5rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
+                    >
+                      Download
+                    </button>
+                  </div>
+                </div>
+              `;
+              
+              videosGrid.appendChild(videoCard);
+            });
+          }
+        } else {
+          throw new Error(data.error || 'Failed to load videos');
+        }
+      } catch (error) {
+        console.error('Error loading folder videos:', error);
+        videosLoading.innerHTML = `<div style="color: #ef4444;">Error loading videos: ${error.message}</div>`;
+      }
+    }
+
+    /**
+     * Go back to folder list
+     */
+    function backToFolders() {
+      currentFolder = null;
+      const folderListView = document.getElementById('folderListView');
+      const folderDetailView = document.getElementById('folderDetailView');
+      
+      folderDetailView.style.display = 'none';
+      folderListView.style.display = 'block';
+    }
   </script>
 
   <!-- Particles.js Library -->
