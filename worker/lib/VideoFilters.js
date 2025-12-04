@@ -76,11 +76,13 @@ function applyFilterIntensity(filterString, intensity = 0.4) {
     return `vignette=${scaled.toFixed(3)}`;
   });
   
-  // Scale unsharp
-  scaledFilter = scaledFilter.replace(/unsharp=(\d+):(\d+):([\d.]+)/g, (match, luma, chroma, amount) => {
-    const numAmount = parseFloat(amount);
-    const scaled = numAmount * (intensity / 0.4);
-    return `unsharp=${luma}:${chroma}:${scaled.toFixed(2)}`;
+  // Scale unsharp (format: unsharp=luma_msize_x:luma_msize_y:luma_amount:chroma_msize_x:chroma_msize_y:chroma_amount)
+  scaledFilter = scaledFilter.replace(/unsharp=(\d+):(\d+):([\d.]+):(\d+):(\d+):([\d.]+)/g, (match, lumaX, lumaY, lumaAmount, chromaX, chromaY, chromaAmount) => {
+    const numLumaAmount = parseFloat(lumaAmount);
+    const numChromaAmount = parseFloat(chromaAmount);
+    const scaledLuma = numLumaAmount * (intensity / 0.4);
+    const scaledChroma = numChromaAmount * (intensity / 0.4);
+    return `unsharp=${lumaX}:${lumaY}:${scaledLuma.toFixed(2)}:${chromaX}:${chromaY}:${scaledChroma.toFixed(2)}`;
   });
   
   return baseScale ? `${baseScale},${scaledFilter}` : scaledFilter;
