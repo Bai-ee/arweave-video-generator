@@ -292,15 +292,36 @@ export class VideoSegmentCompositor {
       try {
         // Download video if we have a file reference
         if (hasFileReferences && selectedFileRef) {
+          console.log(`[VideoSegmentCompositor] Downloading video: ${selectedFileRef.name} from ${sourceFolder}...`);
           selectedVideo = await videoLoader.downloadVideoFile(selectedFileRef, sourceFolder);
+          if (!selectedVideo || !await fs.pathExists(selectedVideo)) {
+            throw new Error(`Downloaded video file not found: ${selectedVideo}`);
+          }
+          console.log(`[VideoSegmentCompositor] ✅ Video downloaded: ${path.basename(selectedVideo)}`);
         }
         
+        if (!selectedVideo) {
+          throw new Error('No video selected for segment extraction');
+        }
+        
+        if (!await fs.pathExists(selectedVideo)) {
+          throw new Error(`Video file does not exist: ${selectedVideo}`);
+        }
+        
+        console.log(`[VideoSegmentCompositor] Extracting segment ${i + 1}/${segmentsNeeded} from ${path.basename(selectedVideo)}...`);
         const segmentPath = await this.extractRandomSegment(selectedVideo, segmentDuration);
+        
+        if (!segmentPath || !await fs.pathExists(segmentPath)) {
+          throw new Error(`Extracted segment file not found: ${segmentPath}`);
+        }
+        
         segmentPaths.push(segmentPath);
-        console.log(`[VideoSegmentCompositor] Segment ${i + 1}/${segmentsNeeded} extracted from ${sourceFolder} folder`);
+        console.log(`[VideoSegmentCompositor] ✅ Segment ${i + 1}/${segmentsNeeded} extracted from ${sourceFolder} folder`);
       } catch (error) {
         const videoName = hasFileReferences ? (selectedFileRef?.name || 'unknown') : path.basename(selectedVideo || 'unknown');
-        console.warn(`[VideoSegmentCompositor] Failed to extract segment from ${videoName}, trying another...`);
+        console.error(`[VideoSegmentCompositor] ❌ Failed to extract segment from ${videoName}`);
+        console.error(`[VideoSegmentCompositor] Error: ${error.message}`);
+        console.warn(`[VideoSegmentCompositor] Trying another video...`);
         
         // Try another video from the same folder
         let fallbackVideo = null;
@@ -371,26 +392,59 @@ export class VideoSegmentCompositor {
       }
     }
 
-    // Segments are already normalized during extraction (720x720, yuv420p, with audio)
-    // Use concat demuxer directly
+    // Verify segments are valid before concatenation
+    console.log(`[VideoSegmentCompositor] Verifying ${segmentPaths.length} segments before concatenation...`);
+    const validSegments = [];
+    for (const segPath of segmentPaths) {
+      const stats = await fs.stat(segPath);
+      if (stats.size < 1000) { // Less than 1KB is likely corrupted
+        console.warn(`[VideoSegmentCompositor] ⚠️  Skipping segment ${path.basename(segPath)}: too small (${stats.size} bytes)`);
+        continue;
+      }
+      validSegments.push(segPath);
+    }
+    
+    if (validSegments.length === 0) {
+      throw new Error('No valid segments to concatenate');
+    }
+    
+    if (validSegments.length < segmentPaths.length) {
+      console.warn(`[VideoSegmentCompositor] ⚠️  Only ${validSegments.length}/${segmentPaths.length} segments are valid`);
+    }
+    
+    // Use concat demuxer - it's more reliable for segments with consistent format
+    // First ensure all segments are properly formatted
     const concatListPath = path.join(this.tempDir, `concat_list_${Date.now()}.txt`);
-    const concatList = segmentPaths.map(seg => {
+    const concatList = validSegments.map(seg => {
       const absPath = path.resolve(seg);
+      // Use proper escaping for concat demuxer
       return `file '${absPath.replace(/'/g, "'\\''")}'`;
     }).join('\n');
     await fs.writeFile(concatListPath, concatList);
-
+    
+    console.log(`[VideoSegmentCompositor] Concatenating ${validSegments.length} valid segments using concat demuxer...`);
+    
     try {
-      await this.executeFFmpeg([
+      // Use concat demuxer with re-encoding to handle any format differences
+      const command = [
         ffmpegPath,
         '-f', 'concat',
         '-safe', '0',
         '-i', concatListPath,
-        '-c', 'copy', // Can use copy now since all segments are normalized
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', '23',
+        '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-ar', '44100',
+        '-ac', '2',
         '-t', targetDuration.toString(),
         '-y',
         outputPath
-      ]);
+      ];
+      
+      await this.executeFFmpeg(command);
 
       // Verify output
       if (!await fs.pathExists(outputPath)) {

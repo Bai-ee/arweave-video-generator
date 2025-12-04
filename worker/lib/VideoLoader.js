@@ -270,7 +270,7 @@ export class VideoLoader {
      * Returns grouped structure: { skyline: [...], chicago: [...] }
      * Also maintains backward compatibility by returning flat array if needed
      */
-    async loadAllSkylineVideos(returnGrouped = true) {
+    async loadAllSkylineVideos(returnGrouped = true, selectedFolders = []) {
         try {
             const storage = getStorage();
             const bucket = storage.bucket();

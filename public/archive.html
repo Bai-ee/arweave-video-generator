@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Archive to Arweave - Arweave Video Generator</title>
+  
+  <link rel="icon" type="image/svg+xml" href="/logos/logo.svg">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/edittrax-styles.css">
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB8zZex61GBZKqnAJVnIv3s5LIaangLUts",
+      authDomain: "editvideos-63486.firebaseapp.com",
+      projectId: "editvideos-63486",
+      storageBucket: "editvideos-63486.firebasestorage.app",
+      messagingSenderId: "136146097402",
+      appId: "1:136146097402:web:1cc75f9dff37f4d48a2543"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // Make available globally
+    window.firebase = { 
+      db, 
+      storage, 
+      collection, 
+      query, 
+      where, 
+      orderBy, 
+      onSnapshot, 
+      addDoc, 
+      doc, 
+      getDoc, 
+      ref, 
+      getDownloadURL,
+      uploadBytesResumable
+    };
+  </script>
+
+  <style>
+    html {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100%;
+    }
+    
+    body {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(180deg, #000000 0%, #0a0a0a 100%);
+    }
+    
+    #particles-js {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: -1;
+      background: linear-gradient(180deg, #000000 0%, #0a0a0a 100%);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  
+  <!-- Color Bar - Top Border -->
+  <img src="/logos/color_bar.png" alt="" style="position: fixed; top: 0; left: 0; width: 100%; height: 5px; max-height: 5px; z-index: 9999; pointer-events: none; display: block; object-fit: cover;">
+  
+  <!-- Particle Background -->
+  <div id="particles-js"></div>
+  
+  <!-- Header -->
+  <header class="header-edittrax">
+    <div class="max-w-6xl mx-auto pt-3" style="position: relative;">
+      
+      <!-- Navigation -->
+      <div style="position: absolute; top: 25px; left: 0; z-index: 50; font-family: var(--font-mathias); font-size: 0.75rem;">
+        <a href="/index.html" style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; text-decoration: none; font-weight: bold;">
+          ← HOME
+        </a>
+      </div>
+      
+      <!-- Top Right Actions -->
+      <div style="position: absolute; top: 25px; right: 0; display: flex; flex-direction: column; gap: 17px; align-items: flex-end; z-index: 50; font-family: var(--font-mathias); font-size: 0.75rem;">
+        <button 
+          id="refreshBtn" 
+          onclick="loadFolders()"
+          style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; font-family: var(--font-mathias); font-size: 0.75rem;"
+          title="Refresh Folders"
+        >
+          <span style="font-weight: bold;">REFRESH</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="flex flex-col items-center gap-3 w-full">
+        <div class="logo-container flex flex-col items-center gap-2">
+          <img src="/logos/load.gif" alt="Loading Animation" style="width: 140px; height: auto;">
+          <h1 style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 1.5rem; text-transform: uppercase;">Archive to Arweave</h1>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto pb-4" style="width: 100%; box-sizing: border-box; overflow: visible; position: relative; padding-top: 2rem;">
+    
+    <!-- Expectations Management Section -->
+    <div style="background: rgba(230, 233, 224, 0.1); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem; max-width: 800px; margin-left: auto; margin-right: auto;">
+      <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin-bottom: 1rem; text-align: center;">
+        ⚠️ Important: Blockchain Confirmation Delays
+      </h2>
+      <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.6; font-family: var(--font-mathias);">
+        <p style="margin-bottom: 0.75rem;">
+          <strong>Files are not immediately viewable:</strong> After uploading, files must be confirmed on the Arweave blockchain. This typically takes 2-10 minutes.
+        </p>
+        <p style="margin-bottom: 0.75rem;">
+          <strong>Costs:</strong> Uploading to Arweave has minimal costs (typically less than $0.01 per file), but costs do exist and are paid from your wallet.
+        </p>
+        <p style="margin-bottom: 0.75rem;">
+          <strong>Access:</strong> Once confirmed, files will be permanently stored on Arweave and accessible via the provided URLs. You can check transaction status on <a href="https://arweave.net" target="_blank" style="color: var(--color-yellow-75); text-decoration: underline;">arweave.net</a>.
+        </p>
+        <p>
+          <strong>Purpose:</strong> This archives your Firebase Storage files to Arweave for permanent, decentralized storage. Archived files can be used in video generation instead of Firebase URLs.
+        </p>
+      </div>
+    </div>
+
+    <!-- Folder Selection Section -->
+    <div style="background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
+      <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin-bottom: 1rem; text-align: center;">
+        📁 Select Folder
+      </h2>
+      <div id="foldersContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <!-- Folders will be populated here -->
+      </div>
+      <div id="foldersLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+        Loading folders...
+      </div>
+    </div>
+
+    <!-- File Selection Section -->
+    <div id="fileSelectionSection" style="display: none; background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin: 0;">
+          📄 Files in <span id="selectedFolderName"></span>
+        </h2>
+        <div style="display: flex; gap: 0.5rem;">
+          <button onclick="selectAllFiles()" style="padding: 0.5rem 1rem; border: 1px solid var(--color-yellow-75); border-radius: 5px; background: transparent; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;">
+            Select All
+          </button>
+          <button onclick="deselectAllFiles()" style="padding: 0.5rem 1rem; border: 1px solid var(--color-yellow-75); border-radius: 5px; background: transparent; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;">
+            Deselect All
+          </button>
+        </div>
+      </div>
+      <div id="filesContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; max-height: 500px; overflow-y: auto;">
+        <!-- Files will be populated here -->
+      </div>
+      <div id="filesLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
+        Loading files...
+      </div>
+      <div id="filesEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
+        No files in this folder.
+      </div>
+    </div>
+
+    <!-- Upload Section -->
+    <div id="uploadSection" style="display: none; background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
+      <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin-bottom: 1rem; text-align: center;">
+        🚀 Archive Selected Files
+      </h2>
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <button 
+          id="archiveBtn" 
+          onclick="archiveSelectedFiles()"
+          style="padding: 1rem 2rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: var(--color-yellow-75); color: black; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
+        >
+          📤 Archive <span id="selectedCount">0</span> File(s) to Arweave
+        </button>
+      </div>
+      
+      <!-- Progress Section -->
+      <div id="progressSection" style="display: none;">
+        <h3 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1rem; margin-bottom: 1rem;">
+          Upload Progress
+        </h3>
+        <div style="margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="color: var(--color-yellow-75); font-size: 0.875rem;">Overall Progress</span>
+            <span id="overallProgress" style="color: var(--color-yellow-75); font-size: 0.875rem;">0%</span>
+          </div>
+          <div style="width: 100%; height: 20px; background: #0a0a0a; border: 1px solid var(--color-yellow-75); border-radius: 5px; overflow: hidden;">
+            <div id="overallProgressBar" style="height: 100%; background: var(--color-yellow-75); width: 0%; transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+        <div id="fileProgressList" style="max-height: 400px; overflow-y: auto;">
+          <!-- Individual file progress will be shown here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Archive Manifest View -->
+    <div style="background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin: 0;">
+          📋 Archive Manifest
+        </h2>
+        <button onclick="loadManifest()" style="padding: 0.5rem 1rem; border: 1px solid var(--color-yellow-75); border-radius: 5px; background: transparent; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;">
+          Refresh
+        </button>
+      </div>
+      <div id="manifestContainer" style="max-height: 500px; overflow-y: auto;">
+        <div style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+          Loading manifest...
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Global state
+    let availableFolders = [];
+    let selectedFolder = null;
+    let folderFiles = [];
+    let selectedFiles = new Set();
+    let uploadJobs = new Map(); // jobId -> { fileName, status, transactionId, etc. }
+
+    // Load folders on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadFolders();
+      loadManifest();
+    });
+
+    // Load available folders
+    async function loadFolders() {
+      const container = document.getElementById('foldersContainer');
+      const loading = document.getElementById('foldersLoading');
+      
+      container.innerHTML = '';
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch('/api/video-folders');
+        const data = await response.json();
+
+        if (data.success && data.folders) {
+          availableFolders = data.folders;
+          loading.style.display = 'none';
+
+          if (availableFolders.length === 0) {
+            container.innerHTML = '<p style="color: var(--color-yellow-75); text-align: center; grid-column: 1/-1;">No folders available.</p>';
+            return;
+          }
+
+          availableFolders.forEach(folder => {
+            const folderCard = document.createElement('div');
+            folderCard.style.cssText = `
+              background: #1a1a1a;
+              border: 2px solid var(--color-yellow-75);
+              border-radius: 8px;
+              padding: 1rem;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              text-align: center;
+            `;
+            folderCard.onmouseover = () => {
+              folderCard.style.transform = 'scale(1.02)';
+              folderCard.style.borderColor = '#fff';
+            };
+            folderCard.onmouseout = () => {
+              folderCard.style.transform = 'scale(1)';
+              folderCard.style.borderColor = 'var(--color-yellow-75)';
+            };
+            folderCard.onclick = () => selectFolder(folder.name);
+
+            folderCard.innerHTML = `
+              <div style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-weight: bold; margin-bottom: 0.5rem;">
+                ${folder.displayName || folder.name}
+              </div>
+              <div style="font-size: 0.75rem; color: #888;">
+                ${folder.count} ${folder.type === 'image' ? 'image' : 'video'}(s)
+              </div>
+            `;
+
+            container.appendChild(folderCard);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading folders:', error);
+        loading.innerHTML = '<p style="color: #ef4444;">Error loading folders. Please try again.</p>';
+      }
+    }
+
+    // Select folder and load files
+    async function selectFolder(folderName) {
+      selectedFolder = folderName;
+      selectedFiles.clear();
+      
+      document.getElementById('fileSelectionSection').style.display = 'block';
+      document.getElementById('selectedFolderName').textContent = folderName;
+      document.getElementById('uploadSection').style.display = 'block';
+      document.getElementById('filesLoading').style.display = 'block';
+      document.getElementById('filesEmpty').style.display = 'none';
+      document.getElementById('filesContainer').innerHTML = '';
+
+      try {
+        const response = await fetch(`/api/video-folders?folder=${encodeURIComponent(folderName)}`);
+        const data = await response.json();
+
+        document.getElementById('filesLoading').style.display = 'none';
+
+        if (data.success && (data.items || data.videos) && (data.items || data.videos).length > 0) {
+          folderFiles = data.items || data.videos;
+          renderFiles();
+        } else {
+          document.getElementById('filesEmpty').style.display = 'block';
+          folderFiles = [];
+        }
+      } catch (error) {
+        console.error('Error loading files:', error);
+        document.getElementById('filesLoading').innerHTML = '<p style="color: #ef4444;">Error loading files.</p>';
+      }
+    }
+
+    // Render files with checkboxes
+    function renderFiles() {
+      const container = document.getElementById('filesContainer');
+      container.innerHTML = '';
+
+      folderFiles.forEach(file => {
+        const fileCard = document.createElement('div');
+        fileCard.style.cssText = `
+          background: #1a1a1a;
+          border: 2px solid var(--color-yellow-75);
+          border-radius: 8px;
+          padding: 1rem;
+        `;
+
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        const isSelected = selectedFiles.has(file.name);
+
+        fileCard.innerHTML = `
+          <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+            <input 
+              type="checkbox" 
+              ${isSelected ? 'checked' : ''}
+              onchange="toggleFileSelection('${file.name.replace(/'/g, "\\'")}')"
+              style="width: 20px; height: 20px; cursor: pointer;"
+            />
+            <div style="flex: 1;">
+              <div style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-weight: bold; margin-bottom: 0.25rem;">
+                ${file.name}
+              </div>
+              <div style="font-size: 0.75rem; color: #888;">
+                ${fileSizeMB} MB • ${file.contentType || file.type || 'file'}
+              </div>
+            </div>
+          </label>
+        `;
+
+        container.appendChild(fileCard);
+      });
+
+      updateSelectedCount();
+    }
+
+    // Toggle file selection
+    function toggleFileSelection(fileName) {
+      if (selectedFiles.has(fileName)) {
+        selectedFiles.delete(fileName);
+      } else {
+        selectedFiles.add(fileName);
+      }
+      updateSelectedCount();
+    }
+
+    // Select all files
+    function selectAllFiles() {
+      folderFiles.forEach(file => selectedFiles.add(file.name));
+      renderFiles();
+    }
+
+    // Deselect all files
+    function deselectAllFiles() {
+      selectedFiles.clear();
+      renderFiles();
+    }
+
+    // Update selected count
+    function updateSelectedCount() {
+      document.getElementById('selectedCount').textContent = selectedFiles.size;
+    }
+
+    // Archive selected files
+    async function archiveSelectedFiles() {
+      if (selectedFiles.size === 0) {
+        alert('Please select at least one file to archive.');
+        return;
+      }
+
+      if (!selectedFolder) {
+        alert('Please select a folder first.');
+        return;
+      }
+
+      const btn = document.getElementById('archiveBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Archiving...';
+
+      document.getElementById('progressSection').style.display = 'block';
+      document.getElementById('fileProgressList').innerHTML = '';
+
+      const filesToArchive = Array.from(selectedFiles);
+      let completed = 0;
+      let failed = 0;
+
+      // Initialize progress for each file
+      filesToArchive.forEach(fileName => {
+        const jobId = `archive_${Date.now()}_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        uploadJobs.set(fileName, {
+          jobId: jobId,
+          fileName: fileName,
+          status: 'uploading',
+          progress: 0
+        });
+
+        const progressItem = document.createElement('div');
+        progressItem.id = `progress_${fileName}`;
+        progressItem.style.cssText = `
+          background: #1a1a1a;
+          border: 1px solid var(--color-yellow-75);
+          border-radius: 5px;
+          padding: 0.75rem;
+          margin-bottom: 0.5rem;
+        `;
+        progressItem.innerHTML = `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="color: var(--color-yellow-75); font-size: 0.875rem; font-family: var(--font-mathias);">${fileName}</span>
+            <span id="status_${fileName}" style="color: var(--color-yellow-75); font-size: 0.75rem;">Uploading...</span>
+          </div>
+          <div style="width: 100%; height: 8px; background: #0a0a0a; border-radius: 4px; overflow: hidden;">
+            <div id="bar_${fileName}" style="height: 100%; background: var(--color-yellow-75); width: 0%; transition: width 0.3s ease;"></div>
+          </div>
+        `;
+        document.getElementById('fileProgressList').appendChild(progressItem);
+      });
+
+      // Upload files sequentially
+      for (const fileName of filesToArchive) {
+        try {
+          updateFileProgress(fileName, 50, 'Uploading to Arweave...');
+
+          const response = await fetch('/api/archive-upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              folder: selectedFolder,
+              fileName: fileName
+            })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            updateFileProgress(fileName, 100, 'Complete');
+            updateFileStatus(fileName, 'completed', result.transactionId, result.arweaveUrl);
+            completed++;
+            
+            // Start polling for confirmation
+            pollJobStatus(result.jobId, fileName);
+          } else {
+            updateFileProgress(fileName, 0, 'Failed');
+            updateFileStatus(fileName, 'failed', null, null, result.error);
+            failed++;
+          }
+        } catch (error) {
+          console.error(`Error archiving ${fileName}:`, error);
+          updateFileProgress(fileName, 0, 'Error');
+          updateFileStatus(fileName, 'failed', null, null, error.message);
+          failed++;
+        }
+
+        // Update overall progress
+        const overallProgress = Math.round(((completed + failed) / filesToArchive.length) * 100);
+        document.getElementById('overallProgress').textContent = `${overallProgress}%`;
+        document.getElementById('overallProgressBar').style.width = `${overallProgress}%`;
+      }
+
+      btn.disabled = false;
+      btn.textContent = `📤 Archive ${selectedFiles.size} File(s) to Arweave`;
+
+      // Reload manifest after a delay
+      setTimeout(() => {
+        loadManifest();
+      }, 2000);
+    }
+
+    // Update file progress
+    function updateFileProgress(fileName, percent, status) {
+      const bar = document.getElementById(`bar_${fileName}`);
+      const statusEl = document.getElementById(`status_${fileName}`);
+      if (bar) bar.style.width = `${percent}%`;
+      if (statusEl) statusEl.textContent = status;
+    }
+
+    // Update file status
+    function updateFileStatus(fileName, status, transactionId, arweaveUrl, error = null) {
+      const job = uploadJobs.get(fileName);
+      if (job) {
+        job.status = status;
+        job.transactionId = transactionId;
+        job.arweaveUrl = arweaveUrl;
+        job.error = error;
+      }
+
+      const statusEl = document.getElementById(`status_${fileName}`);
+      if (statusEl) {
+        if (status === 'completed') {
+          statusEl.innerHTML = `<a href="${arweaveUrl}" target="_blank" style="color: #22c55e; text-decoration: underline;">View on Arweave</a>`;
+        } else if (status === 'failed') {
+          statusEl.style.color = '#ef4444';
+          statusEl.textContent = `Failed: ${error || 'Unknown error'}`;
+        } else if (status === 'pending_confirmation') {
+          statusEl.style.color = '#f59e0b';
+          statusEl.textContent = 'Pending confirmation...';
+        }
+      }
+    }
+
+    // Poll job status for confirmation
+    async function pollJobStatus(jobId, fileName) {
+      const maxAttempts = 30; // Poll for up to 5 minutes (10s intervals)
+      let attempts = 0;
+
+      const poll = async () => {
+        if (attempts >= maxAttempts) {
+          updateFileStatus(fileName, 'pending_confirmation', null, null);
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/archive-status?jobId=${jobId}`);
+          const data = await response.json();
+
+          if (data.success && data.job) {
+            if (data.job.status === 'pending_confirmation') {
+              updateFileStatus(fileName, 'pending_confirmation', data.job.transactionId, data.job.arweaveUrl);
+              attempts++;
+              setTimeout(poll, 10000); // Poll every 10 seconds
+            } else if (data.job.status === 'completed') {
+              updateFileStatus(fileName, 'completed', data.job.transactionId, data.job.arweaveUrl);
+            } else if (data.job.status === 'failed') {
+              updateFileStatus(fileName, 'failed', null, null, data.job.error);
+            }
+          }
+        } catch (error) {
+          console.error('Error polling job status:', error);
+          attempts++;
+          if (attempts < maxAttempts) {
+            setTimeout(poll, 10000);
+          }
+        }
+      };
+
+      setTimeout(poll, 10000); // Start polling after 10 seconds
+    }
+
+    // Load archive manifest
+    async function loadManifest() {
+      const container = document.getElementById('manifestContainer');
+
+      try {
+        const response = await fetch('/api/archive-manifest');
+        const data = await response.json();
+
+        if (data.success && data.manifest) {
+          const manifest = data.manifest;
+          const folders = manifest.folders || {};
+
+          if (Object.keys(folders).length === 0) {
+            container.innerHTML = '<p style="color: var(--color-yellow-75); text-align: center;">No files archived yet.</p>';
+            return;
+          }
+
+          let html = '';
+          Object.entries(folders).forEach(([folderName, folderData]) => {
+            const files = folderData.files || [];
+            if (files.length === 0) return;
+
+            html += `
+              <div style="margin-bottom: 1.5rem; border-bottom: 1px solid rgba(230, 233, 224, 0.2); padding-bottom: 1rem;">
+                <h3 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1rem; margin-bottom: 0.75rem;">
+                  ${folderName} (${files.length} file${files.length !== 1 ? 's' : ''})
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.75rem;">
+            `;
+
+            files.forEach(file => {
+              html += `
+                <div style="background: #1a1a1a; border: 1px solid var(--color-yellow-75); border-radius: 5px; padding: 0.75rem;">
+                  <div style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: bold;">
+                    ${file.name}
+                  </div>
+                  <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.5rem;">
+                    ${(file.fileSize / (1024 * 1024)).toFixed(2)} MB • Archived: ${new Date(file.archivedAt).toLocaleDateString()}
+                  </div>
+                  <a href="${file.arweaveUrl}" target="_blank" style="color: var(--color-yellow-75); text-decoration: underline; font-size: 0.75rem;">
+                    View on Arweave →
+                  </a>
+                </div>
+              `;
+            });
+
+            html += `
+                </div>
+              </div>
+            `;
+          });
+
+          container.innerHTML = html;
+        }
+      } catch (error) {
+        console.error('Error loading manifest:', error);
+        container.innerHTML = '<p style="color: #ef4444; text-align: center;">Error loading manifest.</p>';
+      }
+    }
+  </script>
+
+  <!-- Particles.js Library -->
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <script>
+    // Initialize particle system
+    particlesJS('particles-js', {
+      particles: {
+        number: {
+          value: 500,
+          density: {
+            enable: true,
+            value_area: 800
+          }
+        },
+        color: {
+          value: '#ffffff'
+        },
+        shape: {
+          type: 'circle'
+        },
+        opacity: {
+          value: 0.5,
+          random: true,
+          anim: {
+            enable: true,
+            speed: 1,
+            opacity_min: 0.1,
+            sync: false
+          }
+        },
+        size: {
+          value: 2,
+          random: true,
+          anim: {
+            enable: false
+          }
+        },
+        line_linked: {
+          enable: false
+        },
+        move: {
+          enable: true,
+          speed: 0.5,
+          direction: 'none',
+          random: true,
+          straight: false,
+          out_mode: 'out',
+          bounce: false
+        }
+      },
+      interactivity: {
+        detect_on: 'canvas',
+        events: {
+          onhover: {
+            enable: true,
+            mode: 'grab'
+          },
+          onclick: {
+            enable: false
+          },
+          resize: true
+        },
+        modes: {
+          grab: {
+            distance: 140,
+            line_linked: {
+              opacity: 0.3
+            }
+          }
+        }
+      },
+      retina_detect: true
+    });
+  </script>
+
+</body>
+</html>
+

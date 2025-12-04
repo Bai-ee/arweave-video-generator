@@ -364,20 +364,46 @@ class ArweaveVideoGenerator {
                     console.log(`[ArweaveVideoGenerator] Selected folders: ${selectedFolders.length > 0 ? selectedFolders.join(', ') : 'all'}`);
                     console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with equal distribution across selected folders (videos will be downloaded on-demand)...`);
                     
+                    // Validate we have enough videos for the required segments
+                    const segmentsNeeded = Math.ceil(duration / 5);
+                    if (totalVideos < segmentsNeeded) {
+                        console.warn(`[ArweaveVideoGenerator] ⚠️  Warning: Only ${totalVideos} video references available, but ${segmentsNeeded} segments needed. Videos will be reused.`);
+                    }
+                    
                     try {
                         // Create 30-second video from random 5-second segments with equal distribution
                         // Videos will be downloaded on-demand in VideoSegmentCompositor
+                        console.log(`[ArweaveVideoGenerator] Attempting to create video from ${totalVideos} video references...`);
                         backgroundPath = await this.segmentCompositor.createVideoFromSegments(
                             groupedVideos, // Pass grouped structure with file references (not paths)
                             duration,
                             5 // 5-second segments
                         );
+                        
+                        // Verify the video was actually created
+                        if (!backgroundPath) {
+                            throw new Error('Video segment compositor returned null/undefined path');
+                        }
+                        
+                        const fs = await import('fs-extra');
+                        if (!await fs.pathExists(backgroundPath)) {
+                            throw new Error(`Video file does not exist at path: ${backgroundPath}`);
+                        }
+                        
                         useVideoBackground = true;
                         console.log('[ArweaveVideoGenerator] ✅ Created video background from track videos (equal distribution, on-demand download)');
+                        console.log(`[ArweaveVideoGenerator] Video path: ${backgroundPath}`);
                     } catch (error) {
-                        console.error('[ArweaveVideoGenerator] Failed to create segment video:', error.message);
+                        console.error('[ArweaveVideoGenerator] ❌ Failed to create segment video!');
+                        console.error(`[ArweaveVideoGenerator] Error message: ${error.message}`);
+                        console.error(`[ArweaveVideoGenerator] Error stack: ${error.stack}`);
+                        console.error(`[ArweaveVideoGenerator] This will cause fallback to image background.`);
+                        console.error(`[ArweaveVideoGenerator] Check logs above for video loading/segment extraction errors.`);
                         // Fall through to DALL-E or simple background
                     }
+                } else {
+                    console.warn(`[ArweaveVideoGenerator] ⚠️  No video references found in selected folders: ${selectedFolders.length > 0 ? selectedFolders.join(', ') : 'all'}`);
+                    console.warn(`[ArweaveVideoGenerator] This will cause fallback to image background.`);
                 }
             } else {
                 // For mixes: Load videos from selected folders (downloads all upfront for backward compatibility)
@@ -400,19 +426,45 @@ class ArweaveVideoGenerator {
                     const distributionType = folderCount > 2 ? `equal distribution across ${folderCount} folders` : '50/50 distribution';
                     console.log(`[ArweaveVideoGenerator] Creating ${duration}s video from 5s segments with ${distributionType}...`);
                     
+                    // Validate we have enough videos for the required segments
+                    const segmentsNeeded = Math.ceil(duration / 5);
+                    if (totalVideos < segmentsNeeded) {
+                        console.warn(`[ArweaveVideoGenerator] ⚠️  Warning: Only ${totalVideos} videos available, but ${segmentsNeeded} segments needed. Videos will be reused.`);
+                    }
+                    
                     try {
                         // Create 30-second video from random 5-second segments
+                        console.log(`[ArweaveVideoGenerator] Attempting to create video from ${totalVideos} videos...`);
                         backgroundPath = await this.segmentCompositor.createVideoFromSegments(
                             groupedVideos, // Pass grouped structure
                             duration,
                             5 // 5-second segments
                         );
+                        
+                        // Verify the video was actually created
+                        if (!backgroundPath) {
+                            throw new Error('Video segment compositor returned null/undefined path');
+                        }
+                        
+                        const fs = await import('fs-extra');
+                        if (!await fs.pathExists(backgroundPath)) {
+                            throw new Error(`Video file does not exist at path: ${backgroundPath}`);
+                        }
+                        
                         useVideoBackground = true;
                         console.log(`[ArweaveVideoGenerator] ✅ Created video background from selected folders (${distributionType})`);
+                        console.log(`[ArweaveVideoGenerator] Video path: ${backgroundPath}`);
                     } catch (error) {
-                        console.error('[ArweaveVideoGenerator] Failed to create segment video:', error.message);
+                        console.error('[ArweaveVideoGenerator] ❌ Failed to create segment video!');
+                        console.error(`[ArweaveVideoGenerator] Error message: ${error.message}`);
+                        console.error(`[ArweaveVideoGenerator] Error stack: ${error.stack}`);
+                        console.error(`[ArweaveVideoGenerator] This will cause fallback to image background.`);
+                        console.error(`[ArweaveVideoGenerator] Check logs above for video loading/segment extraction errors.`);
                         // Fall through to DALL-E or simple background
                     }
+                } else {
+                    console.warn(`[ArweaveVideoGenerator] ⚠️  No videos found in selected folders: ${selectedFolders.join(', ')}`);
+                    console.warn(`[ArweaveVideoGenerator] This will cause fallback to image background.`);
                 }
             }
             
@@ -507,7 +559,8 @@ class ArweaveVideoGenerator {
                 const [logoFiles] = await bucket.getFiles({ prefix: 'logos/' });
                 const validLogos = logoFiles.filter(file => {
                     const fileName = path.basename(file.name);
-                    return (fileName.endsWith('.png') || fileName.endsWith('.svg') || fileName.endsWith('.jpg')) &&
+                    // Exclude SVG files - FFmpeg cannot handle them directly
+                    return (fileName.endsWith('.png') || fileName.endsWith('.jpg')) &&
                            fileName !== 'serial_logo.png' &&
                            !fileName.endsWith('.keep');
                 });
@@ -630,7 +683,8 @@ class ArweaveVideoGenerator {
                 const [logoFiles] = await bucket.getFiles({ prefix: 'logos/' });
                 const validLogos = logoFiles.filter(file => {
                     const fileName = path.basename(file.name);
-                    return (fileName.endsWith('.png') || fileName.endsWith('.svg') || fileName.endsWith('.jpg')) &&
+                    // Exclude SVG files - FFmpeg cannot handle them directly
+                    return (fileName.endsWith('.png') || fileName.endsWith('.jpg')) &&
                            fileName !== 'serial_logo.png' &&
                            !fileName.endsWith('.keep');
                 });

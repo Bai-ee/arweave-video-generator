@@ -116,10 +116,14 @@ export default async function handler(req, res) {
     // Make file publicly accessible
     await file.makePublic();
 
-    // Get public URL
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    // Generate signed URL for CORS compliance (consistent with other endpoints)
+    const [signedUrl] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 365 * 24 * 60 * 60 * 1000 // 1 year
+    });
+    const publicUrl = signedUrl;
 
-    console.log(`[upload-video] ✅ Optimization complete: ${publicUrl}`);
+    console.log(`[upload-video] ✅ Optimization complete: ${publicUrl.substring(0, 100)}...`);
 
     // Clean up temp files
     await optimizer.cleanup(tempFilePath);

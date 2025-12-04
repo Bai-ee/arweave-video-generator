@@ -30,6 +30,18 @@
       "dest": "/api/delete-video.js"
     },
     {
+      "src": "/api/archive-upload",
+      "dest": "/api/archive-upload.js"
+    },
+    {
+      "src": "/api/archive-status",
+      "dest": "/api/archive-status.js"
+    },
+    {
+      "src": "/api/archive-manifest",
+      "dest": "/api/archive-manifest.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/$1"
     }
@@ -54,6 +66,15 @@
       "maxDuration": 10
     },
     "api/delete-video.js": {
+      "maxDuration": 10
+    },
+    "api/archive-upload.js": {
+      "maxDuration": 120
+    },
+    "api/archive-status.js": {
+      "maxDuration": 10
+    },
+    "api/archive-manifest.js": {
       "maxDuration": 10
     }
   }

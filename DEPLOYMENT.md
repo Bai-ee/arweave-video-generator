@@ -69,3 +69,4 @@ Before deploying, ensure:
 4. **Commit frequently** with clear messages
 5. **Never commit** `.env` files or sensitive credentials
 
+

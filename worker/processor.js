@@ -124,14 +124,20 @@ async function processVideoJob(jobId, jobData, documentId = null) {
     });
     console.log(`✅ File uploaded to Storage successfully`);
 
-    // Get public URL
+    // Get file reference and generate signed URL (works with CORS, no Google Cloud setup needed)
     const file = bucket.file(storagePath);
     console.log(`🔓 Making file public: ${storagePath}`);
     await file.makePublic(); // Make file publicly accessible
     console.log(`✅ File is now public`);
     
-    const videoUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
-    console.log(`✅ Video uploaded: ${videoUrl}`);
+    // Generate signed URL (valid for 1 year) - this works with CORS without any Google Cloud configuration
+    // Signed URLs bypass CORS issues and work the same way as before
+    const [signedUrl] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 365 * 24 * 60 * 60 * 1000 // 1 year
+    });
+    const videoUrl = signedUrl;
+    console.log(`✅ Video uploaded with signed URL: ${videoUrl.substring(0, 100)}...`);
 
     // Update job status to completed
     // IMPORTANT: status must be at root level, not in metadata

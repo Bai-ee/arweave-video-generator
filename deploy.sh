@@ -60,3 +60,4 @@ echo "  - Vercel: Frontend/API deployed"
 echo ""
 echo "💡 Next video generation will use the latest code from both sources."
 
+

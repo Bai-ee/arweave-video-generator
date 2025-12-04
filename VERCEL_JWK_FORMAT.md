@@ -1,0 +1,34 @@
+# How to Format ARWEAVE_WALLET_JWK in Vercel
+
+## The Problem
+Vercel environment variables must be a **single-line string**. If you paste multi-line JSON, it can cause parsing errors like "Unterminated string in JSON".
+
+## Solution: Use This Exact Format
+
+When adding `ARWEAVE_WALLET_JWK` to Vercel, paste it as a **single-line JSON string** (no line breaks):
+
+```
+{"d":"lBSXc5Yzm3b7xDs8phvjJZQd7vK-OixYBZoXYcVLuKLzrIp7asX_0_S2gKuYfcL1fqNELfKeYpKcV7aPeYHjSn-cLAdYi6iTNBNLof5yGT-O6N8PSey4AHWrBQN6Yw7Mgmku0EtBbzAZIckgjS2tzs1W_s9OXBCMuSdL0FyNOpBpcVD-aa31glVjazvu0MgI8fbyLPDOt7pm9zadVAYEqh-4r5tFlAbYzreWEeWZmNxzTtDRGtKpAsY0ibrNZ7vxVs_TswPoXV8e5jJkcC8igrBba4FCmLptWTaWCnqVbEfpmz6pNyZZnFaL5j4eKKOdJZnCu615PrO18GAL_a1ngMcrRMo0_O9-HBohCKXL0xxP5EOe6N-GmLLShRg4XRde6pyZ8xPlEwIDhg5h9U_ChIHVwPt7f9CokAsQEu-Sr1Atis0JNlAzOrUSqyDHjbyPP1NLboI4PYrwRJ6TZ8SoBSmCpqE-2F5aaBUWLSZe0xGHvjAskZQWKBKEFr-gZp7TsXTftqB5QR8mF8RO4Ha8QNlDjJ3-9RVETfeCCbsMJ5d3pf_oR5ePQ3nM5FlPlSyaIT2C9UuKHm2bO9zAZpH982oxZLFM0o9mUG9S77lG8zvygDEYtUDWWULedBQCkBW-WepydXpaCTrJrmJBWqznsLSmR4qotz-TRZL1lgmjU4k","dp":"reZBd78J69Y6D3PhjOCRcr91X1VEOcqk4aqZzLJQJNLe5NgEw-iyPPfcjgHA4unTp7TtcFVxus8qxmda5nFoTBjXFu6hj_vdIw5NTVmVJINgh74GBn4GLVwUOAIQ_BYz2Ej6w_PdyI6Ma8IWbfROB_XgUfljuR6TuTHunvwxaq7mv5NcUIckMHxuRHGI8zKu-c4tsuSU47ExF6iCF3Uq7JBbM4nVX-Hd8uVKz2LY5Z4akDfklM0_3898LR3O27pnr6AQOY8tc1YqygThxL5URf5Flv-My6F8cmQ5vLOBxJR5nyIfBaMgcVevUPPetFr-qrf3pfbKie9MuIv6B2vNhw","dq":"FuSKmEgDThhRsvSAoGGaTYNbcNf1U-OQHN50hOTKAEbqNT_1cbVGzbRY4ys8eEFxNHUogtr2Y75RWUOqLJyMG8wvgzP7f7UFK5noAmWIGDsaEvTvyBlREL43R4j-pnw8aojIVEZotzzeoNR_4pq6MUzbFIuNJzURIpDRSbJkLm4w14hsRlwbBaRhlfDOZjalrRu8ztYCKZ9rlW8cUCTqGT8Wzr_OpMjqWiK5r-sPJx_YMo60MVCaHTAElTeV82SlcNlEMYpsoXYMHwMVJeaSZvm9Ap-7kbxgu8VxlKqgjv5tli2OH8IviDDFDv22r-W4BWg7k8rqmOK1x4Bnv-tenQ","e":"AQAB","kty":"RSA","n":"saRLCGZ88g12wzkJiGzyFbYeVSqPFgzb-B5jdsws4c1O-HOcxoYPOEkwFuCfl5zI7HohRE1NMqMAZlsB44ZkoO4ne38xwXwfJ8znFM-SHyHPY720FRF23ZIOFHO0GVQgHTE2mA0g_KNRQlTRYW1ohevjBcd7rwCZS7_AFOHozNw0LCdEbFd5YeYrcSZAfeqX2DmQM4W2hFP8RwwDQUvO8qH4W9OLgM4-UlDbDHCS3spoPa_XV7wNbWjMfvyxPF3RhME0nQ2462vi_ZVZmBJ-gIMy3Z9DVTXFo5n5J3HiDR4dxVLHsm-AepYJdcN35PrDxtg45QOuzVW-EZAg51gdudgOzGNxp8e-CHnaOHhhwwtfkck3KV7xdQdiXq-ZmkLmnpHzyXQlkhCfYV1sa1h0v49ZWb_B762nIh-LrDkn1hCpeDMB2VugkY8W6CxBhvyf9HZUYyMCxohAzUZPn5suA6vbe8iuEc9c8yV0G5d3_LvVSDC1PyjfthWcwdrnmPwnlNJrQ51XGOzM3YjVke03imeN0Ii8GmtB_D1-mTPU_ui55j-FkIgsFDKL1aqwsty9hlqClKAVWf8cfOQpA2ZQWvlf6_u7w7IqvrDkQhBRyb9kIeFO5HkCri3R34Rm_PB5H_pP54tEzECDekSvMFtj8xszGbn6w9zep4EdhJf5Ets","p":"-T9j8TMs_YgkiQWfAFp3Jb7uxvse_qIY04m1Oy8yL_mpI-6QQWDi2INU0zIHfqnBYbS5-Rt7-_8Re3f1jT1kzTWgEiCCPXhq0SFXmci7heJjh058mJkd3ZSo216P0eg0h5Uawuex0oHFmKDw4NBWmhvk7IVCHiUfv7bEpGpmU5cWrtYgdefC_p7fYZ-K227TtiYI4rFDsf0DwvA_3qCvOeoV3i2znCM2_S36-eavL3_QPrgUAJ1qnyrHjUKp1tWWL1owPHZlP-JtrekCtpidXqYcWQDMqTo-W4UZK9msi-Pib83qPf1QJdkMSu2j1e4F0i8TaQc7EIsQWlgmIoghvw","q":"tnRLPbEZIIV9CRDUWVtFDgewLu27EY4eVhEqeaSfrdbrrQG731VpWco41RKTHWrMOVtXQ5JUNBM2IDjkZPP5aSR_H_UARUEP_XsNrSyQwd3DmvnzxCLHnxggzjpo5jgQ5cr6RgIV5_P6ktrBzRY42SYGNTGFnKIFx3ZkIxtsdYElEeDMr_iSQEzvSsK2F8FbzRybndWhCQvmH-amiLViOiEwR-87YzReXP6IAWSfF1lcAhUxeDnjWhHM611W66CDLOItOqQiXcqQbJB1VjJBvLJTIlynyTSovbme_trF3UmFa5jmS2lsMjHJwqGg2RD26c-G1ZUKvARRIxd7Qy_d5Q","qi":"faapKGMdCp9ue4UhDyMYwG4kTvSkoQhAto0MNfhRApVMlKTMnDRPbxvbehsh49nWYC0SkCExRbystPddyg_Eg3Hk-Wk9YJxZ8bEpjZykwK4ZINuu68u6lYj8fQKtHMpEiPL-HUM-_90-jFyA2uWp4enkXRnpgC1zohm5UgqHUkE0sz1aEtUIy4XhFPHO_KfaVbsM3BERikDK8sQ76DKPRu46wpFl5V3E5t4_PcCdJU1ZKMfBnxFqHxVG4eF6thns0T-5YuZmYTKsFTfe0e_hvl-1F2BmUL9r41cNahGbWN0-NszQ-pLal3bO9XRhuzSZZb4Sip_Ul5A3C0yzz-_qyw"}
+```
+
+## Steps to Fix in Vercel:
+
+1. Go to your Vercel project → Settings → Environment Variables
+2. Find `ARWEAVE_WALLET_JWK`
+3. Click the "..." menu → Edit
+4. **Delete the current value**
+5. **Paste the single-line JSON string above** (the entire line, no line breaks)
+6. Click "Save"
+7. Redeploy your project
+
+## Important Notes:
+
+- ✅ **DO**: Paste as a single continuous line (no line breaks)
+- ✅ **DO**: Include the entire JSON object in one string
+- ❌ **DON'T**: Paste multi-line formatted JSON
+- ❌ **DON'T**: Add extra quotes around it
+- ❌ **DON'T**: Add line breaks or formatting
+
+The code now has better error handling that will attempt to clean up the JSON if there are formatting issues, but it's best to paste it correctly from the start.
+
+

@@ -1,0 +1,54 @@
+# Vercel ignore file - exclude large/unnecessary files from deployment
+
+# Node modules (will be installed by Vercel)
+node_modules/
+worker/node_modules/
+
+# Large video files and assets
+assets/chicago-skyline-videos/*.mp4
+worker/assets/
+
+# Output directories (generated files)
+worker/outputs/
+worker/temp-uploads/
+worker/test-output/
+outputs/
+temp-uploads/
+test-output/
+
+# Cache directories
+worker/outputs/video-cache/
+worker/outputs/image-cache/
+worker/outputs/backgrounds/
+worker/outputs/videos/
+worker/outputs/composed-videos/
+worker/outputs/dalle-images/
+
+# Test files
+worker/test-*.js
+test-*.js
+*.test.js
+
+# Development files
+worker/setup-*.sh
+worker/setup-*.js
+scripts/
+worker/upload-*.js
+
+# Documentation
+*.md
+!README.md
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
