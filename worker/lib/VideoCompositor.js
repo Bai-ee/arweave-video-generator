@@ -145,11 +145,8 @@ export class VideoCompositor {
     if (config.videoFilter) {
       // Apply custom video filter
       // Custom filters already include scale/pad operations, so apply directly to input
-      // Ensure filter string is clean (no extra spaces, proper formatting)
-      const cleanFilter = config.videoFilter.trim().replace(/\s*,\s*/g, ',').replace(/\s+/g, ' ');
-      baseFilter = `[0:v]${cleanFilter}[base_scaled]`;
-      console.log(`[VideoCompositor] Applying custom video filter: ${cleanFilter.substring(0, 100)}...`);
-      console.log(`[VideoCompositor] Full filter length: ${cleanFilter.length} chars`);
+      baseFilter = `[0:v]${config.videoFilter}[base_scaled]`;
+      console.log(`[VideoCompositor] Applying custom video filter: ${config.videoFilter.substring(0, 100)}...`);
     } else {
       // Default: scale to canvas and apply black and white
       baseFilter = `[0:v]scale=${canvasWidth}:${canvasHeight}:force_original_aspect_ratio=increase,crop=${canvasWidth}:${canvasHeight},hue=s=0[base_scaled]`;
@@ -446,25 +443,11 @@ export class VideoCompositor {
       finalVideoLabel = currentInput; // Update final label to include after-fade layers
     }
 
-    let filterComplex = filters.join(';');
-    
-    // Validate filter complex - check for common issues
-    if (filterComplex.includes('  ')) {
-      console.warn(`[VideoCompositor] ⚠️  Filter complex contains double spaces - cleaning...`);
-      filterComplex = filterComplex.replace(/\s+/g, ' ');
-    }
-    
-    // Check for unmatched parentheses (basic check)
-    const openParens = (filterComplex.match(/\(/g) || []).length;
-    const closeParens = (filterComplex.match(/\)/g) || []).length;
-    if (openParens !== closeParens) {
-      console.error(`[VideoCompositor] ⚠️  Mismatched parentheses: ${openParens} open, ${closeParens} close`);
-    }
+    const filterComplex = filters.join(';');
     
     // Store final video label for output mapping
     config._finalVideoLabel = finalVideoLabel;
     console.log(`[VideoCompositor] Filter complex: ${filterComplex.substring(0, 200)}...`);
-    console.log(`[VideoCompositor] Full filter complex length: ${filterComplex.length} chars`);
     
     // Debug: Log all output labels created
     const allLabels = filterComplex.match(/\[[^\]]+\]/g) || [];
@@ -553,9 +536,6 @@ export class VideoCompositor {
 
     // Filter complex
     if (filterComplex) {
-      // Log the full filter complex for debugging (truncated if too long)
-      const logLength = Math.min(filterComplex.length, 500);
-      console.log(`[VideoCompositor] Full filter_complex (first ${logLength} chars): ${filterComplex.substring(0, logLength)}${filterComplex.length > logLength ? '...' : ''}`);
       command.push('-filter_complex', filterComplex);
 
       // Determine final output label - use the labels that were actually created
@@ -709,15 +689,6 @@ export class VideoCompositor {
           console.error(`[VideoCompositor] ❌ FFmpeg failed with code: ${code}`);
           console.error(`[VideoCompositor] Full stderr output:`);
           console.error(stderr);
-          
-          // Log the filter_complex that was used (if available in command)
-          const filterComplexIndex = args.indexOf('-filter_complex');
-          if (filterComplexIndex >= 0 && args[filterComplexIndex + 1]) {
-            const filterComplexUsed = args[filterComplexIndex + 1];
-            console.error(`[VideoCompositor] Filter complex used (first 500 chars): ${filterComplexUsed.substring(0, 500)}...`);
-            console.error(`[VideoCompositor] Filter complex length: ${filterComplexUsed.length} chars`);
-          }
-          
           // Show last 1000 chars if stderr is very long
           const errorSnippet = stderr.length > 1000 ? stderr.substring(stderr.length - 1000) : stderr;
           reject(new Error(`FFmpeg failed with exit code ${code}: ${errorSnippet}`));
