@@ -661,27 +661,50 @@ export class VideoCompositor {
   async checkAudioStream(audioPath) {
     try {
       // Use ffprobe to check for audio streams
-      const ffprobePath = ffmpegPath.replace('ffmpeg', 'ffprobe');
-      const { execSync } = await import('child_process');
+      // Try to find ffprobe - it's usually in the same directory as ffmpeg
+      let ffprobePath = ffmpegPath.replace('ffmpeg', 'ffprobe');
       
-      // Run ffprobe to get stream information
-      const command = [
-        ffprobePath,
-        '-v', 'error',
-        '-select_streams', 'a:0',
-        '-show_entries', 'stream=codec_type',
-        '-of', 'default=noprint_wrappers=1:nokey=1',
-        audioPath
-      ];
-      
-      try {
-        const output = execSync(command.join(' '), { encoding: 'utf8', stdio: 'pipe' });
-        return output.trim() === 'audio';
-      } catch (error) {
-        // If ffprobe fails, assume no audio stream
-        console.warn(`[VideoCompositor] Could not check audio stream (ffprobe failed): ${error.message}`);
-        return false;
+      // If using ffmpeg-static, try ffprobe-static
+      if (ffmpegPath.includes('ffmpeg-static')) {
+        try {
+          const ffprobeStatic = await import('ffprobe-static');
+          if (ffprobeStatic && ffprobeStatic.path) {
+            ffprobePath = ffprobeStatic.path;
+          }
+        } catch (e) {
+          // Fall back to system ffprobe
+        }
       }
+      
+      const { spawn } = await import('child_process');
+      
+      // Use spawn instead of execSync to handle paths with spaces properly
+      return new Promise((resolve) => {
+        const ffprobe = spawn(ffprobePath, [
+          '-v', 'error',
+          '-select_streams', 'a:0',
+          '-show_entries', 'stream=codec_type',
+          '-of', 'default=noprint_wrappers=1:nokey=1',
+          audioPath
+        ], { stdio: 'pipe' });
+        
+        let output = '';
+        ffprobe.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+        
+        ffprobe.on('close', (code) => {
+          if (code === 0 && output.trim() === 'audio') {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        });
+        
+        ffprobe.on('error', () => {
+          resolve(false);
+        });
+      });
     } catch (error) {
       console.warn(`[VideoCompositor] Error checking audio stream: ${error.message}`);
       return false; // Default to false if check fails
