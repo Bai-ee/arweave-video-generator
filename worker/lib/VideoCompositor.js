@@ -110,11 +110,18 @@ export class VideoCompositor {
         }
       }
 
+      // Check if audio file has an audio stream
+      const hasAudioStream = await this.checkAudioStream(config.audio);
+      if (!hasAudioStream) {
+        console.warn(`[VideoCompositor] ⚠️  Audio file has no audio stream: ${config.audio}`);
+        console.warn(`[VideoCompositor] Video will be created without audio`);
+      }
+
       // Build filter complex
       const filterComplex = this.buildFilterComplex(config);
 
       // Build FFmpeg command
-      const command = this.buildFFmpegCommand(config, filterComplex);
+      const command = this.buildFFmpegCommand(config, filterComplex, hasAudioStream);
 
       console.log('[VideoCompositor] Executing FFmpeg composition...');
 
@@ -501,7 +508,7 @@ export class VideoCompositor {
   /**
    * Build FFmpeg command array
    */
-  buildFFmpegCommand(config, filterComplex) {
+  buildFFmpegCommand(config, filterComplex, hasAudioStream = true) {
     // Use the ffmpegPath determined at module load
     // In GitHub Actions, this will be system FFmpeg (has drawtext)
     const command = [ffmpegPath];
@@ -605,11 +612,12 @@ export class VideoCompositor {
       }
       
       command.push('-map', finalOutput);
-      command.push('-map', '1:a'); // Map audio from input 1
+      // Map audio from input 1 (use '?' to make it optional if no audio stream exists)
+      command.push('-map', '1:a?'); // Optional audio mapping
     } else {
       // No filter complex - map base video directly
       command.push('-map', '0:v');
-      command.push('-map', '1:a');
+      command.push('-map', '1:a?'); // Optional audio mapping
     }
 
     // Video codec settings
@@ -618,18 +626,22 @@ export class VideoCompositor {
     command.push('-crf', '23');
     command.push('-pix_fmt', 'yuv420p');
 
-    // Audio codec and fade out (last 3 seconds: 27-30s for 30s video)
-    const audioFadeStart = config.duration - 3; // 27 seconds for 30s video
-    const audioFadeDuration = 3; // 3 second fade
-    
-    if (audioFadeStart > 0 && audioFadeDuration > 0) {
-      // Apply audio fade out filter
-      command.push('-af', `afade=t=out:st=${audioFadeStart}:d=${audioFadeDuration}`);
-      console.log(`[VideoCompositor] Adding audio fade out: ${audioFadeStart}s-${audioFadeStart + audioFadeDuration}s`);
+    // Audio codec and fade out (only if audio stream exists)
+    if (hasAudioStream) {
+      const audioFadeStart = config.duration - 3; // 27 seconds for 30s video
+      const audioFadeDuration = 3; // 3 second fade
+      
+      if (audioFadeStart > 0 && audioFadeDuration > 0) {
+        // Apply audio fade out filter
+        command.push('-af', `afade=t=out:st=${audioFadeStart}:d=${audioFadeDuration}`);
+        console.log(`[VideoCompositor] Adding audio fade out: ${audioFadeStart}s-${audioFadeStart + audioFadeDuration}s`);
+      }
+      
+      command.push('-c:a', 'aac');
+      command.push('-b:a', '192k');
+    } else {
+      console.log(`[VideoCompositor] Skipping audio codec settings (no audio stream)`);
     }
-    
-    command.push('-c:a', 'aac');
-    command.push('-b:a', '192k');
 
     // Duration
     command.push('-t', config.duration.toString());
@@ -641,6 +653,39 @@ export class VideoCompositor {
     command.push('-y', config.outputPath);
 
     return command;
+  }
+
+  /**
+   * Check if audio file has an audio stream using ffprobe
+   */
+  async checkAudioStream(audioPath) {
+    try {
+      // Use ffprobe to check for audio streams
+      const ffprobePath = ffmpegPath.replace('ffmpeg', 'ffprobe');
+      const { execSync } = await import('child_process');
+      
+      // Run ffprobe to get stream information
+      const command = [
+        ffprobePath,
+        '-v', 'error',
+        '-select_streams', 'a:0',
+        '-show_entries', 'stream=codec_type',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        audioPath
+      ];
+      
+      try {
+        const output = execSync(command.join(' '), { encoding: 'utf8', stdio: 'pipe' });
+        return output.trim() === 'audio';
+      } catch (error) {
+        // If ffprobe fails, assume no audio stream
+        console.warn(`[VideoCompositor] Could not check audio stream (ffprobe failed): ${error.message}`);
+        return false;
+      }
+    } catch (error) {
+      console.warn(`[VideoCompositor] Error checking audio stream: ${error.message}`);
+      return false; // Default to false if check fails
+    }
   }
 
   /**
