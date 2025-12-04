@@ -406,10 +406,10 @@ class ArweaveVideoGenerator {
                     console.warn(`[ArweaveVideoGenerator] This will cause fallback to image background.`);
                 }
             } else {
-                // For mixes: Load videos from selected folders (downloads all upfront for backward compatibility)
+                // For mixes: Load video REFERENCES from selected folders (on-demand download, not all upfront)
                 const defaultFolders = selectedFolders.length > 0 ? selectedFolders : ['skyline', 'assets/chicago-skyline-videos'];
-                console.log(`[ArweaveVideoGenerator] Loading mix videos from selected folders: ${defaultFolders.join(', ')}`);
-                const groupedVideos = await this.videoLoader.loadAllSkylineVideos(true, defaultFolders);
+                console.log(`[ArweaveVideoGenerator] Loading mix video references from selected folders: ${defaultFolders.join(', ')}`);
+                const groupedVideos = await this.videoLoader.loadTrackVideoReferences(true, defaultFolders);
                 
                 // Calculate totals from all folders
                 const totalVideos = Object.values(groupedVideos).reduce((sum, arr) => sum + arr.length, 0);
