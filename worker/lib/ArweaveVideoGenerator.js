@@ -377,7 +377,8 @@ class ArweaveVideoGenerator {
                         backgroundPath = await this.segmentCompositor.createVideoFromSegments(
                             groupedVideos, // Pass grouped structure with file references (not paths)
                             duration,
-                            5 // 5-second segments
+                            5, // 5-second segments
+                            audioFilePath // Pass audio path for BPM detection
                         );
                         
                         // Verify the video was actually created
@@ -433,12 +434,13 @@ class ArweaveVideoGenerator {
                     }
                     
                     try {
-                        // Create 30-second video from random 5-second segments
+                        // Create 30-second video from random 5-second segments with transitions and beat sync
                         console.log(`[ArweaveVideoGenerator] Attempting to create video from ${totalVideos} videos...`);
                         backgroundPath = await this.segmentCompositor.createVideoFromSegments(
                             groupedVideos, // Pass grouped structure
                             duration,
-                            5 // 5-second segments
+                            5, // 5-second segments
+                            audioFilePath // Pass audio path for BPM detection
                         );
                         
                         // Verify the video was actually created

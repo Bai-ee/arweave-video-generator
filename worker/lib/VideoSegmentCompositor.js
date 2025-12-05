@@ -68,12 +68,14 @@ export class VideoSegmentCompositor {
   }
 
   /**
-   * Extract a random 5-second segment from a video
+   * Extract a 5-second segment from a video, optionally aligned to a beat
    * @param {string} videoPath - Path to source video
    * @param {number} segmentDuration - Duration of segment in seconds (default: 5)
+   * @param {number} targetTime - Optional target start time (for beat alignment)
+   * @param {number[]} beatPositions - Optional array of beat positions for alignment
    * @returns {Promise<string>} Path to extracted segment
    */
-  async extractRandomSegment(videoPath, segmentDuration = 5) {
+  async extractRandomSegment(videoPath, segmentDuration = 5, targetTime = null, beatPositions = []) {
     try {
       const videoDuration = await this.getVideoDuration(videoPath);
       
@@ -83,9 +85,19 @@ export class VideoSegmentCompositor {
         return videoPath;
       }
 
-      // Calculate random start time (leave room for segment duration)
-      const maxStartTime = videoDuration - segmentDuration;
-      const startTime = Math.random() * maxStartTime;
+      // Calculate start time
+      let startTime;
+      if (targetTime !== null && beatPositions.length > 0) {
+        // Align to nearest beat
+        startTime = this.alignToBeat(targetTime, beatPositions, true);
+        // Ensure we don't exceed video duration
+        startTime = Math.min(startTime, videoDuration - segmentDuration);
+        startTime = Math.max(0, startTime);
+      } else {
+        // Random start time (leave room for segment duration)
+        const maxStartTime = videoDuration - segmentDuration;
+        startTime = Math.random() * maxStartTime;
+      }
 
       // Generate output path
       const segmentPath = path.join(
@@ -96,8 +108,9 @@ export class VideoSegmentCompositor {
       console.log(`[VideoSegmentCompositor] Extracting ${segmentDuration}s segment from ${path.basename(videoPath)} (start: ${startTime.toFixed(1)}s)`);
 
       // Extract segment using FFmpeg
-      // Re-encode to ensure compatibility with concatenation
+      // Re-encode to ensure compatibility with concatenation and consistent frame rate
       // Extract segment with video and audio (add silent audio if missing)
+      // Normalize to 30fps for consistent timebase (required for xfade transitions)
       await this.executeFFmpeg([
         ffmpegPath,
         '-i', videoPath,
@@ -105,12 +118,14 @@ export class VideoSegmentCompositor {
         '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
         '-ss', startTime.toString(),
         '-t', segmentDuration.toString(),
-        '-filter_complex', '[0:v]scale=720:720:force_original_aspect_ratio=increase,crop=720:720,format=yuv420p[v];[1:a]atrim=0:' + segmentDuration.toString() + '[a]',
+        '-filter_complex', '[0:v]scale=720:720:force_original_aspect_ratio=increase,crop=720:720,fps=30,format=yuv420p[v];[1:a]atrim=0:' + segmentDuration.toString() + '[a]',
         '-map', '[v]',
         '-map', '[a]',
         '-c:v', 'libx264',
         '-preset', 'fast',
         '-crf', '23',
+        '-r', '30', // Ensure 30fps output
+        '-g', '30', // GOP size for better seeking
         '-c:a', 'aac',
         '-b:a', '128k',
         '-avoid_negative_ts', 'make_zero',
@@ -127,13 +142,110 @@ export class VideoSegmentCompositor {
   }
 
   /**
-   * Create a 30-second video from multiple 5-second segments
+   * Align a time to the nearest beat position
+   * @param {number} time - Time in seconds
+   * @param {number[]} beatPositions - Array of beat positions
+   * @param {boolean} strict - If true, always align; if false, allow ±0.2s deviation
+   * @returns {number} Aligned time
+   */
+  alignToBeat(time, beatPositions, strict = true) {
+    if (beatPositions.length === 0) return time;
+    
+    const nearestBeat = beatPositions.reduce((prev, curr) => 
+      Math.abs(curr - time) < Math.abs(prev - time) ? curr : prev
+    );
+    const deviation = Math.abs(nearestBeat - time);
+    
+    if (strict || deviation < 0.2) {
+      return nearestBeat;
+    }
+    return time; // Allow deviation for fades
+  }
+
+  /**
+   * Detect BPM from audio file using FFmpeg
+   * @param {string} audioPath - Path to audio file
+   * @returns {Promise<number>} Detected BPM (defaults to 120 if detection fails)
+   */
+  async detectBPM(audioPath) {
+    try {
+      if (!await fs.pathExists(audioPath)) {
+        console.warn(`[VideoSegmentCompositor] Audio file not found for BPM detection: ${audioPath}`);
+        return 120; // Default BPM
+      }
+
+      // Use FFmpeg's silencedetect to find audio events/peaks
+      // Analyze the gaps between events to estimate BPM
+      const command = [
+        ffmpegPath,
+        '-i', audioPath,
+        '-af', 'silencedetect=noise=-50dB:duration=0.1',
+        '-f', 'null',
+        '-'
+      ];
+
+      return new Promise((resolve) => {
+        let stderr = '';
+        const ffmpegProcess = spawn(ffmpegPath, command.slice(1), { stdio: 'pipe' });
+
+        ffmpegProcess.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        ffmpegProcess.on('close', (code) => {
+          // Parse silence_detect output to find audio events
+          const silenceMatches = stderr.match(/silence_start: ([\d.]+)/g);
+          const silenceEnds = stderr.match(/silence_end: ([\d.]+)/g);
+          
+          if (silenceMatches && silenceMatches.length > 2) {
+            // Extract timestamps
+            const starts = silenceMatches.map(m => parseFloat(m.match(/[\d.]+/)[0]));
+            const ends = silenceEnds ? silenceEnds.map(m => parseFloat(m.match(/[\d.]+/)[0])) : [];
+            
+            // Calculate intervals between events
+            const intervals = [];
+            for (let i = 1; i < starts.length; i++) {
+              intervals.push(starts[i] - starts[i - 1]);
+            }
+            
+            if (intervals.length > 0) {
+              // Find most common interval (likely beat interval)
+              const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+              const bpm = 60 / avgInterval;
+              
+              // Clamp to reasonable range (60-180 BPM)
+              const clampedBPM = Math.max(60, Math.min(180, Math.round(bpm)));
+              console.log(`[VideoSegmentCompositor] Detected BPM: ${clampedBPM} (from ${intervals.length} intervals)`);
+              resolve(clampedBPM);
+              return;
+            }
+          }
+          
+          // Fallback: Try analyzing audio peaks with astats
+          console.warn(`[VideoSegmentCompositor] Could not detect BPM from silence, using default 120 BPM`);
+          resolve(120);
+        });
+
+        ffmpegProcess.on('error', () => {
+          console.warn(`[VideoSegmentCompositor] FFmpeg error during BPM detection, using default 120 BPM`);
+          resolve(120);
+        });
+      });
+    } catch (error) {
+      console.warn(`[VideoSegmentCompositor] BPM detection error: ${error.message}, using default 120 BPM`);
+      return 120;
+    }
+  }
+
+  /**
+   * Create a 30-second video from multiple 5-second segments with transitions and beat sync
    * @param {string[]|Object} videoPaths - Array of source video paths OR grouped object { skyline: [...], chicago: [...] }
    * @param {number} targetDuration - Target duration in seconds (default: 30)
    * @param {number} segmentDuration - Duration of each segment in seconds (default: 5)
+   * @param {string} audioPath - Optional path to audio file for BPM detection
    * @returns {Promise<string>} Path to concatenated video
    */
-  async createVideoFromSegments(videoPaths, targetDuration = 30, segmentDuration = 5) {
+  async createVideoFromSegments(videoPaths, targetDuration = 30, segmentDuration = 5, audioPath = null) {
     // Handle grouped structure with any folder combination
     let folderMap = {}; // Dynamic folder map
     let isGrouped = false;
@@ -186,14 +298,42 @@ export class VideoSegmentCompositor {
     const distributionType = isTrackMode ? `equal distribution across ${folderCount} folders` : '50/50 distribution';
     console.log(`[VideoSegmentCompositor] Creating ${targetDuration}s video from ${segmentsNeeded} segments with ${distributionType}`);
 
+    // Detect BPM if audio path provided
+    let bpm = 120;
+    let beatPositions = [];
+    let beatInterval = 0.5; // Default: 120 BPM = 0.5s per beat
+    
+    if (audioPath) {
+      console.log(`[VideoSegmentCompositor] Detecting BPM from audio: ${audioPath}`);
+      bpm = await this.detectBPM(audioPath);
+      beatInterval = 60 / bpm;
+      
+      // Generate beat positions for the entire duration
+      for (let beat = 0; beat <= targetDuration; beat += beatInterval) {
+        beatPositions.push(beat);
+      }
+      console.log(`[VideoSegmentCompositor] BPM: ${bpm}, Beat interval: ${beatInterval.toFixed(3)}s, ${beatPositions.length} beats`);
+    }
+
     // Extract random segments with equal distribution
     const segmentPaths = [];
-    const usedVideos = {};
+    const transitionTypes = []; // Store transition type for each segment boundary
+    const usedAllVideos = new Set(); // Global tracking across all folders
     
-    // Initialize usedVideos sets for all folders
-    Object.keys(folderMap).forEach(folder => {
-      usedVideos[folder] = new Set();
+    // Collect all videos for tracking (regardless of folder)
+    const allVideosList = [];
+    Object.values(folderMap).forEach(videos => {
+      videos.forEach(v => {
+        if (typeof v === 'string') {
+          allVideosList.push(v);
+        } else if (v && v.name) {
+          allVideosList.push(v.name);
+        }
+      });
     });
+    
+    const totalVideosAvailable = allVideosList.length;
+    console.log(`[VideoSegmentCompositor] Total videos available: ${totalVideosAvailable}`);
 
       // Check if we have file references (Firebase File objects) or paths (strings)
       // Check first non-empty folder array
@@ -223,70 +363,49 @@ export class VideoSegmentCompositor {
         throw new Error('No valid videos available for segment extraction');
       }
 
-      if (isTrackMode || allFolders.length > 2) {
-        // Equal distribution across all folders
-        // Randomly select a folder (equal chance for each)
-        const selectedFolder = allFolders[Math.floor(Math.random() * allFolders.length)];
-        sourceFolder = selectedFolder.name;
-
-        // Select a video from that folder
-        let availableVideos = selectedFolder.videos.filter(v => {
-          // For file references, compare by name; for paths, compare directly
-          if (hasFileReferences) {
-            return !usedVideos[sourceFolder].has(v.name);
-          } else {
-            return !usedVideos[sourceFolder].has(v);
+      // Select video from any folder (global tracking, no repeats until all used)
+      let availableVideos = [];
+      
+      // Collect all available videos from all folders
+      for (const folder of allFolders) {
+        for (const v of folder.videos) {
+          const videoKey = hasFileReferences ? v.name : v;
+          if (!usedAllVideos.has(videoKey)) {
+            availableVideos.push({ video: v, folder: folder.name });
           }
-        });
-        
-        if (availableVideos.length === 0) {
-          // All videos from this folder used, reset and reuse
-          availableVideos = selectedFolder.videos;
-          usedVideos[sourceFolder].clear();
         }
-        
-        const selectedItem = availableVideos[Math.floor(Math.random() * availableVideos.length)];
-        
-        if (hasFileReferences) {
-          // Store file reference and download on-demand
-          selectedFileRef = selectedItem;
-          usedVideos[sourceFolder].add(selectedItem.name);
+      }
+      
+      // If no available videos, check if all have been used
+      if (availableVideos.length === 0) {
+        if (usedAllVideos.size >= totalVideosAvailable && totalVideosAvailable > 0) {
+          // All videos used, reset and allow repeats
+          console.log(`[VideoSegmentCompositor] All ${totalVideosAvailable} videos used, resetting and allowing repeats`);
+          usedAllVideos.clear();
+          // Re-collect all videos
+          for (const folder of allFolders) {
+            for (const v of folder.videos) {
+              availableVideos.push({ video: v, folder: folder.name });
+            }
+          }
         } else {
-          // Use path directly
-          selectedVideo = selectedItem;
-          usedVideos[sourceFolder].add(selectedItem);
+          throw new Error(`Not enough unique videos available. Need ${segmentsNeeded} segments but only ${totalVideosAvailable} videos available.`);
         }
+      }
+      
+      // Randomly select from available videos
+      const selected = availableVideos[Math.floor(Math.random() * availableVideos.length)];
+      sourceFolder = selected.folder;
+      const selectedItem = selected.video;
+      
+      // Track as used
+      const videoKey = hasFileReferences ? selectedItem.name : selectedItem;
+      usedAllVideos.add(videoKey);
+      
+      if (hasFileReferences) {
+        selectedFileRef = selectedItem;
       } else {
-        // Mix mode: 50/50 distribution between first two folders (typically skyline and chicago)
-        const folder1 = allFolders[0];
-        const folder2 = allFolders[1] || folder1;
-        
-        const useFolder1 = Math.random() < 0.5;
-        const selectedFolder = useFolder1 ? folder1 : folder2;
-        sourceFolder = selectedFolder.name;
-        
-        let availableVideos = selectedFolder.videos.filter(v => {
-          if (hasFileReferences) {
-            return !usedVideos[sourceFolder].has(v.name);
-          } else {
-            return !usedVideos[sourceFolder].has(v);
-          }
-        });
-        
-        if (availableVideos.length === 0) {
-          availableVideos = selectedFolder.videos;
-          usedVideos[sourceFolder].clear();
-        }
-        
-        const selectedItem = availableVideos[Math.floor(Math.random() * availableVideos.length)];
-        
-        if (hasFileReferences) {
-          selectedFileRef = selectedItem;
-          usedVideos[sourceFolder].add(selectedItem.name);
-        } else {
-          selectedVideo = selectedItem;
-          usedVideos[sourceFolder].add(selectedItem);
-        }
+        selectedVideo = selectedItem;
       }
 
       try {
@@ -308,15 +427,38 @@ export class VideoSegmentCompositor {
           throw new Error(`Video file does not exist: ${selectedVideo}`);
         }
         
+        // Calculate target time for beat alignment
+        const segmentStartTime = i * segmentDuration;
+        const targetTime = beatPositions.length > 0 ? segmentStartTime : null;
+        
         console.log(`[VideoSegmentCompositor] Extracting segment ${i + 1}/${segmentsNeeded} from ${path.basename(selectedVideo)}...`);
-        const segmentPath = await this.extractRandomSegment(selectedVideo, segmentDuration);
+        const segmentPath = await this.extractRandomSegment(selectedVideo, segmentDuration, targetTime, beatPositions);
+        
+        // Determine transition type for this segment boundary (random: quick-cut or quick-fade)
+        if (i < segmentsNeeded - 1) { // No transition after last segment
+          const useFade = Math.random() < 0.5; // 50% chance of fade
+          const fadeDuration = useFade ? 0.5 + Math.random() * 0.5 : 0; // 0.5-1.0s for fades
+          transitionTypes.push({
+            type: useFade ? 'fade' : 'cut',
+            duration: fadeDuration
+          });
+        }
         
         if (!segmentPath || !await fs.pathExists(segmentPath)) {
           throw new Error(`Extracted segment file not found: ${segmentPath}`);
         }
         
+        // Validate segment size (must be at least 10KB to be valid)
+        const segmentStats = await fs.stat(segmentPath);
+        if (segmentStats.size < 10240) {
+          console.warn(`[VideoSegmentCompositor] ⚠️  Segment ${i + 1} is too small (${segmentStats.size} bytes), retrying...`);
+          // Remove invalid segment and try again with a different video
+          await fs.remove(segmentPath).catch(() => {});
+          throw new Error(`Segment too small: ${segmentStats.size} bytes`);
+        }
+        
         segmentPaths.push(segmentPath);
-        console.log(`[VideoSegmentCompositor] ✅ Segment ${i + 1}/${segmentsNeeded} extracted from ${sourceFolder} folder`);
+        console.log(`[VideoSegmentCompositor] ✅ Segment ${i + 1}/${segmentsNeeded} extracted from ${sourceFolder} folder (${(segmentStats.size / 1024).toFixed(1)}KB)`);
       } catch (error) {
         const videoName = hasFileReferences ? (selectedFileRef?.name || 'unknown') : path.basename(selectedVideo || 'unknown');
         console.error(`[VideoSegmentCompositor] ❌ Failed to extract segment from ${videoName}`);
@@ -354,14 +496,15 @@ export class VideoSegmentCompositor {
       }
     }
 
-    // Concatenate segments
+    // Concatenate segments with transitions
     const outputPath = path.join(
       this.tempDir,
       `concatenated_${Date.now()}.mp4`
     );
 
-    console.log(`[VideoSegmentCompositor] Concatenating ${segmentPaths.length} segments...`);
-    await this.concatenateSegments(segmentPaths, outputPath, targetDuration);
+    console.log(`[VideoSegmentCompositor] Concatenating ${segmentPaths.length} segments with transitions...`);
+    console.log(`[VideoSegmentCompositor] Transitions: ${transitionTypes.map(t => t.type).join(', ')}`);
+    await this.concatenateSegmentsWithTransitions(segmentPaths, outputPath, targetDuration, transitionTypes, beatPositions);
 
     // Cleanup segment files
     for (const segmentPath of segmentPaths) {
@@ -378,9 +521,9 @@ export class VideoSegmentCompositor {
   }
 
   /**
-   * Concatenate video segments using FFmpeg
+   * Concatenate video segments with transitions (quick-cuts and quick-fades)
    */
-  async concatenateSegments(segmentPaths, outputPath, targetDuration) {
+  async concatenateSegmentsWithTransitions(segmentPaths, outputPath, targetDuration, transitionTypes, beatPositions = []) {
     // Verify all segments exist and are valid
     for (const segPath of segmentPaths) {
       if (!await fs.pathExists(segPath)) {
@@ -411,21 +554,21 @@ export class VideoSegmentCompositor {
     if (validSegments.length < segmentPaths.length) {
       console.warn(`[VideoSegmentCompositor] ⚠️  Only ${validSegments.length}/${segmentPaths.length} segments are valid`);
     }
-    
-    // Use concat demuxer - it's more reliable for segments with consistent format
-    // First ensure all segments are properly formatted
-    const concatListPath = path.join(this.tempDir, `concat_list_${Date.now()}.txt`);
-    const concatList = validSegments.map(seg => {
-      const absPath = path.resolve(seg);
-      // Use proper escaping for concat demuxer
-      return `file '${absPath.replace(/'/g, "'\\''")}'`;
-    }).join('\n');
-    await fs.writeFile(concatListPath, concatList);
-    
-    console.log(`[VideoSegmentCompositor] Concatenating ${validSegments.length} valid segments using concat demuxer...`);
+
+    // Check if we have any fades - if all are cuts, use simpler concat demuxer
+    const hasFades = transitionTypes.some(t => t.type === 'fade');
     
     try {
-      // Use concat demuxer with re-encoding to handle any format differences
+      if (!hasFades) {
+      // All quick-cuts: use simple concat demuxer (faster and simpler)
+      console.log(`[VideoSegmentCompositor] All transitions are quick-cuts, using concat demuxer...`);
+      const concatListPath = path.join(this.tempDir, `concat_list_${Date.now()}.txt`);
+      const concatList = validSegments.map(seg => {
+        const absPath = path.resolve(seg);
+        return `file '${absPath.replace(/'/g, "'\\''")}'`;
+      }).join('\n');
+      await fs.writeFile(concatListPath, concatList);
+      
       const command = [
         ffmpegPath,
         '-f', 'concat',
@@ -435,39 +578,123 @@ export class VideoSegmentCompositor {
         '-preset', 'fast',
         '-crf', '23',
         '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        '-ar', '44100',
-        '-ac', '2',
         '-t', targetDuration.toString(),
         '-y',
         outputPath
       ];
       
       await this.executeFFmpeg(command);
-
-      // Verify output
-      if (!await fs.pathExists(outputPath)) {
-        throw new Error('Concatenated video was not created');
-      }
-      const outputStats = await fs.stat(outputPath);
-      if (outputStats.size === 0) {
-        throw new Error('Concatenated video is empty');
-      }
-
-      console.log(`[VideoSegmentCompositor] ✅ Concatenated video created: ${path.basename(outputPath)} (${(outputStats.size / 1024 / 1024).toFixed(2)}MB)`);
-
-    } catch (error) {
-      console.error(`[VideoSegmentCompositor] ❌ Concatenation failed:`, error.message);
-      throw error;
-    } finally {
-      // Cleanup concat list
+      
+      // Cleanup
       try {
         await fs.remove(concatListPath);
-      } catch (error) {
-        // Ignore cleanup errors
+      } catch (e) {
+        // Ignore
       }
+    } else {
+      // Mix of cuts and fades: use filter_complex with xfade
+      console.log(`[VideoSegmentCompositor] Building filter_complex with fades and cuts...`);
+      
+      const numSegments = validSegments.length;
+      const filterParts = [];
+      let currentOutputLabel = '';
+      let currentTime = 0;
+      const segmentDuration = 5;
+
+      // Scale and normalize all segments first (with consistent frame rate and timebase for xfade)
+      for (let i = 0; i < numSegments; i++) {
+        filterParts.push(`[${i}:v]scale=720:720:force_original_aspect_ratio=increase,crop=720:720,fps=30,format=yuv420p[v${i}]`);
+      }
+
+      // Chain segments with transitions
+      for (let i = 0; i < numSegments; i++) {
+        if (i === 0) {
+          currentOutputLabel = `v${i}`;
+        } else {
+          const transition = transitionTypes[i - 1] || { type: 'cut', duration: 0 };
+          
+          if (transition.type === 'fade') {
+            // Quick-fade: crossfade transition
+            // Normalize timebase first to avoid xfade errors
+            const fadeDuration = transition.duration;
+            const offset = Math.max(0, currentTime + segmentDuration - fadeDuration);
+            
+            // Align fade start to beat if possible (flexible sync)
+            let fadeOffset = offset;
+            if (beatPositions.length > 0) {
+              fadeOffset = this.alignToBeat(offset, beatPositions, false);
+              fadeOffset = Math.max(0, fadeOffset);
+            }
+            
+            // Normalize timebase for xfade compatibility
+            const normalizedCurrent = `v${i}_norm_prev`;
+            const normalizedNext = `v${i}_norm_next`;
+            filterParts.push(`[${currentOutputLabel}]setpts=PTS-STARTPTS[${normalizedCurrent}]`);
+            filterParts.push(`[v${i}]setpts=PTS-STARTPTS[${normalizedNext}]`);
+            
+            const nextLabel = `v${i}_out`;
+            filterParts.push(`[${normalizedCurrent}][${normalizedNext}]xfade=transition=fade:duration=${fadeDuration.toFixed(3)}:offset=${fadeOffset.toFixed(3)}[${nextLabel}]`);
+            currentOutputLabel = nextLabel;
+            currentTime += segmentDuration - fadeDuration;
+          } else {
+            // Quick-cut: use concat filter (normalize timebase first)
+            const normalizedCurrent = `v${i}_cut_prev`;
+            const normalizedNext = `v${i}_cut_next`;
+            filterParts.push(`[${currentOutputLabel}]setpts=PTS-STARTPTS[${normalizedCurrent}]`);
+            filterParts.push(`[v${i}]setpts=PTS-STARTPTS[${normalizedNext}]`);
+            
+            const nextLabel = `v${i}_out`;
+            filterParts.push(`[${normalizedCurrent}][${normalizedNext}]concat=n=2:v=1:a=0[${nextLabel}]`);
+            currentOutputLabel = nextLabel;
+            currentTime += segmentDuration;
+          }
+        }
+      }
+
+      const filterComplex = filterParts.join(';');
+      const finalOutput = `[${currentOutputLabel}]`;
+      
+      console.log(`[VideoSegmentCompositor] Filter complex length: ${filterComplex.length} chars`);
+      
+      const command = [
+        ffmpegPath,
+        ...validSegments.flatMap(seg => ['-i', seg]),
+        '-filter_complex', filterComplex,
+        '-map', finalOutput,
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', '23',
+        '-pix_fmt', 'yuv420p',
+        '-t', targetDuration.toString(),
+        '-y',
+        outputPath
+      ];
+      
+      await this.executeFFmpeg(command);
     }
+
+    // Verify output
+    if (!await fs.pathExists(outputPath)) {
+      throw new Error('Concatenated video was not created');
+    }
+    const outputStats = await fs.stat(outputPath);
+    if (outputStats.size === 0) {
+      throw new Error('Concatenated video is empty');
+    }
+
+      console.log(`[VideoSegmentCompositor] ✅ Concatenated video with transitions created: ${path.basename(outputPath)} (${(outputStats.size / 1024 / 1024).toFixed(2)}MB)`);
+    } catch (error) {
+      console.error(`[VideoSegmentCompositor] ❌ Concatenation with transitions failed:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Concatenate video segments using FFmpeg (legacy method, kept for backward compatibility)
+   */
+  async concatenateSegments(segmentPaths, outputPath, targetDuration) {
+    // Fallback to old method if needed
+    return this.concatenateSegmentsWithTransitions(segmentPaths, outputPath, targetDuration, [], []);
   }
 
   /**
