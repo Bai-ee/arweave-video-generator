@@ -303,7 +303,8 @@ class ArweaveVideoGenerator {
             fadeOut = 2,
             videoFilter = null,
             useTrax = false, // Flag to use tracks instead of mixes
-            selectedFolders = [] // Array of selected folder names
+            selectedFolders = [], // Array of selected folder names
+            enableOverlay = true // Overlay feature toggle (default: true)
         } = options;
 
         console.log(`[ArweaveVideoGenerator] Starting video generation - ${duration}s for ${artist || 'random artist'}`);

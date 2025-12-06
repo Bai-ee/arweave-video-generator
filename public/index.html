@@ -162,6 +162,30 @@
               <!-- Folders will be populated dynamically -->
             </div>
           </div>
+          
+          <!-- Overlay Toggle -->
+          <div id="overlayToggleContainer" style="display: none; margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(230, 233, 224, 0.2);">
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
+              🎨 VIDEO OVERLAY EFFECT
+            </label>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 1rem;">
+              <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem 1.5rem; background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 5px; transition: all 0.3s ease;">
+                <input 
+                  type="checkbox" 
+                  id="enableOverlay" 
+                  checked
+                  style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-yellow-75);"
+                  onchange="updateOverlayToggle(this.checked)"
+                />
+                <span style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; font-size: 0.875rem;">
+                  Enable Overlay Effect
+                </span>
+              </label>
+            </div>
+            <p style="color: #888; font-size: 0.75rem; text-align: center; margin-top: 0.5rem; font-family: var(--font-mathias);">
+              Adds texture/grit overlay effect (may increase processing time)
+            </p>
+          </div>
         </div>
         
         <!-- Filter Selection - COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity -->
@@ -451,6 +475,7 @@
     let availableArtists = []; // List of available artists
     let selectedFolders = new Set(); // Set of selected folder names
     let availableFolders = []; // List of available folders for current mode
+    let enableOverlay = true; // Overlay feature enabled by default
 
     // Video filter definitions (must match backend)
     const VIDEO_FILTERS = {
@@ -616,6 +641,12 @@
         selectedArtist = 'random'; // Reset to random for tracks
       }
       
+      // Show overlay toggle when folders are shown
+      const overlayContainer = document.getElementById('overlayToggleContainer');
+      if (overlayContainer) {
+        overlayContainer.style.display = 'block';
+      }
+      
       // Show ALL available folders for both modes
       populateAllFolderCheckboxes();
       
@@ -740,6 +771,25 @@
     });
 
     /**
+     * Update overlay toggle state
+     */
+    function updateOverlayToggle(checked) {
+      enableOverlay = checked;
+      const overlayContainer = document.getElementById('overlayToggleContainer');
+      const label = overlayContainer?.querySelector('label');
+      if (label) {
+        if (checked) {
+          label.style.background = '#2a2a2a';
+          label.style.borderColor = 'var(--color-yellow-75)';
+        } else {
+          label.style.background = '#1a1a1a';
+          label.style.borderColor = '#666';
+        }
+      }
+      console.log(`✅ Overlay feature: ${checked ? 'ENABLED' : 'DISABLED'}`);
+    }
+
+    /**
      * Initialize filter selection buttons
      * COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity
      */
@@ -847,7 +897,8 @@
           videoFilter: selectedFilter, // Always 'look_hard_bw_street_doc'
           filterIntensity: filterIntensity, // Always 0.8 (80%)
           useTrax: selectedAudioSource === 'tracks', // true for tracks, false for mixes
-          selectedFolders: Array.from(selectedFolders) // Array of selected folder names
+          selectedFolders: Array.from(selectedFolders), // Array of selected folder names
+          enableOverlay: enableOverlay // Overlay feature toggle
         };
         
         // Add artist selection only for mixes

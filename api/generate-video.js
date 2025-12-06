@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     const useTrax = req.body.useTrax === true; // true for tracks, false for mixes
     const filterIntensity = req.body.filterIntensity !== undefined ? parseFloat(req.body.filterIntensity) : 0.4; // Filter intensity 0.0-1.0 (default 0.4 = 40%)
     const selectedFolders = req.body.selectedFolders || []; // Array of selected folder names
+    const enableOverlay = req.body.enableOverlay !== undefined ? req.body.enableOverlay : true; // Overlay feature toggle (default: true)
 
     // Generate unique job ID
     const jobId = uuidv4();
@@ -55,6 +56,7 @@ export default async function handler(req, res) {
       filterIntensity: filterIntensity, // Filter intensity 0.0-1.0
       useTrax: useTrax, // Flag to use tracks instead of mixes
       selectedFolders: selectedFolders, // Array of selected folder names
+      enableOverlay: enableOverlay, // Overlay feature toggle
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       completedAt: null,
       videoUrl: null,

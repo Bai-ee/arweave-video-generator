@@ -81,7 +81,8 @@ async function processVideoJob(jobId, jobData, documentId = null) {
       fadeOut: 2,
       videoFilter: videoFilter,
       useTrax: jobData.useTrax === true, // Pass useTrax flag to video generator
-      selectedFolders: jobData.selectedFolders || [] // Pass selected folders array
+      selectedFolders: jobData.selectedFolders || [], // Pass selected folders array
+      enableOverlay: jobData.enableOverlay !== undefined ? jobData.enableOverlay : true // Pass overlay toggle (default: true)
     });
 
     if (!videoResult.success) {
