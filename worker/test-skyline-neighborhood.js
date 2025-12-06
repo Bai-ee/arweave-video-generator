@@ -10,19 +10,15 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-console.log('🎬 Generating Video with Random Artist and Random Folders (EXCLUDING chicago-skyline)\n');
+console.log('🎬 Testing Video Generation with ONLY Skyline and Neighborhood Folders\n');
+console.log('This test will help diagnose why the system falls back to an image.\n');
 
 async function generateVideo() {
     try {
         const videoGenerator = new ArweaveVideoGenerator();
         
-        // Define available folders (excluding chicago-skyline)
-        const availableFolders = ['skyline', 'artist', 'decks', 'equipment', 'family', 'neighborhood'];
-        
-        // Select 2-3 random folders
-        const numFolders = Math.floor(Math.random() * 2) + 2; // 2 or 3 folders
-        const shuffled = [...availableFolders].sort(() => Math.random() - 0.5);
-        const selectedFolders = shuffled.slice(0, numFolders);
+        // Test with ONLY skyline and neighborhood folders (as user reported issue)
+        const selectedFolders = ['skyline', 'neighborhood'];
         
         // Define the filter and intensity
         const selectedFilterKey = 'look_hard_bw_street_doc';
@@ -30,15 +26,15 @@ async function generateVideo() {
         const filterDef = getFilter(selectedFilterKey, filterIntensity);
         const videoFilter = filterDef ? filterDef.filter : null;
 
-        console.log('📋 Configuration:');
+        console.log('📋 Test Configuration:');
+        console.log(`   Selected Folders: [${selectedFolders.join(', ')}]`);
         console.log(`   Video Filter: ${filterDef ? filterDef.name : 'None'} (${(filterIntensity * 100).toFixed(0)}%)`);
-        console.log(`   Selected Folders: ${selectedFolders.join(', ')}`);
         console.log(`   Artist: Random`);
         console.log(`   Duration: 30s`);
         console.log(`   Use Trax: false (Mixes mode)`);
-        console.log(`   ⚠️  EXCLUDING chicago-skyline folder\n`);
+        console.log(`\n🔍 Starting video generation...\n`);
 
-        // Generate video with selected folders, filter, and layers
+        // Generate video with selected folders
         const result = await videoGenerator.generateVideoWithAudio({
             duration: 30,
             artist: null, // Random artist
@@ -60,19 +56,24 @@ async function generateVideo() {
             console.log(`\n🔗 Local file URL: file://${absPath}`);
             console.log(`\nTo view: open "${absPath}"`);
             
+            // Check if it's actually a video or an image
+            const stats = await fs.stat(absPath);
+            const isVideo = result.videoPath && !result.videoPath.includes('background');
+            console.log(`\n📊 File type: ${isVideo ? 'VIDEO ✅' : 'IMAGE ⚠️ (fallback detected)'}`);
+            console.log(`📊 File size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+            
             return absPath;
         } else {
-            console.error('❌ Video generation failed');
-            console.error(result);
+            console.error('\n❌ Video generation failed');
+            console.error('Result:', result);
             return null;
         }
     } catch (error) {
-        console.error('❌ Error:', error.message);
-        console.error(error.stack);
+        console.error('\n❌ Error:', error.message);
+        console.error('Stack:', error.stack);
         return null;
     }
 }
 
 generateVideo();
-
 

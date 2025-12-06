@@ -367,3 +367,4 @@ console.log('Wallet address:', process.env.ARWEAVE_WALLET_ADDRESS);
 console.log('Drive ID:', process.env.ARWEAVE_DRIVE_ID);
 ```
 
+

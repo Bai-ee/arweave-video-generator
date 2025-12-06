@@ -651,6 +651,11 @@
       }
       
       availableFolders.forEach(folderInfo => {
+        // Skip logos and paper_backgrounds folders (internal use only, not for user selection)
+        if (folderInfo.name === 'logos' || folderInfo.name === 'paper_backgrounds') {
+          return;
+        }
+        
         // Normalize folder name (remove 'assets/' prefix for display)
         const folderName = folderInfo.name.replace('assets/', '');
         const displayName = folderDisplayMap[folderName] || folderName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());

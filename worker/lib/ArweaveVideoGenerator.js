@@ -291,6 +291,8 @@ class ArweaveVideoGenerator {
      * Generate video with audio and proper visuals
      */
     async generateVideoWithAudio(options = {}, existingAudioResult = null) {
+        // Store overlay opacity from options for use in layer creation
+        this.currentOverlayOpacity = options.overlayOpacity !== undefined ? options.overlayOpacity : 0.5;
         const {
             duration = 30,
             artist = null,
@@ -349,7 +351,7 @@ class ArweaveVideoGenerator {
             // For mixes: download all videos upfront (backward compatibility)
             if (useTrax) {
                 // For tracks: Get video file references (metadata only, no download yet)
-                console.log('[ArweaveVideoGenerator] Getting track video file references from selected folders...');
+                console.log(`[ArweaveVideoGenerator] 🎵 TRACKS mode: Getting video file references from selected folders: [${selectedFolders.join(', ')}]`);
                 const groupedVideos = await this.videoLoader.loadTrackVideoReferences(true, selectedFolders);
                 
                 // Calculate totals from all folders
@@ -409,7 +411,8 @@ class ArweaveVideoGenerator {
             } else {
                 // For mixes: Load video REFERENCES from selected folders (on-demand download, not all upfront)
                 const defaultFolders = selectedFolders.length > 0 ? selectedFolders : ['skyline', 'assets/chicago-skyline-videos'];
-                console.log(`[ArweaveVideoGenerator] Loading mix video references from selected folders: ${defaultFolders.join(', ')}`);
+                console.log(`[ArweaveVideoGenerator] 🎬 MIXES mode: Loading video references from selected folders: [${defaultFolders.join(', ')}]`);
+                console.log(`[ArweaveVideoGenerator] 📋 Original selectedFolders parameter: [${selectedFolders.join(', ')}]`);
                 const groupedVideos = await this.videoLoader.loadTrackVideoReferences(true, defaultFolders);
                 
                 // Calculate totals from all folders
@@ -465,8 +468,12 @@ class ArweaveVideoGenerator {
                         // Fall through to DALL-E or simple background
                     }
                 } else {
-                    console.warn(`[ArweaveVideoGenerator] ⚠️  No videos found in selected folders: ${selectedFolders.join(', ')}`);
-                    console.warn(`[ArweaveVideoGenerator] This will cause fallback to image background.`);
+                    console.warn(`[ArweaveVideoGenerator] ⚠️  No videos found in selected folders: [${selectedFolders.join(', ')}]`);
+                    console.warn(`[ArweaveVideoGenerator] ⚠️  This will cause fallback to image background.`);
+                    console.warn(`[ArweaveVideoGenerator] 💡 Troubleshooting:`);
+                    console.warn(`[ArweaveVideoGenerator]    1. Check VideoLoader logs above for folder matching details`);
+                    console.warn(`[ArweaveVideoGenerator]    2. Verify videos exist in Firebase Storage in those folders`);
+                    console.warn(`[ArweaveVideoGenerator]    3. Check that folder names match exactly (case-insensitive)`);
                 }
             }
             
@@ -634,8 +641,12 @@ class ArweaveVideoGenerator {
             const textFontSize = Math.round(height * 0.03); // Small font (3% of height)
             
             // Position at bottom left corner
+            // With reduced line spacing (0.75x instead of 1.5x), text takes less vertical space
+            // Adjust Y position to move text up: reduce the height calculation since lines are closer together
             const textX = 10; // Small margin from left edge
-            const textY = height - (textFontSize * 4) - 10; // Bottom with margin (4 lines of text)
+            // Move text up significantly: 3 lines with 0.75x spacing need more clearance from bottom
+            // Using 3.5x font size + 30px margin to ensure all 3 lines are fully visible
+            const textY = height - (textFontSize * 3.5) - 30; // Moved up significantly: 3.5x font size + 30px margin
             
             // Build text content: Artist (line break) Mix Title (line break) UndergroundExistence.info
             const textContent = `${audioArtist}\n${audioMixTitle}\nUndergroundExistence.info`;
@@ -650,6 +661,12 @@ class ArweaveVideoGenerator {
             // Add text layer with white color, small font, fade-in at 10 seconds
             // Note: drawtext doesn't support fontcolor directly in enable expression, so we'll use white text
             // We'll need to modify VideoCompositor to support white text color
+            // Text should end when fade starts (so it fades out with video)
+            // Fade starts at duration - 8 seconds (22s for 30s video)
+            const fadeStartTime = duration - 8;
+            const textEndTime = fadeStartTime; // Text ends when fade starts
+            const textDuration = textEndTime - textStartTime; // Duration from start to fade
+            
             const textLayer = new LayerConfig(
                 'text',
                 textContent,
@@ -660,12 +677,116 @@ class ArweaveVideoGenerator {
                 1.0, // scale
                 null, // No custom font - use system Arial/sans-serif
                 textStartTime, // start at 10 seconds
-                duration - textStartTime // duration until end (20 seconds)
+                textDuration // duration until fade starts (12 seconds for 30s video: 10s to 22s)
             );
+            // Text layer should fade out with everything else (processed before fade)
+            textLayer.addAfterFade = false;
             // Store text color in layer config (we'll need to add this to LayerConfig)
             textLayer.textColor = '0xFFFFFF'; // White text
             textLayer.fontSize = textFontSize; // Store font size
             layers.push(textLayer);
+
+            // Step 5.5: Add random video overlays from ONE selected folder, switching every 10 seconds
+            console.log('[ArweaveVideoGenerator] Step 5.5: Loading overlay videos from ONE random folder, switching every 10 seconds...');
+            const overlayVideoCachePaths = [];
+            
+            try {
+                const { getStorage } = await import('../firebase-admin.js');
+                const storage = getStorage();
+                const bucket = storage.bucket();
+                
+                // Define which asset folders are for overlay videos (not background videos)
+                // These folders contain videos specifically for overlay effects
+                const OVERLAY_ASSET_FOLDERS = ['assets/analog_film', 'assets/gritt', 'assets/noise', 'assets/retro_dust'];
+                const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
+                
+                console.log(`[ArweaveVideoGenerator] 📥 Available overlay asset folders: ${OVERLAY_ASSET_FOLDERS.join(', ')}`);
+                
+                // Select ONE random folder for this video
+                const selectedFolderPath = OVERLAY_ASSET_FOLDERS[Math.floor(Math.random() * OVERLAY_ASSET_FOLDERS.length)];
+                console.log(`[ArweaveVideoGenerator] 🎲 Selected overlay folder: ${selectedFolderPath}`);
+                
+                // Load all videos from the selected folder
+                const [files] = await bucket.getFiles({ prefix: `${selectedFolderPath}/` });
+                const folderVideos = files.filter(file => {
+                    const fileName = file.name.toLowerCase();
+                    return videoExtensions.some(ext => fileName.endsWith(ext)) && !fileName.endsWith('.keep');
+                });
+                
+                if (folderVideos.length === 0) {
+                    console.warn(`[ArweaveVideoGenerator] ⚠️  No overlay videos found in ${selectedFolderPath}. Run upload-overlay-videos.js to upload videos.`);
+                } else {
+                    console.log(`[ArweaveVideoGenerator] Found ${folderVideos.length} videos in ${selectedFolderPath}`);
+                    
+                    // Calculate number of 10-second segments needed
+                    const segmentDuration = 10; // 10 seconds per overlay
+                    const numSegments = Math.ceil(duration / segmentDuration);
+                    console.log(`[ArweaveVideoGenerator] Creating ${numSegments} overlay segments (${segmentDuration}s each) for ${duration}s video`);
+                    
+                    // Download videos and create overlay layers for each segment
+                    const usedVideoIndices = new Set(); // Track which videos we've used to avoid immediate repeats
+                    
+                    for (let segmentIndex = 0; segmentIndex < numSegments; segmentIndex++) {
+                        const segmentStartTime = segmentIndex * segmentDuration;
+                        const segmentEndTime = Math.min(segmentStartTime + segmentDuration, duration);
+                        const actualSegmentDuration = segmentEndTime - segmentStartTime;
+                        
+                        // Select a random video from the folder (avoid immediate repeats)
+                        let videoIndex;
+                        let attempts = 0;
+                        do {
+                            videoIndex = Math.floor(Math.random() * folderVideos.length);
+                            attempts++;
+                            // If we've used all videos, reset the set
+                            if (usedVideoIndices.size >= folderVideos.length) {
+                                usedVideoIndices.clear();
+                            }
+                        } while (usedVideoIndices.has(videoIndex) && attempts < 10);
+                        
+                        usedVideoIndices.add(videoIndex);
+                        const selectedVideo = folderVideos[videoIndex];
+                        const videoFileName = path.basename(selectedVideo.name);
+                        
+                        console.log(`[ArweaveVideoGenerator] Segment ${segmentIndex + 1}/${numSegments}: ${videoFileName} (${segmentStartTime}s - ${segmentEndTime}s)`);
+                        
+                        // Download and cache video
+                        const overlayVideoCachePath = path.join(this.cacheDir, `overlay_video_${Date.now()}_${segmentIndex}.mp4`);
+                        await selectedVideo.download({ destination: overlayVideoCachePath });
+                        overlayVideoCachePaths.push(overlayVideoCachePath);
+                        
+                        // Video overlay: full canvas size, overlay blend mode, z-index 250
+                        const overlayVideoWidth = width;
+                        const overlayVideoHeight = height;
+                        const overlayVideoX = 0;
+                        const overlayVideoY = 0;
+                        
+                        // Add video overlay layer with timing (10 seconds per segment)
+                        // Opacity can be controlled via options.overlayOpacity (default 0.5 for less distraction)
+                        const overlayOpacity = this.currentOverlayOpacity !== undefined ? this.currentOverlayOpacity : 0.5;
+                        const overlayVideoLayer = new LayerConfig(
+                            'video',
+                            overlayVideoCachePath,
+                            { x: overlayVideoX, y: overlayVideoY },
+                            { width: overlayVideoWidth, height: overlayVideoHeight },
+                            overlayOpacity, // Configurable opacity (default 0.5 for less distraction)
+                            250, // z-index (above images at 10/20, below text at 400 and end logo at 300)
+                            1.0, // scale
+                            null, // no font path
+                            segmentStartTime, // start at segment start time
+                            actualSegmentDuration // duration of this segment
+                        );
+                        overlayVideoLayer.addAfterFade = false; // Fade out with everything else
+                        overlayVideoLayer.blendMode = 'overlay'; // Use overlay blend mode
+                        layers.push(overlayVideoLayer);
+                    }
+                    
+                    console.log(`[ArweaveVideoGenerator] ✅ Created ${numSegments} overlay segments from ${selectedFolderPath}`);
+                    console.log(`[ArweaveVideoGenerator] Overlay videos will switch every ${segmentDuration} seconds`);
+                }
+            } catch (error) {
+                console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load overlay videos from assets/:`, error.message);
+                // Continue without overlay videos if it fails
+            }
 
             // Step 6: Add random logo overlay at 25 seconds (5 seconds before end)
             console.log('[ArweaveVideoGenerator] Step 6: Loading random logo for end overlay from Firebase...');

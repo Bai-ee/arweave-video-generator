@@ -27,8 +27,8 @@ export default async function handler(req, res) {
 
     const { folder } = req.query;
 
-    // Define available folders (videos and images)
-    const availableFolders = ['skyline', 'artist', 'decks', 'equipment', 'family', 'neighborhood', 'assets/chicago-skyline-videos', 'logos', 'paper_backgrounds'];
+    // Define available folders (videos only - logos and paper_backgrounds are for internal use, not user selection)
+    const availableFolders = ['skyline', 'artist', 'decks', 'equipment', 'family', 'neighborhood', 'assets/chicago-skyline-videos'];
 
     if (folder) {
       // Get files from a specific folder (videos or images)

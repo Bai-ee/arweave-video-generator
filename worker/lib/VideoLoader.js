@@ -158,6 +158,9 @@ export class VideoLoader {
             const storage = getStorage();
             const bucket = storage.bucket();
             
+            // Log what folders are being requested
+            console.log(`[VideoLoader] 🔍 Loading video references with selectedFolders: [${selectedFolders.join(', ')}]`);
+            
             // Support multiple video formats
             const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
             
@@ -167,14 +170,38 @@ export class VideoLoader {
             // Helper function to check if a folder should be included
             const shouldIncludeFolder = (folderName) => {
                 if (selectedFolders.length === 0) return true; // No filter = include all
-                // Check if folder name matches any selected folder (handle both 'skyline' and 'assets/chicago-skyline-videos')
-                return selectedFolders.some(selected => {
-                    const normalizedSelected = selected.replace('assets/', '');
-                    const normalizedFolder = folderName.replace('assets/', '');
-                    return normalizedSelected === normalizedFolder || 
-                           selected.includes(folderName) || 
-                           folderName.includes(selected);
+                
+                // Normalize folder names for comparison (case-insensitive, trim whitespace, remove assets/ prefix)
+                const normalize = (name) => {
+                    if (!name) return '';
+                    return name.toString().toLowerCase().trim().replace(/^assets\//, '');
+                };
+                
+                const normalizedFolder = normalize(folderName);
+                
+                // Check if folder name matches any selected folder
+                const matches = selectedFolders.some(selected => {
+                    const normalizedSelected = normalize(selected);
+                    // Exact match after normalization
+                    if (normalizedSelected === normalizedFolder) return true;
+                    // Handle partial matches (e.g., "chicago-skyline-videos" matches "assets/chicago-skyline-videos")
+                    if (normalizedSelected.includes(normalizedFolder) || normalizedFolder.includes(normalizedSelected)) {
+                        // Additional check: make sure it's not a false positive
+                        // e.g., "skyline" should match "skyline" but not "chicago-skyline-videos"
+                        if (normalizedSelected === 'skyline' && normalizedFolder === 'chicago-skyline-videos') return false;
+                        if (normalizedFolder === 'skyline' && normalizedSelected === 'chicago-skyline-videos') return false;
+                        return true;
+                    }
+                    return false;
                 });
+                
+                if (matches) {
+                    console.log(`[VideoLoader] ✅ Folder "${folderName}" matches selected folders: [${selectedFolders.join(', ')}]`);
+                } else {
+                    console.log(`[VideoLoader] ⏭️  Folder "${folderName}" does NOT match selected folders: [${selectedFolders.join(', ')}]`);
+                }
+                
+                return matches;
             };
             
             // Initialize grouped structure for all folders
@@ -219,7 +246,12 @@ export class VideoLoader {
             console.log(`[VideoLoader] ✅ Found ${groupedFiles.equipment.length} equipment + ${groupedFiles.decks.length} decks + ${groupedFiles.skyline.length} skyline + ${groupedFiles.chicago.length} chicago + ${groupedFiles.neighborhood.length} neighborhood + ${groupedFiles.artist.length} artist + ${groupedFiles.family.length} family = ${total} total video references`);
 
             if (total === 0) {
-                console.warn(`[VideoLoader] ⚠️ No videos found in selected folders`);
+                console.warn(`[VideoLoader] ⚠️ No videos found in selected folders: [${selectedFolders.join(', ')}]`);
+                console.warn(`[VideoLoader] ⚠️ This will cause fallback to image background.`);
+                console.warn(`[VideoLoader] 💡 Check that:`);
+                console.warn(`[VideoLoader]    1. Folder names match exactly (case-insensitive)`);
+                console.warn(`[VideoLoader]    2. Videos exist in Firebase Storage in those folders`);
+                console.warn(`[VideoLoader]    3. Videos have valid extensions: ${videoExtensions.join(', ')}`);
                 return returnGrouped ? groupedFiles : [];
             }
 
@@ -276,22 +308,50 @@ export class VideoLoader {
             const storage = getStorage();
             const bucket = storage.bucket();
 
+            // Log what folders are being requested
+            console.log(`[VideoLoader] 🔍 Loading videos with selectedFolders: [${selectedFolders.join(', ')}]`);
+
             // Support multiple video formats: .mp4, .mov, .m4v, .avi, .mkv, .webm
             const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
             
             // Define all possible folders (matching API availableFolders)
             const allFolders = ['equipment', 'decks', 'skyline', 'neighborhood', 'artist', 'family', 'assets/chicago-skyline-videos'];
             
-            // Helper function to check if a folder should be included
+            // Helper function to check if a folder should be included (same logic as loadTrackVideoReferences)
             const shouldIncludeFolder = (folderName) => {
                 if (selectedFolders.length === 0) return true; // No filter = include all
-                return selectedFolders.some(selected => {
-                    const normalizedSelected = selected.replace('assets/', '');
-                    const normalizedFolder = folderName.replace('assets/', '');
-                    return normalizedSelected === normalizedFolder || 
-                           selected.includes(folderName) || 
-                           folderName.includes(selected);
+                
+                // Normalize folder names for comparison (case-insensitive, trim whitespace, remove assets/ prefix)
+                const normalize = (name) => {
+                    if (!name) return '';
+                    return name.toString().toLowerCase().trim().replace(/^assets\//, '');
+                };
+                
+                const normalizedFolder = normalize(folderName);
+                
+                // Check if folder name matches any selected folder
+                const matches = selectedFolders.some(selected => {
+                    const normalizedSelected = normalize(selected);
+                    // Exact match after normalization
+                    if (normalizedSelected === normalizedFolder) return true;
+                    // Handle partial matches (e.g., "chicago-skyline-videos" matches "assets/chicago-skyline-videos")
+                    if (normalizedSelected.includes(normalizedFolder) || normalizedFolder.includes(normalizedSelected)) {
+                        // Additional check: make sure it's not a false positive
+                        // e.g., "skyline" should match "skyline" but not "chicago-skyline-videos"
+                        if (normalizedSelected === 'skyline' && normalizedFolder === 'chicago-skyline-videos') return false;
+                        if (normalizedFolder === 'skyline' && normalizedSelected === 'chicago-skyline-videos') return false;
+                        return true;
+                    }
+                    return false;
                 });
+                
+                if (matches) {
+                    console.log(`[VideoLoader] ✅ Folder "${folderName}" matches selected folders: [${selectedFolders.join(', ')}]`);
+                } else {
+                    console.log(`[VideoLoader] ⏭️  Folder "${folderName}" does NOT match selected folders: [${selectedFolders.join(', ')}]`);
+                }
+                
+                return matches;
             };
             
             // Initialize grouped structure for all folders
@@ -371,7 +431,12 @@ export class VideoLoader {
             console.log(`[VideoLoader] ✅ Loaded ${folderSummary} = ${totalVideos} total videos`);
 
             if (totalVideos === 0) {
-                console.warn(`[VideoLoader] ⚠️ No videos found in selected folders: ${selectedFolders.length > 0 ? selectedFolders.join(', ') : 'all'}`);
+                console.warn(`[VideoLoader] ⚠️ No videos found in selected folders: [${selectedFolders.join(', ')}]`);
+                console.warn(`[VideoLoader] ⚠️ This will cause fallback to image background.`);
+                console.warn(`[VideoLoader] 💡 Check that:`);
+                console.warn(`[VideoLoader]    1. Folder names match exactly (case-insensitive)`);
+                console.warn(`[VideoLoader]    2. Videos exist in Firebase Storage in those folders`);
+                console.warn(`[VideoLoader]    3. Videos have valid extensions: ${videoExtensions.join(', ')}`);
                 return returnGrouped ? groupedVideos : [];
             }
 

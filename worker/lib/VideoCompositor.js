@@ -45,7 +45,7 @@ if (process.env.GITHUB_ACTIONS === 'true') {
  */
 export class LayerConfig {
   constructor(type, source, position, size, opacity, zIndex, scale = 1, fontPath = null, startTime = null, duration = null) {
-    this.type = type; // 'background' | 'image' | 'text'
+    this.type = type; // 'background' | 'image' | 'text' | 'video'
     this.source = source; // file path or text content
     this.position = position; // { x: number, y: number }
     this.size = size; // { width: number, height: number }
@@ -55,6 +55,7 @@ export class LayerConfig {
     this.fontPath = fontPath; // custom font path for text layers (optional)
     this.startTime = startTime; // start time in seconds (optional, for timed overlays)
     this.duration = duration; // duration in seconds (optional, for timed overlays)
+    this.blendMode = null; // blend mode: 'overlay', 'multiply', 'screen', etc. (optional)
   }
 }
 
@@ -102,9 +103,10 @@ export class VideoCompositor {
         throw new Error(`Audio file not found: ${config.audio}`);
       }
 
-      // Verify image layer files exist (text layers don't have files)
-      const imageLayers = config.layers.filter(layer => layer.type !== 'text');
-      for (const layer of imageLayers) {
+      // Verify image and video layer files exist (text layers don't have files)
+      const imageLayers = config.layers.filter(layer => layer.type === 'image');
+      const videoLayers = config.layers.filter(layer => layer.type === 'video');
+      for (const layer of [...imageLayers, ...videoLayers]) {
         if (!await fs.pathExists(layer.source)) {
           console.warn(`[VideoCompositor] Layer source not found: ${layer.source}, skipping`);
         }
@@ -165,21 +167,27 @@ export class VideoCompositor {
     let currentInput = '[base_scaled]';
 
     // Separate layers by type and by whether they should be added after fade
-    const imageLayers = config.layers.filter(layer => layer.type !== 'text' && layer.type !== 'background');
+    const imageLayers = config.layers.filter(layer => layer.type === 'image');
+    const videoLayers = config.layers.filter(layer => layer.type === 'video');
     const textLayers = config.layers.filter(layer => layer.type === 'text');
 
     // IMPORTANT: Separate layers into "before fade" and "after fade" groups
     // Layers with addAfterFade=true should be processed AFTER the fade filter
-    const layersBeforeFade = [...imageLayers, ...textLayers].filter(layer => !layer.addAfterFade);
-    const layersAfterFade = [...imageLayers, ...textLayers].filter(layer => layer.addAfterFade === true);
+    const layersBeforeFade = [...imageLayers, ...videoLayers, ...textLayers].filter(layer => !layer.addAfterFade);
+    const layersAfterFade = [...imageLayers, ...videoLayers, ...textLayers].filter(layer => layer.addAfterFade === true);
     
     // Sort each group by z-index
     const allLayersBeforeFade = layersBeforeFade.sort((a, b) => a.zIndex - b.zIndex);
     const allLayersAfterFade = layersAfterFade.sort((a, b) => a.zIndex - b.zIndex);
     
-    // Track which layers are images vs text for input indexing
+    // Track which layers are images vs videos vs text for input indexing
     let imageLayerIndex = 0; // Track image layer index for input numbering
+    let videoLayerIndex = 0; // Track video layer index for input numbering
     let textLayerIndex = 0; // Track text layer index for label numbering
+    
+    // Track created labels as we build the filter complex
+    const createdTextLabels = [];
+    const createdImageLabels = [];
 
     // Process layers that should appear BEFORE fade
     allLayersBeforeFade.forEach((layer) => {
@@ -190,8 +198,19 @@ export class VideoCompositor {
         // Calculate font size based on layer height (or use stored fontSize)
         const fontSize = layer.fontSize || Math.round(layer.size.height * 0.7); // 70% of layer height or stored value
 
-        // Escape text for FFmpeg
-        const escapedText = layer.source.replace(/'/g, "\\'").replace(/:/g, "\\:");
+        // Escape text for FFmpeg drawtext filter
+        // Need to escape: single quotes, colons, brackets, parentheses, backslashes, and other special chars
+        let escapedText = layer.source
+          .replace(/\\/g, '\\\\')  // Escape backslashes first
+          .replace(/'/g, "\\'")     // Escape single quotes
+          .replace(/"/g, '\\"')     // Escape double quotes
+          .replace(/:/g, "\\:")     // Escape colons
+          .replace(/\[/g, "\\[")    // Escape brackets
+          .replace(/\]/g, "\\]")    // Escape brackets
+          .replace(/\(/g, "\\(")    // Escape parentheses
+          .replace(/\)/g, "\\)")    // Escape parentheses
+          .replace(/\$/g, "\\$")    // Escape dollar signs (used in expressions)
+          .replace(/\@/g, "\\@");   // Escape @ symbols
 
         // FFmpeg drawtext uses x,y for top-left corner
         let xPos = layer.position.x;
@@ -212,12 +231,16 @@ export class VideoCompositor {
         const borderWidth = actualFontSize < 30 ? 1 : 2; // Thinner border for small text
         
         // Build drawtext parameters
+        // Use escaped text without quotes (FFmpeg will handle it)
+        // Add lineheight for line spacing (0.75x font size - half of previous 1.5x)
+        const lineHeight = Math.round(actualFontSize * 0.75);
         const drawtextParams = [
-          `text='${escapedText}'`,
+          `text='${escapedText}'`, // Single quotes around escaped text (no quotes in content itself)
           `fontsize=${actualFontSize}`,
           `fontcolor=${textColor}`, // Use layer's text color (default black)
           `borderw=${borderWidth}`, // Border width
           `bordercolor=${borderColor}`, // Border color (opposite of text color)
+          `line_spacing=${lineHeight}`, // Add line spacing between lines
           isCentered ? `x=(w-text_w)/2` : `x=${xPos}`,
           `y=${yPos}`
         ];
@@ -236,13 +259,16 @@ export class VideoCompositor {
         let textFilter;
         if (layer.startTime !== null && layer.startTime !== undefined) {
           const endTime = layer.startTime + (layer.duration || config.duration);
+          // Round endTime to avoid decimal issues in filter expressions
+          const roundedEndTime = Math.round(endTime * 100) / 100;
           // Use enable expression with fade-in: opacity goes from 0 to full over 1 second
           // FFmpeg doesn't support clamp(), so use if() and min() instead
           // Formula: alpha = if(t < startTime, 0, min(255, (t - startTime) / fadeDuration * 255))
           const fadeDuration = 1.0; // 1 second fade-in
-          const fadeAlpha = `if(lt(t,${layer.startTime}),0,min(255,(t-${layer.startTime})/${fadeDuration}*255))`;
+          const fadeAlpha = `if(lt(t\\,${layer.startTime})\\,0\\,min(255\\,(t-${layer.startTime})/${fadeDuration}*255))`;
           drawtextParams.push(`alpha='${fadeAlpha}'`); // Add dynamic fade alpha
-          drawtextParams.push(`enable='between(t,${layer.startTime},${endTime})'`);
+          // Use gte/lte instead of between to avoid parsing issues
+          drawtextParams.push(`enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'`);
           textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
         } else {
           // No timing - add static alpha
@@ -253,11 +279,98 @@ export class VideoCompositor {
         console.log(`[VideoCompositor] Text filter for layer ${textLayerIndex}: ${textFilter.substring(0, 150)}...`);
         filters.push(textFilter);
         currentInput = outputLabel;
+        createdTextLabels.push(outputLabel); // Track text label for final output mapping
         textLayerIndex++;
-      } else {
-        // Process image layer
-        const inputIndex = imageLayerIndex + 2; // +2 because 0=base, 1=audio
-        const outputLabel = `[layer${imageLayerIndex}]`;
+      } else if (layer.type === 'video') {
+        // Process video layer with blend mode support
+        // Input index: videos come first after base(0) and audio(1), so index = 2 + videoLayerIndex
+        const inputIndex = 2 + videoLayerIndex; // +2 because 0=base, 1=audio, then videos
+        let outputLabel = `[video_layer${videoLayerIndex}]`;
+        
+        // Scale video to canvas size
+        const finalWidth = Math.round(layer.size.width * (layer.scale || 1));
+        const finalHeight = Math.round(layer.size.height * (layer.scale || 1));
+        
+        // Apply blend mode if specified
+        const opacity = layer.opacity || 1.0;
+        let overlayFilter;
+        
+        if (layer.blendMode === 'overlay') {
+          // For overlay blend mode, we'll scale and position in the blend step
+          const scaleFilter = `[${inputIndex}:v]scale=${finalWidth}:${finalHeight}:force_original_aspect_ratio=increase,crop=${finalWidth}:${finalHeight},fps=30[scaled_video${videoLayerIndex}]`;
+          filters.push(scaleFilter);
+          // Overlay blend mode: use blend filter with overlay mode
+          // First, prepare the video with opacity if needed
+          let videoInput = `[scaled_video${videoLayerIndex}]`;
+          if (opacity < 1.0) {
+            filters.push(`[scaled_video${videoLayerIndex}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*${opacity}'[scaled_video${videoLayerIndex}_alpha]`);
+            videoInput = `[scaled_video${videoLayerIndex}_alpha]`;
+          }
+          
+          // For overlay blend mode: blend the video directly with current input
+          // Both inputs need to be the same size for blend filter
+          // Scale video to match canvas size, then blend
+          const videoScaled = `[video_scaled_for_blend${videoLayerIndex}]`;
+          filters.push(`${videoInput}scale=${canvasWidth}:${canvasHeight}:force_original_aspect_ratio=increase,crop=${canvasWidth}:${canvasHeight},fps=30${videoScaled}`);
+          
+          // Blend the scaled video with the current input using overlay blend mode
+          const blendOutput = `[video_blend${videoLayerIndex}]`;
+          
+          // For blend mode with timing, we need to handle it differently
+          // Since blend filter doesn't work well with enable expressions, we'll use a workaround:
+          // For timed overlays, we'll apply the blend for the full duration
+          // The timing will be controlled by trimming the video input in the filter chain
+          if (layer.startTime !== null && layer.startTime !== undefined) {
+            const endTime = layer.startTime + (layer.duration || config.duration);
+            // Trim the video input to only the time window we want
+            const trimmedVideo = `[trimmed_video${videoLayerIndex}]`;
+            filters.push(`${videoScaled}trim=start=${layer.startTime}:end=${endTime},setpts=PTS-STARTPTS${trimmedVideo}`);
+            
+            // Blend the trimmed video with current input
+            filters.push(`${currentInput}${trimmedVideo}blend=all_mode=overlay:all_opacity=${opacity}${blendOutput}`);
+            currentInput = blendOutput;
+            outputLabel = blendOutput;
+            overlayFilter = null;
+          } else {
+            // No timing - blend directly
+            filters.push(`${currentInput}${videoScaled}blend=all_mode=overlay:all_opacity=${opacity}${blendOutput}`);
+            currentInput = blendOutput;
+            outputLabel = blendOutput;
+            overlayFilter = null;
+          }
+        } else {
+          // No blend mode - simple overlay
+          const scaleFilter = `[${inputIndex}:v]scale=${finalWidth}:${finalHeight}:force_original_aspect_ratio=increase,crop=${finalWidth}:${finalHeight},fps=30[scaled_video${videoLayerIndex}]`;
+          filters.push(scaleFilter);
+          
+          if (opacity < 1.0) {
+            filters.push(`[scaled_video${videoLayerIndex}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*${opacity}'[scaled_video${videoLayerIndex}_alpha]`);
+            if (layer.startTime !== null && layer.startTime !== undefined) {
+              const endTime = layer.startTime + (layer.duration || config.duration);
+              overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+            } else {
+              overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+            }
+          } else {
+            if (layer.startTime !== null && layer.startTime !== undefined) {
+              const endTime = layer.startTime + (layer.duration || config.duration);
+              overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+            } else {
+              overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+            }
+          }
+        }
+        if (overlayFilter) {
+          filters.push(overlayFilter);
+          currentInput = outputLabel;
+        }
+        // If blend mode was used and no overlay filter, currentInput was already updated above
+        videoLayerIndex++;
+        } else {
+          // Process image layer
+          // Input index: images come after videos, so index = 2 + videoLayers.length + imageLayerIndex
+          const inputIndex = 2 + videoLayers.length + imageLayerIndex; // +2 because 0=base, 1=audio, then videos, then images
+          const outputLabel = `[layer${imageLayerIndex}]`;
 
         // Calculate final size with scale
         const finalWidth = Math.round(layer.size.width * (layer.scale || 1));
@@ -355,11 +468,18 @@ export class VideoCompositor {
     const videoFadeStart = config.duration - 8; // 22 seconds for 30s video
     const videoFadeDuration = 3; // 3 second fade
     let finalVideoLabel = currentInput; // Track final video label after fade
+    const hasTextBeforeFade = allLayersBeforeFade.some(layer => layer.type === 'text');
     if (videoFadeStart > 0 && videoFadeDuration > 0) {
       const fadeOutFilter = `${currentInput}fade=t=out:st=${videoFadeStart}:d=${videoFadeDuration}[faded_video]`;
       filters.push(fadeOutFilter);
       currentInput = '[faded_video]';
       finalVideoLabel = '[faded_video]';
+      // If text was processed before fade, the faded_video contains the text, so use it as final output
+      if (hasTextBeforeFade) {
+        // Remove text labels from tracking since they're now part of faded_video
+        // The final output will be faded_video which includes the text
+        createdTextLabels.length = 0; // Clear text labels - they're in faded_video now
+      }
       console.log(`[VideoCompositor] Adding video fade to black: ${videoFadeStart}s-${videoFadeStart + videoFadeDuration}s`);
     }
 
@@ -371,7 +491,18 @@ export class VideoCompositor {
           // Process text layer (same as before, but on faded video)
           const outputLabel = `[text_layer_after${textLayerIndex}]`;
           const fontSize = layer.fontSize || Math.round(layer.size.height * 0.7);
-          const escapedText = layer.source.replace(/'/g, "\\'").replace(/:/g, "\\:");
+          // Escape text for FFmpeg drawtext filter (same as above)
+          let escapedText = layer.source
+            .replace(/\\/g, '\\\\')  // Escape backslashes first
+            .replace(/'/g, "\\'")     // Escape single quotes
+            .replace(/"/g, '\\"')     // Escape double quotes
+            .replace(/:/g, "\\:")     // Escape colons
+            .replace(/\[/g, "\\[")    // Escape brackets
+            .replace(/\]/g, "\\]")    // Escape brackets
+            .replace(/\(/g, "\\(")    // Escape parentheses
+            .replace(/\)/g, "\\)")    // Escape parentheses
+            .replace(/\$/g, "\\$")    // Escape dollar signs (used in expressions)
+            .replace(/\@/g, "\\@");   // Escape @ symbols
           let xPos = layer.position.x;
           let yPos = layer.position.y;
           const isCentered = Math.abs(xPos - (canvasWidth / 2)) < 10;
@@ -381,12 +512,15 @@ export class VideoCompositor {
           const borderColor = textColor === '0xFFFFFF' ? '0x000000' : '0xFFFFFF';
           const borderWidth = actualFontSize < 30 ? 1 : 2;
           
+          // Add lineheight for line spacing (0.75x font size - half of previous 1.5x)
+          const lineHeight = Math.round(actualFontSize * 0.75);
           const drawtextParams = [
-            `text='${escapedText}'`,
+            `text='${escapedText}'`, // Single quotes around escaped text (no quotes in content itself)
             `fontsize=${actualFontSize}`,
             `fontcolor=${textColor}`,
             `borderw=${borderWidth}`,
             `bordercolor=${borderColor}`,
+            `line_spacing=${lineHeight}`, // Add line spacing between lines
             isCentered ? `x=(w-text_w)/2` : `x=${xPos}`,
             `y=${yPos}`
           ];
@@ -402,10 +536,13 @@ export class VideoCompositor {
           let textFilter;
           if (layer.startTime !== null && layer.startTime !== undefined) {
             const endTime = layer.startTime + (layer.duration || config.duration);
+            // Round endTime to avoid decimal issues in filter expressions
+            const roundedEndTime = Math.round(endTime * 100) / 100;
             const fadeDuration = 1.0;
-            const fadeAlpha = `if(lt(t,${layer.startTime}),0,min(255,(t-${layer.startTime})/${fadeDuration}*255))`;
+            const fadeAlpha = `if(lt(t\\,${layer.startTime})\\,0\\,min(255\\,(t-${layer.startTime})/${fadeDuration}*255))`;
             drawtextParams.push(`alpha='${fadeAlpha}'`);
-            drawtextParams.push(`enable='between(t,${layer.startTime},${endTime})'`);
+            // Use gte/lte instead of between to avoid parsing issues
+            drawtextParams.push(`enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'`);
             textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
           } else {
             drawtextParams.push(`alpha=${opacity}`);
@@ -415,9 +552,72 @@ export class VideoCompositor {
           filters.push(textFilter);
           currentInput = outputLabel;
           textLayerIndex++;
+        } else if (layer.type === 'video') {
+          // Process video layer after fade (same as before fade, but on faded video)
+          // Input index: videos come first after base(0) and audio(1), so index = 2 + videoLayerIndex
+          const inputIndex = 2 + videoLayerIndex; // +2 because 0=base, 1=audio, then videos
+          let outputLabel = `[video_layer_after${videoLayerIndex}]`;
+          
+          // Scale video to canvas size
+          const finalWidth = Math.round(layer.size.width * (layer.scale || 1));
+          const finalHeight = Math.round(layer.size.height * (layer.scale || 1));
+          const scaleFilter = `[${inputIndex}:v]scale=${finalWidth}:${finalHeight}:force_original_aspect_ratio=increase,crop=${finalWidth}:${finalHeight},fps=30[scaled_video_after${videoLayerIndex}]`;
+          filters.push(scaleFilter);
+          
+          // Apply blend mode if specified
+          const opacity = layer.opacity || 1.0;
+          let overlayFilter;
+          
+          if (layer.blendMode === 'overlay') {
+            let videoInput = `[scaled_video_after${videoLayerIndex}]`;
+            if (opacity < 1.0) {
+              filters.push(`[scaled_video_after${videoLayerIndex}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*${opacity}'[scaled_video_after${videoLayerIndex}_alpha]`);
+              videoInput = `[scaled_video_after${videoLayerIndex}_alpha]`;
+            }
+            
+            // For overlay blend mode: blend the video directly with current input
+            // Both inputs need to be the same size for blend filter
+            // Scale video to match canvas size, then blend
+            const videoScaled = `[video_scaled_for_blend${videoLayerIndex}]`;
+            filters.push(`${videoInput}scale=${canvasWidth}:${canvasHeight}:force_original_aspect_ratio=increase,crop=${canvasWidth}:${canvasHeight},fps=30${videoScaled}`);
+            
+            // Blend the scaled video with the current input using overlay blend mode
+            const blendOutput = `[video_blend_after${videoLayerIndex}]`;
+            // Blend filter requires both inputs to be same size - currentInput is already canvas size
+            filters.push(`${currentInput}${videoScaled}blend=all_mode=overlay:all_opacity=${opacity}${blendOutput}`);
+            
+            // The blend output becomes the new current input
+            overlayFilter = null;
+            currentInput = blendOutput;
+            outputLabel = blendOutput;
+          } else {
+            if (opacity < 1.0) {
+              filters.push(`[scaled_video_after${videoLayerIndex}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*${opacity}'[scaled_video_after${videoLayerIndex}_alpha]`);
+              if (layer.startTime !== null && layer.startTime !== undefined) {
+                const endTime = layer.startTime + (layer.duration || config.duration);
+                overlayFilter = `${currentInput}[scaled_video_after${videoLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+              } else {
+                overlayFilter = `${currentInput}[scaled_video_after${videoLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+              }
+            } else {
+              if (layer.startTime !== null && layer.startTime !== undefined) {
+                const endTime = layer.startTime + (layer.duration || config.duration);
+                overlayFilter = `${currentInput}[scaled_video_after${videoLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+              } else {
+                overlayFilter = `${currentInput}[scaled_video_after${videoLayerIndex}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+              }
+            }
+          }
+          if (overlayFilter) {
+            filters.push(overlayFilter);
+            currentInput = outputLabel;
+          }
+          // If blend mode was used, currentInput was already updated above
+          videoLayerIndex++;
         } else {
           // Process image layer (same as before, but on faded video)
-          const inputIndex = imageLayerIndex + 2; // +2 because 0=base, 1=audio
+          // Input index: images come after videos, so index = 2 + videoLayers.length + imageLayerIndex
+          const inputIndex = 2 + videoLayers.length + imageLayerIndex; // +2 because 0=base, 1=audio, then videos, then images
           const outputLabel = `[layer_after${imageLayerIndex}]`;
           const finalWidth = Math.round(layer.size.width * (layer.scale || 1));
           const finalHeight = Math.round(layer.size.height * (layer.scale || 1));
@@ -464,10 +664,7 @@ export class VideoCompositor {
     // Track labels from the unified processing
     // Combine all layers (before and after fade) for label tracking
     const allLayers = [...allLayersBeforeFade, ...allLayersAfterFade];
-    const createdTextLabels = [];
-    const createdImageLabels = [];
-    
-    // Track labels from before-fade layers
+    // Track labels from before-fade layers (labels already tracked above)
     allLayersBeforeFade.forEach((layer, idx) => {
       if (layer.type === 'text') {
         const textIdx = allLayersBeforeFade.slice(0, idx).filter(l => l.type === 'text').length;
@@ -501,6 +698,8 @@ export class VideoCompositor {
     // Store created labels in config for later validation
     config._createdTextLabels = createdTextLabels;
     config._createdImageLabels = createdImageLabels;
+    config._finalVideoLabel = finalVideoLabel; // Store final video label (faded_video if fade applied)
+    config._hasTextBeforeFade = hasTextBeforeFade; // Track if text was processed before fade
     
     return filterComplex;
   }
@@ -532,10 +731,18 @@ export class VideoCompositor {
     // Input audio
     command.push('-i', config.audio);
 
-    // Input image layers (text layers don't need input files)
-    const imageLayers = config.layers.filter(layer => layer.type !== 'text' && layer.type !== 'background');
+    // Input image and video layers (text layers don't need input files)
+    const imageLayers = config.layers.filter(layer => layer.type === 'image');
+    const videoLayers = config.layers.filter(layer => layer.type === 'video');
+    
+    // Add video layers first (they don't need looping)
+    videoLayers.forEach(layer => {
+      command.push('-stream_loop', '-1'); // Loop video if shorter than duration
+      command.push('-i', layer.source);
+    });
+    
+    // Add image layers (they need to be looped to create video streams)
     imageLayers.forEach(layer => {
-      // Images need to be looped to create video streams
       command.push('-loop', '1');
       command.push('-framerate', '30');
       command.push('-i', layer.source);
@@ -546,22 +753,53 @@ export class VideoCompositor {
       command.push('-filter_complex', filterComplex);
 
       // Determine final output label - use the labels that were actually created
+      // PRIORITY: Text layers > Image layers > Faded video > Base
+      // Text should ALWAYS be on top, even if there are image layers after fade
       let finalOutput;
 
-      // Use the tracked labels from buildFilterComplex if available
-      // Check if fade was applied first (highest priority)
-      if (config._finalVideoLabel && filterComplex.includes(config._finalVideoLabel)) {
+      // First priority: If text was processed before fade, use faded_video (text is included in fade)
+      if (config._hasTextBeforeFade && config._finalVideoLabel && filterComplex.includes(config._finalVideoLabel)) {
         finalOutput = config._finalVideoLabel;
-        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (after fade)`);
-      } else if (config._createdTextLabels && config._createdTextLabels.length > 0) {
-        // Use the last text layer that was actually created
-        finalOutput = config._createdTextLabels[config._createdTextLabels.length - 1];
-        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${config._createdTextLabels.length} text layers created)`);
-      } else if (config._createdImageLabels && config._createdImageLabels.length > 0) {
-        // Use the last image layer that was actually created
-        finalOutput = config._createdImageLabels[config._createdImageLabels.length - 1];
-        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${config._createdImageLabels.length} image layers created)`);
-      } else {
+        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (text processed before fade, now in faded_video)`);
+      }
+      // Second priority: Check for text layers processed after fade (these stay visible)
+      else if (config._createdTextLabels && config._createdTextLabels.length > 0) {
+        // Find the last text layer that exists in the filter complex
+        for (let i = config._createdTextLabels.length - 1; i >= 0; i--) {
+          const textLabel = config._createdTextLabels[i];
+          if (filterComplex.includes(textLabel)) {
+            finalOutput = textLabel;
+            console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${config._createdTextLabels.length} text layers created, using last valid)`);
+            break;
+          }
+        }
+        // If no text label found in filter complex, fall through to next priority
+        if (!finalOutput) {
+          console.warn(`[VideoCompositor] ⚠️  Text layers tracked but not found in filter complex, falling back to other layers`);
+        }
+      }
+      
+      // Third priority: Use final video label (after fade) if no text layers or text not found
+      if (!finalOutput && config._finalVideoLabel && filterComplex.includes(config._finalVideoLabel)) {
+        finalOutput = config._finalVideoLabel;
+        console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (after fade, no text layers)`);
+      } 
+      
+      // Third priority: Image layers
+      if (!finalOutput && config._createdImageLabels && config._createdImageLabels.length > 0) {
+        // Find the last image layer that exists in the filter complex
+        for (let i = config._createdImageLabels.length - 1; i >= 0; i--) {
+          const imageLabel = config._createdImageLabels[i];
+          if (filterComplex.includes(imageLabel)) {
+            finalOutput = imageLabel;
+            console.log(`[VideoCompositor] Mapping final output: ${finalOutput} (${config._createdImageLabels.length} image layers created, using last valid)`);
+            break;
+          }
+        }
+      }
+      
+      // Fallback: determine from layer counts
+      if (!finalOutput) {
         // Fallback: determine from layer counts
         const textLayers = config.layers.filter(layer => layer.type === 'text');
         const imageLayers = config.layers.filter(layer => layer.type !== 'text' && layer.type !== 'background');

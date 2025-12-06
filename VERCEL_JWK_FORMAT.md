@@ -32,3 +32,4 @@ When adding `ARWEAVE_WALLET_JWK` to Vercel, paste it as a **single-line JSON str
 The code now has better error handling that will attempt to clean up the JSON if there are formatting issues, but it's best to paste it correctly from the start.
 
 
+

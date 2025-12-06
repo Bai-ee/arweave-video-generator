@@ -28,42 +28,73 @@ export class VideoSegmentCompositor {
    */
   async getVideoDuration(videoPath) {
     try {
+      // Verify file exists first
+      if (!await fs.pathExists(videoPath)) {
+        throw new Error(`Video file does not exist: ${videoPath}`);
+      }
+      
       // Try using ffprobe first (more reliable, available in GitHub Actions)
       try {
         const ffprobePath = process.env.GITHUB_ACTIONS === 'true' ? 'ffprobe' : 'ffprobe';
         const command = `${ffprobePath} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
-        const duration = parseFloat(execSync(command, { encoding: 'utf8' }).trim());
+        const duration = parseFloat(execSync(command, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim());
         if (!isNaN(duration) && duration > 0) {
           return duration;
         }
       } catch (ffprobeError) {
-        // Fall through to ffmpeg method
+        // ffprobe not available or failed, fall through to ffmpeg method
       }
       
       // Fallback: Use ffmpeg to get duration (works even if ffprobe not available)
-      // This method parses ffmpeg output which works in both environments
-      const command = `${ffmpegPath} -i "${videoPath}" 2>&1`;
-      const output = execSync(command, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }).trim();
-      
-      // Extract duration from ffmpeg output: "Duration: HH:MM:SS.mmm"
-      const durationMatch = output.match(/Duration:\s*(\d{2}):(\d{2}):(\d{2}\.?\d*)/);
-      if (durationMatch) {
-        const hours = parseFloat(durationMatch[1]);
-        const minutes = parseFloat(durationMatch[2]);
-        const seconds = parseFloat(durationMatch[3]);
-        const duration = hours * 3600 + minutes * 60 + seconds;
+      // Use spawn instead of execSync to properly capture stderr
+      return new Promise((resolve, reject) => {
+        const ffmpegProcess = spawn(ffmpegPath, ['-i', videoPath], { stdio: ['ignore', 'pipe', 'pipe'] });
         
-        if (!isNaN(duration) && duration > 0) {
-          return duration;
-        }
-      }
-      
-      throw new Error('Could not parse duration from ffmpeg output');
+        let stderr = '';
+        let stdout = '';
+        
+        ffmpegProcess.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+        
+        ffmpegProcess.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        ffmpegProcess.on('close', (code) => {
+          // FFmpeg always exits with non-zero when using -i without output, but stderr contains the info
+          const output = stderr || stdout;
+          
+          // Extract duration from ffmpeg output: "Duration: HH:MM:SS.mmm"
+          const durationMatch = output.match(/Duration:\s*(\d{2}):(\d{2}):(\d{2}\.?\d*)/);
+          if (durationMatch) {
+            const hours = parseFloat(durationMatch[1]);
+            const minutes = parseFloat(durationMatch[2]);
+            const seconds = parseFloat(durationMatch[3]);
+            const duration = hours * 3600 + minutes * 60 + seconds;
+            
+            if (!isNaN(duration) && duration > 0) {
+              resolve(duration);
+              return;
+            }
+          }
+          
+          // If we can't parse duration, check if video has any streams
+          if (output.includes('Stream #') && output.includes('Video:')) {
+            // Video has streams but we can't get duration - might be corrupted or unusual format
+            reject(new Error('Video has streams but duration cannot be determined - may be corrupted'));
+          } else {
+            reject(new Error('Video file appears to have no video streams or is corrupted'));
+          }
+        });
+        
+        ffmpegProcess.on('error', (error) => {
+          reject(new Error(`FFmpeg error: ${error.message}`));
+        });
+      });
     } catch (error) {
       console.error(`[VideoSegmentCompositor] Error getting video duration:`, error.message);
-      // Fallback: assume 30 seconds if we can't determine (safe default)
-      console.warn(`[VideoSegmentCompositor] Using fallback duration: 30s`);
-      return 30;
+      throw new Error(`Cannot determine video duration for ${path.basename(videoPath)}: ${error.message}`);
     }
   }
 
@@ -77,7 +108,23 @@ export class VideoSegmentCompositor {
    */
   async extractRandomSegment(videoPath, segmentDuration = 5, targetTime = null, beatPositions = []) {
     try {
-      const videoDuration = await this.getVideoDuration(videoPath);
+      // Verify video file exists and is readable
+      if (!await fs.pathExists(videoPath)) {
+        throw new Error(`Video file does not exist: ${videoPath}`);
+      }
+      
+      const stats = await fs.stat(videoPath);
+      if (stats.size < 1024) { // Less than 1KB is definitely invalid
+        throw new Error(`Video file is too small (${stats.size} bytes) - likely corrupted`);
+      }
+      
+      let videoDuration;
+      try {
+        videoDuration = await this.getVideoDuration(videoPath);
+      } catch (durationError) {
+        // If we can't get duration, this video is problematic - skip it
+        throw new Error(`Cannot extract from video (duration detection failed): ${durationError.message}`);
+      }
       
       // If video is shorter than segment duration, use the whole video
       if (videoDuration <= segmentDuration) {
@@ -89,7 +136,14 @@ export class VideoSegmentCompositor {
       let startTime;
       if (targetTime !== null && beatPositions.length > 0) {
         // Align to nearest beat
+        const originalTime = targetTime;
         startTime = this.alignToBeat(targetTime, beatPositions, true);
+        const beatOffset = Math.abs(startTime - originalTime);
+        if (beatOffset > 0.01) {
+          console.log(`[VideoSegmentCompositor] 🎵 Beat alignment: ${originalTime.toFixed(3)}s → ${startTime.toFixed(3)}s (offset: ${beatOffset.toFixed(3)}s)`);
+        } else {
+          console.log(`[VideoSegmentCompositor] 🎵 Beat alignment: ${startTime.toFixed(3)}s (already on beat)`);
+        }
         // Ensure we don't exceed video duration
         startTime = Math.min(startTime, videoDuration - segmentDuration);
         startTime = Math.max(0, startTime);
@@ -97,6 +151,9 @@ export class VideoSegmentCompositor {
         // Random start time (leave room for segment duration)
         const maxStartTime = videoDuration - segmentDuration;
         startTime = Math.random() * maxStartTime;
+        if (beatPositions.length > 0) {
+          console.log(`[VideoSegmentCompositor] ⚠️  No targetTime provided, using random start (not beat-aligned)`);
+        }
       }
 
       // Generate output path
@@ -105,33 +162,64 @@ export class VideoSegmentCompositor {
         `segment_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`
       );
 
-      console.log(`[VideoSegmentCompositor] Extracting ${segmentDuration}s segment from ${path.basename(videoPath)} (start: ${startTime.toFixed(1)}s)`);
+      // Ensure startTime is within valid bounds
+      const maxStartTime = Math.max(0, videoDuration - segmentDuration);
+      if (startTime > maxStartTime) {
+        startTime = Math.max(0, maxStartTime);
+        console.warn(`[VideoSegmentCompositor] ⚠️  Adjusted startTime to ${startTime.toFixed(1)}s (video is ${videoDuration.toFixed(1)}s)`);
+      }
+      
+      // If video is too short, use what we can
+      if (videoDuration < segmentDuration) {
+        console.warn(`[VideoSegmentCompositor] ⚠️  Video is only ${videoDuration.toFixed(1)}s, extracting ${videoDuration.toFixed(1)}s segment instead of ${segmentDuration}s`);
+      }
+
+      console.log(`[VideoSegmentCompositor] Extracting ${segmentDuration}s segment from ${path.basename(videoPath)} (start: ${startTime.toFixed(1)}s, video duration: ${videoDuration.toFixed(1)}s)`);
 
       // Extract segment using FFmpeg
       // Re-encode to ensure compatibility with concatenation and consistent frame rate
       // Extract segment with video and audio (add silent audio if missing)
       // Normalize to 30fps for consistent timebase (required for xfade transitions)
-      await this.executeFFmpeg([
-        ffmpegPath,
-        '-i', videoPath,
-        '-f', 'lavfi',
-        '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
-        '-ss', startTime.toString(),
-        '-t', segmentDuration.toString(),
-        '-filter_complex', '[0:v]scale=720:720:force_original_aspect_ratio=increase,crop=720:720,fps=30,format=yuv420p[v];[1:a]atrim=0:' + segmentDuration.toString() + '[a]',
-        '-map', '[v]',
-        '-map', '[a]',
-        '-c:v', 'libx264',
-        '-preset', 'fast',
-        '-crf', '23',
-        '-r', '30', // Ensure 30fps output
-        '-g', '30', // GOP size for better seeking
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        '-avoid_negative_ts', 'make_zero',
-        '-y',
-        segmentPath
-      ]);
+      try {
+        await this.executeFFmpeg([
+          ffmpegPath,
+          '-i', videoPath,
+          '-f', 'lavfi',
+          '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+          '-ss', startTime.toString(),
+          '-t', segmentDuration.toString(),
+          '-filter_complex', '[0:v]scale=720:720:force_original_aspect_ratio=increase,crop=720:720,fps=30,format=yuv420p[v];[1:a]atrim=0:' + segmentDuration.toString() + '[a]',
+          '-map', '[v]',
+          '-map', '[a]',
+          '-c:v', 'libx264',
+          '-preset', 'fast',
+          '-crf', '23',
+          '-r', '30', // Ensure 30fps output
+          '-g', '30', // GOP size for better seeking
+          '-c:a', 'aac',
+          '-b:a', '128k',
+          '-avoid_negative_ts', 'make_zero',
+          '-y',
+          segmentPath
+        ], segmentPath, 100 * 1024); // Minimum 100KB for a 5s segment
+      } catch (ffmpegError) {
+        // Clean up invalid output file if it exists
+        if (await fs.pathExists(segmentPath)) {
+          await fs.remove(segmentPath).catch(() => {});
+        }
+        throw new Error(`FFmpeg extraction failed: ${ffmpegError.message}`);
+      }
+
+      // Validate output file was created and is valid
+      if (!await fs.pathExists(segmentPath)) {
+        throw new Error(`Segment file was not created: ${segmentPath}`);
+      }
+      
+      const segmentStats = await fs.stat(segmentPath);
+      if (segmentStats.size < 10240) { // Less than 10KB is definitely invalid
+        await fs.remove(segmentPath).catch(() => {});
+        throw new Error(`Segment file is too small (${segmentStats.size} bytes) - FFmpeg extraction likely failed`);
+      }
 
       return segmentPath;
 
@@ -398,9 +486,13 @@ export class VideoSegmentCompositor {
       sourceFolder = selected.folder;
       const selectedItem = selected.video;
       
-      // Track as used
+      // Track as used (prevent repeats)
       const videoKey = hasFileReferences ? selectedItem.name : selectedItem;
       usedAllVideos.add(videoKey);
+      
+      // Log selection to verify no repeats
+      const videoDisplayName = hasFileReferences ? selectedItem.name : path.basename(selectedItem);
+      console.log(`[VideoSegmentCompositor] 🎬 Selected video ${i + 1}/${segmentsNeeded}: ${videoDisplayName} from ${sourceFolder} (${usedAllVideos.size}/${totalVideosAvailable} used)`);
       
       if (hasFileReferences) {
         selectedFileRef = selectedItem;
@@ -463,35 +555,100 @@ export class VideoSegmentCompositor {
         const videoName = hasFileReferences ? (selectedFileRef?.name || 'unknown') : path.basename(selectedVideo || 'unknown');
         console.error(`[VideoSegmentCompositor] ❌ Failed to extract segment from ${videoName}`);
         console.error(`[VideoSegmentCompositor] Error: ${error.message}`);
-        console.warn(`[VideoSegmentCompositor] Trying another video...`);
+        console.warn(`[VideoSegmentCompositor] Trying another video (ensuring no repeats)...`);
         
-        // Try another video from the same folder
+        // Try another video from ANY folder, but ensure it hasn't been used yet
         let fallbackVideo = null;
         let fallbackFileRef = null;
-        const folderVideos = folderMap[sourceFolder] || [];
-        if (folderVideos.length > 1) {
-          if (hasFileReferences) {
-            const otherVideos = folderVideos.filter(v => v.name !== selectedFileRef?.name);
-            if (otherVideos.length > 0) {
-              fallbackFileRef = otherVideos[Math.floor(Math.random() * otherVideos.length)];
-            }
-          } else {
-            const otherVideos = folderVideos.filter(v => v !== selectedVideo);
-            if (otherVideos.length > 0) {
-              fallbackVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
-            }
+        let fallbackFolder = null;
+        
+        // Collect all unused videos from all folders (not just the same folder)
+        const unusedVideos = [];
+        for (const folder of allFolders) {
+          for (const v of folder.videos) {
+            const videoKey = hasFileReferences ? v.name : v;
+            // Skip if already used OR if it's the one that just failed
+            if (usedAllVideos.has(videoKey)) continue;
+            if (hasFileReferences && selectedFileRef && v.name === selectedFileRef.name) continue;
+            if (!hasFileReferences && selectedVideo && v === selectedVideo) continue;
+            
+            unusedVideos.push({ video: v, folder: folder.name });
           }
         }
         
-        if (fallbackFileRef) {
-          fallbackVideo = await videoLoader.downloadVideoFile(fallbackFileRef, sourceFolder);
-          const segmentPath = await this.extractRandomSegment(fallbackVideo, segmentDuration);
-          segmentPaths.push(segmentPath);
-        } else if (fallbackVideo) {
-          const segmentPath = await this.extractRandomSegment(fallbackVideo, segmentDuration);
-          segmentPaths.push(segmentPath);
-        } else {
-          throw new Error('No valid videos available for segment extraction');
+        if (unusedVideos.length > 0) {
+          // Randomly select from unused videos
+          const fallback = unusedVideos[Math.floor(Math.random() * unusedVideos.length)];
+          fallbackFolder = fallback.folder;
+          
+          if (hasFileReferences) {
+            fallbackFileRef = fallback.video;
+          } else {
+            fallbackVideo = fallback.video;
+          }
+        }
+        
+        // Try fallback videos with retry logic (up to 3 attempts)
+        let fallbackSuccess = false;
+        let attempts = 0;
+        const maxFallbackAttempts = 3;
+        
+        while (!fallbackSuccess && attempts < maxFallbackAttempts && unusedVideos.length > 0) {
+          attempts++;
+          
+          // Select a random unused video
+          const fallbackIndex = Math.floor(Math.random() * unusedVideos.length);
+          const fallback = unusedVideos[fallbackIndex];
+          fallbackFolder = fallback.folder;
+          
+          // Remove from unused list to prevent retrying same video
+          unusedVideos.splice(fallbackIndex, 1);
+          
+          let fallbackKey = null;
+          try {
+            if (hasFileReferences) {
+              fallbackFileRef = fallback.video;
+              fallbackKey = fallbackFileRef.name;
+              // Mark as used BEFORE downloading to prevent race conditions
+              usedAllVideos.add(fallbackKey);
+              
+              fallbackVideo = await videoLoader.downloadVideoFile(fallbackFileRef, fallbackFolder);
+            } else {
+              fallbackVideo = fallback.video;
+              fallbackKey = fallbackVideo;
+              // Mark as used
+              usedAllVideos.add(fallbackKey);
+            }
+            
+            const segmentPath = await this.extractRandomSegment(fallbackVideo, segmentDuration);
+            
+            // Validate segment
+            const segmentStats = await fs.stat(segmentPath);
+            if (segmentStats.size < 10240) {
+              // Segment too small, remove from used set and try another
+              usedAllVideos.delete(fallbackKey);
+              console.warn(`[VideoSegmentCompositor] ⚠️  Fallback attempt ${attempts}: segment too small (${segmentStats.size} bytes), trying another...`);
+              await fs.remove(segmentPath).catch(() => {});
+              continue; // Try next video
+            }
+            
+            // Success! Add segment
+            segmentPaths.push(segmentPath);
+            const folderName = fallbackFolder || 'unknown';
+            console.log(`[VideoSegmentCompositor] ✅ Fallback segment ${i + 1}/${segmentsNeeded} extracted from ${folderName} folder (${(segmentStats.size / 1024).toFixed(1)}KB) - attempt ${attempts}`);
+            fallbackSuccess = true;
+          } catch (fallbackError) {
+            // If this fallback failed, remove from used set and try another
+            if (fallbackKey) {
+              usedAllVideos.delete(fallbackKey);
+            }
+            console.warn(`[VideoSegmentCompositor] ⚠️  Fallback attempt ${attempts} failed: ${fallbackError.message}, trying another...`);
+            // Continue to next attempt
+          }
+        }
+        
+        if (!fallbackSuccess) {
+          throw new Error(`Failed to extract segment after ${attempts} fallback attempts. No valid unused videos available.`);
         }
       }
     }
@@ -548,11 +705,27 @@ export class VideoSegmentCompositor {
     }
     
     if (validSegments.length === 0) {
-      throw new Error('No valid segments to concatenate');
+      const errorMsg = `No valid segments to concatenate (all ${segmentPaths.length} segments failed or were too small)`;
+      console.error(`[VideoSegmentCompositor] ❌ ${errorMsg}`);
+      console.error(`[VideoSegmentCompositor] 💡 This usually means:`);
+      console.error(`[VideoSegmentCompositor]    1. Videos in selected folders are corrupted or too short`);
+      console.error(`[VideoSegmentCompositor]    2. Videos are shorter than ${segmentDuration}s and can't extract segments`);
+      console.error(`[VideoSegmentCompositor]    3. FFmpeg extraction is failing for all videos`);
+      throw new Error(errorMsg);
     }
     
     if (validSegments.length < segmentPaths.length) {
-      console.warn(`[VideoSegmentCompositor] ⚠️  Only ${validSegments.length}/${segmentPaths.length} segments are valid`);
+      const missingCount = segmentPaths.length - validSegments.length;
+      console.warn(`[VideoSegmentCompositor] ⚠️  Only ${validSegments.length}/${segmentPaths.length} segments are valid (${missingCount} failed)`);
+      console.warn(`[VideoSegmentCompositor] ⚠️  Video will be shorter than target duration (${targetDuration}s)`);
+      
+      // Calculate actual duration we'll get
+      const actualDuration = validSegments.length * segmentDuration;
+      if (actualDuration < targetDuration * 0.5) {
+        console.error(`[VideoSegmentCompositor] ❌ Too few valid segments (${validSegments.length}) for target duration (${targetDuration}s)`);
+        console.error(`[VideoSegmentCompositor] ❌ Actual duration would be only ${actualDuration}s (${((actualDuration / targetDuration) * 100).toFixed(0)}% of target)`);
+        throw new Error(`Insufficient valid segments: only ${validSegments.length}/${segmentPaths.length} segments valid, would result in ${actualDuration}s video (need at least ${Math.ceil(targetDuration * 0.5)}s)`);
+      }
     }
 
     // Check if we have any fades - if all are cuts, use simpler concat demuxer
@@ -583,7 +756,7 @@ export class VideoSegmentCompositor {
         outputPath
       ];
       
-      await this.executeFFmpeg(command);
+      await this.executeFFmpeg(command, outputPath, 5 * 1024 * 1024); // Minimum 5MB for 30s video
       
       // Cleanup
       try {
@@ -622,8 +795,13 @@ export class VideoSegmentCompositor {
             // Align fade start to beat if possible (flexible sync)
             let fadeOffset = offset;
             if (beatPositions.length > 0) {
+              const originalOffset = fadeOffset;
               fadeOffset = this.alignToBeat(offset, beatPositions, false);
               fadeOffset = Math.max(0, fadeOffset);
+              const beatOffset = Math.abs(fadeOffset - originalOffset);
+              if (beatOffset > 0.01) {
+                console.log(`[VideoSegmentCompositor] 🎵 Transition beat alignment: ${originalOffset.toFixed(3)}s → ${fadeOffset.toFixed(3)}s (offset: ${beatOffset.toFixed(3)}s)`);
+              }
             }
             
             // Normalize timebase for xfade compatibility
@@ -670,21 +848,72 @@ export class VideoSegmentCompositor {
         outputPath
       ];
       
-      await this.executeFFmpeg(command);
+      await this.executeFFmpeg(command, outputPath, 5 * 1024 * 1024); // Minimum 5MB for 30s video
     }
 
-    // Verify output
+    // Verify output (executeFFmpeg already validated size, but double-check)
     if (!await fs.pathExists(outputPath)) {
       throw new Error('Concatenated video was not created');
     }
     const outputStats = await fs.stat(outputPath);
-    if (outputStats.size === 0) {
-      throw new Error('Concatenated video is empty');
+    const minSize = 5 * 1024 * 1024; // 5MB minimum for 30s video
+    if (outputStats.size < minSize) {
+      throw new Error(`Concatenated video too small: ${(outputStats.size / 1024 / 1024).toFixed(2)}MB (minimum: 5MB)`);
     }
 
-      console.log(`[VideoSegmentCompositor] ✅ Concatenated video with transitions created: ${path.basename(outputPath)} (${(outputStats.size / 1024 / 1024).toFixed(2)}MB)`);
+    console.log(`[VideoSegmentCompositor] ✅ Concatenated video with transitions created: ${path.basename(outputPath)} (${(outputStats.size / 1024 / 1024).toFixed(2)}MB)`);
     } catch (error) {
       console.error(`[VideoSegmentCompositor] ❌ Concatenation with transitions failed:`, error.message);
+      console.error(`[VideoSegmentCompositor] Error details:`, error.stack);
+      // If any concatenation fails (filter_complex, xfade, or other), try simple concat as fallback
+      // This handles cases where complex transitions fail due to codec/format issues
+      if (hasFades || error.message.includes('FFmpeg failed')) {
+        console.warn(`[VideoSegmentCompositor] ⚠️  Complex concatenation failed, trying simple concat fallback...`);
+        try {
+          // Fallback to simple concat demuxer
+          const concatListPath = path.join(this.tempDir, `concat_list_fallback_${Date.now()}.txt`);
+          const concatList = validSegments.map(seg => {
+            const absPath = path.resolve(seg);
+            return `file '${absPath.replace(/'/g, "'\\''")}'`;
+          }).join('\n');
+          await fs.writeFile(concatListPath, concatList);
+          
+          const fallbackCommand = [
+            ffmpegPath,
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', concatListPath,
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '23',
+            '-pix_fmt', 'yuv420p',
+            '-t', targetDuration.toString(),
+            '-y',
+            outputPath
+          ];
+          
+          await this.executeFFmpeg(fallbackCommand, outputPath, 5 * 1024 * 1024); // Minimum 5MB for 30s video
+          
+          // Cleanup
+          await fs.remove(concatListPath).catch(() => {});
+          
+          // Verify fallback output (executeFFmpeg already validated size, but double-check)
+          if (await fs.pathExists(outputPath)) {
+            const fallbackStats = await fs.stat(outputPath);
+            const minSize = 5 * 1024 * 1024; // 5MB minimum for 30s video
+            if (fallbackStats.size >= minSize) {
+              console.log(`[VideoSegmentCompositor] ✅ Fallback concatenation successful: ${path.basename(outputPath)} (${(fallbackStats.size / 1024 / 1024).toFixed(2)}MB)`);
+              return; // Success with fallback
+            } else {
+              throw new Error(`Fallback concatenation produced file too small: ${(fallbackStats.size / 1024 / 1024).toFixed(2)}MB (minimum: 5MB)`);
+            }
+          } else {
+            throw new Error('Fallback concatenation did not produce output file');
+          }
+        } catch (fallbackError) {
+          console.error(`[VideoSegmentCompositor] ❌ Fallback concatenation also failed:`, fallbackError.message);
+        }
+      }
       throw error;
     }
   }
@@ -699,11 +928,25 @@ export class VideoSegmentCompositor {
 
   /**
    * Execute FFmpeg command
+   * @param {Array} command - FFmpeg command array
+   * @param {string} outputPath - Optional output path to validate after execution
+   * @param {number} minSizeBytes - Minimum expected file size in bytes (default: 1MB)
    */
-  async executeFFmpeg(command) {
-    return new Promise((resolve, reject) => {
+  async executeFFmpeg(command, outputPath = null, minSizeBytes = 1024 * 1024) {
+    return new Promise(async (resolve, reject) => {
       const ffmpegPath = command[0];
       const args = command.slice(1);
+
+      // Extract output path from command if not provided
+      if (!outputPath) {
+        const outputIndex = args.indexOf('-y');
+        if (outputIndex >= 0 && outputIndex < args.length - 1) {
+          outputPath = args[outputIndex + 1];
+        } else {
+          // Last argument is usually output path
+          outputPath = args[args.length - 1];
+        }
+      }
 
       console.log(`[VideoSegmentCompositor] Executing: ${ffmpegPath} ${args.slice(0, 5).join(' ')}...`);
 
@@ -719,15 +962,34 @@ export class VideoSegmentCompositor {
         }
       });
 
-      ffmpegProcess.on('close', (code) => {
+      ffmpegProcess.on('close', async (code) => {
         console.log(''); // New line after progress dots
 
         if (code === 0) {
+          // Validate output file if path provided
+          if (outputPath && await fs.pathExists(outputPath)) {
+            try {
+              const stats = await fs.stat(outputPath);
+              if (stats.size < minSizeBytes) {
+                const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
+                const minMB = (minSizeBytes / 1024 / 1024).toFixed(2);
+                console.error(`[VideoSegmentCompositor] ❌ Output file too small: ${sizeMB}MB (minimum: ${minMB}MB)`);
+                console.error(`[VideoSegmentCompositor] ❌ This indicates FFmpeg produced a corrupted or incomplete file`);
+                reject(new Error(`FFmpeg output file too small: ${sizeMB}MB (expected at least ${minMB}MB)`));
+                return;
+              }
+              console.log(`[VideoSegmentCompositor] ✅ Output file validated: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
+            } catch (statError) {
+              console.warn(`[VideoSegmentCompositor] ⚠️  Could not validate output file: ${statError.message}`);
+            }
+          }
           resolve();
         } else {
           console.error(`[VideoSegmentCompositor] ❌ FFmpeg failed with code: ${code}`);
-          console.error(stderr.substring(stderr.length - 500)); // Last 500 chars
-          reject(new Error(`FFmpeg failed with exit code ${code}`));
+          // Show more of the error (last 1000 chars for better debugging)
+          const errorSnippet = stderr.length > 1000 ? stderr.substring(stderr.length - 1000) : stderr;
+          console.error(`[VideoSegmentCompositor] FFmpeg error output:\n${errorSnippet}`);
+          reject(new Error(`FFmpeg failed with exit code ${code}: ${errorSnippet.split('\n').slice(-3).join(' ')}`));
         }
       });
 
