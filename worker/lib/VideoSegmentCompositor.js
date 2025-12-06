@@ -782,7 +782,9 @@ export class VideoSegmentCompositor {
       // Chain segments with transitions
       for (let i = 0; i < numSegments; i++) {
         if (i === 0) {
-          currentOutputLabel = `v${i}`;
+          // First segment: normalize framerate and timebase
+          filterParts.push(`[v${i}]fps=30,setpts=PTS-STARTPTS[v${i}_start]`);
+          currentOutputLabel = `v${i}_start`;
         } else {
           const transition = transitionTypes[i - 1] || { type: 'cut', duration: 0 };
           
