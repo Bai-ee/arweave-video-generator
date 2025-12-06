@@ -68,8 +68,15 @@ export default async function handler(req, res) {
 
     // Save to Firestore
     await db.collection('videoJobs').doc(jobId).set(jobData);
-
-    console.log(`[Generate Video] Job created: ${jobId}`);
+    
+    // Verify job was created
+    const createdJob = await db.collection('videoJobs').doc(jobId).get();
+    if (!createdJob.exists) {
+      throw new Error('Failed to create job in Firestore');
+    }
+    
+    console.log(`[Generate Video] ✅ Job created and verified in Firestore: ${jobId}`);
+    console.log(`[Generate Video] Job status: ${createdJob.data().status}`);
 
     // Trigger GitHub Actions workflow immediately via webhook
     try {
@@ -77,7 +84,10 @@ export default async function handler(req, res) {
         const [owner, repo] = process.env.GITHUB_REPO.split('/');
         const githubApiUrl = `https://api.github.com/repos/${owner}/${repo}/dispatches`;
         
-        await axios.post(githubApiUrl, {
+        console.log(`[Generate Video] Triggering GitHub Actions webhook for job: ${jobId}`);
+        console.log(`[Generate Video] Repo: ${owner}/${repo}, URL: ${githubApiUrl}`);
+        
+        const webhookResponse = await axios.post(githubApiUrl, {
           event_type: 'process-video-job',
           client_payload: {
             jobId: jobId,
@@ -92,13 +102,22 @@ export default async function handler(req, res) {
           }
         });
         
-        console.log(`[Generate Video] GitHub Actions workflow triggered for job: ${jobId}`);
+        console.log(`[Generate Video] ✅ GitHub Actions workflow triggered successfully for job: ${jobId}`);
+        console.log(`[Generate Video] Webhook response status: ${webhookResponse.status}`);
       } else {
-        console.log('[Generate Video] GitHub token not configured - workflow will run on schedule');
+        console.error('[Generate Video] ❌ GitHub token not configured!');
+        console.error(`[Generate Video] GITHUB_TOKEN: ${process.env.GITHUB_TOKEN ? 'SET' : 'MISSING'}`);
+        console.error(`[Generate Video] GITHUB_REPO: ${process.env.GITHUB_REPO || 'MISSING'}`);
+        console.warn('[Generate Video] Workflow will only run on schedule (every minute)');
       }
     } catch (webhookError) {
-      // Don't fail the request if webhook fails - scheduled run will pick it up
-      console.warn('[Generate Video] Failed to trigger webhook (will use scheduled run):', webhookError.message);
+      // Log full error details for debugging
+      console.error('[Generate Video] ❌ Failed to trigger webhook:', webhookError.message);
+      if (webhookError.response) {
+        console.error('[Generate Video] Response status:', webhookError.response.status);
+        console.error('[Generate Video] Response data:', JSON.stringify(webhookError.response.data, null, 2));
+      }
+      console.warn('[Generate Video] Job will be processed by scheduled run (every minute)');
     }
 
     // Return immediately with job ID
