@@ -804,22 +804,23 @@ export class VideoSegmentCompositor {
               }
             }
             
-            // Normalize timebase for xfade compatibility
+            // Normalize timebase and framerate for xfade compatibility
+            // xfade requires consistent timebase (1/30) and framerate (30fps)
             const normalizedCurrent = `v${i}_norm_prev`;
             const normalizedNext = `v${i}_norm_next`;
-            filterParts.push(`[${currentOutputLabel}]setpts=PTS-STARTPTS[${normalizedCurrent}]`);
-            filterParts.push(`[v${i}]setpts=PTS-STARTPTS[${normalizedNext}]`);
+            filterParts.push(`[${currentOutputLabel}]fps=30,setpts=PTS-STARTPTS[${normalizedCurrent}]`);
+            filterParts.push(`[v${i}]fps=30,setpts=PTS-STARTPTS[${normalizedNext}]`);
             
             const nextLabel = `v${i}_out`;
             filterParts.push(`[${normalizedCurrent}][${normalizedNext}]xfade=transition=fade:duration=${fadeDuration.toFixed(3)}:offset=${fadeOffset.toFixed(3)}[${nextLabel}]`);
             currentOutputLabel = nextLabel;
             currentTime += segmentDuration - fadeDuration;
           } else {
-            // Quick-cut: use concat filter (normalize timebase first)
+            // Quick-cut: use concat filter (normalize timebase and framerate first)
             const normalizedCurrent = `v${i}_cut_prev`;
             const normalizedNext = `v${i}_cut_next`;
-            filterParts.push(`[${currentOutputLabel}]setpts=PTS-STARTPTS[${normalizedCurrent}]`);
-            filterParts.push(`[v${i}]setpts=PTS-STARTPTS[${normalizedNext}]`);
+            filterParts.push(`[${currentOutputLabel}]fps=30,setpts=PTS-STARTPTS[${normalizedCurrent}]`);
+            filterParts.push(`[v${i}]fps=30,setpts=PTS-STARTPTS[${normalizedNext}]`);
             
             const nextLabel = `v${i}_out`;
             filterParts.push(`[${normalizedCurrent}][${normalizedNext}]concat=n=2:v=1:a=0[${nextLabel}]`);
