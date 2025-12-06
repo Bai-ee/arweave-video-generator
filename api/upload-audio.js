@@ -49,8 +49,9 @@ export default async function handler(req, res) {
       keepExtensions: true,
     });
 
-    const [fields, files] = await form.parse(req);
+    const { fields, files } = await form.parse(req);
     
+    // formidable v3 returns fields as arrays, extract first value
     const artistName = Array.isArray(fields.artistName) ? fields.artistName[0] : fields.artistName;
     const mixTitle = Array.isArray(fields.mixTitle) ? fields.mixTitle[0] : fields.mixTitle;
     const mixUrl = Array.isArray(fields.mixUrl) ? fields.mixUrl[0] : fields.mixUrl;
@@ -66,6 +67,7 @@ export default async function handler(req, res) {
     }
 
     // Check if we have a file upload or a URL
+    // formidable v3 returns files as arrays
     const file = Array.isArray(files.file) ? files.file[0] : files.file;
     
     let arweaveUrl = null;
