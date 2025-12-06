@@ -5,7 +5,7 @@
  * Returns list of available artists for video generation
  */
 
-import { initializeFirebaseAdmin } from '../lib/firebase-admin.js';
+import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -32,26 +32,47 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Try to load artists from JSON file
-    const artistsPaths = [
-      path.join(process.cwd(), 'worker', 'data', 'sample-artists.json'),
-      path.join(process.cwd(), 'data', 'sample-artists.json'),
-      path.join(__dirname, '..', 'worker', 'data', 'sample-artists.json'),
-      path.join(__dirname, '..', 'data', 'sample-artists.json')
-    ];
-
+    // Try to load from Firebase first
     let artistsData = null;
-    for (const artistsPath of artistsPaths) {
-      try {
-        if (fs.existsSync(artistsPath)) {
-          const fileContent = fs.readFileSync(artistsPath, 'utf-8');
-          artistsData = JSON.parse(fileContent);
-          console.log(`[Artists] Loaded ${artistsData.length} artists from ${artistsPath}`);
-          break;
+    
+    try {
+      initializeFirebaseAdmin();
+      const db = getFirestore();
+      const artistsRef = db.collection('system').doc('artists');
+      const artistsDoc = await artistsRef.get();
+      
+      if (artistsDoc.exists) {
+        const data = artistsDoc.data();
+        if (data.artists && Array.isArray(data.artists) && data.artists.length > 0) {
+          artistsData = data.artists;
+          console.log(`[Artists] Loaded ${artistsData.length} artists from Firebase`);
         }
-      } catch (error) {
-        console.warn(`[Artists] Failed to load from ${artistsPath}:`, error.message);
-        continue;
+      }
+    } catch (firebaseError) {
+      console.warn('[Artists] Firebase load failed, trying local files:', firebaseError.message);
+    }
+
+    // Fallback to local files if Firebase didn't work
+    if (!artistsData || artistsData.length === 0) {
+      const artistsPaths = [
+        path.join(process.cwd(), 'worker', 'data', 'sample-artists.json'),
+        path.join(process.cwd(), 'data', 'sample-artists.json'),
+        path.join(__dirname, '..', 'worker', 'data', 'sample-artists.json'),
+        path.join(__dirname, '..', 'data', 'sample-artists.json')
+      ];
+
+      for (const artistsPath of artistsPaths) {
+        try {
+          if (fs.existsSync(artistsPath)) {
+            const fileContent = fs.readFileSync(artistsPath, 'utf-8');
+            artistsData = JSON.parse(fileContent);
+            console.log(`[Artists] Loaded ${artistsData.length} artists from ${artistsPath}`);
+            break;
+          }
+        } catch (error) {
+          console.warn(`[Artists] Failed to load from ${artistsPath}:`, error.message);
+          continue;
+        }
       }
     }
 

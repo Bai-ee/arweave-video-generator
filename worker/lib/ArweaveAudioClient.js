@@ -34,7 +34,10 @@ try {
  */
 class ArweaveAudioClient {
   constructor() {
-    this.loadArtistsData();
+    // Load artists data (async, but don't await - will be loaded when needed)
+    this.loadArtistsData().catch(err => {
+      console.error('[ArweaveAudioClient] Failed to load artists data:', err);
+    });
     
     // Default retry configuration
     this.retryConfig = {
@@ -49,22 +52,47 @@ class ArweaveAudioClient {
   }
 
   /**
-   * Load artists data from JSON database
+   * Load artists data from Firebase (with local file fallback)
    */
-  loadArtistsData() {
+  async loadArtistsData() {
     try {
+      // Try to load from Firebase first
+      try {
+        const { initializeFirebaseAdmin, getFirestore } = await import('../firebase-admin.js');
+        initializeFirebaseAdmin();
+        const db = getFirestore();
+        const artistsRef = db.collection('system').doc('artists');
+        const artistsDoc = await artistsRef.get();
+        
+        if (artistsDoc.exists) {
+          const data = artistsDoc.data();
+          if (data.artists && Array.isArray(data.artists) && data.artists.length > 0) {
+            this.artistsData = data.artists;
+            console.log(`[ArweaveAudioClient] Loaded ${data.artists.length} artists from Firebase`);
+            return;
+          }
+        }
+        console.log('[ArweaveAudioClient] No artists found in Firebase, trying local files...');
+      } catch (firebaseError) {
+        console.warn('[ArweaveAudioClient] Firebase load failed, trying local files:', firebaseError.message);
+      }
+
+      // Fallback to local files
       const artistsPaths = [
         path.join(process.cwd(), 'data', 'sample-artists.json'),
+        path.join(process.cwd(), 'worker', 'data', 'sample-artists.json'),
         path.join(process.cwd(), 'content', 'artists.json'),
         path.join(process.cwd(), 'assets', 'artists.json')
       ];
       
       for (const artistsPath of artistsPaths) {
         try {
-          const artistsData = JSON.parse(fs.readFileSync(artistsPath, 'utf-8'));
-          this.artistsData = artistsData;
-          console.log(`[ArweaveAudioClient] Loaded ${artistsData.length} artists from ${artistsPath}`);
-          return;
+          if (fs.existsSync(artistsPath)) {
+            const artistsData = JSON.parse(fs.readFileSync(artistsPath, 'utf-8'));
+            this.artistsData = artistsData;
+            console.log(`[ArweaveAudioClient] Loaded ${artistsData.length} artists from ${artistsPath}`);
+            return;
+          }
         } catch (error) {
           continue;
         }
