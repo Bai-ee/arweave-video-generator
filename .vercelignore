@@ -4,9 +4,24 @@
 node_modules/
 worker/node_modules/
 
-# Large video files and assets
-assets/chicago-skyline-videos/*.mp4
+# Large video files and assets - ALL local assets folders
+assets/
 worker/assets/
+worker/content/
+worker/content/audio/
+
+# All media file types
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.m4a
+*.wav
+*.mp3
+*.aac
+*.flac
+*.m4v
 
 # Output directories (generated files)
 worker/outputs/

@@ -37,10 +37,24 @@ worker/assets/fonts/**/*.woff2
 # Paper backgrounds (also ignored as images)
 worker/assets/paper_backgrounds/**/*.png
 
-# Large video files
+# Large video files - ALL assets folders are local only, not for git
+assets/
+!assets/.gitkeep
 assets/**/*.mp4
 assets/**/*.mov
 assets/**/*.m4v
+assets/**/*.avi
+assets/**/*.mkv
+assets/**/*.webm
+
+# Audio files
+**/*.m4a
+**/*.wav
+**/*.mp3
+**/*.aac
+**/*.flac
+worker/content/audio/
+worker/content/
 
 # Firebase credentials
 firebase-key.json
