@@ -688,10 +688,12 @@ class ArweaveVideoGenerator {
             layers.push(textLayer);
 
             // Step 5.5: Add random video overlays from ONE selected folder, switching every 10 seconds
-            console.log('[ArweaveVideoGenerator] Step 5.5: Loading overlay videos from ONE random folder, switching every 10 seconds...');
-            const overlayVideoCachePaths = [];
-            
-            try {
+            // Only add overlay if enableOverlay is true
+            if (enableOverlay) {
+                console.log('[ArweaveVideoGenerator] Step 5.5: Loading overlay videos from ONE random folder, switching every 10 seconds...');
+                const overlayVideoCachePaths = [];
+                
+                try {
                 const { getStorage } = await import('../firebase-admin.js');
                 const storage = getStorage();
                 const bucket = storage.bucket();
@@ -784,9 +786,12 @@ class ArweaveVideoGenerator {
                     console.log(`[ArweaveVideoGenerator] ✅ Created ${numSegments} overlay segments from ${selectedFolderPath}`);
                     console.log(`[ArweaveVideoGenerator] Overlay videos will switch every ${segmentDuration} seconds`);
                 }
-            } catch (error) {
-                console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load overlay videos from assets/:`, error.message);
-                // Continue without overlay videos if it fails
+                } catch (error) {
+                    console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load overlay videos from assets/:`, error.message);
+                    // Continue without overlay videos if it fails
+                }
+            } else {
+                console.log('[ArweaveVideoGenerator] Step 5.5: Overlay feature disabled - skipping overlay videos');
             }
 
             // Step 6: Add random logo overlay at 25 seconds (5 seconds before end)
