@@ -850,12 +850,13 @@ export class VideoCompositor {
       }
       
       command.push('-map', finalOutput);
-      // Map audio from input 1 (use '?' to make it optional if no audio stream exists)
-      command.push('-map', '1:a?'); // Optional audio mapping
+      // Map audio from input 1 - REQUIRED (not optional)
+      // If audio doesn't exist, FFmpeg will fail, which is better than silent video
+      command.push('-map', '1:a'); // Required audio mapping
     } else {
       // No filter complex - map base video directly
       command.push('-map', '0:v');
-      command.push('-map', '1:a?'); // Optional audio mapping
+      command.push('-map', '1:a'); // Required audio mapping
     }
 
     // Video codec settings
