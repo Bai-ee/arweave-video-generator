@@ -56,6 +56,14 @@ assets/**/*.webm
 worker/content/audio/
 worker/content/
 
+# Website assets (large files, already in Firebase/Arweave)
+website/img/**/*.jpg
+website/img/**/*.jpeg
+website/img/**/*.png
+website/img/**/*.gif
+website/img/**/*.svg
+website/fonts/**/*
+
 # Firebase credentials
 firebase-key.json
 firebase-credentials.json
@@ -71,3 +79,4 @@ Thumbs.db
 *.swo
 *~
 
+.env.production
