@@ -343,22 +343,24 @@ export class VideoCompositor {
           const scaleFilter = `[${inputIndex}:v]scale=${finalWidth}:${finalHeight}:force_original_aspect_ratio=increase,crop=${finalWidth}:${finalHeight},fps=30[scaled_video${videoLayerIndex}]`;
           filters.push(scaleFilter);
           
-          if (opacity < 1.0) {
-            filters.push(`[scaled_video${videoLayerIndex}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*${opacity}'[scaled_video${videoLayerIndex}_alpha]`);
-            if (layer.startTime !== null && layer.startTime !== undefined) {
-              const endTime = layer.startTime + (layer.duration || config.duration);
-              overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+            if (opacity < 1.0) {
+              filters.push(`[scaled_video${videoLayerIndex}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*${opacity}'[scaled_video${videoLayerIndex}_alpha]`);
+              if (layer.startTime !== null && layer.startTime !== undefined) {
+                const endTime = layer.startTime + (layer.duration || config.duration);
+                const roundedEndTime = Math.round(endTime * 100) / 100;
+                overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'${outputLabel}`;
+              } else {
+                overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+              }
             } else {
-              overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+              if (layer.startTime !== null && layer.startTime !== undefined) {
+                const endTime = layer.startTime + (layer.duration || config.duration);
+                const roundedEndTime = Math.round(endTime * 100) / 100;
+                overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'${outputLabel}`;
+              } else {
+                overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
+              }
             }
-          } else {
-            if (layer.startTime !== null && layer.startTime !== undefined) {
-              const endTime = layer.startTime + (layer.duration || config.duration);
-              overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
-            } else {
-              overlayFilter = `${currentInput}[scaled_video${videoLayerIndex}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
-            }
-          }
         }
         if (overlayFilter) {
           filters.push(overlayFilter);
@@ -595,14 +597,16 @@ export class VideoCompositor {
               filters.push(`[scaled_video_after${videoLayerIndex}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*${opacity}'[scaled_video_after${videoLayerIndex}_alpha]`);
               if (layer.startTime !== null && layer.startTime !== undefined) {
                 const endTime = layer.startTime + (layer.duration || config.duration);
-                overlayFilter = `${currentInput}[scaled_video_after${videoLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+                const roundedEndTime = Math.round(endTime * 100) / 100;
+                overlayFilter = `${currentInput}[scaled_video_after${videoLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'${outputLabel}`;
               } else {
                 overlayFilter = `${currentInput}[scaled_video_after${videoLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
               }
             } else {
               if (layer.startTime !== null && layer.startTime !== undefined) {
                 const endTime = layer.startTime + (layer.duration || config.duration);
-                overlayFilter = `${currentInput}[scaled_video_after${videoLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+                const roundedEndTime = Math.round(endTime * 100) / 100;
+                overlayFilter = `${currentInput}[scaled_video_after${videoLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'${outputLabel}`;
               } else {
                 overlayFilter = `${currentInput}[scaled_video_after${videoLayerIndex}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
               }
@@ -630,14 +634,16 @@ export class VideoCompositor {
             filters.push(`[scaled_after${imageLayerIndex}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*${opacity}'[scaled_after${imageLayerIndex}_alpha]`);
             if (layer.startTime !== null && layer.startTime !== undefined) {
               const endTime = layer.startTime + (layer.duration || config.duration);
-              overlayFilter = `${currentInput}[scaled_after${imageLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+              const roundedEndTime = Math.round(endTime * 100) / 100;
+              overlayFilter = `${currentInput}[scaled_after${imageLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'${outputLabel}`;
             } else {
               overlayFilter = `${currentInput}[scaled_after${imageLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
             }
           } else {
             if (layer.startTime !== null && layer.startTime !== undefined) {
               const endTime = layer.startTime + (layer.duration || config.duration);
-              overlayFilter = `${currentInput}[scaled_after${imageLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+              const roundedEndTime = Math.round(endTime * 100) / 100;
+              overlayFilter = `${currentInput}[scaled_after${imageLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'${outputLabel}`;
             } else {
               overlayFilter = `${currentInput}[scaled_after${imageLayerIndex}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
             }
