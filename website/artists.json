@@ -1,0 +1,381 @@
+[
+  {
+    "artistName": "ACIDMAN",
+    "artistFilename": "acidman.html",
+    "artistImageFilename": "img/artists/acidman.jpg",
+    "artistGenre": "acid",
+    "mixes": [
+      {
+        "mixTitle": "Stargazers vs Sunbathers",
+        "mixArweaveURL": "https://pq4y62fmg2rlmdprylwbzvhf6weeg265x6wpdoknwfosey3pb7ua.arweave.net/fDmPaKw2orYN8cLsHNTl9YhDa92_rPG5TbFdImNvD-g",
+        "mixDateYear": "'09",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/artists/acidman.jpg"
+      },
+      {
+        "mixTitle": "Live @ Smartbar",
+        "mixArweaveURL": "https://tsksz4eeemr4tlq46gvx2j3ikuv2xvzv7pzxft4dcc76qn3g3frq.arweave.net/nJUs8IQjI8muHPGrfSdoVSur1zX783LPgxC_6Ddm2WM",
+        "mixDateYear": "'11",
+        "mixDuration": "72 Min",
+        "mixImageFilename": "img/covers/acidtest.jpg"
+      },
+      {
+        "mixTitle": "Loft Livin",
+        "mixArweaveURL": "https://2a3ilgvxa3h3qnbgs5kcfr3tclfsuf6w2qztps4igikcwczf2uba.arweave.net/0DaFmrcGz7g0JpdUIsdzEssqF9bUMzfLiDIUKwsl1QI",
+        "mixDateYear": "'05",
+        "mixDuration": "72 Min",
+        "mixImageFilename": "img/covers/loftlivin.jpg"
+      }
+    ]
+  },
+  {
+    "artistName": "AKILA",
+    "artistFilename": "akila.html",
+    "artistImageFilename": "img/artists/akila.jpg",
+    "artistGenre": "house",
+    "mixes": [
+      {
+        "mixTitle": "...Head Ass!!!",
+        "mixArweaveURL": "https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg",
+        "mixDateYear": "6/24",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/artists/akila.jpg"
+      },
+      {
+        "mixTitle": "A drink and a smoke on the veranda",
+        "mixArweaveURL": "https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg",
+        "mixDateYear": "'24",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/artists/akila.jpg"
+      }
+    ]
+  },
+  {
+    "artistName": "ANDREW EMIL",
+    "artistFilename": "andrewemil.html",
+    "artistImageFilename": "img/artists/andrew_emil.jpg",
+    "artistGenre": "techno",
+    "mixes": [
+       {
+        "mixTitle": "Live @ Viva Acid '24",
+        "mixArweaveURL": "https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM",
+        "mixDateYear": "'24",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/covers/andrewb2bredeye.png"
+      },
+       {
+        "mixTitle": "Live @ Flammable '19",
+        "mixArweaveURL": "https://i3iyj63muibfla4rgtxiuis72fy6iwbg3rcz7vda2try7xr3kzia.arweave.net/RtGE-2yiAlWDkTTuiiJf0XHkWCbcRZ_UYNTjj947VlA",
+        "mixDateYear": "'19",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/covers/andrewemilflammable.png"
+      }
+    ]
+  },
+  {
+    "artistName": "BAI-EE",
+    "artistFilename": "baiee.html",
+    "artistImageFilename": "img/artists/bai-ee2.jpg",
+    "artistGenre": "acid",
+    "mixes": [
+      {
+        "mixTitle": "Josh Z & Bai-ee B2B Podlasie 7/18/25",
+        "mixArweaveURL": "https://v5pcq77sqiqhc2xkg4xxetpezy3nb673darvogh7cvdxg3twop5a.ardrive.net/r14of_KCIHFq6jcvck3kzjbQ-_sYI1cY_xVHc252c_o",
+        "mixDateYear": "7/18/25",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/artists/JoshZ_B2B_Baiee.png"
+      },
+      {
+        "mixTitle": "Live @ Viva Acid '24",
+        "mixArweaveURL": "https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg",
+        "mixDateYear": "'24",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/bai_ee_closing_partyVAjpg.jpg"
+      },
+      {
+        "mixTitle": "Fathers Day Jazz Mix",
+        "mixArweaveURL": "https://tote4rvkmrw7hor2y3utj4nmyi2akuth7mzitqkelabv2wgipdca.arweave.net/m6ZORqpkbfO6OsbpNPGswjQFUmf7MonBRFgDXVjIeMQ",
+        "mixDateYear": "'24",
+        "mixDuration": "61:00",
+        "mixImageFilename": "https://73wboszzo3ctg377phl52yzv5wdmtm2sr4yjgjeyfybtssfnpsqq.arweave.net/_uwXSzl2xTNv_3nX3WM17YbJs1KPMJMkmC4DOUitfKE"
+      },
+       {
+        "mixTitle": "Rough Times",
+        "mixArweaveURL": "https://ynfuoawcqrbjqsood6erdnboyvcy7p7ndipmphftwtehjy2to5xq.arweave.net/w0tHAsKEQphJzh-JEbQuxUWPv-0aHsecs7TIdONTd28",
+        "mixDateYear": "'16",
+        "mixDuration": "61:00",
+        "mixImageFilename": "img/roughtimes.jpg"
+      },
+       {
+        "mixTitle": "Love Manifesto (2) V-Day Mix",
+        "mixArweaveURL": "https://avbaf4pajrqslakfjysssiaqk266x6wkmjm3fnf3cz4yhoxf6aoa.arweave.net/BUIC8eBMYSWBRU4lKSAQVr3r-spiWbK0uxZ5g7rl8Bw",
+        "mixDateYear": "'24",
+        "mixDuration": "72:00",
+        "mixImageFilename": "img/covers/lovemanifesto2.jpg"
+      },
+      {
+        "mixTitle": "Love Manifesto V-Day Mix",
+        "mixArweaveURL": "https://p4oglbpmdcjtobggvj7xgpeoo7nhllg43pmqlaqxs2sbtb5dnxwa.arweave.net/fxxlhewYkzcExqp_czyOd9p1rNzb2QWCF5akGYejbew",
+        "mixDateYear": "'23",
+        "mixDuration": "83:00",
+        "mixImageFilename": "img/covers/lovemanifesto.jpg"
+      },
+      {
+        "mixTitle": "Live @ Smartbar",
+        "mixArweaveURL": "https://tsksz4eeemr4tlq46gvx2j3ikuv2xvzv7pzxft4dcc76qn3g3frq.arweave.net/nJUs8IQjI8muHPGrfSdoVSur1zX783LPgxC_6Ddm2WM",
+        "mixDateYear": "'11",
+        "mixDuration": "90:00",
+        "mixImageFilename": "img/covers/acidtest.jpg"
+      },
+      {
+        "mixTitle": "Loft Livin '05",
+        "mixArweaveURL": "https://2a3ilgvxa3h3qnbgs5kcfr3tclfsuf6w2qztps4igikcwczf2uba.arweave.net/0DaFmrcGz7g0JpdUIsdzEssqF9bUMzfLiDIUKwsl1QI",
+        "mixDateYear": "'05",
+        "mixDuration": "90:00",
+        "mixImageFilename": "img/covers/loftlivin.jpg"
+      }
+    ]
+  },
+  {
+    "artistName": "BLUE JAY (AKA Josh Zeitler)",
+    "artistFilename": "zeitler.html",
+    "artistImageFilename": "img/artists/josh_zeitler.png",
+    "artistGenre": "acid",
+    "mixes": [
+       {
+        "mixTitle": "Josh Z & Bai-ee B2B Podlasie 7/18/25",
+        "mixArweaveURL": "https://v5pcq77sqiqhc2xkg4xxetpezy3nb673darvogh7cvdxg3twop5a.ardrive.net/r14of_KCIHFq6jcvck3kzjbQ-_sYI1cY_xVHc252c_o",
+        "mixDateYear": "7/18/25",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/artists/JoshZ_B2B_Baiee.png"
+      },
+       {
+        "mixTitle": "Live at Studio409 New York (2024)",
+        "mixArweaveURL": "https://uzh5clhxybxsww3li3gmcodyxok7dwa46vfq7etzn6owprhujdea.arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg",
+        "mixDateYear": "2024",
+        "mixDuration": "2:58",
+        "mixImageFilename": "img/artists/josh_zeitler.png"
+      },
+      {
+        "mixTitle": "Blue Jay Live at Hush 2024 in San Francisco",
+        "mixArweaveURL": "https://icvl3qhmdkbyqm626rqj44qeu32iyswsx5s4pndqrfao46bw4iuq.arweave.net/QKq9wOwag4gz2vRgnnIEpvSMStK_Zce0cIlA7ng24ik",
+        "mixDateYear": "2024",
+        "mixDuration": "60min",
+        "mixImageFilename": "img/artists/josh_zeitler.png"
+      }
+    ]
+  },
+  {
+    "artistName": "CESAR RAMIREZ",
+    "artistFilename": "cesarramirez.html",
+    "artistImageFilename": "img/artists/cesarramirez.jpg",
+    "artistGenre": "house",
+    "mixes": [
+      {
+        "mixTitle": "Let Yourself Go",
+        "mixArweaveURL": "https://wqyhof73vki2hs5mwj6tm4godenmlg7b24jik2ovjtnfhzosizbq.arweave.net/tDB3F_uqkaPLrLJ9NnDOGRrFm-HXEoVp1UzaU-XSRkM",
+        "mixDateYear": "'01'",
+        "mixDuration": "93:00",
+        "mixImageFilename": "img/covers/letyourselfgo.jpg"
+      }
+    ]
+  },
+  {
+    "artistName": "JOHN SIMMONS",
+    "artistFilename": "johnsimmons.html",
+    "artistImageFilename": "img/artists/js.jpg",
+    "artistGenre": "techno",
+    "mixes": [
+      {
+        "mixTitle": "Live @ UE.info ??",
+        "mixArweaveURL": "https://us52zeiw62ei2egubws4huywpyw4nzvjxueism7pkt32pcjyoizq.arweave.net/pLuskRb2iI0Q1A2lw9MWfi3G5qm9CIkz71T3p4k4cjM",
+        "mixDateYear": "20??",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/artists/js.jpg"
+      }
+    ]
+  },
+  {
+    "artistName": "LORELEI",
+    "artistFilename": "lorelei.html",
+    "artistImageFilename": "img/artists/lorelei.png",
+    "artistGenre": "acid",
+    "mixes": [
+      {
+        "mixTitle": "Lorelei Live at Podlasie 7/18/25",
+        "mixArweaveURL": "https://moin6j46cuf73puauj65coz7islgdbbsvrl45pkj3mmaosp5dkrq.ardrive.net/Y5DfJ54VC_2-gKJ90Ts_RJZhhDKsV869SdsYB0n9GqM",
+        "mixDateYear": "7/18/25",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/artists/lorelei.png"
+      }
+    ]
+  },
+  {
+    "artistName": "RED EYE",
+    "artistFilename": "redeye.html",
+    "artistImageFilename": "img/artists/redeye.png",
+    "artistGenre": "acid",
+    "mixes": [
+      {
+        "mixTitle": "Live @ Viva Acid '24",
+        "mixArweaveURL": "https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM",
+        "mixDateYear": "'24",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/covers/andrewb2bredeye.png"
+      }
+    ]
+  },
+  {
+    "artistName": "DJ RELEASE AKA IKE",
+    "artistFilename": "release.html",
+    "artistImageFilename": "img/artists/ike.jpg",
+    "artistGenre": "house",
+    "mixes": [
+      {
+        "mixTitle": "Live @ UE.info ??",
+        "mixArweaveURL": "https://embbv2sphugsxwzrx222jkjpcqbj2unqbn5yaiqh4rgoacvigycq.arweave.net/IwIa6k89DSvbMb61pKkvFAKdUbALe4AiB-RM4AqoNgU",
+        "mixDateYear": "20??",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/artists/ike.jpg"
+      }
+    ]
+  },
+  {
+    "artistName": "SASSMOUTH",
+    "artistFilename": "sassmouth.html",
+    "artistImageFilename": "https://xnc6efkurp75ca5ikzln7a43ndgv3rqga2pwtytggitumwh3jpoa.arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/sassmouth.jpg",
+    "artistGenre": "techno",
+    "mixes": [
+      {
+        "mixTitle": "Live at Podlasie",
+        "mixArweaveURL": "https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0",
+        "mixDateYear": "2024",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/artists/sassmouth.jpg"
+      }
+    ]
+  },
+  {
+    "artistName": "SEAN SMITH",
+    "artistFilename": "seansmith.html",
+    "artistImageFilename": "img/artists/sean_smith.jpg",
+    "artistGenre": "other",
+    "mixes": [
+      {
+        "mixTitle": "Martians Mixtape",
+        "mixArweaveURL": "https://bzihmbcqda77zu2zf6xgurrcwke37xbcewvg5xovs45znnt5bnda.arweave.net/DlB2BFAYP_zTWS-uakYisom_3CIlqm7d1Zc7lrZ9C0Y",
+        "mixDateYear": "Circa 2009",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/artists/sean_smith.jpg"
+      }
+    ]
+  },
+  {
+    "artistName": "STAR TRAXX",
+    "artistFilename": "Startraxx.html",
+    "artistImageFilename": "img/artists/startraxxthumb.jpg",
+    "artistGenre": "other",
+    "mixes": [
+      {
+        "mixTitle": "Mix Tape",
+        "mixArweaveURL": "https://3t4xoq2sswghgedqxsojzckllnq4oay6p4xrte7tl5mfm5ia7cka.arweave.net/3Pl3Q1KVjHMQcLycnIlLW2HHAx5_LxmT819YVnUA-JQ",
+        "mixDateYear": "Circe '95",
+        "mixDuration": "30:00",
+        "mixImageFilename": "img/artists/startraxxthumb.jpg"
+      }
+    ]
+  },
+  {
+    "artistName": "TYREL WILLIAMS",
+    "artistFilename": "tyrel.html",
+    "artistImageFilename": "img/artists/tyrelwilliams.jpg",
+    "artistGenre": "techno",
+    "mixes": [
+      {
+        "mixTitle": "Tyrel Williams Live at Podlasie 2024",
+        "mixArweaveURL": "https://nbdlqhjegffe2b43r4pz5dbnnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU",
+        "mixDateYear": "2024",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/artists/tyrelwilliams.jpg"
+      },
+      {
+        "mixTitle": "Tyrel Williams Live at Podlasie 2025",
+        "mixArweaveURL": "https://cc5ljjz5pjfxckbwfw7jblqhr7wend5is6crvyull4qaasecsbha.ardrive.net/ELq0pz16S3EoNi2-kK4Hj-xGj6iXhRrii18gAEiCkE4",
+        "mixDateYear": "2025",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/artists/tyrelwilliams.jpg"
+      }
+    ]
+  },
+    {
+    "artistName": "VIVA ACID",
+    "artistFilename": "vivaacid.html",
+    "artistImageFilename": "img/artists/vivaacid.png",
+    "artistGenre": "acid",
+    "mixes": [
+      {
+        "mixTitle": "Viva Acid at Podlasie 7/18/25",
+        "mixArweaveURL": "https://yq3iykqm666wepox224lvonfehrupieuxwvfc3qdbe6acrcajqgq.ardrive.net/xDaMKgz3vWI919a4urmlIeNHoJS9qlFuAwk8AURATA0",
+        "mixDateYear": "7/18/25",
+        "mixDuration": "180:00",
+        "mixImageFilename": "img/artists/vivaacid_podlasie_71825.png"
+      },
+      {
+        "mixTitle": "Josh Z & Bai-ee B2B Podlasie 7/18/25",
+        "mixArweaveURL": "https://v5pcq77sqiqhc2xkg4xxetpezy3nb673darvogh7cvdxg3twop5a.ardrive.net/r14of_KCIHFq6jcvck3kzjbQ-_sYI1cY_xVHc252c_o",
+        "mixDateYear": "7/18/25",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/artists/JoshZ_B2B_Baiee.png"
+      },
+      {
+        "mixTitle": "Jaggy @ Viva Acid '24",
+        "mixArweaveURL": "https://swbvmevnmdjuyfieo7kceppa7g5ni4s7x2gt2acs23x4wl5qfmca.arweave.net/lYNWEq1g00wVBHfUIj3g-brUcl--jT0AUtbvyy-wKwQ",
+        "mixDateYear": "'24",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/bai_ee_closing_partyVAjpg.jpg"
+      },
+      {
+        "mixTitle": "Live @ Viva Acid '24",
+        "mixArweaveURL": "https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg",
+        "mixDateYear": "'24",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/bai_ee_closing_partyVAjpg.jpg"
+      },
+      {
+        "mixTitle": "Lorelei Live at Podlasie 7/18/25",
+        "mixArweaveURL": "https://moin6j46cuf73puauj65coz7islgdbbsvrl45pkj3mmaosp5dkrq.ardrive.net/Y5DfJ54VC_2-gKJ90Ts_RJZhhDKsV869SdsYB0n9GqM",
+        "mixDateYear": "7/18/25",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/artists/lorelei.png"
+      },
+      {
+        "mixTitle": "Tyrel Williams Live at Podlasie 2025",
+        "mixArweaveURL": "https://cc5ljjz5pjfxckbwfw7jblqhr7wend5is6crvyull4qaasecsbha.ardrive.net/ELq0pz16S3EoNi2-kK4Hj-xGj6iXhRrii18gAEiCkE4",
+        "mixDateYear": "2025",
+        "mixDuration": "60:00",
+        "mixImageFilename": "img/artists/tyrelwilliams.jpg"
+      },
+      {
+        "mixTitle": "Live @ Viva Acid '24",
+        "mixArweaveURL": "https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM",
+        "mixDateYear": "'24",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/covers/andrewb2bredeye.png"
+      },
+       {
+        "mixTitle": "Live @ Viva Acid '24",
+        "mixArweaveURL": "https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0",
+        "mixDateYear": "'24",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/artists/sassmouth.jpg"
+      },
+      {
+        "mixTitle": "Live @ Viva Acid '24",
+        "mixArweaveURL": "https://nbdlqhjegffe2b43r4pz5dbnnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU",
+        "mixDateYear": "'24",
+        "mixDuration": "120:00",
+        "mixImageFilename": "img/artists/tyrelwilliams.jpg"
+      }
+    ]
+  }
+]

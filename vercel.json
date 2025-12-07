@@ -42,6 +42,10 @@
       "dest": "/api/archive-manifest.js"
     },
     {
+      "src": "/website/(.*)",
+      "dest": "/website/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/$1"
     }

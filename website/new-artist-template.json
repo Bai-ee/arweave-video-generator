@@ -1,0 +1,86 @@
+[
+    {
+      "artistName": "Chicago Skyway",
+      "artistFilename": "chicagoskyway.html",
+      "artistImageFilename": "img/artists/chickageskyway.jpg",
+      "artistGenre": "Acid, Deep House",
+      "artistBio": "",
+      "mixes": [
+        {
+          "mixTitle": "Chicago Skyway for Hakeem",
+          "mixArweaveURL": "https://4zj2ozjipdt4lqx3be24koilrjqt4l7igs7hfhumrha7g7qvabaa.arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA",
+          "mixDateYear": "",
+          "mixDuration": "57min",
+          "mixImageFilename": "img/artists/chickageskyway.jpg",
+          "mixDescription": ""
+        },
+        {
+          "mixTitle": "LWE",
+          "mixArweaveURL": "https://yuxcgtquj4muomqb2ecdb5fxd63ebbysde4wyq7pybztpxjig7sq.arweave.net/xS4jThRPGUcyAdEEMPS3H7ZAhxIZOWxD78BzN90oN-U",
+          "mixDateYear": "",
+          "mixDuration": "1 hour",
+          "mixImageFilename": "img/artists/chickageskyway.jpg",
+          "mixDescription": ""
+        },
+        {
+          "mixTitle": "Playing to the Wall",
+          "mixArweaveURL": "https://gdzput7zxnda3rncbjctigt424v2sza3chbo5e4tltdfs53tjm5a.arweave.net/MPL6T_m7Rg3FogpFNBp81yupZBsRwu6Tk1zGWXdzSzo",
+          "mixDateYear": "",
+          "mixDuration": "50min",
+          "mixImageFilename": "img/artists/chickageskyway.jpg",
+          "mixDescription": ""
+        },
+        {
+          "mixTitle": "wwFM",
+          "mixArweaveURL": "https://2pgnqqeqgn7ric25tb3jy3lbmo4jfnjn4ljyhjmx7xaybtt35qvq.arweave.net/08zYQJAzfxQLXZh2nG1hY7iStS3i04Oll_3BgM577Cs",
+          "mixDateYear": "",
+          "mixDuration": "1 hour 7 min",
+          "mixImageFilename": "img/artists/chickageskyway.jpg",
+          "mixDescription": ""
+        },
+        {
+          "mixTitle": "Chubby Podcast 2021",
+          "mixArweaveURL": "https://zcxekfuulha26hweqntyez4egu4baliajqdrfcu7xc2wvtnuef4q.arweave.net/yK5FFpRZwa8exINngmeENTgQLQBMBxKKn7i1as20IXk",
+          "mixDateYear": "2021",
+          "mixDuration": "1 hour 10",
+          "mixImageFilename": "img/artists/chickageskyway.jpg",
+          "mixDescription": ""
+        }
+      ]
+    },
+    {
+      "artistName": "Jevon Jackson",
+      "artistFilename": "jevonjackson.html",
+      "artistImageFilename": "img/artists/jevonjackson.png",
+      "artistGenre": "House and Techno",
+      "artistBio": "",
+      "mixes": [
+        {
+          "mixTitle": "Frankie Vega B2B Jevon Jackson",
+          "mixArweaveURL": "https://3ouwbtzescwl2diyhhhyq67japhviffnphdye4ix6yf2gsgdenla.arweave.net/26lgzySQrL0NGDnPiHvpA89UFK15x4JxF_YLo0jDI1Y",
+          "mixDateYear": "",
+          "mixDuration": "40min",
+          "mixImageFilename": "img/artists/jevonjackson.png",
+          "mixDescription": ""
+        }
+      ]
+    },
+    {
+      "artistName": "Bernard Badie B2B Sean Smith",
+      "artistFilename": "bernardbadie.html",
+      "artistImageFilename": "img/artists/bernardbadie.jpg",
+      "artistGenre": "House Deep Vocal",
+      "artistBio": "",
+      "mixes": [
+        {
+          "mixTitle": "Live at UE",
+          "mixArweaveURL": "https://uzh5clhxybxsww3li3gmcodyxok7dwa46vfq7etzn6owprhujdea.arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg",
+          "mixDateYear": "",
+          "mixDuration": "1 hour 10 min",
+          "mixImageFilename": "img/artists/bernardbadie.jpg",
+          "mixDescription": ""
+        }
+      ]
+    }
+  ]
+  

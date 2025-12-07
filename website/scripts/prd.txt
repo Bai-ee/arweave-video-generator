@@ -1,0 +1,193 @@
+# Underground Existence - Product Requirements Document
+
+## 1. Overview
+
+Underground Existence is a web application that archives and showcases mixtapes from Chicago's underground music scene. The platform provides a user-friendly interface for browsing, filtering, and playing audio content stored on the Arweave blockchain for permanent preservation.
+
+## 2. Tech Stack
+
+### Frontend
+- **HTML5/CSS3**: Traditional static HTML pages with responsive design
+- **JavaScript**: ES5/ES6 with jQuery as the primary library
+- **CSS Framework**: Bootstrap (Grid/Reboot) for layout
+- **CSS Preprocessor**: Stylus (main.styl), compiled to main.css
+- **Media Player**: Plyr.js for audio playback
+- **UI Libraries**:
+  - Owl Carousel (content sliders)
+  - Magnific Popup (modals)
+  - Select2 (enhanced dropdowns)
+  - GSAP with ScrollTrigger (animations)
+  - Smooth Scrollbar (custom scrollbars)
+  - InputMask (form input formatting)
+
+### Backend
+- No traditional backend (Static Site)
+- Content managed through JSON files (artists.json, new-artist-template.json)
+
+### Storage/Hosting
+- Static hosting optimized for Arweave blockchain deployment
+- Audio files hosted on Arweave blockchain (decentralized permanent storage)
+- Images stored locally in img/ directory with considerations for Arweave storage constraints
+
+## 3. Core Components
+
+### Media Player
+- Built using Plyr.js
+- Always-accessible floating player
+- Controls for play/pause, track navigation, volume, mute
+- Displays current track info and artist image
+- Toggle button to show/hide player
+
+### Artist Directory
+- Grid layout of artist cards on homepage
+- Filtering by genre (house, acid, techno, other)
+- Each artist card links to individual artist page
+
+### Artist Pages
+- Dedicated page for each artist
+- Artist image and information
+- Playlist of mixes with playback controls
+- Download links for audio files
+- Links to social media profiles when available
+
+### Content Structure
+- **Data Sources**:
+  - artists.json: Primary data source for existing artists and mixes
+  - new-artist-template.json: Template for adding new artists
+- **HTML Structure**:
+  - index.html: Main landing page with all artists and featured mixes
+  - [artist].html: Individual artist pages (one HTML file per artist)
+
+## 4. Common Components and Templates
+
+### Duplicated Code Patterns
+1. **Artist Cards**:
+   ```html
+   <div class="album" data-genre="[genre]">
+     <a href="[artist].html">
+       <div class="album__cover">
+         <img src="[image_path]" alt="">
+       </div>
+     </a>
+     <div class="album__title">
+       <h3>[ARTIST_NAME]</h3>
+     </div>
+   </div>
+   ```
+
+2. **Track List Items**:
+   ```html
+   <li class="single-item">
+     <a data-link data-title="[title]" data-artist="[artist]" data-img="[image_path]" href="[arweave_url]" class="single-item__cover">
+       <img src="[image_path]" alt="">
+       <svg>...</svg>
+       <svg>...</svg>
+     </a>
+     <div class="single-item__title">
+       <h4>[title]</h4>
+       <span>[additional_info]</span>
+     </div>
+     <span class="single-item__time">[duration]</span>
+     <a href="[arweave_url]" download class="svg-download">
+       <svg>...</svg>
+     </a>
+   </li>
+   ```
+
+3. **Artist Page Template**:
+   Standard layout with breadcrumb, title, cover image, tracklist, and optional bio section.
+
+## 5. User Experience
+
+### Homepage
+- Header with logo and navigation
+- Sidebar with navigation links
+- Grid of artist cards with filterable categories
+- Featured mixes list with playback controls
+- Footer with site info and social links
+
+### Artist Pages
+- Back navigation to homepage
+- Artist profile and image
+- Mix playlist with playback and download options
+- Optional artist bio and additional information
+
+### Player
+- Global floating player accessible across all pages
+- Toggle to minimize/maximize
+- Always shows current track and controls
+
+## 6. Content Management
+
+### Adding New Artists
+1. Fill out the new-artist-template.json with artist information
+2. Create artist HTML page based on template
+3. Add artist to grid on index.html
+4. Add first mix to featured list on index.html
+5. Append artist data to artists.json
+
+### Adding New Mixes
+1. Update artist's entry in artists.json with new mix information
+2. Update artist's HTML page tracklist
+3. Update index.html featured list if it's the primary mix
+
+## 7. Arweave Optimization
+
+### Storage Considerations
+- Optimize asset sizes to minimize storage costs (images, audio files)
+- Use external Arweave URLs for large media files whenever possible
+- Implement lazy loading for images and media content
+- Use image compression and appropriate formats (WebP where supported)
+
+### Performance Optimization
+- Minimize JavaScript and CSS to reduce transaction sizes
+- Bundle CSS and JS files to reduce HTTP requests
+- Optimize HTML structure to reduce redundancy
+- Implement efficient caching strategies compatible with permanent storage
+
+### Content Distribution
+- Consider using Arweave gateways for improved content delivery
+- Implement progressive loading strategies for audio content
+- Design for permanent immutable storage (version control in file names)
+- Use permaweb patterns for linking between content
+
+### Cost Efficiency
+- Batch uploads to optimize transaction fees
+- Implement smart bundling of related assets
+- Consider decentralized storage mix (Arweave for permanent content, traditional hosting for changing components)
+
+## 8. Future Development Areas
+
+### Technical Improvements
+- Convert to a dynamic site with server-side rendering
+- Implement a proper CMS for content management
+- Use a templating system to reduce code duplication
+- Enhance mobile responsiveness
+
+### Feature Enhancements
+- User accounts and playlist creation
+- Social sharing capabilities
+- Enhanced artist profiles and biography pages
+- Embedded related content (videos, photos, etc.)
+- Advanced filtering and search functionality
+
+## 9. Design Guidelines
+
+### Theme
+- Dark, music-focused aesthetic
+- Consistent typography and color scheme
+- Responsive design for all device sizes
+
+### Assets
+- Artist images stored in img/artists/
+- Cover art stored in img/covers/
+- UI elements and logos in img/ directory
+- Custom icon set for UI controls
+
+## 10. Implementation Notes
+
+- All audio files are hosted on Arweave with permanent URLs
+- Genre filtering is implemented via JavaScript
+- Main audio player functionality is in main.js
+- Site is designed for static hosting with no backend requirements
+- Structure optimized for permanent deployment on Arweave blockchain

@@ -1,0 +1,159 @@
+{
+  "projectName": "Underground Existence",
+  "techStack": {
+    "frontend": [
+      "HTML5",
+      "CSS3",
+      "JavaScript (ES5/ES6)",
+      "jQuery",
+      "Bootstrap (Grid/Reboot)",
+      "Owl Carousel",
+      "Magnific Popup",
+      "Select2",
+      "Plyr.js",
+      "GSAP (gsap.min.js, ScrollTrigger.min.js)",
+      "Smooth Scrollbar",
+      "InputMask"
+    ],
+    "preprocessor": "Stylus (inferred from main.styl, but compiled main.css is used)",
+    "backend": "None (Static Site)",
+    "hosting": "Static hosting (likely), Audio files hosted on Arweave",
+    "buildTool": "None explicitly identified"
+  },
+  "dataSources": {
+    "artists": {
+      "file": "artists.json",
+      "description": "Primary source of truth for *existing* artists. An array of artist objects, each containing basic info and a 'mixes' array. Updated by the AI after processing a new artist template.",
+      "updateMethod": "Manually edit to correct existing data if necessary. New artists are added via the template workflow."
+    },
+    "newArtistTemplate": {
+        "file": "new-artist-template.json",
+        "description": "Template file to be filled out by the user when adding a *new* artist. Contains placeholders for required artist and initial mix(es) data.",
+        "updateMethod": "User copies and fills this template, then provides the content to the AI for processing."
+    }
+  },
+  "codingGuidelines": {
+    "structure": "Multiple static HTML pages per artist, plus index.html. Repetitive structure. Content is generated/updated based on artists.json and new-artist-template.json.",
+    "style": "Manual HTML edits (based on templates/duplication), Bootstrap grid conventions, custom CSS in main.css.",
+    "comments": "Minimal.",
+    "languageLevel": "Primarily ES5 (jQuery), potentially some ES6 in custom scripts.",
+    "assetHandling": {
+      "images": "Located in img/ directory (e.g., img/artists/artistname.jpg or img/covers/...).",
+      "css": "Located in css/ directory.",
+      "javascript": "Located in js/ directory.",
+      "audio": "Hosted externally on Arweave, linked directly in HTML."
+    },
+    "avoid": [
+      "Templating engines (currently)",
+      "Static Site Generators (currently)",
+      "Modern JS frameworks (React, Vue, Angular, Svelte) (currently)"
+    ]
+  },
+  "uiNotes": {
+    "theme": "Dark, music-focused aesthetic.",
+    "layout": "Responsive, uses Bootstrap grid.",
+    "components": "Uses jQuery plugins for carousels, popups, player."
+  },
+  "contentStructures": {
+    "indexPage": {
+      "artistGrid": {
+        "container": ".row.row--grid .col-12 .row.row--grid.fadeIn",
+        "itemSelector": ".col-6.col-sm-4.col-lg-2 .album",
+        "elementsToUpdate": {
+          "link": "a[href]",
+          "image": ".album__cover img[src]",
+          "name": ".album__title h3",
+          "genre": ".album[data-genre]"
+        },
+        "description": "Grid displaying artist thumbnails linking to individual artist pages."
+      },
+      "featuredTrackList": {
+        "container": "ul.main__list",
+        "itemSelector": "li.single-item",
+        "elementsToUpdate": {
+          "linkAndData": "a.single-item__cover[data-link][data-title][data-artist][data-img][href]",
+          "image": "a.single-item__cover img[src]",
+          "title": ".single-item__title h4",
+          "artist/details": ".single-item__title span a",
+          "time": ".single-item__time"
+        },
+        "description": "List of featured tracks at the bottom, playable via the main player.",
+        "purpose": "Displays the first mix listed in the 'mixes' array from artists.json for each artist."
+      },
+      "mainPlayer": {
+         "selector": "div.player",
+         "image": ".player__cover img[src]",
+         "title": ".player__title",
+         "artist": ".player__artist",
+         "audioSource": "audio#audio[src]",
+         "description": "The main audio player displayed at the top/side. Defaults to the first mix of the featured artist (currently Josh Zeitler)."
+      }
+    },
+    "artistPage": {
+      "mainPlayer": {
+         "selector": "div.player",
+         "image": ".player__cover img[src]",
+         "title": ".player__title",
+         "artist": ".player__artist",
+         "audioSource": "audio#audio[src]",
+         "description": "The main audio player on the artist page. Defaults to the first mix in the artist's 'mixes' array."
+      },
+      "artistHeader": "h1",
+      "trackList": {
+        "container": "ul.main__list.main__list--playlist",
+        "itemSelector": "li.single-item",
+        "elementsToUpdate": {
+          "linkAndData": "a.single-item__cover[data-playlist][data-title][data-artist][data-img][href]",
+          "image": "a.single-item__cover img[src]",
+          "title": ".single-item__title h4 a",
+          "artist/details": ".single-item__title span a",
+          "year/date": ".single-item__title span",
+          "time": ".single-item__time",
+          "downloadLink": "a.svg-download[href]"
+        },
+        "description": "The list of all tracks/mixes for the specific artist, generated from the 'mixes' array."
+      }
+    }
+  },
+  "contentUpdateProcess": {
+    "addingNewArtist": [
+      "1. User copies 'new-artist-template.json' and fills it with the new artist's data, including at least one mix in the 'mixes' array.",
+      "2. User provides the *content* of the filled JSON template to the AI.",
+      "3. AI duplicates an existing artist page (e.g., 'tyrel.html') to create the new file specified in 'artistFilename' from the provided JSON.",
+      "4. AI populates the new artist HTML file: Updates page <title>, meta tags (using artistName and the first mix's image), header <h1>, main player details (using the first mix's details).",
+      "5. AI generates the full track list (contentStructures.artistPage.trackList) on the new artist page by iterating through the 'mixes' array from the provided JSON and creating a 'li.single-item' for each mix.",
+      "6. AI updates 'index.html': Adds a new artist block to the artist grid (contentStructures.indexPage.artistGrid) using data from the provided JSON.",
+      "7. AI updates 'index.html': Adds a new list item ('li.single-item') for the artist's *first* mix (from the provided JSON) to the featured track list (contentStructures.indexPage.featuredTrackList).",
+      "8. AI reads the current 'artists.json' file.",
+      "9. AI appends the new artist object (from the user-provided JSON) to the array in 'artists.json' and saves the updated file.",
+      "10. User ensures the actual image files (artistImageFilename and all mixImageFilenames) are uploaded to 'img/artists/' or 'img/covers/'.",
+      "11. User ensures all audio files are uploaded to Arweave and URLs match the mixArweaveURLs in the provided JSON."
+    ],
+    "addingNewMix": [
+      "1. User manually adds a new mix object to the specific artist's 'mixes' array within 'artists.json'. IMPORTANT: Add the new mix to the *beginning* of the array if it should become the new featured/default mix.",
+      "2. User provides the *updated artist object* from 'artists.json' and the artist's filename to the AI.",
+      "3. AI reads the specified artist's HTML file ('artistname.html').",
+      "4. AI completely regenerates the track list section ('ul.main__list.main__list--playlist') based on the *entire* updated 'mixes' array for that artist from the provided JSON data.",
+      "5. AI updates the main player (contentStructures.artistPage.mainPlayer) in the artist's file using the details from the *first* mix in the updated 'mixes' array.",
+      "6. AI reads 'index.html'.",
+      "7. AI finds the existing 'li.single-item' for this artist in the featured track list (contentStructures.indexPage.featuredTrackList) using the artist name for identification.",
+      "8. AI updates this existing list item's details (image, title, artist/details, time, linkAndData attributes including href) to match the details of the *first* mix in the artist's updated 'mixes' array.",
+      "9. User ensures the new audio file is uploaded to Arweave and the URL matches the new mixArweaveURL.",
+      "10. User ensures any new mix-specific image is uploaded."
+    ]
+  },
+  "aiDirectives": [
+    "The primary source of truth for *existing* artists is 'artists.json'.",
+    "For *new* artists, use the data provided by the user (from the filled 'new-artist-template.json') as the source of truth for the creation process.",
+    "Follow the 'addingNewArtist' process when the user provides data for a new artist. Generate the HTML page, update index.html, and *append* the new artist data to 'artists.json'.",
+    "Follow the 'addingNewMix' process when the user provides updated mix data for an *existing* artist (usually by providing the updated artist object from 'artists.json'). Regenerate the artist's track list and update the index.html featured list based on the *first* mix.",
+    "Use 'contentStructures' for specific selectors when editing HTML.",
+    "Strictly adhere to updating *both* the artist's page and the relevant sections of 'index.html' (artist grid and featured track list) as specified in the update processes.",
+    "The featured track list in index.html ('ul.main__list') MUST always reflect the single *first* mix listed in the 'mixes' array for each artist.",
+    "Recognize that global UI changes require editing multiple HTML files and are best addressed by recommending refactoring first.",
+    "Treat Arweave URLs as external content links that need to be updated directly in the 'href' attributes based on the provided JSON data.",
+    "Confirm image paths point to 'img/artists/' or 'img/covers/' or are full external URLs as specified in the provided JSON data.",
+    "Verify Arweave URLs before inserting them.",
+    "Ignore the deprecated 'new-artist-data.template.json' file if it still exists."
+  ]
+} 

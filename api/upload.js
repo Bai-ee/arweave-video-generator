@@ -19,8 +19,14 @@
 
 import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
 import { uploadToArweave } from '../lib/ArweaveUploader.js';
+import { syncFirebaseToWebsiteJSON } from '../lib/WebsiteSync.js';
+import { deployWebsiteToArweave } from '../lib/WebsiteDeployer.js';
 import formidable from 'formidable';
 import fs from 'fs-extra';
+import path from 'path';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 // Disable default body parser for file uploads
 export const config = {
@@ -154,6 +160,14 @@ export default async function handler(req, res) {
         isTrack: isTrack
       });
 
+      // Update website (non-blocking - don't fail upload if website update fails)
+      let websiteUpdateResult = null;
+      try {
+        websiteUpdateResult = await updateWebsite(db);
+      } catch (websiteError) {
+        console.warn('[Upload] Website update failed (non-blocking):', websiteError.message);
+      }
+
       return res.status(200).json({
         success: true,
         type: 'audio',
@@ -161,7 +175,8 @@ export default async function handler(req, res) {
         fileName: fileName,
         fileSize: fileSize,
         artistName: artistName,
-        message: 'Audio uploaded and added to artist database'
+        message: 'Audio uploaded and added to artist database',
+        websiteUpdate: websiteUpdateResult
       });
 
     } else if (type === 'image') {
@@ -229,6 +244,14 @@ export default async function handler(req, res) {
       // Update artist image in Firebase artists JSON
       await updateArtistImage(db, artistName, arweaveUrl);
 
+      // Update website (non-blocking - don't fail upload if website update fails)
+      let websiteUpdateResult = null;
+      try {
+        websiteUpdateResult = await updateWebsite(db);
+      } catch (websiteError) {
+        console.warn('[Upload] Website update failed (non-blocking):', websiteError.message);
+      }
+
       return res.status(200).json({
         success: true,
         type: 'image',
@@ -236,7 +259,8 @@ export default async function handler(req, res) {
         fileName: fileName,
         fileSize: uploadResult.fileSize,
         artistName: artistName,
-        message: 'Artist image uploaded and updated in database'
+        message: 'Artist image uploaded and updated in database',
+        websiteUpdate: websiteUpdateResult
       });
     }
 
@@ -318,6 +342,48 @@ async function addMixToArtist(db, artistName, mixData) {
     
   } catch (error) {
     console.error('[Upload] Error updating artists JSON:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Update website after Firebase changes (sync, regenerate, deploy)
+ * Non-blocking - errors are logged but don't throw
+ */
+async function updateWebsite(db) {
+  try {
+    console.log('[Upload] Updating website after Firebase changes...');
+    
+    // Step 1: Sync Firebase to website/artists.json
+    const syncResult = await syncFirebaseToWebsiteJSON(db, 'website');
+    if (!syncResult.success) {
+      throw new Error(`Sync failed: ${syncResult.error}`);
+    }
+    console.log('[Upload] ✅ Synced Firebase to website/artists.json');
+
+    // Step 2: Generate HTML pages
+    const generateScript = require(path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js'));
+    const generateResult = generateScript.generatePages();
+    if (!generateResult.success) {
+      throw new Error(`Generate failed: ${generateResult.error}`);
+    }
+    console.log('[Upload] ✅ Generated HTML pages');
+
+    // Step 3: Deploy to Arweave
+    const deployResult = await deployWebsiteToArweave('website');
+    if (!deployResult.success) {
+      throw new Error(`Deploy failed: ${deployResult.error}`);
+    }
+    console.log('[Upload] ✅ Deployed website to Arweave');
+
+    return {
+      success: true,
+      manifestId: deployResult.manifestId,
+      websiteUrl: deployResult.websiteUrl,
+      filesUploaded: deployResult.filesUploaded
+    };
+  } catch (error) {
+    console.error('[Upload] Website update error:', error.message);
     throw error;
   }
 }

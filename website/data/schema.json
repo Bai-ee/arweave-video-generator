@@ -1,0 +1,108 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "UndergroundExistence Artist Schema",
+    "description": "Schema for artist data files on UndergroundExistence",
+    "type": "object",
+    "required": ["meta", "artist", "playlist"],
+    "properties": {
+        "meta": {
+            "type": "object",
+            "required": ["title", "description", "keywords", "author"],
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Page title in format 'Artist Name - UndergroundExistence'"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Brief description of the artist's content"
+                },
+                "keywords": {
+                    "type": "string",
+                    "description": "Comma-separated keywords for SEO"
+                },
+                "author": {
+                    "type": "string",
+                    "description": "Content author/curator"
+                }
+            }
+        },
+        "artist": {
+            "type": "object",
+            "required": ["name", "image", "social_links"],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Artist's name"
+                },
+                "image": {
+                    "type": "string",
+                    "description": "Path to artist's profile image"
+                },
+                "social_links": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["platform", "url", "icon"],
+                        "properties": {
+                            "platform": {
+                                "type": "string",
+                                "enum": ["soundcloud", "instagram", "facebook", "twitter"],
+                                "description": "Social media platform name"
+                            },
+                            "url": {
+                                "type": "string",
+                                "format": "uri",
+                                "description": "Full URL to artist's social media profile"
+                            },
+                            "icon": {
+                                "type": "string",
+                                "description": "SVG icon markup for the platform"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "playlist": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["title", "artist", "genre", "duration", "image", "audio_url", "download_url"],
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Title of the mix/track"
+                    },
+                    "artist": {
+                        "type": "string",
+                        "description": "Artist name for the mix/track"
+                    },
+                    "genre": {
+                        "type": "string",
+                        "description": "Primary genre of the mix/track"
+                    },
+                    "duration": {
+                        "type": "string",
+                        "pattern": "^\\d{1,2}:\\d{2}:\\d{2}$",
+                        "description": "Duration in format HH:MM:SS"
+                    },
+                    "image": {
+                        "type": "string",
+                        "description": "Path to cover artwork image"
+                    },
+                    "audio_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "URL to stream the audio"
+                    },
+                    "download_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "URL to download the audio file"
+                    }
+                }
+            }
+        }
+    }
+} 
