@@ -1591,30 +1591,80 @@
         progressBar.style.width = '10%';
         progressPercent.textContent = '10%';
         
-        // Create form data
-        const formData = new FormData();
-        formData.append('type', 'audio');
-        formData.append('artistName', artistName);
+        let firebasePath = null;
         
         if (uploadType === 'file') {
-          formData.append('file', mixFile);
-        } else {
-          formData.append('mixUrl', mixUrl);
+          // Upload to Firebase Storage first (like archive upload does)
+          progressStatus.textContent = 'Uploading to Firebase...';
+          progressBar.style.width = '20%';
+          progressPercent.textContent = '20%';
+          
+          const { storage, ref, uploadBytesResumable, getDownloadURL } = window.firebase;
+          const fileName = `mix_${Date.now()}_${mixFile.name}`;
+          const storagePath = `mixes/${artistName}/${fileName}`;
+          const storageRef = ref(storage, storagePath);
+          
+          // Upload to Firebase
+          const uploadTask = uploadBytesResumable(storageRef, mixFile, {
+            contentType: 'audio/mpeg',
+            customMetadata: {
+              originalName: mixFile.name,
+              artist: artistName,
+              title: mixTitle || mixFile.name,
+              uploadedAt: new Date().toISOString()
+            }
+          });
+          
+          // Wait for Firebase upload to complete
+          await new Promise((resolve, reject) => {
+            uploadTask.on(
+              'state_changed',
+              (snapshot) => {
+                const progressPercent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                progressBar.style.width = `${10 + (progressPercent * 0.2)}%`;
+                progressPercent.textContent = `${Math.round(10 + (progressPercent * 0.2))}%`;
+              },
+              (error) => {
+                console.error('Firebase upload error:', error);
+                reject(error);
+              },
+              async () => {
+                firebasePath = storagePath;
+                console.log('[Mix Upload] File uploaded to Firebase:', firebasePath);
+                resolve();
+              }
+            );
+          });
         }
-        
-        if (mixTitle) formData.append('mixTitle', mixTitle);
-        if (mixDate) formData.append('mixDateYear', mixDate);
-        if (mixDuration) formData.append('mixDuration', mixDuration);
-        formData.append('isTrack', isTrack.toString());
         
         progressStatus.textContent = 'Uploading to Arweave...';
         progressBar.style.width = '30%';
         progressPercent.textContent = '30%';
         
-        // Upload to API
+        // Send JSON to API (like archive upload does) - no file in request body!
+        const requestBody = {
+          type: 'audio',
+          artistName: artistName,
+          mixTitle: mixTitle,
+          mixDateYear: mixDate,
+          mixDuration: mixDuration,
+          isTrack: isTrack.toString()
+        };
+        
+        if (uploadType === 'file' && firebasePath) {
+          // Send Firebase path instead of file
+          requestBody.firebasePath = firebasePath;
+        } else if (uploadType === 'url') {
+          requestBody.mixUrl = mixUrl;
+        }
+        
+        // Upload to API (JSON, not FormData - matches archive upload!)
         const response = await fetch('/api/upload', {
           method: 'POST',
-          body: formData
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
         });
         
         progressBar.style.width = '70%';

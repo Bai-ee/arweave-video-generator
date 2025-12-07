@@ -17,8 +17,8 @@
  * - isTrack: Boolean, true for tracks, false for mixes (optional, for audio, default: false)
  */
 
-import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
-import { uploadToArweave } from '../lib/ArweaveUploader.js';
+import { initializeFirebaseAdmin, getFirestore, getStorage } from '../lib/firebase-admin.js';
+import { uploadToArweave, uploadFromFirebase } from '../lib/ArweaveUploader.js';
 import { syncFirebaseToWebsiteJSON } from '../lib/WebsiteSync.js';
 import { deployWebsiteToArweave } from '../lib/WebsiteDeployer.js';
 import { calculateCost, formatCost } from '../lib/ArweaveCostCalculator.js';
@@ -92,27 +92,58 @@ export default async function handler(req, res) {
       console.log('[Upload] URL:', req.url);
       console.log('[Upload] Content-Type:', req.headers['content-type']);
       console.log('[Upload] ARWEAVE_WALLET_JWK exists:', !!process.env.ARWEAVE_WALLET_JWK);
-      console.log('[Upload] ARWEAVE_WALLET_JWK length:', process.env.ARWEAVE_WALLET_JWK ? process.env.ARWEAVE_WALLET_JWK.length : 0);
-      console.log('[Upload] ARWEAVE_WALLET_JWK first char:', process.env.ARWEAVE_WALLET_JWK ? process.env.ARWEAVE_WALLET_JWK.substring(0, 50) : 'N/A');
       
-      // Parse multipart form data (formidable v3 API)
-      const form = formidable({
-        maxFileSize: 500 * 1024 * 1024, // 500MB max
-        keepExtensions: true,
-      });
+      // Check if request is JSON (new Firebase-based flow) or multipart (old direct upload)
+      const contentType = req.headers['content-type'] || '';
+      let type, artistName, mixTitle, mixUrl, mixDateYear, mixDuration, isTrack, firebasePath;
+      
+      if (contentType.includes('application/json')) {
+        // New flow: JSON with Firebase path (like archive upload)
+        console.log('[Upload] Parsing JSON request (Firebase-based flow)...');
+        const body = await new Promise((resolve, reject) => {
+          let data = '';
+          req.on('data', chunk => data += chunk);
+          req.on('end', () => {
+            try {
+              resolve(JSON.parse(data));
+            } catch (e) {
+              reject(e);
+            }
+          });
+          req.on('error', reject);
+        });
+        
+        type = body.type;
+        artistName = body.artistName;
+        mixTitle = body.mixTitle;
+        mixUrl = body.mixUrl;
+        mixDateYear = body.mixDateYear;
+        mixDuration = body.mixDuration;
+        isTrack = body.isTrack === 'true' || body.isTrack === true;
+        firebasePath = body.firebasePath;
+        
+        console.log('[Upload] JSON parsed successfully');
+        console.log('[Upload] Firebase path:', firebasePath || 'None (using URL)');
+      } else {
+        // Old flow: multipart form data (for backward compatibility)
+        console.log('[Upload] Parsing multipart form data (legacy flow)...');
+        const form = formidable({
+          maxFileSize: 500 * 1024 * 1024, // 500MB max
+          keepExtensions: true,
+        });
 
-      console.log('[Upload] Parsing form data...');
-      const { fields, files } = await form.parse(req);
-      console.log('[Upload] Form parsed successfully');
-    
-    // Extract fields (formidable v3 returns arrays)
-    const type = Array.isArray(fields.type) ? fields.type[0] : fields.type;
-    const artistName = Array.isArray(fields.artistName) ? fields.artistName[0] : fields.artistName;
-    const mixTitle = Array.isArray(fields.mixTitle) ? fields.mixTitle[0] : fields.mixTitle;
-    const mixUrl = Array.isArray(fields.mixUrl) ? fields.mixUrl[0] : fields.mixUrl;
-    const mixDateYear = Array.isArray(fields.mixDateYear) ? fields.mixDateYear[0] : fields.mixDateYear;
-    const mixDuration = Array.isArray(fields.mixDuration) ? fields.mixDuration[0] : fields.mixDuration;
-    const isTrack = Array.isArray(fields.isTrack) ? fields.isTrack[0] === 'true' : fields.isTrack === 'true';
+        const { fields, files } = await form.parse(req);
+        console.log('[Upload] Form parsed successfully');
+      
+        // Extract fields (formidable v3 returns arrays)
+        type = Array.isArray(fields.type) ? fields.type[0] : fields.type;
+        artistName = Array.isArray(fields.artistName) ? fields.artistName[0] : fields.artistName;
+        mixTitle = Array.isArray(fields.mixTitle) ? fields.mixTitle[0] : fields.mixTitle;
+        mixUrl = Array.isArray(fields.mixUrl) ? fields.mixUrl[0] : fields.mixUrl;
+        mixDateYear = Array.isArray(fields.mixDateYear) ? fields.mixDateYear[0] : fields.mixDateYear;
+        mixDuration = Array.isArray(fields.mixDuration) ? fields.mixDuration[0] : fields.mixDuration;
+        isTrack = Array.isArray(fields.isTrack) ? fields.isTrack[0] === 'true' : fields.isTrack === 'true';
+      }
 
     if (!type || !['audio', 'image'].includes(type)) {
       return res.status(400).json({
@@ -129,14 +160,63 @@ export default async function handler(req, res) {
     }
 
     if (type === 'audio') {
-      // Handle audio upload
-      const file = Array.isArray(files.file) ? files.file[0] : files.file;
-      
       let arweaveUrl = null;
       let fileName = null;
       let fileSize = 0;
 
-      if (file) {
+      if (firebasePath) {
+        // New flow: Download from Firebase and upload to Arweave (like archive upload!)
+        console.log(`[Upload] Using Firebase path: ${firebasePath}`);
+        console.log(`[Upload] This matches the working archive upload flow!`);
+        
+        initializeFirebaseAdmin();
+        const storage = getStorage();
+        const bucket = storage.bucket();
+        const fileRef = bucket.file(firebasePath);
+        
+        // Check if file exists
+        const [exists] = await fileRef.exists();
+        if (!exists) {
+          return res.status(404).json({
+            success: false,
+            error: `File not found in Firebase: ${firebasePath}`
+          });
+        }
+        
+        // Use uploadFromFirebase (same as archive upload!)
+        const uploadResult = await uploadFromFirebase(fileRef, 'mixes', {
+          source: 'firebase',
+          originalFolder: 'mixes',
+          metadata: {
+            artist: artistName,
+            title: mixTitle || firebasePath.split('/').pop(),
+            type: isTrack ? 'track' : 'mix',
+            dateYear: mixDateYear || '',
+            duration: mixDuration || ''
+          }
+        });
+        
+        if (!uploadResult.success) {
+          return res.status(500).json({
+            success: false,
+            error: uploadResult.error || 'Failed to upload to Arweave'
+          });
+        }
+        
+        arweaveUrl = uploadResult.arweaveUrl;
+        fileSize = uploadResult.fileSize;
+        fileName = uploadResult.fileName;
+        
+        console.log(`[Upload] ✅ Uploaded to Arweave via Firebase: ${arweaveUrl}`);
+        
+      } else if (mixUrl) {
+        // Use provided URL
+        arweaveUrl = mixUrl;
+      } else {
+        // Legacy flow: multipart file upload (for backward compatibility)
+        const file = files && (Array.isArray(files.file) ? files.file[0] : files.file);
+        
+        if (file) {
         // Upload file to Arweave
         console.log(`[Upload] Reading file from: ${file.filepath}`);
         console.log(`[Upload] File size: ${file.size} bytes`);
