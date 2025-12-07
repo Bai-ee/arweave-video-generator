@@ -393,7 +393,8 @@ export class VideoCompositor {
           // Add timing if specified (enable overlay only at startTime)
           if (layer.startTime !== null && layer.startTime !== undefined) {
             const endTime = layer.startTime + (layer.duration || config.duration);
-            overlayFilter = `${currentInput}[scaled${imageLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+            const roundedEndTime = Math.round(endTime * 100) / 100;
+            overlayFilter = `${currentInput}[scaled${imageLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'${outputLabel}`;
           } else {
             overlayFilter = `${currentInput}[scaled${imageLayerIndex}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
           }
@@ -445,8 +446,9 @@ export class VideoCompositor {
         // Add timing if specified (enable overlay only at startTime)
         if (layer.startTime !== null && layer.startTime !== undefined) {
           const endTime = layer.startTime + (layer.duration || config.duration);
+          const roundedEndTime = Math.round(endTime * 100) / 100;
           // Use overlay with enable expression to show only at specific time
-          overlayFilter = `${currentInput}[scaled${index}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+          overlayFilter = `${currentInput}[scaled${index}_alpha]overlay=${layer.position.x}:${layer.position.y}:enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'${outputLabel}`;
         } else {
           overlayFilter = `${currentInput}[scaled${index}_alpha]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
         }
@@ -454,8 +456,9 @@ export class VideoCompositor {
         // Full opacity - simple overlay
         if (layer.startTime !== null && layer.startTime !== undefined) {
           const endTime = layer.startTime + (layer.duration || config.duration);
+          const roundedEndTime = Math.round(endTime * 100) / 100;
           // Use overlay with enable expression to show only at specific time
-          overlayFilter = `${currentInput}[scaled${index}]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+          overlayFilter = `${currentInput}[scaled${index}]overlay=${layer.position.x}:${layer.position.y}:enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'${outputLabel}`;
         } else {
           overlayFilter = `${currentInput}[scaled${index}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
         }
