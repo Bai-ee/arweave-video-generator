@@ -232,17 +232,15 @@ function generatePages(artistsJsonPath = null, outputDir = null) {
 }
 
 // Export for use as module
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    generatePages,
-    generateArtistPages,
-    updateIndexHtml,
-    generateArtistCard,
-    generateFeaturedTrack,
-    generatePlaylistItems,
-    escapeHtml
-  };
-}
+module.exports = {
+  generatePages,
+  generateArtistPages,
+  updateIndexHtml,
+  generateArtistCard,
+  generateFeaturedTrack,
+  generatePlaylistItems,
+  escapeHtml
+};
 
 // Run as CLI if called directly
 if (require.main === module) {

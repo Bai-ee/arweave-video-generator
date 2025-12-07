@@ -9,11 +9,103 @@ import { uploadFromFirebase } from '../lib/ArweaveUploader.js';
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'application/json');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  // Handle GET requests for status and manifest
+  if (req.method === 'GET') {
+    try {
+      initializeFirebaseAdmin();
+      const db = getFirestore();
+      
+      // In Vercel, we need to check the original URL or headers to determine which endpoint
+      // Check multiple possible sources for the path
+      const urlPath = req.url || req.headers['x-vercel-path'] || req.headers['x-invoke-path'] || '';
+      const host = req.headers['host'] || '';
+      const referer = req.headers['referer'] || '';
+      const fullUrl = req.headers['x-forwarded-proto'] 
+        ? `${req.headers['x-forwarded-proto']}://${host}${urlPath}`
+        : urlPath;
+      
+      // Determine which endpoint was called
+      const isStatusRequest = urlPath.includes('/archive-status') || fullUrl.includes('/archive-status') || referer.includes('/archive-status');
+      const isManifestRequest = urlPath.includes('/archive-manifest') || fullUrl.includes('/archive-manifest') || referer.includes('/archive-manifest');
+      
+      // Parse query parameters
+      const queryString = urlPath.includes('?') ? urlPath.split('?')[1] : (req.url && req.url.includes('?') ? req.url.split('?')[1] : '');
+      const queryParams = new URLSearchParams(queryString);
+      
+      // Log for debugging
+      console.log('[Archive] GET Request Debug:');
+      console.log('  urlPath:', urlPath);
+      console.log('  fullUrl:', fullUrl);
+      console.log('  isStatusRequest:', isStatusRequest);
+      console.log('  isManifestRequest:', isManifestRequest);
+      
+      if (isStatusRequest) {
+        // Get archive job status
+        const jobId = queryParams.get('jobId');
+        
+        if (!jobId) {
+          return res.status(400).json({
+            success: false,
+            error: 'jobId query parameter is required'
+          });
+        }
+        
+        const jobRef = db.collection('archiveJobs').doc(jobId);
+        const jobDoc = await jobRef.get();
+        
+        if (!jobDoc.exists) {
+          return res.status(404).json({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+        
+        const jobData = jobDoc.data();
+        return res.status(200).json({
+          success: true,
+          job: jobData
+        });
+      } else if (isManifestRequest) {
+        // Get archive manifest
+        const manifestRef = db.collection('archiveManifest').doc('main');
+        const manifestDoc = await manifestRef.get();
+        
+        if (!manifestDoc.exists) {
+          return res.status(200).json({
+            success: true,
+            manifest: {
+              version: '1.0.0',
+              lastUpdated: new Date().toISOString(),
+              folders: {}
+            }
+          });
+        }
+        
+        return res.status(200).json({
+          success: true,
+          manifest: manifestDoc.data()
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid endpoint. Use /api/archive-status or /api/archive-manifest'
+        });
+      }
+    } catch (error) {
+      console.error('[Archive] GET Error:', error.message);
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to retrieve archive data'
+      });
+    }
   }
 
   if (req.method !== 'POST') {

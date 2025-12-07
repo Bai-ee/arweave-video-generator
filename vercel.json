@@ -35,11 +35,27 @@
     },
     {
       "src": "/api/archive-status",
-      "dest": "/api/archive-status.js"
+      "dest": "/api/archive-upload.js"
     },
     {
       "src": "/api/archive-manifest",
-      "dest": "/api/archive-manifest.js"
+      "dest": "/api/archive-upload.js"
+    },
+    {
+      "src": "/api/upload",
+      "dest": "/api/upload.js"
+    },
+    {
+      "src": "/api/manage-artists",
+      "dest": "/api/manage-artists.js"
+    },
+    {
+      "src": "/api/deploy-website",
+      "dest": "/api/deploy-website.js"
+    },
+    {
+      "src": "/api/update-website",
+      "dest": "/api/deploy-website.js"
     },
     {
       "src": "/website/(.*)",
@@ -75,11 +91,14 @@
     "api/archive-upload.js": {
       "maxDuration": 120
     },
-    "api/archive-status.js": {
-      "maxDuration": 10
+    "api/upload.js": {
+      "maxDuration": 300
     },
-    "api/archive-manifest.js": {
-      "maxDuration": 10
+    "api/manage-artists.js": {
+      "maxDuration": 60
+    },
+    "api/deploy-website.js": {
+      "maxDuration": 300
     }
   }
 }

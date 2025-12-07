@@ -50,6 +50,10 @@ worker/setup-*.js
 scripts/
 worker/upload-*.js
 
+# React/TypeScript files not needed for deployment
+audioLinks/
+*.tsx
+
 # Documentation
 *.md
 !README.md

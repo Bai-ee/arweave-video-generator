@@ -223,8 +223,8 @@ async function updateWebsite(db) {
     }
     console.log('[Manage Artists] ✅ Generated HTML pages');
 
-    // Step 3: Deploy to Arweave
-    const deployResult = await deployWebsiteToArweave('website');
+    // Step 3: Deploy to Arweave (with database for incremental uploads)
+    const deployResult = await deployWebsiteToArweave('website', db);
     if (!deployResult.success) {
       throw new Error(`Deploy failed: ${deployResult.error}`);
     }
@@ -234,7 +234,10 @@ async function updateWebsite(db) {
       success: true,
       manifestId: deployResult.manifestId,
       websiteUrl: deployResult.websiteUrl,
-      filesUploaded: deployResult.filesUploaded
+      filesUploaded: deployResult.filesUploaded,
+      filesUnchanged: deployResult.filesUnchanged || 0,
+      totalFiles: deployResult.totalFiles || deployResult.filesUploaded,
+      costEstimate: deployResult.costEstimate
     };
   } catch (error) {
     console.error('[Manage Artists] Website update error:', error.message);

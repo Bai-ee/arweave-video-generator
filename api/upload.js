@@ -21,6 +21,7 @@ import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js'
 import { uploadToArweave } from '../lib/ArweaveUploader.js';
 import { syncFirebaseToWebsiteJSON } from '../lib/WebsiteSync.js';
 import { deployWebsiteToArweave } from '../lib/WebsiteDeployer.js';
+import { calculateCost, formatCost } from '../lib/ArweaveCostCalculator.js';
 import formidable from 'formidable';
 import fs from 'fs-extra';
 import path from 'path';
@@ -36,31 +37,63 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  // Handle OPTIONS preflight
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
-  // Only allow POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+  // Wrapper to ensure all errors return JSON
   try {
-    // Parse multipart form data (formidable v3 API)
-    const form = formidable({
-      maxFileSize: 500 * 1024 * 1024, // 500MB max
-      keepExtensions: true,
-    });
+    // Set CORS headers and JSON content type early
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS,GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Content-Type', 'application/json');
 
-    const { fields, files } = await form.parse(req);
+    // Handle OPTIONS preflight
+    if (req.method === 'OPTIONS') {
+      res.status(200).end();
+      return;
+    }
+
+    // Handle GET for cost estimation
+    if (req.method === 'GET') {
+      const { fileSize } = req.query;
+      if (fileSize) {
+        try {
+          const costEstimate = await calculateCost(parseInt(fileSize) || 0);
+          return res.status(200).json({
+            success: true,
+            cost: costEstimate,
+            formatted: formatCost(costEstimate)
+          });
+        } catch (error) {
+          return res.status(500).json({ success: false, error: error.message });
+        }
+      }
+      return res.status(400).json({ success: false, error: 'fileSize query parameter required' });
+    }
+
+    // Only allow POST for uploads
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+      console.log('[Upload] ============================================');
+      console.log('[Upload] Starting upload request...');
+      console.log('[Upload] Method:', req.method);
+      console.log('[Upload] URL:', req.url);
+      console.log('[Upload] Content-Type:', req.headers['content-type']);
+      console.log('[Upload] ARWEAVE_WALLET_JWK exists:', !!process.env.ARWEAVE_WALLET_JWK);
+      console.log('[Upload] ARWEAVE_WALLET_JWK length:', process.env.ARWEAVE_WALLET_JWK ? process.env.ARWEAVE_WALLET_JWK.length : 0);
+      console.log('[Upload] ARWEAVE_WALLET_JWK first char:', process.env.ARWEAVE_WALLET_JWK ? process.env.ARWEAVE_WALLET_JWK.substring(0, 50) : 'N/A');
+      
+      // Parse multipart form data (formidable v3 API)
+      const form = formidable({
+        maxFileSize: 500 * 1024 * 1024, // 500MB max
+        keepExtensions: true,
+      });
+
+      console.log('[Upload] Parsing form data...');
+      const { fields, files } = await form.parse(req);
+      console.log('[Upload] Form parsed successfully');
     
     // Extract fields (formidable v3 returns arrays)
     const type = Array.isArray(fields.type) ? fields.type[0] : fields.type;
@@ -95,6 +128,10 @@ export default async function handler(req, res) {
 
       if (file) {
         // Upload file to Arweave
+        console.log(`[Upload] Reading file from: ${file.filepath}`);
+        console.log(`[Upload] File size: ${file.size} bytes`);
+        console.log(`[Upload] Original filename: ${file.originalFilename}`);
+        
         const fileBuffer = await fs.readFile(file.filepath);
         fileName = file.originalFilename || `audio_${Date.now()}.mp3`;
         
@@ -107,7 +144,9 @@ export default async function handler(req, res) {
           });
         }
 
+        console.log(`[Upload] File buffer size: ${fileBuffer.length} bytes`);
         console.log(`[Upload] Uploading ${fileName} to Arweave for artist: ${artistName}`);
+        console.log(`[Upload] Using same uploadToArweave function as archive upload...`);
         
         const uploadResult = await uploadToArweave(fileBuffer, fileName, {
           contentType: 'audio/mpeg',
@@ -119,6 +158,11 @@ export default async function handler(req, res) {
             duration: mixDuration || ''
           }
         });
+        
+        console.log(`[Upload] Upload result:`, uploadResult.success ? 'SUCCESS' : 'FAILED');
+        if (!uploadResult.success) {
+          console.error(`[Upload] Upload error:`, uploadResult.error);
+        }
 
         // Cleanup temp file
         await fs.remove(file.filepath).catch(() => {});
@@ -241,6 +285,9 @@ export default async function handler(req, res) {
       initializeFirebaseAdmin();
       const db = getFirestore();
 
+      // Calculate upload cost
+      const uploadCost = await calculateCost(uploadResult.fileSize);
+      
       // Update artist image in Firebase artists JSON
       await updateArtistImage(db, artistName, arweaveUrl);
 
@@ -259,6 +306,8 @@ export default async function handler(req, res) {
         fileName: fileName,
         fileSize: uploadResult.fileSize,
         artistName: artistName,
+        cost: uploadCost,
+        formattedCost: formatCost(uploadCost),
         message: 'Artist image uploaded and updated in database',
         websiteUpdate: websiteUpdateResult
       });
@@ -266,11 +315,39 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('[Upload] Error:', error.message);
-    return res.status(500).json({ 
-      success: false,
-      error: 'Failed to upload file',
-      message: error.message 
-    });
+    console.error('[Upload] Stack:', error.stack);
+    
+    // Ensure we always return valid JSON
+    try {
+      return res.status(500).json({ 
+        success: false,
+        error: 'Failed to upload file',
+        message: error.message || 'Unknown error',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    } catch (jsonError) {
+      // Fallback if JSON.stringify fails
+      console.error('[Upload] Failed to send JSON response:', jsonError);
+      res.status(500).end(JSON.stringify({ 
+        success: false,
+        error: 'Failed to upload file',
+        message: error.message || 'Unknown error'
+      }));
+    }
+  }
+  } catch (outerError) {
+    // Catch any errors in the handler itself (e.g., header setting)
+    console.error('[Upload] Outer error:', outerError.message);
+    try {
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: outerError.message || 'Unknown error'
+      });
+    } catch (finalError) {
+      // Last resort - send plain text
+      res.status(500).end('Internal Server Error');
+    }
   }
 }
 
@@ -369,8 +446,8 @@ async function updateWebsite(db) {
     }
     console.log('[Upload] ✅ Generated HTML pages');
 
-    // Step 3: Deploy to Arweave
-    const deployResult = await deployWebsiteToArweave('website');
+    // Step 3: Deploy to Arweave (with database for incremental uploads)
+    const deployResult = await deployWebsiteToArweave('website', db);
     if (!deployResult.success) {
       throw new Error(`Deploy failed: ${deployResult.error}`);
     }
@@ -380,7 +457,10 @@ async function updateWebsite(db) {
       success: true,
       manifestId: deployResult.manifestId,
       websiteUrl: deployResult.websiteUrl,
-      filesUploaded: deployResult.filesUploaded
+      filesUploaded: deployResult.filesUploaded,
+      filesUnchanged: deployResult.filesUnchanged || 0,
+      totalFiles: deployResult.totalFiles || deployResult.filesUploaded,
+      costEstimate: deployResult.costEstimate
     };
   } catch (error) {
     console.error('[Upload] Website update error:', error.message);

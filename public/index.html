@@ -335,11 +335,16 @@
               type="file" 
               id="mixFileInput" 
               accept=".mp3,audio/mpeg"
+              onchange="updateMixCostEstimate()"
               style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
             />
             <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
               Max file size: 500MB. File will be uploaded to Arweave.
             </p>
+            <div id="mixCostEstimate" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: #1a1a1a; border: 1px solid var(--color-yellow-75); border-radius: 5px;">
+              <div style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem; font-weight: bold; margin-bottom: 0.25rem;">💰 Upload Cost Estimate:</div>
+              <div id="mixCostDetails" style="color: #888; font-family: var(--font-mathias); font-size: 0.75rem;"></div>
+            </div>
           </div>
           
           <div id="mixUrlContainer" style="display: none;">
@@ -352,6 +357,9 @@
               placeholder="https://arweave.net/..."
               style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
             />
+            <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
+              Using existing Arweave URL - no upload cost.
+            </p>
           </div>
           
           <div>
@@ -1613,10 +1621,41 @@
         progressPercent.textContent = '70%';
         progressStatus.textContent = 'Processing...';
         
-        const data = await response.json();
+        // Check if response is OK
+        if (!response.ok) {
+          const text = await response.text();
+          console.error('Upload failed with status:', response.status);
+          console.error('Response text:', text.substring(0, 500));
+          
+          // Try to parse as JSON, but handle HTML error pages
+          let errorMessage = `Upload failed with status ${response.status}`;
+          try {
+            const errorData = JSON.parse(text);
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch (e) {
+            // Response is not JSON (likely HTML error page)
+            if (text.includes('Forbidden')) {
+              errorMessage = 'Upload forbidden: Check your Arweave wallet credentials in Vercel environment variables. The ARWEAVE_WALLET_JWK may be invalid or have insufficient permissions.';
+            } else if (text.includes('Unauthorized')) {
+              errorMessage = 'Upload unauthorized: Check your Arweave wallet credentials.';
+            } else {
+              errorMessage = `Server error: ${text.substring(0, 200)}`;
+            }
+          }
+          throw new Error(errorMessage);
+        }
+        
+        let data;
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          const text = await response.text();
+          console.error('Failed to parse JSON response:', text);
+          throw new Error(`Server returned invalid JSON: ${text.substring(0, 200)}`);
+        }
         
         if (!data.success) {
-          throw new Error(data.error || 'Upload failed');
+          throw new Error(data.error || data.message || 'Upload failed');
         }
         
         progressBar.style.width = '90%';
@@ -1630,13 +1669,21 @@
         progressPercent.textContent = '100%';
         progressStatus.textContent = '✅ Complete!';
         
-        // Show success message
+        // Show success message with cost
+        let costInfo = '';
+        if (data.cost) {
+          costInfo = `<div style="margin-top: 0.5rem; font-size: 0.75rem; opacity: 0.9;">
+            Upload cost: ${data.cost.costAR.toFixed(6)} AR (~$${data.cost.costUSD.toFixed(4)} USD)
+          </div>`;
+        }
+        
         statusMsg.style.display = 'block';
         statusMsg.innerHTML = `
           <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1rem; color: #10b981;">
             <strong>✅ Upload successful!</strong><br/>
             <div style="margin-top: 0.5rem; font-size: 0.875rem;">
               ${uploadType === 'file' ? `File uploaded to Arweave: ${data.fileName || 'N/A'}` : `Using Arweave URL: ${mixUrl}`}<br/>
+              ${costInfo}
               ${data.websiteUpdate && data.websiteUpdate.success ? `Website updated! Manifest: ${data.websiteUpdate.websiteUrl || 'N/A'}` : 'Website update in progress...'}
             </div>
           </div>
@@ -1917,18 +1964,58 @@
     }
 
     /**
+     * Estimate deployment cost before deploying
+     */
+    async function estimateDeployCost() {
+      try {
+        const response = await fetch('/api/deploy-website?estimate=true', {
+          method: 'GET'
+        });
+        
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Error estimating deploy cost:', error);
+        return null;
+      }
+    }
+
+    /**
      * Deploy website to Arweave
      */
     async function deployWebsite() {
       const deployBtn = document.getElementById('deployWebsiteBtn');
       const originalText = deployBtn.innerHTML;
       
-      // Confirm action
-      if (!confirm('This will deploy the website to Arweave. This may take several minutes. Continue?')) {
+      // Estimate cost first
+      deployBtn.disabled = true;
+      deployBtn.innerHTML = '💰 Estimating cost...';
+      
+      let estimateData = null;
+      try {
+        estimateData = await estimateDeployCost();
+      } catch (error) {
+        console.warn('Could not estimate cost:', error);
+      }
+      
+      // Show cost estimate and confirm
+      let confirmMessage = 'This will deploy the website to Arweave. This may take several minutes.\n\n';
+      if (estimateData && estimateData.success && estimateData.cost && estimateData.cost.costAR > 0) {
+        const cost = estimateData.cost;
+        confirmMessage += `💰 Estimated cost: ${cost.costAR.toFixed(6)} AR (~$${cost.costUSD.toFixed(4)} USD)\n`;
+        if (estimateData.filesChanged !== undefined) {
+          confirmMessage += `📊 Files to upload: ${estimateData.filesChanged} (${estimateData.filesUnchanged || 0} unchanged will be reused)\n`;
+        }
+        confirmMessage += '\n';
+      }
+      confirmMessage += 'Continue?';
+      
+      if (!confirm(confirmMessage)) {
+        deployBtn.disabled = false;
+        deployBtn.innerHTML = originalText;
         return;
       }
       
-      deployBtn.disabled = true;
       deployBtn.innerHTML = '⏳ Deploying...';
       
       try {
@@ -1942,10 +2029,17 @@
           body: JSON.stringify({})
         });
         
-        const data = await response.json();
+        let data;
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          const text = await response.text();
+          console.error('Failed to parse JSON response:', text);
+          throw new Error(`Server returned invalid JSON: ${text.substring(0, 100)}`);
+        }
         
         if (!data.success) {
-          throw new Error(data.error || 'Deployment failed');
+          throw new Error(data.error || data.message || 'Deployment failed');
         }
         
         // Show success with manifest URL
@@ -1953,6 +2047,12 @@
         const websiteUrl = data.websiteUrl || `https://arweave.net/${data.manifestId}/index.html`;
         
         showToast('✅ Website deployed successfully!', 'success');
+        
+        // Build cost info
+        let costInfo = '';
+        if (data.costEstimate && data.costEstimate.costAR > 0) {
+          costInfo = `\n💰 Deployment Cost: ${data.costEstimate.costAR.toFixed(6)} AR (~$${data.costEstimate.costUSD.toFixed(4)} USD)`;
+        }
         
         // Show detailed success message
         const message = `
@@ -1966,7 +2066,8 @@
    Alternative: https://arweave.dev/${data.manifestId}/index.html
    Alternative: https://ar-io.dev/${data.manifestId}/index.html
 
-📊 Files Uploaded: ${data.filesUploaded}
+📊 Files: ${data.filesUploaded} uploaded, ${data.filesUnchanged || 0} unchanged (reused)
+${costInfo}
 
 Your website is now live on Arweave!
 Note: Access the website using the URLs above with /index.html included.
