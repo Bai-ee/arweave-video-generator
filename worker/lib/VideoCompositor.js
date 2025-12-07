@@ -401,7 +401,8 @@ export class VideoCompositor {
           // Full opacity - simple overlay
           if (layer.startTime !== null && layer.startTime !== undefined) {
             const endTime = layer.startTime + (layer.duration || config.duration);
-            overlayFilter = `${currentInput}[scaled${imageLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='between(t,${layer.startTime},${endTime})'${outputLabel}`;
+            const roundedEndTime = Math.round(endTime * 100) / 100;
+            overlayFilter = `${currentInput}[scaled${imageLayerIndex}]overlay=${layer.position.x}:${layer.position.y}:enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'${outputLabel}`;
           } else {
             overlayFilter = `${currentInput}[scaled${imageLayerIndex}]overlay=${layer.position.x}:${layer.position.y}${outputLabel}`;
           }
