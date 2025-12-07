@@ -39,11 +39,21 @@ export const config = {
 export default async function handler(req, res) {
   // Wrapper to ensure all errors return JSON
   try {
-    // Set CORS headers and JSON content type early
+    // Set CORS headers early - BEFORE any processing
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS,GET');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Content-Length, Content-Disposition');
+    
+    // Log the incoming request immediately
+    console.log('[Upload] ============================================');
+    console.log('[Upload] Request received!');
+    console.log('[Upload] Method:', req.method);
+    console.log('[Upload] URL:', req.url);
+    console.log('[Upload] Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('[Upload] Content-Type:', req.headers['content-type']);
+    
+    // Set JSON content type for responses (but allow multipart for requests)
     res.setHeader('Content-Type', 'application/json');
 
     // Handle OPTIONS preflight
