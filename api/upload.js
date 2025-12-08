@@ -213,67 +213,64 @@ export default async function handler(req, res) {
         const file = files && (Array.isArray(files.file) ? files.file[0] : files.file);
         
         if (file) {
-        // Upload file to Arweave
-        console.log(`[Upload] Reading file from: ${file.filepath}`);
-        console.log(`[Upload] File size: ${file.size} bytes`);
-        console.log(`[Upload] Original filename: ${file.originalFilename}`);
-        
-        const fileBuffer = await fs.readFile(file.filepath);
-        fileName = file.originalFilename || `audio_${Date.now()}.mp3`;
-        
-        // Validate file extension
-        if (!fileName.toLowerCase().endsWith('.mp3')) {
+          // Upload file to Arweave
+          console.log(`[Upload] Reading file from: ${file.filepath}`);
+          console.log(`[Upload] File size: ${file.size} bytes`);
+          console.log(`[Upload] Original filename: ${file.originalFilename}`);
+          
+          const fileBuffer = await fs.readFile(file.filepath);
+          fileName = file.originalFilename || `audio_${Date.now()}.mp3`;
+          
+          // Validate file extension
+          if (!fileName.toLowerCase().endsWith('.mp3')) {
+            await fs.remove(file.filepath).catch(() => {});
+            return res.status(400).json({
+              success: false,
+              error: 'Only .mp3 files are supported for audio uploads'
+            });
+          }
+
+          console.log(`[Upload] File buffer size: ${fileBuffer.length} bytes`);
+          console.log(`[Upload] Uploading ${fileName} to Arweave for artist: ${artistName}`);
+          console.log(`[Upload] Using same uploadToArweave function as archive upload...`);
+          
+          const uploadResult = await uploadToArweave(fileBuffer, fileName, {
+            contentType: 'audio/mpeg',
+            metadata: {
+              artist: artistName,
+              title: mixTitle || fileName,
+              type: isTrack ? 'track' : 'mix',
+              dateYear: mixDateYear || '',
+              duration: mixDuration || ''
+            }
+          });
+          
+          console.log(`[Upload] Upload result:`, uploadResult.success ? 'SUCCESS' : 'FAILED');
+          if (!uploadResult.success) {
+            console.error(`[Upload] Upload error:`, uploadResult.error);
+          }
+
+          // Cleanup temp file
           await fs.remove(file.filepath).catch(() => {});
+
+          if (!uploadResult.success) {
+            return res.status(500).json({
+              success: false,
+              error: uploadResult.error || 'Failed to upload to Arweave'
+            });
+          }
+
+          arweaveUrl = uploadResult.arweaveUrl;
+          fileSize = uploadResult.fileSize;
+          fileName = uploadResult.fileName;
+          
+          console.log(`[Upload] ✅ Uploaded to Arweave: ${arweaveUrl}`);
+        } else {
           return res.status(400).json({
             success: false,
-            error: 'Only .mp3 files are supported for audio uploads'
+            error: 'Either file, firebasePath, or mixUrl is required for audio uploads'
           });
         }
-
-        console.log(`[Upload] File buffer size: ${fileBuffer.length} bytes`);
-        console.log(`[Upload] Uploading ${fileName} to Arweave for artist: ${artistName}`);
-        console.log(`[Upload] Using same uploadToArweave function as archive upload...`);
-        
-        const uploadResult = await uploadToArweave(fileBuffer, fileName, {
-          contentType: 'audio/mpeg',
-          metadata: {
-            artist: artistName,
-            title: mixTitle || fileName,
-            type: isTrack ? 'track' : 'mix',
-            dateYear: mixDateYear || '',
-            duration: mixDuration || ''
-          }
-        });
-        
-        console.log(`[Upload] Upload result:`, uploadResult.success ? 'SUCCESS' : 'FAILED');
-        if (!uploadResult.success) {
-          console.error(`[Upload] Upload error:`, uploadResult.error);
-        }
-
-        // Cleanup temp file
-        await fs.remove(file.filepath).catch(() => {});
-
-        if (!uploadResult.success) {
-          return res.status(500).json({
-            success: false,
-            error: uploadResult.error || 'Failed to upload to Arweave'
-          });
-        }
-
-        arweaveUrl = uploadResult.arweaveUrl;
-        fileSize = uploadResult.fileSize;
-        fileName = uploadResult.fileName;
-        
-        console.log(`[Upload] ✅ Uploaded to Arweave: ${arweaveUrl}`);
-      } else if (mixUrl) {
-        // Use provided URL
-        arweaveUrl = mixUrl;
-        console.log(`[Upload] Using provided Arweave URL: ${arweaveUrl}`);
-      } else {
-        return res.status(400).json({
-          success: false,
-          error: 'Either file or mixUrl is required for audio uploads'
-        });
       }
 
       // Initialize Firebase
