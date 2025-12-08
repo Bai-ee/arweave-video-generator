@@ -411,8 +411,11 @@ export default async function handler(req, res) {
     }
 
   } catch (error) {
-    console.error('[Upload] Error:', error.message);
-    console.error('[Upload] Stack:', error.stack);
+    // Use console.error to ensure it shows in Vercel logs
+    console.error('[Upload] ❌ API Handler Error:', error.message);
+    console.error('[Upload] Error stack:', error.stack);
+    console.error('[Upload] Error name:', error.name);
+    console.error('[Upload] Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     
     // Ensure we always return valid JSON
     try {
