@@ -1742,13 +1742,28 @@
         }
         
         statusMsg.style.display = 'block';
+        
+        // Build Arweave URL display
+        let arweaveUrlDisplay = '';
+        if (data.arweaveUrl) {
+          arweaveUrlDisplay = `
+            <div style="margin-top: 0.5rem; font-size: 0.875rem;">
+              <strong>Arweave URL:</strong><br/>
+              <a href="${data.arweaveUrl}" target="_blank" rel="noopener noreferrer" style="color: #10b981; text-decoration: underline; word-break: break-all;">
+                ${data.arweaveUrl}
+              </a>
+            </div>
+          `;
+        }
+        
         statusMsg.innerHTML = `
           <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1rem; color: #10b981;">
             <strong>✅ Upload successful!</strong><br/>
             <div style="margin-top: 0.5rem; font-size: 0.875rem;">
-              ${uploadType === 'file' ? `File uploaded to Arweave: ${data.fileName || 'N/A'}` : `Using Arweave URL: ${mixUrl}`}<br/>
+              ${uploadType === 'file' ? `File: ${data.fileName || 'N/A'}` : `Using Arweave URL: ${mixUrl}`}<br/>
+              ${arweaveUrlDisplay}
               ${costInfo}
-              ${data.websiteUpdate && data.websiteUpdate.success ? `Website updated! Manifest: ${data.websiteUpdate.websiteUrl || 'N/A'}` : 'Website update in progress...'}
+              ${data.websiteUpdate && data.websiteUpdate.success ? `<div style="margin-top: 0.5rem;">Website updated! <a href="${data.websiteUpdate.websiteUrl || '#'}" target="_blank" rel="noopener noreferrer" style="color: #10b981; text-decoration: underline;">View Site</a></div>` : 'Website update in progress...'}
             </div>
           </div>
         `;
@@ -1758,10 +1773,10 @@
         // Reload artists list
         loadArtists();
         
-        // Close modal after 3 seconds
+        // Close modal after 10 seconds (give user time to copy URL)
         setTimeout(() => {
           hideUploadMixModal();
-        }, 3000);
+        }, 10000);
         
       } catch (error) {
         console.error('Error uploading mix:', error);
