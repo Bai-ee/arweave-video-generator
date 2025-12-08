@@ -8,17 +8,87 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
+import { config } from 'dotenv';
 import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables - try .env.production first, then .env
+// Load environment variables from .env.production (Vercel env vars) or .env
+config({ path: path.join(__dirname, '..', '.env.production') });
+config({ path: path.join(__dirname, '..', '.env') });
+config({ path: path.join(__dirname, '.env') });
+
+// Fix FIREBASE_SERVICE_ACCOUNT_KEY if dotenv mangled it
+// Read directly from .env.production to get the correct format
 try {
-  dotenv.config({ path: path.join(process.cwd(), '.env.production') });
-} catch (e) {
-  dotenv.config({ path: path.join(process.cwd(), '.env') });
+  const envProdPath = path.join(__dirname, '..', '.env.production');
+  if (fs.existsSync(envProdPath)) {
+    const envContent = fs.readFileSync(envProdPath, 'utf8');
+    // Match FIREBASE_SERVICE_ACCOUNT_KEY= followed by the JSON (which may span multiple lines)
+    const keyMatch = envContent.match(/^FIREBASE_SERVICE_ACCOUNT_KEY=(.+?)(?=^[A-Z_]+=|$)/ms);
+    if (keyMatch) {
+      let keyValue = keyMatch[1].trim();
+      // Remove outer quotes if present (single or double, at start and end)
+      if ((keyValue.startsWith('"') && keyValue.endsWith('"')) || 
+          (keyValue.startsWith("'") && keyValue.endsWith("'"))) {
+        keyValue = keyValue.slice(1, -1);
+      }
+      
+      // The private_key field contains literal newlines that need to be escaped for JSON
+      // We need to escape newlines within string values, but preserve the JSON structure
+      // Strategy: Find all string values and escape newlines within them
+      
+      // First, try to parse as-is (in case it's already properly formatted)
+      try {
+        JSON.parse(keyValue);
+        process.env.FIREBASE_SERVICE_ACCOUNT_KEY = keyValue;
+        console.log('[Migration] ✅ FIREBASE_SERVICE_ACCOUNT_KEY is already valid JSON');
+      } catch (firstError) {
+        // If parsing fails, the issue is likely literal newlines in string values
+        // We need to escape newlines that appear within quoted strings
+        // This is tricky - we'll use a regex to find string values and escape newlines within them
+        let fixed = keyValue;
+        
+        // Replace literal newlines with escaped newlines, but be careful not to break the JSON structure
+        // The private_key field is the main culprit - it has literal newlines
+        fixed = fixed.replace(/(["'])([^"']*?)\1/g, (match, quote, content) => {
+          // Escape newlines within the string content
+          const escaped = content
+            .replace(/\r\n/g, '\\n')
+            .replace(/\r/g, '\\n')
+            .replace(/\n/g, '\\n')
+            .replace(/\t/g, '\\t');
+          return quote + escaped + quote;
+        });
+        
+        try {
+          const parsed = JSON.parse(fixed);
+          // Re-stringify to ensure proper formatting
+          process.env.FIREBASE_SERVICE_ACCOUNT_KEY = JSON.stringify(parsed);
+          console.log('[Migration] ✅ Fixed FIREBASE_SERVICE_ACCOUNT_KEY by escaping newlines');
+        } catch (secondError) {
+          // Last resort: try a simpler approach - just escape all newlines globally
+          fixed = keyValue
+            .replace(/\r\n/g, '\\n')
+            .replace(/\r/g, '\\n')
+            .replace(/\n/g, '\\n')
+            .replace(/\t/g, '\\t');
+          
+          try {
+            const parsed = JSON.parse(fixed);
+            process.env.FIREBASE_SERVICE_ACCOUNT_KEY = JSON.stringify(parsed);
+            console.log('[Migration] ✅ Fixed FIREBASE_SERVICE_ACCOUNT_KEY with global newline escape');
+          } catch (thirdError) {
+            console.warn('[Migration] ❌ Could not fix FIREBASE_SERVICE_ACCOUNT_KEY:', thirdError.message);
+            console.warn('[Migration] First 200 chars:', keyValue.substring(0, 200));
+          }
+        }
+      }
+    }
+  }
+} catch (error) {
+  console.warn('[Migration] Could not fix FIREBASE_SERVICE_ACCOUNT_KEY from file:', error.message);
 }
 
 /**
@@ -112,35 +182,8 @@ async function migrateArtists() {
       process.exit(1);
     }
 
-    // Initialize Firebase with robust JSON parsing
-    try {
-      initializeFirebaseAdmin();
-    } catch (error) {
-      // If Firebase init fails due to JSON parsing, try to fix it
-      if (error.message.includes('JSON') || error.message.includes('control character')) {
-        console.log('[Migration] Attempting to fix Firebase credentials JSON parsing...');
-        const keyString = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-        if (keyString) {
-          try {
-            // Try direct parse
-            JSON.parse(keyString);
-          } catch (e) {
-            // Try cleaning up
-            let cleaned = keyString;
-            if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-              cleaned = cleaned.slice(1, -1).replace(/\\"/g, '"').replace(/\\n/g, '\n');
-            } else if (cleaned.startsWith("'") && cleaned.endsWith("'")) {
-              cleaned = cleaned.slice(1, -1).replace(/\\'/g, "'").replace(/\\n/g, '\n');
-            }
-            // Replace the env var temporarily
-            process.env.FIREBASE_SERVICE_ACCOUNT_KEY = cleaned;
-            initializeFirebaseAdmin();
-          }
-        }
-      } else {
-        throw error;
-      }
-    }
+    // Initialize Firebase
+    initializeFirebaseAdmin();
     const db = getFirestore();
     const artistsRef = db.collection('system').doc('artists');
     
