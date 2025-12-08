@@ -300,15 +300,38 @@
         <form id="uploadMixForm" onsubmit="handleMixUpload(event)" style="display: flex; flex-direction: column; gap: 1rem;">
           <div>
             <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Artist Name <span style="color: #ef4444;">*</span>
+              Artist <span style="color: #ef4444;">*</span>
             </label>
+            <select 
+              id="mixArtistSelect" 
+              required
+              onchange="handleArtistSelection()"
+              style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem;"
+            >
+              <option value="">Select an artist...</option>
+              <option value="__new__">+ Create New Artist</option>
+            </select>
             <input 
               type="text" 
               id="mixArtistName" 
-              required
-              placeholder="Enter artist name"
+              placeholder="Enter new artist name"
+              style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); display: none;"
+            />
+          </div>
+          
+          <div id="mixArtistImageContainer" style="display: none;">
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
+              Artist Image <span style="color: #ef4444;">*</span> <span style="color: #888; font-size: 0.75rem;">(Required for new artists)</span>
+            </label>
+            <input 
+              type="file" 
+              id="mixArtistImageInput" 
+              accept=".jpg,.jpeg,.png,.gif,.webp,image/*"
               style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
             />
+            <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
+              Upload an image for the new artist (.jpg, .png, .gif, .webp)
+            </p>
           </div>
           
           <div>
@@ -1504,13 +1527,78 @@
     /**
      * Show upload mix modal
      */
-    function showUploadMixModal() {
+    async function showUploadMixModal() {
       document.getElementById('uploadMixModal').style.display = 'flex';
       // Reset form
       document.getElementById('uploadMixForm').reset();
       document.getElementById('mixUploadProgress').style.display = 'none';
       document.getElementById('mixUploadStatusMsg').style.display = 'none';
       toggleMixUploadType('file'); // Reset to file upload
+      
+      // Load artists into dropdown
+      await populateArtistDropdown();
+      handleArtistSelection(); // Reset artist selection UI
+    }
+    
+    /**
+     * Populate artist dropdown
+     */
+    async function populateArtistDropdown() {
+      try {
+        const response = await fetch('/api/artists');
+        const data = await response.json();
+        
+        const select = document.getElementById('mixArtistSelect');
+        // Clear existing options except "Select" and "New"
+        while (select.children.length > 2) {
+          select.removeChild(select.lastChild);
+        }
+        
+        if (data.success && data.artists && Array.isArray(data.artists)) {
+          data.artists.forEach(artist => {
+            const option = document.createElement('option');
+            option.value = artist.artistName;
+            option.textContent = artist.artistName;
+            select.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading artists:', error);
+      }
+    }
+    
+    /**
+     * Handle artist selection change
+     */
+    function handleArtistSelection() {
+      const select = document.getElementById('mixArtistSelect');
+      const nameInput = document.getElementById('mixArtistName');
+      const imageContainer = document.getElementById('mixArtistImageContainer');
+      const imageInput = document.getElementById('mixArtistImageInput');
+      
+      if (select.value === '__new__') {
+        // New artist - show name input and require image
+        nameInput.style.display = 'block';
+        nameInput.required = true;
+        imageContainer.style.display = 'block';
+        imageInput.required = true;
+        nameInput.value = '';
+        imageInput.value = '';
+      } else if (select.value) {
+        // Existing artist - hide name input and image
+        nameInput.style.display = 'none';
+        nameInput.required = false;
+        imageContainer.style.display = 'none';
+        imageInput.required = false;
+        nameInput.value = select.value;
+      } else {
+        // No selection
+        nameInput.style.display = 'none';
+        nameInput.required = false;
+        imageContainer.style.display = 'none';
+        imageInput.required = false;
+        nameInput.value = '';
+      }
     }
 
     /**
@@ -1550,7 +1638,37 @@
     async function handleMixUpload(event) {
       event.preventDefault();
       
-      const artistName = document.getElementById('mixArtistName').value.trim();
+      const artistSelect = document.getElementById('mixArtistSelect');
+      const artistNameInput = document.getElementById('mixArtistName');
+      const artistImageInput = document.getElementById('mixArtistImageInput');
+      
+      // Get artist name - from select or input
+      let artistName = '';
+      let isNewArtist = false;
+      
+      if (artistSelect.value === '__new__') {
+        // New artist
+        artistName = artistNameInput.value.trim();
+        isNewArtist = true;
+        
+        if (!artistName) {
+          showToast('Please enter a new artist name', 'error');
+          return;
+        }
+        
+        // Check if artist image is required for new artists
+        if (!artistImageInput.files || artistImageInput.files.length === 0) {
+          showToast('Artist image is required for new artists', 'error');
+          return;
+        }
+      } else if (artistSelect.value) {
+        // Existing artist
+        artistName = artistSelect.value;
+      } else {
+        showToast('Please select an artist or create a new one', 'error');
+        return;
+      }
+      
       const uploadType = document.querySelector('input[name="uploadType"]:checked').value;
       const mixFile = document.getElementById('mixFileInput').files[0];
       const mixUrl = document.getElementById('mixUrlInput').value.trim();
@@ -1558,9 +1676,10 @@
       const mixDate = document.getElementById('mixDateInput').value.trim();
       const mixDuration = document.getElementById('mixDurationInput').value.trim();
       const isTrack = document.getElementById('mixIsTrack').checked;
+      const artistImageInput = document.getElementById('mixArtistImageInput');
       
       if (!artistName) {
-        showToast('Please enter an artist name', 'error');
+        showToast('Please select an artist or create a new one', 'error');
         return;
       }
       
@@ -1641,6 +1760,52 @@
         progressBar.style.width = '30%';
         progressPercent.textContent = '30%';
         
+        // Handle new artist image upload if it's a new artist
+        let artistImagePath = null;
+        if (isNewArtist && artistImageInput.files && artistImageInput.files.length > 0) {
+          const artistImageFile = artistImageInput.files[0];
+          progressStatus.textContent = 'Uploading artist image to Firebase...';
+          progressBar.style.width = '25%';
+          progressPercent.textContent = '25%';
+          
+          const { storage, ref, uploadBytesResumable } = window.firebase;
+          const imageFileName = `artist_${Date.now()}_${artistImageFile.name}`;
+          const imageStoragePath = `artist-images/${artistName}/${imageFileName}`;
+          const imageStorageRef = ref(storage, imageStoragePath);
+          
+          await new Promise((resolve, reject) => {
+            const imageUploadTask = uploadBytesResumable(imageStorageRef, artistImageFile, {
+              contentType: artistImageFile.type || 'image/jpeg',
+              customMetadata: {
+                artist: artistName,
+                uploadedAt: new Date().toISOString()
+              }
+            });
+            
+            imageUploadTask.on(
+              'state_changed',
+              (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                progressBar.style.width = `${25 + (progress * 0.05)}%`;
+                progressPercent.textContent = `${Math.round(25 + (progress * 0.05))}%`;
+              },
+              (error) => {
+                console.error('Artist image Firebase upload error:', error);
+                reject(error);
+              },
+              () => {
+                artistImagePath = imageStoragePath;
+                console.log('[Mix Upload] Artist image uploaded to Firebase:', artistImagePath);
+                resolve();
+              }
+            );
+          });
+        }
+        
+        progressStatus.textContent = 'Uploading to Arweave...';
+        progressBar.style.width = '30%';
+        progressPercent.textContent = '30%';
+        
         // Send JSON to API (like archive upload does) - no file in request body!
         const requestBody = {
           type: 'audio',
@@ -1656,6 +1821,10 @@
           requestBody.firebasePath = firebasePath;
         } else if (uploadType === 'url') {
           requestBody.mixUrl = mixUrl;
+        }
+        
+        if (artistImagePath) {
+          requestBody.artistImagePath = artistImagePath;
         }
         
         // Upload to API (JSON, not FormData - matches archive upload!)
@@ -1722,13 +1891,6 @@
           throw new Error(data.error || data.message || 'Upload failed');
         }
         
-        progressBar.style.width = '90%';
-        progressPercent.textContent = '90%';
-        progressStatus.textContent = 'Updating website...';
-        
-        // Wait a moment for website update (it happens in background)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
         progressBar.style.width = '100%';
         progressPercent.textContent = '100%';
         progressStatus.textContent = '✅ Complete!';
@@ -1763,7 +1925,23 @@
               ${uploadType === 'file' ? `File: ${data.fileName || 'N/A'}` : `Using Arweave URL: ${mixUrl}`}<br/>
               ${arweaveUrlDisplay}
               ${costInfo}
-              ${data.websiteUpdate && data.websiteUpdate.success ? `<div style="margin-top: 0.5rem;">Website updated! <a href="${data.websiteUpdate.websiteUrl || '#'}" target="_blank" rel="noopener noreferrer" style="color: #10b981; text-decoration: underline;">View Site</a></div>` : 'Website update in progress...'}
+            </div>
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #10b981;">
+              <div style="font-size: 0.875rem; margin-bottom: 0.75rem;">Deploy ${artistName} to website?</div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button 
+                  onclick="deployArtistToWebsite('${artistName}')"
+                  style="flex: 1; padding: 0.5rem; background: #10b981; color: white; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+                >
+                  Yes, Deploy
+                </button>
+                <button 
+                  onclick="document.getElementById('mixUploadStatusMsg').innerHTML = '';"
+                  style="flex: 1; padding: 0.5rem; background: transparent; color: #10b981; border: 2px solid #10b981; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+                >
+                  Skip
+                </button>
+              </div>
             </div>
           </div>
         `;
@@ -1773,10 +1951,7 @@
         // Reload artists list
         loadArtists();
         
-        // Close modal after 10 seconds (give user time to copy URL)
-        setTimeout(() => {
-          hideUploadMixModal();
-        }, 10000);
+        // Don't auto-close modal - let user decide on deployment
         
       } catch (error) {
         console.error('Error uploading mix:', error);
@@ -2062,6 +2237,74 @@
     /**
      * Deploy website to Arweave
      */
+    /**
+     * Deploy specific artist to website
+     */
+    async function deployArtistToWebsite(artistName) {
+      const statusMsg = document.getElementById('mixUploadStatusMsg');
+      const originalContent = statusMsg.innerHTML;
+      
+      try {
+        statusMsg.innerHTML = `
+          <div style="background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 5px; padding: 1rem; color: var(--color-yellow-75);">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <div class="inline-block w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style="border-color: var(--color-yellow-75); border-top-color: transparent;"></div>
+              <span>Deploying website...</span>
+            </div>
+          </div>
+        `;
+        
+        showToast('Starting website deployment...', 'info');
+        
+        const response = await fetch('/api/deploy-website', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({})
+        });
+        
+        let data;
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          const text = await response.text();
+          throw new Error(`Server returned invalid JSON: ${text.substring(0, 100)}`);
+        }
+        
+        if (!data.success) {
+          throw new Error(data.error || data.message || 'Deployment failed');
+        }
+        
+        const websiteUrl = data.websiteUrl || `https://arweave.net/${data.manifestId}/index.html`;
+        
+        statusMsg.innerHTML = `
+          <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1rem; color: #10b981;">
+            <strong>✅ Website deployed!</strong><br/>
+            <div style="margin-top: 0.5rem; font-size: 0.875rem;">
+              <a href="${websiteUrl}" target="_blank" rel="noopener noreferrer" style="color: #10b981; text-decoration: underline; word-break: break-all;">
+                ${websiteUrl}
+              </a>
+            </div>
+          </div>
+        `;
+        
+        showToast('✅ Website deployed successfully!', 'success');
+        
+      } catch (error) {
+        console.error('Error deploying website:', error);
+        statusMsg.innerHTML = `
+          <div style="background: #5d0a0a; border: 2px solid #ef4444; border-radius: 5px; padding: 1rem; color: #ef4444;">
+            <strong>❌ Deployment failed</strong><br/>
+            <div style="margin-top: 0.5rem; font-size: 0.875rem;">
+              ${error.message}
+            </div>
+          </div>
+        `;
+        showToast(`❌ Deployment failed: ${error.message}`, 'error');
+      }
+    }
+
     async function deployWebsite() {
       const deployBtn = document.getElementById('deployWebsiteBtn');
       const originalText = deployBtn.innerHTML;

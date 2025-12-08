@@ -98,7 +98,7 @@ export default async function handler(req, res) {
       
       // Check if request is JSON (new Firebase-based flow) or multipart (old direct upload)
       const contentType = req.headers['content-type'] || '';
-      let type, artistName, mixTitle, mixUrl, mixDateYear, mixDuration, isTrack, firebasePath;
+      let type, artistName, mixTitle, mixUrl, mixDateYear, mixDuration, isTrack, firebasePath, artistImagePath;
       
       if (contentType.includes('application/json')) {
         // New flow: JSON with Firebase path (like archive upload)
@@ -117,6 +117,7 @@ export default async function handler(req, res) {
         mixDuration = body.mixDuration;
         isTrack = body.isTrack === 'true' || body.isTrack === true;
         firebasePath = body.firebasePath;
+        artistImagePath = body.artistImagePath; // For new artist image uploads
         
         console.log('[Upload] JSON parsed successfully');
         console.log('[Upload] Firebase path:', firebasePath || 'None (using URL)');
@@ -277,6 +278,31 @@ export default async function handler(req, res) {
       initializeFirebaseAdmin();
       const db = getFirestore();
 
+      // Handle artist image upload if provided (for new artists)
+      if (artistImagePath) {
+        console.log(`[Upload] Uploading artist image from Firebase: ${artistImagePath}`);
+        const storage = getStorage();
+        const bucket = storage.bucket();
+        const imageFileRef = bucket.file(artistImagePath);
+        
+        const [imageExists] = await imageFileRef.exists();
+        if (imageExists) {
+          const imageUploadResult = await uploadFromFirebase(imageFileRef, `artist-images/${artistName}`, {
+            source: 'firebase',
+            originalFolder: 'artist-images',
+            metadata: {
+              artist: artistName,
+              type: 'artist-image'
+            }
+          });
+          
+          if (imageUploadResult.success) {
+            await updateArtistImage(db, artistName, imageUploadResult.arweaveUrl);
+            console.log(`[Upload] ✅ Artist image uploaded to Arweave: ${imageUploadResult.arweaveUrl}`);
+          }
+        }
+      }
+      
       // Add to artists JSON in Firebase
       await addMixToArtist(db, artistName, {
         mixTitle: mixTitle || (isTrack ? 'Untitled Track' : 'Untitled Mix'),
@@ -287,13 +313,8 @@ export default async function handler(req, res) {
         isTrack: isTrack
       });
 
-      // Update website (non-blocking - don't fail upload if website update fails)
-      let websiteUpdateResult = null;
-      try {
-        websiteUpdateResult = await updateWebsite(db);
-      } catch (websiteError) {
-        console.warn('[Upload] Website update failed (non-blocking):', websiteError.message);
-      }
+      // Don't auto-deploy - let user decide via frontend prompt
+      // Website deployment is now handled by user prompt in frontend
 
       return res.status(200).json({
         success: true,
@@ -302,8 +323,7 @@ export default async function handler(req, res) {
         fileName: fileName,
         fileSize: fileSize,
         artistName: artistName,
-        message: 'Audio uploaded and added to artist database',
-        websiteUpdate: websiteUpdateResult
+        message: 'Audio uploaded and added to artist database'
       });
 
     } else if (type === 'image') {
