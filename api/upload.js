@@ -29,12 +29,8 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 
-// Disable default body parser for file uploads
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Note: Vercel serverless functions don't use Next.js config
+// Body parsing is handled automatically based on Content-Type
 
 export default async function handler(req, res) {
   // CRITICAL: Log immediately - even before try/catch
