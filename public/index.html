@@ -1545,25 +1545,39 @@
      */
     async function populateArtistDropdown() {
       try {
+        console.log('[Mix Upload] Loading artists for dropdown...');
         const response = await fetch('/api/artists');
         const data = await response.json();
         
+        console.log('[Mix Upload] Artists API response:', data);
+        
         const select = document.getElementById('mixArtistSelect');
+        if (!select) {
+          console.error('[Mix Upload] mixArtistSelect element not found!');
+          return;
+        }
+        
         // Clear existing options except "Select" and "New"
         while (select.children.length > 2) {
           select.removeChild(select.lastChild);
         }
         
         if (data.success && data.artists && Array.isArray(data.artists)) {
+          console.log(`[Mix Upload] Found ${data.artists.length} artists to add`);
           data.artists.forEach(artist => {
             const option = document.createElement('option');
-            option.value = artist.artistName;
-            option.textContent = artist.artistName;
+            // API returns 'name' property, not 'artistName'
+            const artistName = artist.name || artist.artistName || 'Unknown';
+            option.value = artistName;
+            option.textContent = artistName;
             select.appendChild(option);
           });
+          console.log(`[Mix Upload] ✅ Added ${data.artists.length} artists to dropdown`);
+        } else {
+          console.warn('[Mix Upload] No artists found in API response:', data);
         }
       } catch (error) {
-        console.error('Error loading artists:', error);
+        console.error('[Mix Upload] Error loading artists:', error);
       }
     }
     
