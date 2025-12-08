@@ -50,6 +50,13 @@ service firebase.storage {
                    && request.resource.contentType.matches('video/.*');
     }
     
+    // Allow writes to mixes folder (for audio mix uploads)
+    match /mixes/{artistName}/{fileName} {
+      allow write: if request.resource.size < 500 * 1024 * 1024  // 500MB limit
+                   && (request.resource.contentType.matches('audio/.*') 
+                       || request.resource.contentType.matches('image/.*'));
+    }
+    
     // Deny all other writes
     match /{allPaths=**} {
       allow write: if false;
