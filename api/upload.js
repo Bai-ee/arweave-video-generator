@@ -102,19 +102,12 @@ export default async function handler(req, res) {
       
       if (contentType.includes('application/json')) {
         // New flow: JSON with Firebase path (like archive upload)
+        // Vercel automatically parses JSON request bodies into req.body
         console.log('[Upload] Parsing JSON request (Firebase-based flow)...');
-        const body = await new Promise((resolve, reject) => {
-          let data = '';
-          req.on('data', chunk => data += chunk);
-          req.on('end', () => {
-            try {
-              resolve(JSON.parse(data));
-            } catch (e) {
-              reject(e);
-            }
-          });
-          req.on('error', reject);
-        });
+        console.log('[Upload] req.body type:', typeof req.body);
+        console.log('[Upload] req.body:', JSON.stringify(req.body, null, 2));
+        
+        const body = req.body || {};
         
         type = body.type;
         artistName = body.artistName;
