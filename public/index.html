@@ -1784,9 +1784,9 @@
             imageUploadTask.on(
               'state_changed',
               (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                progressBar.style.width = `${25 + (progress * 0.05)}%`;
-                progressPercent.textContent = `${Math.round(25 + (progress * 0.05))}%`;
+                const imageProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                progressBar.style.width = `${25 + (imageProgress * 0.05)}%`;
+                progressPercent.textContent = `${Math.round(25 + (imageProgress * 0.05))}%`;
               },
               (error) => {
                 console.error('Artist image Firebase upload error:', error);
