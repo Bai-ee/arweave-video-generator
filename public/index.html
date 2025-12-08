@@ -1676,7 +1676,6 @@
       const mixDate = document.getElementById('mixDateInput').value.trim();
       const mixDuration = document.getElementById('mixDurationInput').value.trim();
       const isTrack = document.getElementById('mixIsTrack').checked;
-      const artistImageInput = document.getElementById('mixArtistImageInput');
       
       if (!artistName) {
         showToast('Please select an artist or create a new one', 'error');
@@ -1739,9 +1738,9 @@
             uploadTask.on(
               'state_changed',
               (snapshot) => {
-                const progressPercent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                progressBar.style.width = `${10 + (progressPercent * 0.2)}%`;
-                progressPercent.textContent = `${Math.round(10 + (progressPercent * 0.2))}%`;
+                const uploadProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                progressBar.style.width = `${10 + (uploadProgress * 0.2)}%`;
+                progressPercent.textContent = `${Math.round(10 + (uploadProgress * 0.2))}%`;
               },
               (error) => {
                 console.error('Firebase upload error:', error);
