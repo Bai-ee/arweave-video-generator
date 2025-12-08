@@ -1,25 +1,13 @@
 /**
- * Migration script to merge original sample-artists.json with existing Firebase data
- * This preserves any new mixes/uploads while restoring all original artists
+ * API endpoint to migrate original artists JSON to Firebase
+ * This merges the original sample-artists.json with existing Firebase data
  * 
- * Usage: node worker/migrate-artists-to-firebase.js
+ * POST /api/migrate-artists
  */
 
 import fs from 'fs-extra';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
 import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load environment variables - try .env.production first, then .env
-try {
-  dotenv.config({ path: path.join(process.cwd(), '.env.production') });
-} catch (e) {
-  dotenv.config({ path: path.join(process.cwd(), '.env') });
-}
 
 /**
  * Merge two artist objects, combining mixes and trax arrays
@@ -83,13 +71,30 @@ function mergeArtist(originalArtist, firebaseArtist) {
   return merged;
 }
 
-async function migrateArtists() {
+export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'application/json');
+
+  // Handle OPTIONS preflight
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  // Only allow POST
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
     console.log('[Migration] Starting artists migration to Firebase...');
     
     // Load original artists JSON
     const artistsPaths = [
-      path.join(__dirname, 'data', 'sample-artists.json'),
       path.join(process.cwd(), 'worker', 'data', 'sample-artists.json'),
       path.join(process.cwd(), 'data', 'sample-artists.json')
     ];
@@ -108,39 +113,14 @@ async function migrateArtists() {
     }
 
     if (!originalArtists || originalArtists.length === 0) {
-      console.error('[Migration] ❌ No original artists data found');
-      process.exit(1);
+      return res.status(400).json({ 
+        success: false,
+        error: 'No original artists data found' 
+      });
     }
 
-    // Initialize Firebase with robust JSON parsing
-    try {
-      initializeFirebaseAdmin();
-    } catch (error) {
-      // If Firebase init fails due to JSON parsing, try to fix it
-      if (error.message.includes('JSON') || error.message.includes('control character')) {
-        console.log('[Migration] Attempting to fix Firebase credentials JSON parsing...');
-        const keyString = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-        if (keyString) {
-          try {
-            // Try direct parse
-            JSON.parse(keyString);
-          } catch (e) {
-            // Try cleaning up
-            let cleaned = keyString;
-            if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-              cleaned = cleaned.slice(1, -1).replace(/\\"/g, '"').replace(/\\n/g, '\n');
-            } else if (cleaned.startsWith("'") && cleaned.endsWith("'")) {
-              cleaned = cleaned.slice(1, -1).replace(/\\'/g, "'").replace(/\\n/g, '\n');
-            }
-            // Replace the env var temporarily
-            process.env.FIREBASE_SERVICE_ACCOUNT_KEY = cleaned;
-            initializeFirebaseAdmin();
-          }
-        }
-      } else {
-        throw error;
-      }
-    }
+    // Initialize Firebase
+    initializeFirebaseAdmin();
     const db = getFirestore();
     const artistsRef = db.collection('system').doc('artists');
     
@@ -187,29 +167,34 @@ async function migrateArtists() {
     await artistsRef.set({ artists: mergedArtists }, { merge: false });
 
     console.log(`[Migration] ✅ Successfully merged and uploaded ${mergedArtists.length} artists to Firebase`);
-    console.log(`[Migration] Firebase path: system/artists`);
     
     // Verify
     const verifyDoc = await artistsRef.get();
+    let summary = [];
     if (verifyDoc.exists) {
       const verifyData = verifyDoc.data();
-      console.log(`[Migration] ✅ Verification: ${verifyData.artists.length} artists in Firebase`);
-      
-      // Show summary
-      verifyData.artists.forEach(artist => {
-        const mixCount = artist.mixes ? artist.mixes.length : 0;
-        const traxCount = artist.trax ? artist.trax.length : 0;
-        console.log(`  - ${artist.artistName}: ${mixCount} mixes, ${traxCount} tracks`);
-      });
+      summary = verifyData.artists.map(artist => ({
+        name: artist.artistName,
+        mixes: artist.mixes ? artist.mixes.length : 0,
+        tracks: artist.trax ? artist.trax.length : 0
+      }));
     }
 
-    process.exit(0);
+    return res.status(200).json({
+      success: true,
+      message: `Successfully migrated ${mergedArtists.length} artists to Firebase`,
+      artistsCount: mergedArtists.length,
+      summary: summary
+    });
+
   } catch (error) {
     console.error('[Migration] ❌ Error:', error.message);
     console.error(error.stack);
-    process.exit(1);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Migration failed',
+      message: error.message 
+    });
   }
 }
-
-migrateArtists();
 
