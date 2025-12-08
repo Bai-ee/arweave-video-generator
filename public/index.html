@@ -1659,6 +1659,12 @@
         }
         
         // Upload to API (JSON, not FormData - matches archive upload!)
+        console.log('[Mix Upload] Sending request to /api/upload:', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: requestBody
+        });
+        
         const response = await fetch('/api/upload', {
           method: 'POST',
           headers: {
@@ -1667,12 +1673,20 @@
           body: JSON.stringify(requestBody)
         });
         
+        console.log('[Mix Upload] Response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+        
         progressBar.style.width = '70%';
         progressPercent.textContent = '70%';
         progressStatus.textContent = 'Processing...';
         
         // Check if response is OK
         if (!response.ok) {
+          console.error('[Mix Upload] Response not OK:', response.status, response.statusText);
           const text = await response.text();
           console.error('Upload failed with status:', response.status);
           console.error('Response text:', text.substring(0, 500));

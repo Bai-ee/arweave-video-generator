@@ -37,6 +37,13 @@ export const config = {
 };
 
 export default async function handler(req, res) {
+  // CRITICAL: Log immediately - even before try/catch
+  console.error('[Upload] ============================================');
+  console.error('[Upload] FUNCTION CALLED - Request received!');
+  console.error('[Upload] Method:', req.method);
+  console.error('[Upload] URL:', req.url);
+  console.error('[Upload] Timestamp:', new Date().toISOString());
+  
   // Wrapper to ensure all errors return JSON
   try {
     // Set CORS headers early - BEFORE any processing
