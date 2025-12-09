@@ -222,7 +222,8 @@ export default async function handler(req, res) {
         const sourceWebsiteDir = path.join(process.cwd(), 'website');
         
         console.log('[Deploy Website] Copying static files to /tmp/website...');
-        const fs = await import('fs-extra');
+        const fsModule = await import('fs-extra');
+        const fs = fsModule.default || fsModule;
         
         // Copy all static files except HTML files (which will be generated)
         const staticExtensions = ['.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.ico', '.ttf', '.woff', '.woff2', '.eot', '.json'];
@@ -230,6 +231,7 @@ export default async function handler(req, res) {
         async function copyStaticFiles(src, dest) {
           if (!await fs.pathExists(src)) return;
           
+          // Use fs-extra's readdir which returns entries with file type info
           const entries = await fs.readdir(src, { withFileTypes: true });
           for (const entry of entries) {
             const srcPath = path.join(src, entry.name);
