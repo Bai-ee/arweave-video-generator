@@ -48,6 +48,7 @@ test-*.js
 worker/setup-*.sh
 worker/setup-*.js
 scripts/
+!website/scripts/
 worker/upload-*.js
 
 # React/TypeScript files not needed for deployment

@@ -113,9 +113,25 @@ export default async function handler(req, res) {
       console.log('[Deploy Website] Updating website HTML only (no deployment)...');
 
       // Sync Firebase to website/artists.json
+      console.log('[Deploy Website] Syncing Firebase to website/artists.json...');
       const syncResult = await syncFirebaseToWebsiteJSON(db, websitePath);
       if (!syncResult.success) {
+        console.error('[Deploy Website] Sync failed:', syncResult.error);
         throw new Error(`Failed to sync Firebase: ${syncResult.error}`);
+      }
+      console.log('[Deploy Website] ✅ Synced Firebase');
+      
+      // Handle /tmp location for artists.json
+      let actualArtistsJsonPath = websiteArtistsJsonPath;
+      if (syncResult.filePath && syncResult.filePath.startsWith('/tmp')) {
+        actualArtistsJsonPath = syncResult.filePath;
+        try {
+          const fs = await import('fs-extra');
+          await fs.copy(actualArtistsJsonPath, websiteArtistsJsonPath);
+          console.log('[Deploy Website] Copied artists.json from /tmp');
+        } catch (copyError) {
+          console.warn('[Deploy Website] Could not copy artists.json:', copyError.message);
+        }
       }
 
       // Regenerate HTML pages
@@ -135,9 +151,9 @@ export default async function handler(req, res) {
           throw new Error(`generatePages function not found. Available: ${Object.keys(generateScript).join(', ')}`);
         }
         
-        // generatePages can take optional params, but defaults work if paths are correct
-        console.log('[Deploy Website] Calling generatePages with:', { artistsJson: websiteArtistsJsonPath, outputDir: websiteRoot });
-        const generateResult = generateScript.generatePages(websiteArtistsJsonPath, websiteRoot);
+        // Use actual path (might be /tmp)
+        console.log('[Deploy Website] Calling generatePages with:', { artistsJson: actualArtistsJsonPath, outputDir: websiteRoot });
+        const generateResult = generateScript.generatePages(actualArtistsJsonPath, websiteRoot);
         console.log('[Deploy Website] Generate result:', generateResult);
         
         if (!generateResult || !generateResult.success) {
@@ -145,6 +161,7 @@ export default async function handler(req, res) {
           console.error('[Deploy Website] Generate pages error:', errorMsg);
           throw new Error(`Failed to generate HTML pages: ${errorMsg}`);
         }
+        console.log('[Deploy Website] ✅ Generated HTML pages');
       } catch (genError) {
         console.error('[Deploy Website] Error requiring or calling generatePages:', genError.message);
         console.error('[Deploy Website] Error stack:', genError.stack);
@@ -164,44 +181,87 @@ export default async function handler(req, res) {
     const websiteIndexHtmlPath = path.join(websiteRoot, 'index.html');
 
     // Step 1: Sync Firebase to website/artists.json
+    console.log('[Deploy Website] Step 1: Syncing Firebase to website/artists.json...');
     const syncResult = await syncFirebaseToWebsiteJSON(db, websitePath);
     if (!syncResult.success) {
+      console.error('[Deploy Website] Sync failed:', syncResult.error);
       throw new Error(`Failed to sync Firebase: ${syncResult.error}`);
     }
     console.log('[Deploy Website] ✅ Synced Firebase to website/artists.json');
+    console.log(`[Deploy Website] Artists count: ${syncResult.artistsCount}`);
+    console.log(`[Deploy Website] File path: ${syncResult.filePath || 'in-memory'}`);
+    
+    // Handle artists.json location (might be in /tmp in production)
+    let actualArtistsJsonPath = websiteArtistsJsonPath;
+    if (syncResult.filePath && syncResult.filePath.startsWith('/tmp')) {
+      actualArtistsJsonPath = syncResult.filePath;
+      console.log('[Deploy Website] Using artists.json from /tmp');
+      
+      // Copy to website directory if possible (for generatePages)
+      try {
+        const fs = await import('fs-extra');
+        await fs.copy(actualArtistsJsonPath, websiteArtistsJsonPath);
+        console.log('[Deploy Website] Copied artists.json from /tmp to website directory');
+      } catch (copyError) {
+        console.warn('[Deploy Website] Could not copy artists.json, generatePages may use /tmp version:', copyError.message);
+        // generatePages will need to handle /tmp path
+        actualArtistsJsonPath = syncResult.filePath;
+      }
+    }
 
     // Step 2: Generate HTML pages
+    console.log('[Deploy Website] Step 2: Generating HTML pages...');
     try {
-      const generateScript = require(path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js'));
+      const generateScriptPath = path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js');
+      console.log('[Deploy Website] Loading generate script from:', generateScriptPath);
+      
+      const generateScript = require(generateScriptPath);
       
       if (!generateScript || typeof generateScript.generatePages !== 'function') {
+        console.error('[Deploy Website] Available functions:', Object.keys(generateScript || {}));
         throw new Error('generatePages function not found in generate_artist_pages.js module');
       }
       
-      // generatePages can take optional params, but defaults work if paths are correct
-      const generateResult = generateScript.generatePages(websiteArtistsJsonPath, websiteRoot);
+      // Use actual path (might be /tmp in production)
+      console.log('[Deploy Website] Calling generatePages with artists.json:', actualArtistsJsonPath);
+      console.log('[Deploy Website] Output directory:', websiteRoot);
+      
+      const generateResult = generateScript.generatePages(actualArtistsJsonPath, websiteRoot);
       
       if (!generateResult || !generateResult.success) {
         const errorMsg = generateResult?.error || 'Unknown error';
         console.error('[Deploy Website] Generate pages error:', errorMsg);
         throw new Error(`Failed to generate HTML pages: ${errorMsg}`);
       }
+      
       console.log('[Deploy Website] ✅ Generated HTML pages');
+      console.log(`[Deploy Website] Artist pages generated: ${generateResult.artistPagesGenerated || 'N/A'}`);
+      console.log(`[Deploy Website] Index HTML updated: ${generateResult.indexHtmlUpdated || false}`);
     } catch (genError) {
       console.error('[Deploy Website] Error requiring or calling generatePages:', genError.message);
+      console.error('[Deploy Website] Error stack:', genError.stack);
       throw new Error(`Failed to generate HTML pages: ${genError.message}`);
     }
 
     // Step 3: Deploy to Arweave (with database for incremental uploads)
+    console.log('[Deploy Website] Step 3: Deploying website to Arweave...');
     const deployResult = await deployWebsiteToArweave(websitePath, db);
 
     if (!deployResult.success) {
+      console.error('[Deploy Website] Deployment failed:', deployResult.error);
       return res.status(500).json({
         success: false,
         error: deployResult.error || 'Failed to deploy website',
-        filesUploaded: deployResult.filesUploaded || 0
+        filesUploaded: deployResult.filesUploaded || 0,
+        step: 'deployment'
       });
     }
+    
+    console.log('[Deploy Website] ✅ Deployment successful');
+    console.log(`[Deploy Website] Manifest ID: ${deployResult.manifestId}`);
+    console.log(`[Deploy Website] Website URL: ${deployResult.websiteUrl}`);
+    console.log(`[Deploy Website] Files uploaded: ${deployResult.filesUploaded}`);
+    console.log(`[Deploy Website] Files unchanged: ${deployResult.filesUnchanged || 0}`);
 
     return res.status(200).json({
       success: true,
@@ -216,8 +276,17 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('[Deploy Website] Error:', error.message);
+    console.error('[Deploy Website] ❌ Error:', error.message);
     console.error('[Deploy Website] Stack:', error.stack);
+    console.error('[Deploy Website] Error context:', {
+      websitePath,
+      websiteDir: req.body?.websiteDir,
+      updateOnly: req.body?.updateOnly,
+      method: req.method,
+      errorType: error.constructor.name,
+      errorMessage: error.message,
+      hasDb: !!db
+    });
     
     // Ensure we always return valid JSON
     try {
@@ -239,7 +308,12 @@ export default async function handler(req, res) {
   }
   } catch (outerError) {
     // Catch any errors in the handler itself (e.g., header setting)
-    console.error('[Deploy Website] Outer error:', outerError.message);
+    console.error('[Deploy Website] ❌ Outer error:', outerError.message);
+    console.error('[Deploy Website] Outer error context:', {
+      errorType: outerError.constructor.name,
+      errorMessage: outerError.message,
+      stack: outerError.stack
+    });
     try {
       res.status(500).json({
         success: false,
@@ -248,6 +322,7 @@ export default async function handler(req, res) {
       });
     } catch (finalError) {
       // Last resort - send plain text
+      console.error('[Deploy Website] ❌ Failed to send error response:', finalError.message);
       res.status(500).end('Internal Server Error');
     }
   }
