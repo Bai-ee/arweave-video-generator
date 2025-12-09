@@ -54,6 +54,10 @@
       "dest": "/api/deploy-website.js"
     },
     {
+      "src": "/api/redirect",
+      "dest": "/api/redirect.js"
+    },
+    {
       "src": "/api/update-website",
       "dest": "/api/deploy-website.js"
     },
