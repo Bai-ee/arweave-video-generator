@@ -213,6 +213,50 @@ export default async function handler(req, res) {
     // Step 2: Generate HTML pages
     console.log('[Deploy Website] Step 2: Generating HTML pages...');
     try {
+      // Check if we're in Vercel production (read-only filesystem)
+      const isVercelProduction = process.env.VERCEL === '1' || process.cwd() === '/var/task';
+      
+      // In production, copy static files to /tmp/website first
+      if (isVercelProduction) {
+        const tmpWebsiteDir = '/tmp/website';
+        const sourceWebsiteDir = path.join(process.cwd(), 'website');
+        
+        console.log('[Deploy Website] Copying static files to /tmp/website...');
+        const fs = await import('fs-extra');
+        
+        // Copy all static files except HTML files (which will be generated)
+        const staticExtensions = ['.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.ico', '.ttf', '.woff', '.woff2', '.eot', '.json'];
+        
+        async function copyStaticFiles(src, dest) {
+          if (!await fs.pathExists(src)) return;
+          
+          const entries = await fs.readdir(src, { withFileTypes: true });
+          for (const entry of entries) {
+            const srcPath = path.join(src, entry.name);
+            const destPath = path.join(dest, entry.name);
+            
+            // Skip directories that will be handled separately
+            if (entry.isDirectory()) {
+              if (entry.name === 'scripts' || entry.name === 'templates') {
+                continue; // Skip these, they're not needed for deployment
+              }
+              await fs.ensureDir(destPath);
+              await copyStaticFiles(srcPath, destPath);
+            } else if (entry.isFile()) {
+              const ext = path.extname(entry.name).toLowerCase();
+              // Copy static files, but skip HTML files (will be generated)
+              if (staticExtensions.includes(ext) || entry.name === 'artists.json') {
+                await fs.copy(srcPath, destPath, { overwrite: true });
+              }
+            }
+          }
+        }
+        
+        await fs.ensureDir(tmpWebsiteDir);
+        await copyStaticFiles(sourceWebsiteDir, tmpWebsiteDir);
+        console.log('[Deploy Website] ✅ Copied static files to /tmp/website');
+      }
+      
       // Use lib/WebsitePageGenerator.cjs instead of website/scripts (avoids .vercelignore issues)
       const generateScriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.cjs');
       console.log('[Deploy Website] Loading generate script from:', generateScriptPath);
@@ -225,8 +269,6 @@ export default async function handler(req, res) {
       }
       
       // In Vercel production, generatePages will write to /tmp/website
-      // Pass null to let it auto-detect, or explicitly pass /tmp/website
-      const isVercelProduction = process.env.VERCEL === '1' || process.cwd() === '/var/task';
       const actualOutputDir = isVercelProduction ? '/tmp/website' : websiteRoot;
       
       // Use actual path (might be /tmp in production)
