@@ -54,23 +54,12 @@
       "dest": "/api/deploy-website.js"
     },
     {
-      "src": "/api/redirect",
-      "dest": "/api/redirect.js"
-    },
-    {
       "src": "/api/update-website",
       "dest": "/api/deploy-website.js"
     },
     {
       "src": "/website/(.*)",
       "dest": "/website/$1"
-    },
-    {
-      "src": "/",
-      "dest": "/api/redirect.js",
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate"
-      }
     },
     {
       "src": "/(.*)",
@@ -110,9 +99,6 @@
     },
     "api/deploy-website.js": {
       "maxDuration": 300
-    },
-    "api/redirect.js": {
-      "maxDuration": 10
     }
   }
 }

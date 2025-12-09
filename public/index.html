@@ -437,6 +437,21 @@
           </div>
           
           <div>
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
+              Mix Thumbnail Image <span style="color: #888; font-size: 0.75rem;">(Optional)</span>
+            </label>
+            <input 
+              type="file" 
+              id="mixThumbnailInput" 
+              accept=".jpg,.jpeg,.png,.gif,.webp,image/*"
+              style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
+            />
+            <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
+              Upload a thumbnail image for this mix/track (.jpg, .png, .gif, .webp). Will be displayed on the website.
+            </p>
+          </div>
+          
+          <div>
             <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 5px;">
               <input 
                 type="checkbox" 
@@ -1942,6 +1957,50 @@
           });
         }
         
+        // Handle mix thumbnail image upload if provided
+        let mixThumbnailPath = null;
+        const mixThumbnailInput = document.getElementById('mixThumbnailInput');
+        if (mixThumbnailInput.files && mixThumbnailInput.files.length > 0) {
+          const mixThumbnailFile = mixThumbnailInput.files[0];
+          progressStatus.textContent = 'Uploading mix thumbnail to Firebase...';
+          progressBar.style.width = '28%';
+          progressPercent.textContent = '28%';
+          
+          const { storage, ref, uploadBytesResumable } = window.firebase;
+          const thumbnailFileName = `mix_thumbnail_${Date.now()}_${mixThumbnailFile.name}`;
+          const thumbnailStoragePath = `mix-thumbnails/${artistName}/${thumbnailFileName}`;
+          const thumbnailStorageRef = ref(storage, thumbnailStoragePath);
+          
+          await new Promise((resolve, reject) => {
+            const thumbnailUploadTask = uploadBytesResumable(thumbnailStorageRef, mixThumbnailFile, {
+              contentType: mixThumbnailFile.type || 'image/jpeg',
+              customMetadata: {
+                artist: artistName,
+                mixTitle: mixTitle || 'Untitled',
+                uploadedAt: new Date().toISOString()
+              }
+            });
+            
+            thumbnailUploadTask.on(
+              'state_changed',
+              (snapshot) => {
+                const thumbnailProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                progressBar.style.width = `${28 + (thumbnailProgress * 0.02)}%`;
+                progressPercent.textContent = `${Math.round(28 + (thumbnailProgress * 0.02))}%`;
+              },
+              (error) => {
+                console.error('Mix thumbnail Firebase upload error:', error);
+                reject(error);
+              },
+              () => {
+                mixThumbnailPath = thumbnailStoragePath;
+                console.log('[Mix Upload] Mix thumbnail uploaded to Firebase:', mixThumbnailPath);
+                resolve();
+              }
+            );
+          });
+        }
+        
         progressStatus.textContent = 'Uploading to Arweave...';
         progressBar.style.width = '30%';
         progressPercent.textContent = '30%';
@@ -1965,6 +2024,10 @@
         
         if (artistImagePath) {
           requestBody.artistImagePath = artistImagePath;
+        }
+        
+        if (mixThumbnailPath) {
+          requestBody.mixThumbnailPath = mixThumbnailPath;
         }
         
         // Upload to API (JSON, not FormData - matches archive upload!)
