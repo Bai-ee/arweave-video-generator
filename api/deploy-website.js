@@ -136,8 +136,8 @@ export default async function handler(req, res) {
 
       // Regenerate HTML pages
       try {
-        // Use lib/WebsitePageGenerator.js instead of website/scripts (avoids .vercelignore issues)
-        const scriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.js');
+        // Use lib/WebsitePageGenerator.cjs instead of website/scripts (avoids .vercelignore issues)
+        const scriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.cjs');
         console.log('[Deploy Website] Loading script from:', scriptPath);
         
         const generateScript = require(scriptPath);
@@ -213,8 +213,8 @@ export default async function handler(req, res) {
     // Step 2: Generate HTML pages
     console.log('[Deploy Website] Step 2: Generating HTML pages...');
     try {
-      // Use lib/WebsitePageGenerator.js instead of website/scripts (avoids .vercelignore issues)
-      const generateScriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.js');
+      // Use lib/WebsitePageGenerator.cjs instead of website/scripts (avoids .vercelignore issues)
+      const generateScriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.cjs');
       console.log('[Deploy Website] Loading generate script from:', generateScriptPath);
       
       const generateScript = require(generateScriptPath);
@@ -287,8 +287,7 @@ export default async function handler(req, res) {
       updateOnly: req.body?.updateOnly,
       method: req.method,
       errorType: error.constructor.name,
-      errorMessage: error.message,
-      hasDb: !!db
+      errorMessage: error.message
     });
     
     // Ensure we always return valid JSON
