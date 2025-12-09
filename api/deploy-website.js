@@ -224,11 +224,16 @@ export default async function handler(req, res) {
         throw new Error('generatePages function not found in WebsitePageGenerator.js module');
       }
       
+      // In Vercel production, generatePages will write to /tmp/website
+      // Pass null to let it auto-detect, or explicitly pass /tmp/website
+      const isVercelProduction = process.env.VERCEL === '1' || process.cwd() === '/var/task';
+      const actualOutputDir = isVercelProduction ? '/tmp/website' : websiteRoot;
+      
       // Use actual path (might be /tmp in production)
       console.log('[Deploy Website] Calling generatePages with artists.json:', actualArtistsJsonPath);
-      console.log('[Deploy Website] Output directory:', websiteRoot);
+      console.log('[Deploy Website] Output directory:', actualOutputDir);
       
-      const generateResult = generateScript.generatePages(actualArtistsJsonPath, websiteRoot);
+      const generateResult = generateScript.generatePages(actualArtistsJsonPath, actualOutputDir);
       
       if (!generateResult || !generateResult.success) {
         const errorMsg = generateResult?.error || 'Unknown error';
@@ -246,8 +251,13 @@ export default async function handler(req, res) {
     }
 
     // Step 3: Deploy to Arweave (with database for incremental uploads)
+    // Use /tmp/website in production, otherwise use the original websitePath
+    const isVercelProduction = process.env.VERCEL === '1' || process.cwd() === '/var/task';
+    const actualWebsitePath = isVercelProduction ? '/tmp/website' : websitePath;
+    
     console.log('[Deploy Website] Step 3: Deploying website to Arweave...');
-    const deployResult = await deployWebsiteToArweave(websitePath, db);
+    console.log('[Deploy Website] Using website directory:', actualWebsitePath);
+    const deployResult = await deployWebsiteToArweave(actualWebsitePath, db);
 
     if (!deployResult.success) {
       console.error('[Deploy Website] Deployment failed:', deployResult.error);
