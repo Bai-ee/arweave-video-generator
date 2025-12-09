@@ -289,6 +289,20 @@
       </button>
     </div>
 
+    <!-- Deploy Website Success Modal -->
+    <div id="deployWebsiteSuccessModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
+      <div style="background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">🌐 Website Deployment Success</h2>
+          <button onclick="hideDeployWebsiteSuccessModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
+        </div>
+        
+        <div id="deployWebsiteSuccessContent" style="color: var(--color-yellow-75); font-family: var(--font-mathias);">
+          <!-- Content will be populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+
     <!-- Upload Mix Modal -->
     <div id="uploadMixModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
       <div style="background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
@@ -1623,6 +1637,119 @@
     }
 
     /**
+     * Show deploy website success modal
+     */
+    function showDeployWebsiteSuccessModal(data) {
+      const modal = document.getElementById('deployWebsiteSuccessModal');
+      const content = document.getElementById('deployWebsiteSuccessContent');
+      
+      const manifestUrl = data.manifestUrl || `https://arweave.net/${data.manifestId}`;
+      const websiteUrl = data.websiteUrl || `https://arweave.net/${data.manifestId}/index.html`;
+      
+      // Build cost info
+      let costInfo = '';
+      if (data.costEstimate && data.costEstimate.costAR > 0) {
+        costInfo = `
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #10b981;">
+            <div style="font-size: 0.875rem; color: #10b981;">
+              💰 <strong>Deployment Cost:</strong> ${data.costEstimate.costAR.toFixed(6)} AR (~$${data.costEstimate.costUSD.toFixed(4)} USD)
+            </div>
+          </div>
+        `;
+      }
+      
+      // Build files info
+      let filesInfo = '';
+      if (data.filesUploaded !== undefined) {
+        filesInfo = `
+          <div style="margin-top: 0.75rem; font-size: 0.875rem; color: #10b981;">
+            📊 <strong>Files:</strong> ${data.filesUploaded} uploaded${data.filesUnchanged ? `, ${data.filesUnchanged} unchanged (reused)` : ''}
+          </div>
+        `;
+      }
+      
+      content.innerHTML = `
+        <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1.5rem; color: #10b981;">
+          <div style="font-size: 1.25rem; font-weight: bold; margin-bottom: 1rem;">
+            ✅ Website Deployed Successfully!
+          </div>
+          
+          <div style="margin-top: 1rem;">
+            <div style="font-size: 0.875rem; margin-bottom: 0.5rem; color: #10b981;">
+              <strong>📋 Manifest ID:</strong>
+            </div>
+            <div style="background: #0a0a0a; padding: 0.5rem; border-radius: 3px; font-family: monospace; font-size: 0.75rem; word-break: break-all; margin-bottom: 1rem;">
+              ${data.manifestId}
+            </div>
+          </div>
+          
+          <div style="margin-top: 1rem;">
+            <div style="font-size: 0.875rem; margin-bottom: 0.75rem; color: #10b981;">
+              <strong>🌐 Website URLs:</strong>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <a 
+                href="${websiteUrl}" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style="background: #10b981; color: white; padding: 0.75rem; border-radius: 5px; text-decoration: none; text-align: center; font-weight: bold; display: block;"
+                onmouseover="this.style.background='#059669'" 
+                onmouseout="this.style.background='#10b981'"
+              >
+                🌐 Primary: ${websiteUrl}
+              </a>
+              <a 
+                href="https://arweave.dev/${data.manifestId}/index.html" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style="background: transparent; color: #10b981; padding: 0.5rem; border: 2px solid #10b981; border-radius: 5px; text-decoration: none; text-align: center; font-size: 0.875rem; display: block;"
+                onmouseover="this.style.background='#10b981'; this.style.color='white'" 
+                onmouseout="this.style.background='transparent'; this.style.color='#10b981'"
+              >
+                🔗 Alternative: arweave.dev
+              </a>
+              <a 
+                href="https://ar-io.dev/${data.manifestId}/index.html" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style="background: transparent; color: #10b981; padding: 0.5rem; border: 2px solid #10b981; border-radius: 5px; text-decoration: none; text-align: center; font-size: 0.875rem; display: block;"
+                onmouseover="this.style.background='#10b981'; this.style.color='white'" 
+                onmouseout="this.style.background='transparent'; this.style.color='#10b981'"
+              >
+                🔗 Alternative: ar-io.dev
+              </a>
+            </div>
+          </div>
+          
+          ${filesInfo}
+          ${costInfo}
+          
+          <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #10b981;">
+            <div style="font-size: 0.75rem; color: #10b981; opacity: 0.8;">
+              💡 <strong>Note:</strong> Your website is now live on Arweave! Access it using any of the URLs above.
+            </div>
+          </div>
+        </div>
+      `;
+      
+      modal.style.display = 'flex';
+      
+      // Copy primary URL to clipboard
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(websiteUrl).then(() => {
+          console.log('Website URL copied to clipboard');
+        });
+      }
+    }
+
+    /**
+     * Hide deploy website success modal
+     */
+    function hideDeployWebsiteSuccessModal() {
+      document.getElementById('deployWebsiteSuccessModal').style.display = 'none';
+    }
+
+    /**
      * Toggle between file upload and URL input
      */
     function toggleMixUploadType(type) {
@@ -2377,45 +2504,9 @@
           throw new Error(data.error || data.message || 'Deployment failed');
         }
         
-        // Show success with manifest URL
-        const manifestUrl = data.manifestUrl || `https://arweave.net/${data.manifestId}`;
-        const websiteUrl = data.websiteUrl || `https://arweave.net/${data.manifestId}/index.html`;
-        
+        // Show success modal
         showToast('✅ Website deployed successfully!', 'success');
-        
-        // Build cost info
-        let costInfo = '';
-        if (data.costEstimate && data.costEstimate.costAR > 0) {
-          costInfo = `\n💰 Deployment Cost: ${data.costEstimate.costAR.toFixed(6)} AR (~$${data.costEstimate.costUSD.toFixed(4)} USD)`;
-        }
-        
-        // Show detailed success message
-        const message = `
-🎉 Website Deployed Successfully!
-
-📋 Manifest ID: ${data.manifestId}
-📋 Manifest URL: ${manifestUrl}
-
-🌐 Website URLs (use /index.html):
-   Primary: ${websiteUrl}
-   Alternative: https://arweave.dev/${data.manifestId}/index.html
-   Alternative: https://ar-io.dev/${data.manifestId}/index.html
-
-📊 Files: ${data.filesUploaded} uploaded, ${data.filesUnchanged || 0} unchanged (reused)
-${costInfo}
-
-Your website is now live on Arweave!
-Note: Access the website using the URLs above with /index.html included.
-        `;
-        
-        alert(message);
-        
-        // Copy manifest URL to clipboard if possible
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(websiteUrl).then(() => {
-            console.log('Website URL copied to clipboard');
-          });
-        }
+        showDeployWebsiteSuccessModal(data);
         
       } catch (error) {
         console.error('Error deploying website:', error);
@@ -2437,6 +2528,12 @@ Note: Access the website using the URLs above with /index.html included.
     document.getElementById('uploadMixModal')?.addEventListener('click', (e) => {
       if (e.target.id === 'uploadMixModal') {
         hideUploadMixModal();
+      }
+    });
+    
+    document.getElementById('deployWebsiteSuccessModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'deployWebsiteSuccessModal') {
+        hideDeployWebsiteSuccessModal();
       }
     });
 
