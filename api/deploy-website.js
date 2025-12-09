@@ -136,7 +136,8 @@ export default async function handler(req, res) {
 
       // Regenerate HTML pages
       try {
-        const scriptPath = path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js');
+        // Use lib/WebsitePageGenerator.js instead of website/scripts (avoids .vercelignore issues)
+        const scriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.js');
         console.log('[Deploy Website] Loading script from:', scriptPath);
         
         const generateScript = require(scriptPath);
@@ -212,14 +213,15 @@ export default async function handler(req, res) {
     // Step 2: Generate HTML pages
     console.log('[Deploy Website] Step 2: Generating HTML pages...');
     try {
-      const generateScriptPath = path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js');
+      // Use lib/WebsitePageGenerator.js instead of website/scripts (avoids .vercelignore issues)
+      const generateScriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.js');
       console.log('[Deploy Website] Loading generate script from:', generateScriptPath);
       
       const generateScript = require(generateScriptPath);
       
       if (!generateScript || typeof generateScript.generatePages !== 'function') {
         console.error('[Deploy Website] Available functions:', Object.keys(generateScript || {}));
-        throw new Error('generatePages function not found in generate_artist_pages.js module');
+        throw new Error('generatePages function not found in WebsitePageGenerator.js module');
       }
       
       // Use actual path (might be /tmp in production)
@@ -278,8 +280,9 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('[Deploy Website] ❌ Error:', error.message);
     console.error('[Deploy Website] Stack:', error.stack);
+    const websitePath = req.body?.websiteDir || 'website';
     console.error('[Deploy Website] Error context:', {
-      websitePath,
+      websitePath: websitePath,
       websiteDir: req.body?.websiteDir,
       updateOnly: req.body?.updateOnly,
       method: req.method,
