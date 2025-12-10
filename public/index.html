@@ -1139,14 +1139,22 @@
       try {
         // Prepare request body
         // Always use Hard B&W Street Doc filter at 80% intensity
+        // Normalize folder names: remove 'assets/' prefix for consistent backend handling
+        const normalizedFolders = Array.from(selectedFolders).map(folder => {
+          // Remove 'assets/' prefix if present, backend will map it correctly
+          return folder.replace(/^assets\//, '');
+        });
+        
         const requestBody = {
           duration: 30,
           videoFilter: selectedFilter, // Always 'look_hard_bw_street_doc'
           filterIntensity: filterIntensity, // Always 0.8 (80%)
           useTrax: selectedAudioSource === 'tracks', // true for tracks, false for mixes
-          selectedFolders: Array.from(selectedFolders), // Array of selected folder names
+          selectedFolders: normalizedFolders, // Array of normalized folder names (without assets/ prefix)
           enableOverlay: enableOverlay // Overlay feature toggle
         };
+        
+        console.log(`[Generate Video] Sending normalized folders:`, normalizedFolders);
         
         // Add artist selection only for mixes
         if (selectedAudioSource === 'mixes') {

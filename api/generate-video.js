@@ -34,8 +34,38 @@ export default async function handler(req, res) {
     const videoFilter = req.body.videoFilter || null; // Optional video filter
     const useTrax = req.body.useTrax === true; // true for tracks, false for mixes
     const filterIntensity = req.body.filterIntensity !== undefined ? parseFloat(req.body.filterIntensity) : 0.4; // Filter intensity 0.0-1.0 (default 0.4 = 40%)
-    const selectedFolders = req.body.selectedFolders || []; // Array of selected folder names
+    const selectedFolders = req.body.selectedFolders || []; // Array of selected folder names (normalized, without assets/ prefix)
     const enableOverlay = req.body.enableOverlay !== undefined ? req.body.enableOverlay : true; // Overlay feature toggle (default: true)
+
+    // Validate selectedFolders
+    if (!Array.isArray(selectedFolders)) {
+      return res.status(400).json({
+        success: false,
+        error: 'selectedFolders must be an array'
+      });
+    }
+
+    // Validate at least one folder is selected
+    if (selectedFolders.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'At least one folder must be selected'
+      });
+    }
+
+    // Validate folder names (normalized names without assets/ prefix)
+    const validFolders = ['equipment', 'decks', 'skyline', 'neighborhood', 'artist', 'family', 'chicago-skyline-videos'];
+    const normalizedFolders = selectedFolders.map(f => f.toString().toLowerCase().trim().replace(/^assets\//, ''));
+    const invalidFolders = normalizedFolders.filter(f => !validFolders.includes(f));
+    
+    if (invalidFolders.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid folder names: ${invalidFolders.join(', ')}. Valid folders: ${validFolders.join(', ')}`
+      });
+    }
+
+    console.log(`[Generate Video] Validated ${normalizedFolders.length} folder(s): [${normalizedFolders.join(', ')}]`);
 
     // Generate unique job ID
     const jobId = uuidv4();

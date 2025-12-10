@@ -411,7 +411,8 @@ class ArweaveVideoGenerator {
                 }
             } else {
                 // For mixes: Load video REFERENCES from selected folders (on-demand download, not all upfront)
-                const defaultFolders = selectedFolders.length > 0 ? selectedFolders : ['skyline', 'assets/chicago-skyline-videos'];
+                // Use normalized folder names (without assets/ prefix) - VideoLoader will map to correct Firebase paths
+                const defaultFolders = selectedFolders.length > 0 ? selectedFolders : ['skyline', 'chicago-skyline-videos'];
                 console.log(`[ArweaveVideoGenerator] 🎬 MIXES mode: Loading video references from selected folders: [${defaultFolders.join(', ')}]`);
                 console.log(`[ArweaveVideoGenerator] 📋 Original selectedFolders parameter: [${selectedFolders.join(', ')}]`);
                 const groupedVideos = await this.videoLoader.loadTrackVideoReferences(true, defaultFolders);
