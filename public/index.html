@@ -191,42 +191,55 @@
           </div>
         </div>
         
-        <!-- Filter Selection - COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity -->
-        <!--
+        <!-- Filter Selection - OFF by default, user can enable -->
         <div style="width: 100%; max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem;">
-          <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
-            🎨 SELECT VIDEO FILTER (Required)
-          </label>
-          <div id="filterButtons" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
-            <!-- Filter buttons will be populated by JavaScript -->
+          <!-- Enable Filter Toggle -->
+          <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem; font-weight: bold; cursor: pointer;">
+              <input 
+                type="checkbox" 
+                id="enableFilterToggle" 
+                onchange="toggleFilterUI(this.checked)"
+                style="width: 20px; height: 20px; cursor: pointer;"
+              />
+              <span>🎨 ENABLE VIDEO FILTER</span>
+            </label>
           </div>
           
-          <!-- Filter Intensity Slider (shown only when filter is selected) -->
-          <div id="filterIntensityContainer" style="display: none; margin-top: 1.5rem; margin-bottom: 1rem;">
+          <!-- Filter Selection UI (hidden by default) -->
+          <div id="filterSelectionContainer" style="display: none;">
             <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
-              🎚️ FILTER INTENSITY: <span id="filterIntensityValue">40%</span>
+              🎨 SELECT VIDEO FILTER
             </label>
-            <div style="max-width: 600px; margin: 0 auto;">
-              <input 
-                type="range" 
-                id="filterIntensitySlider" 
-                min="0" 
-                max="100" 
-                value="40" 
-                step="1"
-                style="width: 100%; height: 8px; background: #0a0a0a; border: 2px solid var(--color-yellow-75); border-radius: 5px; outline: none; cursor: pointer;"
-                oninput="updateFilterIntensity(this.value)"
-              />
-              <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; color: #888; font-size: 0.75rem; font-family: var(--font-mathias);">
-                <span>0% (None)</span>
-                <span>40% (Current)</span>
-                <span>100% (Extreme)</span>
+            <div id="filterButtons" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+              <!-- Filter buttons will be populated by JavaScript -->
+            </div>
+            
+            <!-- Filter Intensity Slider (shown only when filter is selected) -->
+            <div id="filterIntensityContainer" style="display: none; margin-top: 1.5rem; margin-bottom: 1rem;">
+              <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
+                🎚️ FILTER INTENSITY: <span id="filterIntensityValue">80%</span>
+              </label>
+              <div style="max-width: 600px; margin: 0 auto;">
+                <input 
+                  type="range" 
+                  id="filterIntensitySlider" 
+                  min="0" 
+                  max="100" 
+                  value="80" 
+                  step="1"
+                  style="width: 100%; height: 8px; background: #0a0a0a; border: 2px solid var(--color-yellow-75); border-radius: 5px; outline: none; cursor: pointer;"
+                  oninput="updateFilterIntensity(this.value)"
+                />
+                <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; color: #888; font-size: 0.75rem; font-family: var(--font-mathias);">
+                  <span>0% (None)</span>
+                  <span>80% (Default)</span>
+                  <span>100% (Extreme)</span>
+                </div>
               </div>
             </div>
           </div>
-          
         </div>
-        -->
         
         <!-- Action Buttons -->
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
@@ -714,9 +727,10 @@
         window.open('/website/index.html', '_blank');
       }
     }
-    // Always use Hard B&W Street Doc filter at 80% intensity
-    const selectedFilter = 'look_hard_bw_street_doc'; // Always use Hard B&W Street Doc
-    const filterIntensity = 0.8; // Always use 80% intensity (0.8)
+    // Filter settings - OFF by default
+    let filterEnabled = false; // Filter is OFF by default
+    let selectedFilter = 'look_hard_bw_street_doc'; // Default filter when enabled
+    let filterIntensity = 0.8; // Default 80% intensity (0.8)
     let selectedAudioSource = null; // 'mixes' or 'tracks'
     let selectedArtist = 'random'; // Selected artist (or 'random')
     let availableArtists = []; // List of available artists
@@ -1037,13 +1051,43 @@
     }
 
     /**
-     * Initialize filter selection buttons
-     * COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity
+     * Toggle filter UI on/off
      */
-    /*
+    function toggleFilterUI(enabled) {
+      filterEnabled = enabled;
+      const container = document.getElementById('filterSelectionContainer');
+      
+      if (enabled) {
+        // Show filter selection UI
+        if (container) {
+          container.style.display = 'block';
+        }
+        // Initialize filter buttons if not already done
+        const filterButtons = document.getElementById('filterButtons');
+        if (filterButtons && filterButtons.children.length === 0) {
+          initializeFilterButtons();
+        }
+        // Select default filter
+        selectFilter(selectedFilter);
+        console.log('✅ Filter enabled');
+      } else {
+        // Hide filter selection UI
+        if (container) {
+          container.style.display = 'none';
+        }
+        console.log('✅ Filter disabled');
+      }
+    }
+
+    /**
+     * Initialize filter selection buttons
+     */
     function initializeFilterButtons() {
       const container = document.getElementById('filterButtons');
       if (!container) return;
+
+      // Clear existing buttons
+      container.innerHTML = '';
 
       Object.keys(VIDEO_FILTERS).forEach(filterKey => {
         const filter = VIDEO_FILTERS[filterKey];
@@ -1107,7 +1151,6 @@
       }
       console.log(`✅ Filter intensity: ${value}%`);
     }
-    */
 
     /**
      * Generate a new video
@@ -1125,8 +1168,6 @@
         return;
       }
       
-      // Filter check removed - always using Hard B&W Street Doc @ 80%
-
       const btn = document.getElementById('generateVideoBtn');
       const btnText = document.getElementById('generateBtnText');
       const btnLoading = document.getElementById('generateBtnLoading');
@@ -1138,7 +1179,6 @@
 
       try {
         // Prepare request body
-        // Always use Hard B&W Street Doc filter at 80% intensity
         // Normalize folder names: remove 'assets/' prefix for consistent backend handling
         const normalizedFolders = Array.from(selectedFolders).map(folder => {
           // Remove 'assets/' prefix if present, backend will map it correctly
@@ -1147,8 +1187,8 @@
         
         const requestBody = {
           duration: 30,
-          videoFilter: selectedFilter, // Always 'look_hard_bw_street_doc'
-          filterIntensity: filterIntensity, // Always 0.8 (80%)
+          videoFilter: filterEnabled ? selectedFilter : null, // Only send filter if enabled
+          filterIntensity: filterEnabled ? filterIntensity : 0, // Only send intensity if filter enabled
           useTrax: selectedAudioSource === 'tracks', // true for tracks, false for mixes
           selectedFolders: normalizedFolders, // Array of normalized folder names (without assets/ prefix)
           enableOverlay: enableOverlay // Overlay feature toggle

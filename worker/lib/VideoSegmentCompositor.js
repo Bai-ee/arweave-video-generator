@@ -1018,9 +1018,10 @@ export class VideoSegmentCompositor {
               if (stats.size < adjustedMinSize) {
                 const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
                 const minMB = (adjustedMinSize / 1024 / 1024).toFixed(2);
-                console.error(`[VideoSegmentCompositor] ❌ Output file too small: ${sizeMB}MB (minimum: ${minMB}MB)`);
                 
-                // Check if file has valid video streams (more reliable than just size)
+                // Check if file has valid video streams FIRST (more reliable than just size)
+                // If it has valid streams, accept it even if slightly below size threshold
+                let hasValidStreams = false;
                 try {
                   const ffprobePath = process.env.GITHUB_ACTIONS === 'true' ? 'ffprobe' : 'ffprobe';
                   const probeCommand = `${ffprobePath} -v error -select_streams v:0 -show_entries stream=codec_name,width,height,duration -of json "${outputPath}"`;
@@ -1030,6 +1031,7 @@ export class VideoSegmentCompositor {
                   if (probeData.streams && probeData.streams.length > 0) {
                     const stream = probeData.streams[0];
                     console.log(`[VideoSegmentCompositor] Video has valid stream: ${stream.codec_name}, ${stream.width}x${stream.height}, duration: ${stream.duration || 'unknown'}`);
+                    
                     // If video has valid streams, accept it even if size is slightly below threshold
                     // For segments: accept at 50% of minimum (0.25MB)
                     // For final videos: accept at 70% of minimum (1.4MB)
@@ -1039,14 +1041,31 @@ export class VideoSegmentCompositor {
                       resolve();
                       return;
                     }
+                    hasValidStreams = true;
                   }
                 } catch (probeError) {
                   console.warn(`[VideoSegmentCompositor] ⚠️  Could not probe video: ${probeError.message}`);
                 }
                 
-                console.error(`[VideoSegmentCompositor] ❌ This indicates FFmpeg produced a corrupted or incomplete file`);
-                reject(new Error(`FFmpeg output file too small: ${sizeMB}MB (expected at least ${minMB}MB)`));
-                return;
+                // Only log error and reject if we don't have valid streams
+                if (!hasValidStreams) {
+                  console.error(`[VideoSegmentCompositor] ❌ Output file too small: ${sizeMB}MB (minimum: ${minMB}MB)`);
+                  console.error(`[VideoSegmentCompositor] ❌ This indicates FFmpeg produced a corrupted or incomplete file`);
+                  reject(new Error(`FFmpeg output file too small: ${sizeMB}MB (expected at least ${minMB}MB)`));
+                  return;
+                } else {
+                  // Has valid streams but still below acceptance threshold - accept anyway if very close
+                  const veryCloseThreshold = minSizeBytes < 1024 * 1024 ? 0.4 : 0.6; // 40% for segments, 60% for videos
+                  if (stats.size >= adjustedMinSize * veryCloseThreshold) {
+                    console.log(`[VideoSegmentCompositor] ✅ Output file validated (has valid streams, close to threshold): ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
+                    resolve();
+                    return;
+                  }
+                  // Still reject if too far below threshold even with valid streams
+                  console.error(`[VideoSegmentCompositor] ❌ Output file too small: ${sizeMB}MB (minimum: ${minMB}MB) - even with valid streams`);
+                  reject(new Error(`FFmpeg output file too small: ${sizeMB}MB (expected at least ${minMB}MB)`));
+                  return;
+                }
               }
               console.log(`[VideoSegmentCompositor] ✅ Output file validated: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
             } catch (statError) {
