@@ -998,9 +998,22 @@ export class VideoSegmentCompositor {
           if (outputPath && await fs.pathExists(outputPath)) {
             try {
               const stats = await fs.stat(outputPath);
-              // Lower minimum size: 2MB for 30s video (more realistic for efficiently encoded videos)
-              // Original 5MB was too strict and caused false failures
-              const adjustedMinSize = Math.max(minSizeBytes * 0.4, 2 * 1024 * 1024); // At least 2MB, or 40% of original minimum
+              
+              // Determine appropriate minimum size based on context
+              // For 5-second segments: 0.5MB is reasonable (100KB per second)
+              // For 30-second videos: 2MB is reasonable
+              // If minSizeBytes is already low (< 1MB), use it as-is (for segments)
+              // Otherwise, use adjusted minimum for final videos
+              let adjustedMinSize;
+              if (minSizeBytes < 1024 * 1024) {
+                // This is a segment extraction (minSizeBytes is 100KB)
+                // Use 0.5MB minimum for 5-second segments (very reasonable)
+                adjustedMinSize = 0.5 * 1024 * 1024; // 0.5MB
+              } else {
+                // This is a final video (30 seconds)
+                // Use 2MB minimum (more realistic than original 5MB)
+                adjustedMinSize = 2 * 1024 * 1024; // 2MB
+              }
               
               if (stats.size < adjustedMinSize) {
                 const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
@@ -1018,7 +1031,10 @@ export class VideoSegmentCompositor {
                     const stream = probeData.streams[0];
                     console.log(`[VideoSegmentCompositor] Video has valid stream: ${stream.codec_name}, ${stream.width}x${stream.height}, duration: ${stream.duration || 'unknown'}`);
                     // If video has valid streams, accept it even if size is slightly below threshold
-                    if (stats.size >= adjustedMinSize * 0.7) { // 70% of adjusted minimum
+                    // For segments: accept at 50% of minimum (0.25MB)
+                    // For final videos: accept at 70% of minimum (1.4MB)
+                    const acceptanceThreshold = minSizeBytes < 1024 * 1024 ? 0.5 : 0.7;
+                    if (stats.size >= adjustedMinSize * acceptanceThreshold) {
                       console.log(`[VideoSegmentCompositor] ✅ Output file validated (has valid streams): ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
                       resolve();
                       return;
