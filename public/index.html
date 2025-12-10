@@ -1052,8 +1052,9 @@
 
     /**
      * Toggle filter UI on/off
+     * Make it globally accessible for inline onchange handler
      */
-    function toggleFilterUI(enabled) {
+    window.toggleFilterUI = function(enabled) {
       filterEnabled = enabled;
       const container = document.getElementById('filterSelectionContainer');
       
@@ -1077,7 +1078,7 @@
         }
         console.log('✅ Filter disabled');
       }
-    }
+    };
 
     /**
      * Initialize filter selection buttons

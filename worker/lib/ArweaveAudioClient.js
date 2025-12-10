@@ -68,13 +68,13 @@ class ArweaveAudioClient {
           const data = artistsDoc.data();
           if (data.artists && Array.isArray(data.artists) && data.artists.length > 0) {
             this.artistsData = data.artists;
-            console.log(`[ArweaveAudioClient] Loaded ${data.artists.length} artists from Firebase`);
+            console.log(`[ArweaveAudioClient] ✅ Loaded ${data.artists.length} artists from Firebase`);
             return;
           }
         }
-        console.log('[ArweaveAudioClient] No artists found in Firebase, trying local files...');
+        console.log('[ArweaveAudioClient] ⚠️  No artists found in Firebase system/artists, trying local files...');
       } catch (firebaseError) {
-        console.warn('[ArweaveAudioClient] Firebase load failed, trying local files:', firebaseError.message);
+        console.warn('[ArweaveAudioClient] ⚠️  Firebase load failed, trying local files:', firebaseError.message);
       }
 
       // Fallback to local files
@@ -82,23 +82,33 @@ class ArweaveAudioClient {
         path.join(process.cwd(), 'data', 'sample-artists.json'),
         path.join(process.cwd(), 'worker', 'data', 'sample-artists.json'),
         path.join(process.cwd(), 'content', 'artists.json'),
-        path.join(process.cwd(), 'assets', 'artists.json')
+        path.join(process.cwd(), 'assets', 'artists.json'),
+        path.join(process.cwd(), 'website', 'artists.json'), // Also check website folder
+        path.join(__dirname, '..', '..', 'website', 'artists.json') // Relative to worker/lib
       ];
       
       for (const artistsPath of artistsPaths) {
         try {
-          if (fs.existsSync(artistsPath)) {
-            const artistsData = JSON.parse(fs.readFileSync(artistsPath, 'utf-8'));
-            this.artistsData = artistsData;
-            console.log(`[ArweaveAudioClient] Loaded ${artistsData.length} artists from ${artistsPath}`);
+          if (await fs.pathExists(artistsPath)) {
+            const artistsData = JSON.parse(await fs.readFile(artistsPath, 'utf-8'));
+            // Handle both array format and object with artists property
+            if (Array.isArray(artistsData)) {
+              this.artistsData = artistsData;
+            } else if (artistsData.artists && Array.isArray(artistsData.artists)) {
+              this.artistsData = artistsData.artists;
+            } else {
+              continue;
+            }
+            console.log(`[ArweaveAudioClient] ✅ Loaded ${this.artistsData.length} artists from ${artistsPath}`);
             return;
           }
         } catch (error) {
+          console.warn(`[ArweaveAudioClient] ⚠️  Could not load from ${artistsPath}: ${error.message}`);
           continue;
         }
       }
       
-      console.warn('[ArweaveAudioClient] Could not load artists.json - using empty database');
+      console.warn('[ArweaveAudioClient] ⚠️  Could not load artists.json from any location - using empty database');
       this.artistsData = [];
     } catch (error) {
       console.error('[ArweaveAudioClient] Error loading artists data:', error);
@@ -599,6 +609,12 @@ class ArweaveAudioClient {
     console.log(`[ArweaveAudioClient] 💬 Prompt:`, prompt);
     
     try {
+      // Ensure artists data is loaded before proceeding
+      if (!this.artistsData || this.artistsData.length === 0) {
+        console.log('[ArweaveAudioClient] Artists data not loaded yet, attempting to load...');
+        await this.loadArtistsData();
+      }
+      
       // Check if we have any artists data
       console.log(`[ArweaveAudioClient] 📋 Artists data available: ${this.artistsData ? this.artistsData.length : 0} artists`);
       if (!this.artistsData || this.artistsData.length === 0) {
