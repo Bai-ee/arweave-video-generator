@@ -1,0 +1,211 @@
+# Cursor Instructions for Arweave Video Generator
+
+## Critical Context: Always Check Documentation First
+
+Before implementing features or troubleshooting issues, **ALWAYS** consult the relevant documentation files:
+
+### Core Documentation Files
+
+1. **VIDEO_GENERATION_PROCESS.md** - Complete video generation flow from frontend to output
+   - Use when: Working on video generation, segment extraction, concatenation, or composition
+   - Contains: Complete flow, validation logic, error handling, common issues
+
+2. **FOLDER_SELECTION_SYSTEM.md** - Folder naming, normalization, and matching logic
+   - Use when: Working on folder selection UI, backend folder matching, or video loading
+   - Contains: Normalization process, folder mapping, validation rules
+
+3. **GITHUB_ACTIONS_SETUP.md** - Workflow setup, optimization, and troubleshooting
+   - Use when: Working on GitHub Actions, FFmpeg installation, or workflow configuration
+   - Contains: Workflow steps, timeouts, environment variables, optimization strategies
+
+4. **TROUBLESHOOTING.md** - Common issues and solutions
+   - Use when: Debugging any issue or error
+   - Contains: Solutions for CORS, video generation failures, upload issues, etc.
+
+5. **BEST_PRACTICES.md** - Development guidelines and patterns
+   - Use when: Implementing new features or refactoring
+   - Contains: Code patterns, error handling, logging, testing guidelines
+
+6. **SYSTEM_ARCHITECTURE.md** (if exists) - System overview and architecture
+   - Use when: Understanding overall system design
+   - Contains: Component relationships, data flow, architecture decisions
+
+## Critical Features (DO NOT BREAK)
+
+These features are critical and must remain functional:
+
+1. **Music Mix Upload to Arweave** (`api/upload.js`)
+   - Uploads audio files to Arweave
+   - Updates artists.json in Firebase
+   - Handles mix thumbnails and artist images
+
+2. **Website Deployment to Arweave** (`api/deploy-website.js`)
+   - Generates HTML pages from artists.json
+   - Uploads website to Arweave
+   - Creates manifest
+   - Handles Vercel read-only filesystem constraints
+
+3. **Video Generation** (`worker/lib/ArweaveVideoGenerator.js`)
+   - Generates videos from audio and video segments
+   - Handles folder selection
+   - Validates inputs and outputs
+
+## Implementation Guidelines
+
+### When Implementing Features
+
+1. **Read relevant documentation first** - Check the docs listed above
+2. **Follow existing patterns** - Match code style and error handling patterns
+3. **Add validation** - Validate all inputs before processing
+4. **Handle errors gracefully** - Use try-catch, provide clear error messages
+5. **Log important operations** - Use console.log with clear prefixes like `[ComponentName]`
+6. **Test locally** - Test changes before committing
+7. **Update documentation** - Update relevant docs if adding new features
+
+### When Troubleshooting
+
+1. **Check TROUBLESHOOTING.md first** - Many common issues are documented
+2. **Review relevant process docs** - Understand the flow before debugging
+3. **Check logs** - Look for error messages with component prefixes
+4. **Verify inputs** - Check that inputs match expected format
+5. **Test incrementally** - Test one component at a time
+6. **Document new issues** - Add to TROUBLESHOOTING.md if not already covered
+
+### Code Patterns
+
+**Error Handling:**
+```javascript
+try {
+  // operation
+} catch (error) {
+  console.error(`[ComponentName] ❌ Error: ${error.message}`);
+  console.error(`[ComponentName] Stack: ${error.stack}`);
+  throw error; // or handle gracefully
+}
+```
+
+**Logging:**
+```javascript
+console.log(`[ComponentName] Starting operation...`);
+console.log(`[ComponentName] ✅ Success: ${result}`);
+console.warn(`[ComponentName] ⚠️  Warning: ${message}`);
+console.error(`[ComponentName] ❌ Error: ${error.message}`);
+```
+
+**Validation:**
+```javascript
+if (!input || !Array.isArray(input)) {
+  throw new Error('Input must be a non-empty array');
+}
+```
+
+## File Size Validation
+
+**Important:** File size validation for videos:
+- Minimum: 2MB (not 5MB - was too strict)
+- Also validates video streams using ffprobe
+- Accepts videos with valid streams even if slightly below threshold (70% of minimum)
+
+## Folder Selection System
+
+**Important:** Folder names are normalized:
+- Frontend removes `assets/` prefix before sending
+- Backend uses `folderMap` to map normalized names to Firebase Storage paths
+- Special case: `chicago-skyline-videos` → `assets/chicago-skyline-videos/`
+
+## Vercel Deployment
+
+**After completing any task, deploy to Vercel for testing:**
+
+```bash
+cd "/Users/bballi/Documents/Repos/Agent Tools/arweave-video-generator"
+vercel --prod --yes
+```
+
+**After deployment, provide the deployment URL:**
+- Check Vercel dashboard or CLI output for the deployment URL
+- Format: `https://arweave-video-generator-[hash]-[team].vercel.app`
+- Or production URL if configured
+
+## Git Workflow
+
+**Before committing:**
+1. Test changes locally if possible
+2. Review changes with `git diff`
+3. Ensure no sensitive data in commits
+4. Write clear commit messages
+
+**Commit message format:**
+```
+Brief description
+
+- Change 1
+- Change 2
+- Fix for issue X
+
+Fixes: [issue description]
+```
+
+## Environment Variables
+
+**Required for Vercel:**
+- `FIREBASE_SERVICE_ACCOUNT_KEY` - Firebase service account JSON (stringified)
+- `FIREBASE_STORAGE_BUCKET` - Firebase Storage bucket name
+- `ARWEAVE_WALLET_JWK` - Arweave wallet JSON (stringified)
+- `OPENAI_API_KEY` - OpenAI API key (for DALL-E fallback)
+
+**Required for GitHub Actions:**
+- Same as above, plus:
+- `GITHUB_TOKEN` - GitHub personal access token
+- `GITHUB_REPO` - Repository in format `owner/repo`
+
+## Testing Checklist
+
+Before considering a task complete:
+
+- [ ] Code follows existing patterns
+- [ ] Error handling is implemented
+- [ ] Logging is added for important operations
+- [ ] Documentation is updated if needed
+- [ ] Changes are committed and pushed
+- [ ] Deployed to Vercel for testing
+- [ ] Deployment URL is provided to user
+
+## Common Pitfalls to Avoid
+
+1. **Don't break critical features** - Always test upload and deployment features
+2. **Don't ignore Vercel constraints** - Read-only filesystem, use `/tmp` for writes
+3. **Don't use overly strict validation** - File size validation should be realistic
+4. **Don't forget to normalize folder names** - Frontend and backend must match
+5. **Don't skip error handling** - Always handle errors gracefully
+6. **Don't commit without testing** - Test locally or in staging first
+7. **Don't forget to deploy** - Always deploy to Vercel after completing tasks
+
+## Quick Reference
+
+**Deploy to Vercel:**
+```bash
+cd "/Users/bballi/Documents/Repos/Agent Tools/arweave-video-generator"
+vercel --prod --yes
+```
+
+**Check logs:**
+- Vercel: Dashboard → Functions → Logs
+- GitHub Actions: Repository → Actions → Workflow runs
+- Firebase: Console → Firestore/Storage
+
+**Test locally:**
+```bash
+# API endpoints
+vercel dev
+
+# Worker
+cd worker
+node processor.js
+```
+
+**Key file locations:**
+- API endpoints: `api/*.js`
+- Worker: `worker/lib/*.js`
+- Frontend: `public/index.html`
+- Documentation: `*.md` files in root
