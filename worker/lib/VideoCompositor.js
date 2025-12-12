@@ -476,7 +476,7 @@ export class VideoCompositor {
     let finalVideoLabel = currentInput; // Track final video label after fade
     const hasTextBeforeFade = allLayersBeforeFade.some(layer => layer.type === 'text');
     if (videoFadeStart > 0 && videoFadeDuration > 0) {
-      const fadeOutFilter = `${currentInput}fade=t=out:start_time=${videoFadeStart}:d=${videoFadeDuration}[faded_video]`;
+      const fadeOutFilter = `${currentInput}fade=t=out:st=${videoFadeStart}:d=${videoFadeDuration}[faded_video]`;
       filters.push(fadeOutFilter);
       currentInput = '[faded_video]';
       finalVideoLabel = '[faded_video]';
@@ -882,7 +882,7 @@ export class VideoCompositor {
       
       if (audioFadeStart > 0 && audioFadeDuration > 0) {
         // Apply audio fade out filter
-        command.push('-af', `afade=t=out:start_time=${audioFadeStart}:d=${audioFadeDuration}`);
+        command.push('-af', `afade=t=out:st=${audioFadeStart}:d=${audioFadeDuration}`);
         console.log(`[VideoCompositor] Adding audio fade out: ${audioFadeStart}s-${audioFadeStart + audioFadeDuration}s`);
       }
       
