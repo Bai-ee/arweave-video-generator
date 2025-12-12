@@ -649,7 +649,7 @@ textarea {
 
 .stepper-card {
   display: grid;
-  gap: 0.9rem;
+  gap: 1.5rem;
 }
 
 .step-block {
