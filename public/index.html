@@ -762,6 +762,19 @@
       </div>
     </div>
 
+    <!-- Deploy Website Modal -->
+    <div id="deployModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
+      <div style="background: radial-gradient(ellipse at center, rgba(20, 20, 30, 0.7) 0%, rgba(0, 0, 0, 0.6) 100%); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2 id="deployModalTitle" style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">🚀 Deploy Website</h2>
+          <button onclick="hideDeployModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
+        </div>
+        <div id="deployModalContent" style="color: var(--color-yellow-75);">
+          <!-- Content will be dynamically set -->
+        </div>
+      </div>
+    </div>
+
     <!-- Upload Modal -->
     <div id="uploadModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
       <div style="background: radial-gradient(ellipse at center, rgba(20, 20, 30, 0.7) 0%, rgba(0, 0, 0, 0.6) 100%); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
@@ -926,7 +939,12 @@
       
       const dot = element.querySelector('.status-dot');
       if (dot) {
-        dot.style.background = isHealthy ? '#10b981' : '#ef4444';
+        // Arweave indicator: RED when healthy (recording/live), others: GREEN when healthy
+        if (elementId === 'statusArweave') {
+          dot.style.background = isHealthy ? '#ef4444' : '#888888'; // Red when active, gray when down
+        } else {
+          dot.style.background = isHealthy ? '#10b981' : '#ef4444'; // Green when healthy, red when down
+        }
       }
     }
 
@@ -937,7 +955,7 @@
     });
 
     /**
-     * Open website (local or production)
+     * Open website (local or Arweave production)
      */
     window.openWebsite = function() {
       // Check if we're on localhost
@@ -947,8 +965,14 @@
         // For local testing, use the Python server on port 8080
         window.open('http://localhost:8080/index.html', '_blank');
       } else {
-        // For production, use the relative path
-        window.open('/website/index.html', '_blank');
+        // For production, check for stored Arweave URL first
+        const storedUrl = localStorage.getItem('latestArweaveWebsiteUrl');
+        if (storedUrl) {
+          window.open(storedUrl, '_blank');
+        } else {
+          // Fallback to relative path or show message
+          showToast('No deployed website URL found. Deploy website first.', 'warning');
+        }
       }
     };
     // Video filter settings
@@ -2722,6 +2746,24 @@
       }
     }
 
+    // Deploy modal functions
+    window.showDeployModal = function(title, content) {
+      document.getElementById('deployModalTitle').innerHTML = title;
+      document.getElementById('deployModalContent').innerHTML = content;
+      document.getElementById('deployModal').style.display = 'flex';
+    };
+    
+    window.hideDeployModal = function() {
+      document.getElementById('deployModal').style.display = 'none';
+    };
+    
+    // Close deploy modal when clicking outside
+    document.getElementById('deployModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'deployModal') {
+        hideDeployModal();
+      }
+    });
+
     window.deployWebsite = async function() {
       const deployBtn = document.getElementById('deployWebsiteBtn');
       const originalText = deployBtn.innerHTML;
@@ -2737,98 +2779,172 @@
         console.warn('Could not estimate cost:', error);
       }
       
-      // Show cost estimate and confirm
-      let confirmMessage = 'This will deploy the website to Arweave. This may take several minutes.\n\n';
+      // Build cost estimate display
+      let costHtml = '';
       if (estimateData && estimateData.success && estimateData.cost && estimateData.cost.costAR > 0) {
         const cost = estimateData.cost;
-        confirmMessage += `💰 Estimated cost: ${cost.costAR.toFixed(6)} AR (~$${cost.costUSD.toFixed(4)} USD)\n`;
-        if (estimateData.filesChanged !== undefined) {
-          confirmMessage += `📊 Files to upload: ${estimateData.filesChanged} (${estimateData.filesUnchanged || 0} unchanged will be reused)\n`;
-        }
-        confirmMessage += '\n';
-      }
-      confirmMessage += 'Continue?';
-      
-      if (!confirm(confirmMessage)) {
-        deployBtn.disabled = false;
-        deployBtn.innerHTML = originalText;
-        return;
-      }
-      
-      deployBtn.innerHTML = '⏳ Deploying...';
-      
-      try {
-        showToast('Starting website deployment to Arweave...', 'info');
-        
-        const response = await fetch('/api/deploy-website', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({})
-        });
-        
-        let data;
-        try {
-          data = await response.json();
-        } catch (jsonError) {
-          const text = await response.text();
-          console.error('Failed to parse JSON response:', text);
-          throw new Error(`Server returned invalid JSON: ${text.substring(0, 100)}`);
-        }
-        
-        if (!data.success) {
-          throw new Error(data.error || data.message || 'Deployment failed');
-        }
-        
-        // Show success with manifest URL
-        const manifestUrl = data.manifestUrl || `https://arweave.net/${data.manifestId}`;
-        const websiteUrl = data.websiteUrl || `https://arweave.net/${data.manifestId}/index.html`;
-        
-        showToast('✅ Website deployed successfully!', 'success');
-        
-        // Build cost info
-        let costInfo = '';
-        if (data.costEstimate && data.costEstimate.costAR > 0) {
-          costInfo = `\n💰 Deployment Cost: ${data.costEstimate.costAR.toFixed(6)} AR (~$${data.costEstimate.costUSD.toFixed(4)} USD)`;
-        }
-        
-        // Show detailed success message
-        const message = `
-🎉 Website Deployed Successfully!
-
-📋 Manifest ID: ${data.manifestId}
-📋 Manifest URL: ${manifestUrl}
-
-🌐 Website URLs (use /index.html):
-   Primary: ${websiteUrl}
-   Alternative: https://arweave.dev/${data.manifestId}/index.html
-   Alternative: https://ar-io.dev/${data.manifestId}/index.html
-
-📊 Files: ${data.filesUploaded} uploaded, ${data.filesUnchanged || 0} unchanged (reused)
-${costInfo}
-
-Your website is now live on Arweave!
-Note: Access the website using the URLs above with /index.html included.
+        costHtml = `
+          <div style="background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 5px; padding: 1rem; margin-bottom: 1rem;">
+            <div style="font-size: 0.875rem; margin-bottom: 0.5rem;">💰 <strong>Estimated Cost:</strong></div>
+            <div style="font-size: 1.25rem; font-family: var(--font-mathias);">${cost.costAR.toFixed(6)} AR (~$${cost.costUSD.toFixed(4)} USD)</div>
+            ${estimateData.filesChanged !== undefined ? `
+              <div style="font-size: 0.75rem; margin-top: 0.5rem; color: #888;">
+                📊 ${estimateData.filesChanged} files to upload (${estimateData.filesUnchanged || 0} unchanged will be reused)
+              </div>
+            ` : ''}
+          </div>
         `;
-        
-        alert(message);
-        
-        // Copy manifest URL to clipboard if possible
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(websiteUrl).then(() => {
-            console.log('Website URL copied to clipboard');
-          });
-        }
-        
-      } catch (error) {
-        console.error('Error deploying website:', error);
-        showToast(`❌ Deployment failed: ${error.message}`, 'error');
-        alert(`Deployment failed: ${error.message}`);
-      } finally {
-        deployBtn.disabled = false;
-        deployBtn.innerHTML = originalText;
       }
+      
+      // Show confirmation modal
+      const confirmContent = `
+        <div style="margin-bottom: 1rem;">
+          This will deploy the website to Arweave. This may take several minutes.
+        </div>
+        ${costHtml}
+        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+          <button 
+            id="confirmDeployBtn"
+            style="flex: 1; padding: 0.75rem; background: #10b981; color: white; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
+          >
+            Yes, Deploy
+          </button>
+          <button 
+            onclick="hideDeployModal(); document.getElementById('deployWebsiteBtn').disabled = false; document.getElementById('deployWebsiteBtn').innerHTML = 'Deploy Website';"
+            style="flex: 1; padding: 0.75rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
+          >
+            Cancel
+          </button>
+        </div>
+      `;
+      
+      showDeployModal('🚀 Deploy Website to Arweave', confirmContent);
+      
+      // Add click handler for confirm button
+      document.getElementById('confirmDeployBtn').onclick = async function() {
+        hideDeployModal();
+        deployBtn.innerHTML = '⏳ Deploying...';
+        
+        try {
+          showToast('Starting website deployment to Arweave...', 'info');
+          
+          const response = await fetch('/api/deploy-website', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+          });
+          
+          let data;
+          try {
+            data = await response.json();
+          } catch (jsonError) {
+            const text = await response.text();
+            console.error('Failed to parse JSON response:', text);
+            throw new Error(`Server returned invalid JSON: ${text.substring(0, 100)}`);
+          }
+          
+          if (!data.success) {
+            throw new Error(data.error || data.message || 'Deployment failed');
+          }
+          
+          // Show success with manifest URL
+          const manifestUrl = data.manifestUrl || `https://arweave.net/${data.manifestId}`;
+          const websiteUrl = data.websiteUrl || `https://arweave.net/${data.manifestId}/index.html`;
+          
+          // Store the latest website URL for "View Site" button
+          localStorage.setItem('latestArweaveWebsiteUrl', websiteUrl);
+          
+          showToast('✅ Website deployed successfully!', 'success');
+          
+          // Build cost info
+          let costInfoHtml = '';
+          if (data.costEstimate && data.costEstimate.costAR > 0) {
+            costInfoHtml = `
+              <div style="margin-top: 0.75rem; font-size: 0.875rem;">
+                💰 <strong>Cost:</strong> ${data.costEstimate.costAR.toFixed(6)} AR (~$${data.costEstimate.costUSD.toFixed(4)} USD)
+              </div>
+            `;
+          }
+          
+          // Show styled success modal
+          const successContent = `
+            <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1.25rem; color: #10b981;">
+              <strong style="font-size: 1.1rem;">✅ Website Deployed Successfully!</strong>
+              
+              <div style="margin-top: 1rem; font-size: 0.875rem;">
+                <div style="margin-bottom: 0.5rem;">📋 <strong>Manifest ID:</strong></div>
+                <div style="word-break: break-all; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 3px; font-family: monospace; font-size: 0.75rem;">${data.manifestId}</div>
+              </div>
+              
+              <div style="margin-top: 1rem; font-size: 0.875rem;">
+                <div style="margin-bottom: 0.5rem;">🌐 <strong>Website URL:</strong></div>
+                <a href="${websiteUrl}" target="_blank" rel="noopener noreferrer" style="color: #10b981; text-decoration: underline; word-break: break-all; display: block; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 3px;">
+                  ${websiteUrl}
+                </a>
+              </div>
+              
+              <div style="margin-top: 0.75rem; font-size: 0.875rem;">
+                📊 <strong>Files:</strong> ${data.filesUploaded} uploaded, ${data.filesUnchanged || 0} unchanged
+              </div>
+              
+              ${costInfoHtml}
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+              <button 
+                onclick="window.open('${websiteUrl}', '_blank'); hideDeployModal();"
+                style="flex: 1; padding: 0.75rem; background: #10b981; color: white; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
+              >
+                View Website
+              </button>
+              <button 
+                onclick="hideDeployModal();"
+                style="flex: 1; padding: 0.75rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
+              >
+                Close
+              </button>
+            </div>
+          `;
+          
+          showDeployModal('🎉 Deployment Complete', successContent);
+          
+          // Copy website URL to clipboard if possible
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(websiteUrl).then(() => {
+              console.log('Website URL copied to clipboard');
+            });
+          }
+          
+        } catch (error) {
+          console.error('Error deploying website:', error);
+          showToast(`❌ Deployment failed: ${error.message}`, 'error');
+          
+          // Show styled error modal
+          const errorContent = `
+            <div style="background: #5d0a0a; border: 2px solid #ef4444; border-radius: 5px; padding: 1.25rem; color: #ef4444;">
+              <strong style="font-size: 1.1rem;">❌ Deployment Failed</strong>
+              <div style="margin-top: 1rem; font-size: 0.875rem;">
+                ${error.message}
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+              <button 
+                onclick="hideDeployModal();"
+                style="flex: 1; padding: 0.75rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
+              >
+                Close
+              </button>
+            </div>
+          `;
+          
+          showDeployModal('⚠️ Deployment Error', errorContent);
+        } finally {
+          deployBtn.disabled = false;
+          deployBtn.innerHTML = originalText;
+        }
+      };
     }
 
     // Close modals when clicking outside
