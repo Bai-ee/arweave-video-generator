@@ -750,7 +750,7 @@ export class VideoCompositor {
     // Use the ffmpegPath determined at module load
     // In GitHub Actions, this will be system FFmpeg (has drawtext)
     const command = [ffmpegPath];
-    let filterComplexFile = null;
+    let filterComplexFile = null; // Will be set if filter is written to file
 
     // Input base image/video
     const isImage = config.baseVideo.match(/\.(jpg|jpeg|png|webp)$/i);
