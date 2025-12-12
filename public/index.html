@@ -129,7 +129,38 @@
   <header class="header-edittrax">
     <div class="max-w-6xl mx-auto pt-3" style="position: relative;">
       
-      <!-- Navigation and top actions removed -->
+      <!-- System Status and Actions -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0 1rem; flex-wrap: wrap; gap: 0.75rem;">
+        <!-- System Health Status -->
+        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+          <div id="statusVideoGen" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
+            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+            <span style="font-family: var(--font-body); color: var(--color-yellow-75); font-size: 0.75rem; white-space: nowrap;">Video Gen</span>
+          </div>
+          <div id="statusArweave" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
+            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+            <span style="font-family: var(--font-body); color: var(--color-yellow-75); font-size: 0.75rem; white-space: nowrap;">Arweave</span>
+          </div>
+          <div id="statusWebsite" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
+            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+            <span style="font-family: var(--font-body); color: var(--color-yellow-75); font-size: 0.75rem; white-space: nowrap;">Website</span>
+          </div>
+          <div id="statusStorage" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
+            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+            <span style="font-family: var(--font-body); color: var(--color-yellow-75); font-size: 0.75rem; white-space: nowrap;">Storage</span>
+          </div>
+        </div>
+        
+        <!-- Refresh Button -->
+        <button 
+          onclick="window.location.reload()"
+          style="padding: 0.5rem 1rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; cursor: pointer; font-family: var(--font-mathias); font-size: 0.75rem; font-weight: bold; transition: all 0.3s ease; white-space: nowrap;"
+          onmouseover="this.style.background='var(--color-yellow-75)'; this.style.color='black';"
+          onmouseout="this.style.background='transparent'; this.style.color='var(--color-yellow-75)';"
+        >
+          REFRESH
+        </button>
+      </div>
       
       <div class="flex flex-col items-center gap-4 w-full px-4 sm:px-0">
         <div class="logo-container flex flex-col items-center gap-2">
@@ -812,6 +843,72 @@
     // Video generation state
     let activeJobs = new Map(); // jobId -> polling interval
     let videos = []; // Cached video list
+
+    /**
+     * System Health Check
+     */
+    async function checkSystemHealth() {
+      const statuses = {
+        videoGen: false,
+        arweave: false,
+        website: false,
+        storage: false
+      };
+
+      try {
+        // Check Video Generation API
+        const videoGenResponse = await fetch('/api/videos', { method: 'HEAD' });
+        statuses.videoGen = videoGenResponse.ok;
+      } catch (e) {
+        console.warn('Video Gen check failed:', e);
+      }
+
+      try {
+        // Check Arweave API
+        const arweaveResponse = await fetch('/api/archive-manifest', { method: 'HEAD' });
+        statuses.arweave = arweaveResponse.ok;
+      } catch (e) {
+        console.warn('Arweave check failed:', e);
+      }
+
+      try {
+        // Check Website deployment
+        const websiteResponse = await fetch('/api/website-sync', { method: 'HEAD' });
+        statuses.website = websiteResponse.ok;
+      } catch (e) {
+        console.warn('Website check failed:', e);
+      }
+
+      try {
+        // Check Storage (folders endpoint)
+        const storageResponse = await fetch('/api/folders', { method: 'HEAD' });
+        statuses.storage = storageResponse.ok;
+      } catch (e) {
+        console.warn('Storage check failed:', e);
+      }
+
+      // Update UI
+      updateStatusIndicator('statusVideoGen', statuses.videoGen);
+      updateStatusIndicator('statusArweave', statuses.arweave);
+      updateStatusIndicator('statusWebsite', statuses.website);
+      updateStatusIndicator('statusStorage', statuses.storage);
+    }
+
+    function updateStatusIndicator(elementId, isHealthy) {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+      
+      const dot = element.querySelector('.status-dot');
+      if (dot) {
+        dot.style.background = isHealthy ? '#10b981' : '#ef4444';
+      }
+    }
+
+    // Check system health on load and every 30 seconds
+    document.addEventListener('DOMContentLoaded', () => {
+      checkSystemHealth();
+      setInterval(checkSystemHealth, 30000);
+    });
 
     /**
      * Open website (local or production)
