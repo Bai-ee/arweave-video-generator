@@ -556,12 +556,6 @@
 
   <!-- Main Content -->
   <main class="max-w-6xl mx-auto pb-4" style="width: 100%; box-sizing: border-box; overflow: visible; position: relative; padding-top: 2rem;">
-    
-    <!-- Loading State -->
-    <div id="loadingState" class="text-center py-12" style="display: none;">
-      <div class="inline-block w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mb-4" style="border-color: var(--color-yellow-75); border-top-color: transparent;"></div>
-      <p style="color: var(--color-yellow-75);">Loading videos...</p>
-    </div>
 
     <!-- Error State -->
     <div id="errorState" class="hidden card rounded p-4 mb-4" style="border: 2px solid var(--color-red-75);">
@@ -1502,7 +1496,6 @@
      * Load all videos from API
      */
     window.loadVideos = async function() {
-      const loadingState = document.getElementById('loadingState');
       const headerLoadingState = document.getElementById('headerLoadingState');
       const logoGif = document.getElementById('logoGif');
       const resultsContainer = document.getElementById('resultsContainer');
@@ -1514,7 +1507,6 @@
         headerLoadingState.style.display = 'flex';
       }
       
-      loadingState.style.display = 'block';
       resultsContainer.style.display = 'none';
       errorState.classList.add('hidden');
 
@@ -1580,7 +1572,6 @@
           logoGif.style.display = 'block';
         }
         
-        loadingState.style.display = 'none';
         resultsContainer.style.display = 'block';
       }
     }
