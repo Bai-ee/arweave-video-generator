@@ -252,6 +252,33 @@ class ArweaveVideoGenerator {
     }
 
     /**
+     * Sanitize text for display in video overlay
+     * Handles placeholder text and problematic characters
+     */
+    sanitizeTextForDisplay(text) {
+        if (!text) return '';
+        
+        // Replace common placeholders with appropriate text
+        let sanitized = text
+            // Replace ?? with blank or "TBA"
+            .replace(/\s*\?\?\s*/g, '') // Remove ?? placeholder
+            .replace(/\s+@\s+UE\.info\s*$/i, ' @ UndergroundExistence.info') // Normalize UE.info references
+            .replace(/\s+@\s+UndergroundExistence\.info\s+/i, ' @ UndergroundExistence.info ') // Normalize spacing
+            // Replace smart quotes with regular quotes for better FFmpeg compatibility
+            .replace(/['']/g, "'") // Smart single quotes -> regular apostrophe
+            .replace(/[""]/g, '"') // Smart double quotes -> regular quotes
+            // Replace em/en dashes with regular hyphen
+            .replace(/[—–]/g, '-')
+            // Remove any remaining question marks that look like placeholders
+            .replace(/\s+\?\s+/g, ' ')
+            // Clean up multiple spaces
+            .replace(/\s+/g, ' ')
+            .trim();
+        
+        return sanitized;
+    }
+
+    /**
      * Generate text layers for video overlay
      */
     generateTextLayers(artist, mixTitle, width, height) {
@@ -651,7 +678,10 @@ class ArweaveVideoGenerator {
             const textY = height - (textFontSize * 3.5) - 30; // Moved up significantly: 3.5x font size + 30px margin
             
             // Build text content: Artist (line break) Mix Title (line break) UndergroundExistence.info
-            const textContent = `${audioArtist}\n${audioMixTitle}\nUndergroundExistence.info`;
+            // Sanitize text to replace placeholder characters and ensure clean display
+            const sanitizedArtist = this.sanitizeTextForDisplay(audioArtist);
+            const sanitizedMixTitle = this.sanitizeTextForDisplay(audioMixTitle);
+            const textContent = `${sanitizedArtist}\n${sanitizedMixTitle}\nUndergroundExistence.info`;
             
             // Use system Arial/sans-serif (no custom font for this small text)
             // FFmpeg will use default font if no fontfile specified
