@@ -56,14 +56,14 @@
     "artistImageFilename": "img/artists/andrew_emil.jpg",
     "artistGenre": "techno",
     "mixes": [
-       {
+      {
         "mixTitle": "Live @ Viva Acid '24",
         "mixArweaveURL": "https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM",
         "mixDateYear": "'24",
         "mixDuration": "120:00",
         "mixImageFilename": "img/covers/andrewb2bredeye.png"
       },
-       {
+      {
         "mixTitle": "Live @ Flammable '19",
         "mixArweaveURL": "https://i3iyj63muibfla4rgtxiuis72fy6iwbg3rcz7vda2try7xr3kzia.arweave.net/RtGE-2yiAlWDkTTuiiJf0XHkWCbcRZ_UYNTjj947VlA",
         "mixDateYear": "'19",
@@ -99,14 +99,14 @@
         "mixDuration": "61:00",
         "mixImageFilename": "https://73wboszzo3ctg377phl52yzv5wdmtm2sr4yjgjeyfybtssfnpsqq.arweave.net/_uwXSzl2xTNv_3nX3WM17YbJs1KPMJMkmC4DOUitfKE"
       },
-       {
+      {
         "mixTitle": "Rough Times",
         "mixArweaveURL": "https://ynfuoawcqrbjqsood6erdnboyvcy7p7ndipmphftwtehjy2to5xq.arweave.net/w0tHAsKEQphJzh-JEbQuxUWPv-0aHsecs7TIdONTd28",
         "mixDateYear": "'16",
         "mixDuration": "61:00",
         "mixImageFilename": "img/roughtimes.jpg"
       },
-       {
+      {
         "mixTitle": "Love Manifesto (2) V-Day Mix",
         "mixArweaveURL": "https://avbaf4pajrqslakfjysssiaqk266x6wkmjm3fnf3cz4yhoxf6aoa.arweave.net/BUIC8eBMYSWBRU4lKSAQVr3r-spiWbK0uxZ5g7rl8Bw",
         "mixDateYear": "'24",
@@ -142,14 +142,14 @@
     "artistImageFilename": "img/artists/josh_zeitler.png",
     "artistGenre": "acid",
     "mixes": [
-       {
+      {
         "mixTitle": "Josh Z & Bai-ee B2B Podlasie 7/18/25",
         "mixArweaveURL": "https://v5pcq77sqiqhc2xkg4xxetpezy3nb673darvogh7cvdxg3twop5a.ardrive.net/r14of_KCIHFq6jcvck3kzjbQ-_sYI1cY_xVHc252c_o",
         "mixDateYear": "7/18/25",
         "mixDuration": "60:00",
         "mixImageFilename": "img/artists/JoshZ_B2B_Baiee.png"
       },
-       {
+      {
         "mixTitle": "Live at Studio409 New York (2024)",
         "mixArweaveURL": "https://uzh5clhxybxsww3li3gmcodyxok7dwa46vfq7etzn6owprhujdea.arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg",
         "mixDateYear": "2024",
@@ -187,9 +187,9 @@
     "artistGenre": "techno",
     "mixes": [
       {
-        "mixTitle": "Live @ UE.info ??",
+        "mixTitle": "Live @ UE.info",
         "mixArweaveURL": "https://us52zeiw62ei2egubws4huywpyw4nzvjxueism7pkt32pcjyoizq.arweave.net/pLuskRb2iI0Q1A2lw9MWfi3G5qm9CIkz71T3p4k4cjM",
-        "mixDateYear": "20??",
+        "mixDateYear": "20TBA",
         "mixDuration": "120:00",
         "mixImageFilename": "img/artists/js.jpg"
       }
@@ -232,9 +232,9 @@
     "artistGenre": "house",
     "mixes": [
       {
-        "mixTitle": "Live @ UE.info ??",
+        "mixTitle": "Live @ UE.info",
         "mixArweaveURL": "https://embbv2sphugsxwzrx222jkjpcqbj2unqbn5yaiqh4rgoacvigycq.arweave.net/IwIa6k89DSvbMb61pKkvFAKdUbALe4AiB-RM4AqoNgU",
-        "mixDateYear": "20??",
+        "mixDateYear": "20TBA",
         "mixDuration": "60:00",
         "mixImageFilename": "img/artists/ike.jpg"
       }
@@ -307,7 +307,7 @@
       }
     ]
   },
-    {
+  {
     "artistName": "VIVA ACID",
     "artistFilename": "vivaacid.html",
     "artistImageFilename": "img/artists/vivaacid.png",
@@ -362,7 +362,7 @@
         "mixDuration": "120:00",
         "mixImageFilename": "img/covers/andrewb2bredeye.png"
       },
-       {
+      {
         "mixTitle": "Live @ Viva Acid '24",
         "mixArweaveURL": "https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0",
         "mixDateYear": "'24",
