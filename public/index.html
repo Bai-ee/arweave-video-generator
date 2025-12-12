@@ -59,6 +59,20 @@
       const toggle = panel.previousElementSibling;
       const wasOpen = panel.classList.contains('open');
       
+      // Close all other sections (accordion behavior)
+      if (!wasOpen) {
+        const allPanels = document.querySelectorAll('.collapsible-body');
+        allPanels.forEach(otherPanel => {
+          if (otherPanel.id !== sectionId && otherPanel.classList.contains('open')) {
+            otherPanel.classList.remove('open');
+            const otherToggle = otherPanel.previousElementSibling;
+            if (otherToggle && otherToggle.tagName === 'BUTTON') {
+              otherToggle.setAttribute('aria-expanded', 'false');
+            }
+          }
+        });
+      }
+      
       // Toggle the open class
       if (wasOpen) {
         panel.classList.remove('open');
