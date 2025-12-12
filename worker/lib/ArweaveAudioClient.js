@@ -34,8 +34,8 @@ try {
  */
 class ArweaveAudioClient {
   constructor() {
-    // Load artists data (async, but don't await - will be loaded when needed)
-    this.loadArtistsData().catch(err => {
+    // Store loading promise so we can await it when needed
+    this._artistsLoadPromise = this.loadArtistsData().catch(err => {
       console.error('[ArweaveAudioClient] Failed to load artists data:', err);
     });
     
@@ -49,6 +49,22 @@ class ArweaveAudioClient {
     // Ensure output directory exists
     this.outputDir = path.join(process.cwd(), 'content', 'audio');
     fs.ensureDirSync(this.outputDir);
+  }
+
+  /**
+   * Ensure artists data is loaded before proceeding
+   */
+  async ensureArtistsLoaded() {
+    if (this._artistsLoadPromise) {
+      await this._artistsLoadPromise;
+      this._artistsLoadPromise = null; // Only wait once
+    }
+    
+    // If still no data, try loading again
+    if (!this.artistsData || this.artistsData.length === 0) {
+      console.log('[ArweaveAudioClient] Artists data not ready, loading now...');
+      await this.loadArtistsData();
+    }
   }
 
   /**
@@ -599,6 +615,9 @@ class ArweaveAudioClient {
     console.log(`[ArweaveAudioClient] 💬 Prompt:`, prompt);
     
     try {
+      // Ensure artists data is loaded before proceeding
+      await this.ensureArtistsLoaded();
+      
       // Check if we have any artists data
       console.log(`[ArweaveAudioClient] 📋 Artists data available: ${this.artistsData ? this.artistsData.length : 0} artists`);
       if (!this.artistsData || this.artistsData.length === 0) {
