@@ -65,63 +65,63 @@ export default async function handler(req, res) {
     initializeFirebaseAdmin();
     const db = getFirestore();
     
-    // Get all artists from Firebase
-    const artistsRef = db.collection('artists');
-    const snapshot = await artistsRef.get();
+    // Get artists from Firebase (stored as system/artists document)
+    const artistsRef = db.collection('system').doc('artists');
+    const artistsDoc = await artistsRef.get();
     
-    console.log(`[Migrate Image URLs] Found ${snapshot.size} artists`);
+    if (!artistsDoc.exists) {
+      return res.status(404).json({ success: false, error: 'Artists document not found' });
+    }
+    
+    const data = artistsDoc.data();
+    const artists = data.artists || [];
+    
+    console.log(`[Migrate Image URLs] Found ${artists.length} artists`);
     
     let updatedCount = 0;
-    let skippedCount = 0;
     const updates = [];
     
-    for (const doc of snapshot.docs) {
-      const artist = doc.data();
-      const artistUpdates = {};
-      let hasUpdates = false;
+    const updatedArtists = artists.map(artist => {
+      let artistUpdated = false;
+      const updatedArtist = { ...artist };
       
       // Check artist image
       const artistImg = artist.artistImageFilename;
       if (artistImg && !artistImg.startsWith('http')) {
         const mapping = IMAGE_MAPPING[artistImg];
         if (mapping) {
-          artistUpdates.artistImageFilename = mapping.arweaveUrl;
-          hasUpdates = true;
+          updatedArtist.artistImageFilename = mapping.arweaveUrl;
+          artistUpdated = true;
           updates.push({ artist: artist.artistName, field: 'artistImage', from: artistImg, to: mapping.arweaveUrl });
         }
       }
       
       // Check mix images
       if (artist.mixes && Array.isArray(artist.mixes)) {
-        let mixesChanged = false;
-        const updatedMixes = artist.mixes.map(mix => {
+        updatedArtist.mixes = artist.mixes.map(mix => {
           const mixImg = mix.mixImageFilename;
           if (mixImg && !mixImg.startsWith('http')) {
             const mapping = IMAGE_MAPPING[mixImg];
             if (mapping) {
-              mixesChanged = true;
+              artistUpdated = true;
               updates.push({ artist: artist.artistName, mix: mix.mixTitle, field: 'mixImage', from: mixImg, to: mapping.arweaveUrl });
               return { ...mix, mixImageFilename: mapping.arweaveUrl };
             }
           }
           return mix;
         });
-        
-        if (mixesChanged) {
-          artistUpdates.mixes = updatedMixes;
-          hasUpdates = true;
-        }
       }
       
-      // Apply updates if any
-      if (hasUpdates) {
-        await doc.ref.update(artistUpdates);
+      if (artistUpdated) {
         updatedCount++;
-        console.log(`[Migrate Image URLs] Updated: ${artist.artistName || doc.id}`);
-      } else {
-        skippedCount++;
+        console.log(`[Migrate Image URLs] Updated: ${artist.artistName}`);
       }
-    }
+      
+      return updatedArtist;
+    });
+    
+    // Save updated artists back to Firebase
+    await artistsRef.update({ artists: updatedArtists });
     
     // Save the mapping to Firebase for future reference
     const mappingRef = db.collection('system').doc('image-asset-mapping');
@@ -138,8 +138,8 @@ export default async function handler(req, res) {
       success: true,
       message: 'Image URL migration complete',
       stats: {
+        totalArtists: artists.length,
         artistsUpdated: updatedCount,
-        artistsSkipped: skippedCount,
         totalUpdates: updates.length,
         imagesInMapping: Object.keys(IMAGE_MAPPING).length
       },
