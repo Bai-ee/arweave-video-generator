@@ -224,11 +224,13 @@ export class VideoCompositor {
         const fontSize = layer.fontSize || Math.round(layer.size.height * 0.7); // 70% of layer height or stored value
 
         // Escape text for FFmpeg drawtext filter
-        // Need to escape: single quotes, colons, brackets, parentheses, backslashes, newlines, and other special chars
+        // Need to escape: single quotes, colons, brackets, parentheses, backslashes, and other special chars
+        // For newlines, FFmpeg drawtext uses %{n} syntax (NOT \n)
         let escapedText = layer.source
           .replace(/\\/g, '\\\\')  // Escape backslashes first
-          .replace(/\n/g, '\\n')    // Escape newlines (CRITICAL for multi-line text)
           .replace(/\r/g, '')       // Remove carriage returns
+          .replace(/%/g, '%%')      // Escape percent signs BEFORE adding %{n}
+          .replace(/\n/g, '%{n}')   // Use FFmpeg's %{n} for newlines in drawtext
           .replace(/'/g, "\\'")     // Escape single quotes
           .replace(/"/g, '\\"')     // Escape double quotes
           .replace(/:/g, "\\:")     // Escape colons
@@ -525,10 +527,12 @@ export class VideoCompositor {
           const outputLabel = `[text_layer_after${textLayerIndex}]`;
           const fontSize = layer.fontSize || Math.round(layer.size.height * 0.7);
           // Escape text for FFmpeg drawtext filter (same as above)
+          // For newlines, FFmpeg drawtext uses %{n} syntax (NOT \n)
           let escapedText = layer.source
             .replace(/\\/g, '\\\\')  // Escape backslashes first
-            .replace(/\n/g, '\\n')    // Escape newlines (CRITICAL for multi-line text)
             .replace(/\r/g, '')       // Remove carriage returns
+            .replace(/%/g, '%%')      // Escape percent signs BEFORE adding %{n}
+            .replace(/\n/g, '%{n}')   // Use FFmpeg's %{n} for newlines in drawtext
             .replace(/'/g, "\\'")     // Escape single quotes
             .replace(/"/g, '\\"')     // Escape double quotes
             .replace(/:/g, "\\:")     // Escape colons
@@ -796,7 +800,8 @@ export class VideoCompositor {
       
       // Use file method if filter has text or is long (prevents truncation)
       if (hasText || isLong) {
-        const tempDir = path.join(process.cwd(), 'worker', 'temp-uploads');
+        // Use temp-uploads in cwd directly (cwd is already the worker directory)
+        const tempDir = path.join(process.cwd(), 'temp-uploads');
         await fs.ensureDir(tempDir);
         filterComplexFile = path.join(tempDir, `filter_complex_${Date.now()}.txt`);
         await fs.writeFile(filterComplexFile, filterComplex, 'utf8');
