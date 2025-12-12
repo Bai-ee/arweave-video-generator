@@ -788,16 +788,19 @@ export class VideoCompositor {
       command.push('-i', layer.source);
     });
 
-    // Filter complex - write to file if too long to avoid command-line length issues
+    // Filter complex - write to file to avoid command-line truncation issues
+    // Always use file method for filters with text (drawtext) or if longer than 2000 chars
     if (filterComplex) {
-      // If filter_complex is longer than 8000 chars, write to temp file
-      // This prevents command-line truncation and parsing issues
-      if (filterComplex.length > 8000) {
+      const hasText = filterComplex.includes('drawtext');
+      const isLong = filterComplex.length > 2000;
+      
+      // Use file method if filter has text or is long (prevents truncation)
+      if (hasText || isLong) {
         const tempDir = path.join(process.cwd(), 'worker', 'temp-uploads');
         await fs.ensureDir(tempDir);
         filterComplexFile = path.join(tempDir, `filter_complex_${Date.now()}.txt`);
         await fs.writeFile(filterComplexFile, filterComplex, 'utf8');
-        console.log(`[VideoCompositor] Filter complex too long (${filterComplex.length} chars), wrote to file: ${path.basename(filterComplexFile)}`);
+        console.log(`[VideoCompositor] Filter complex ${hasText ? 'has text' : 'is long'} (${filterComplex.length} chars), wrote to file: ${path.basename(filterComplexFile)}`);
         command.push('-filter_complex_script', filterComplexFile);
       } else {
         console.log(`[VideoCompositor] Filter complex length: ${filterComplex.length} chars (using command-line arg)`);
