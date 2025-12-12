@@ -789,7 +789,6 @@ export class VideoCompositor {
     });
 
     // Filter complex - write to file if too long to avoid command-line length issues
-    let filterComplexFile = null;
     if (filterComplex) {
       // If filter_complex is longer than 8000 chars, write to temp file
       // This prevents command-line truncation and parsing issues
