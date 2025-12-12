@@ -122,8 +122,11 @@ export class VideoCompositor {
       // Build filter complex
       const filterComplex = this.buildFilterComplex(config);
 
-      // Build FFmpeg command
-      const command = this.buildFFmpegCommand(config, filterComplex, hasAudioStream);
+      // Build FFmpeg command (now async due to potential file write)
+      const { command, filterComplexFile } = await this.buildFFmpegCommand(config, filterComplex, hasAudioStream);
+      
+      // Store filterComplexFile reference for cleanup
+      let filterFile = filterComplexFile;
 
       console.log('[VideoCompositor] Executing FFmpeg composition...');
 
@@ -131,9 +134,9 @@ export class VideoCompositor {
       const result = await this.executeFFmpeg(command, config.outputPath);
       
       // Clean up filter complex file if it was created
-      if (filterComplexFile) {
+      if (filterFile) {
         try {
-          await fs.remove(filterComplexFile);
+          await fs.remove(filterFile);
           console.log(`[VideoCompositor] Cleaned up filter complex file`);
         } catch (cleanupError) {
           console.warn(`[VideoCompositor] Failed to cleanup filter complex file: ${cleanupError.message}`);
@@ -144,10 +147,10 @@ export class VideoCompositor {
     } catch (error) {
       console.error('[VideoCompositor] Error composing video:', error);
       
-      // Clean up filter complex file if it was created
-      if (filterComplexFile) {
+      // Clean up filter complex file if it was created (from outer scope)
+      if (typeof filterFile !== 'undefined' && filterFile) {
         try {
-          await fs.remove(filterComplexFile);
+          await fs.remove(filterFile);
         } catch (cleanupError) {
           // Ignore cleanup errors in error path
         }
@@ -741,12 +744,13 @@ export class VideoCompositor {
   }
 
   /**
-   * Build FFmpeg command array
+   * Build FFmpeg command array (async due to potential filter file write)
    */
-  buildFFmpegCommand(config, filterComplex, hasAudioStream = true) {
+  async buildFFmpegCommand(config, filterComplex, hasAudioStream = true) {
     // Use the ffmpegPath determined at module load
     // In GitHub Actions, this will be system FFmpeg (has drawtext)
     const command = [ffmpegPath];
+    let filterComplexFile = null;
 
     // Input base image/video
     const isImage = config.baseVideo.match(/\.(jpg|jpeg|png|webp)$/i);
@@ -940,7 +944,7 @@ export class VideoCompositor {
     // Output
     command.push('-y', config.outputPath);
 
-    return command;
+    return { command, filterComplexFile };
   }
 
   /**
