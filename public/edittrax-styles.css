@@ -629,9 +629,17 @@ textarea {
 }
 
 .collapsible-toggle .chevron {
-  font-size: 1rem;
+  font-size: 2rem;
   transition: transform 0.25s ease;
   color: #111;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+  min-height: 50px;
 }
 
 .collapsible-toggle[aria-expanded="true"] .chevron {
