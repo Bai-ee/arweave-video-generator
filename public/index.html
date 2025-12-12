@@ -919,6 +919,7 @@
       loadVideos();
       loadAvailableFolders();
       populateUploadFolderSelect();
+      loadFolders(); // Load uploaded video folders
     });
 
     /**
@@ -2690,7 +2691,7 @@ Note: Access the website using the URLs above with /index.html included.
     /**
      * Load folders with video counts
      */
-    async function loadFolders() {
+    window.loadFolders = async function() {
       const foldersGrid = document.getElementById('foldersGrid');
       const foldersLoading = document.getElementById('foldersLoading');
       
@@ -2750,7 +2751,7 @@ Note: Access the website using the URLs above with /index.html included.
     /**
      * Open a folder to view its videos
      */
-    async function openFolder(folderName) {
+    window.openFolder = async function(folderName) {
       currentFolder = folderName;
       
       const folderListView = document.getElementById('folderListView');
@@ -2899,7 +2900,7 @@ Note: Access the website using the URLs above with /index.html included.
     /**
      * Delete a video from Firebase Storage and UI
      */
-    async function deleteVideo(folderName, fileName) {
+    window.deleteVideo = async function(folderName, fileName) {
       if (!confirm(`Are you sure you want to delete "${fileName}"?\n\nThis action cannot be undone.`)) {
         return;
       }
