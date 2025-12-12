@@ -48,6 +48,41 @@
     };
   </script>
 
+  <!-- Define toggleCollapsible early so it's available for onclick handlers -->
+  <script>
+    window.toggleCollapsible = function(sectionId) {
+      const panel = document.getElementById(sectionId);
+      if (!panel) {
+        console.error(`[toggleCollapsible] Panel not found: ${sectionId}`);
+        return;
+      }
+      const toggle = panel.previousElementSibling;
+      const wasOpen = panel.classList.contains('open');
+      
+      // Toggle the open class
+      if (wasOpen) {
+        panel.classList.remove('open');
+      } else {
+        panel.classList.add('open');
+      }
+      
+      const isNowOpen = panel.classList.contains('open');
+      
+      // Update aria-expanded attribute
+      if (toggle && toggle.tagName === 'BUTTON') {
+        toggle.setAttribute('aria-expanded', isNowOpen.toString());
+      }
+      
+      // Load archive data when archive section is opened
+      if (sectionId === 'archiveSection' && isNowOpen && !wasOpen) {
+        setTimeout(() => {
+          if (typeof loadArchiveFolders === 'function') loadArchiveFolders();
+          if (typeof loadArchiveManifest === 'function') loadArchiveManifest();
+        }, 100);
+      }
+    };
+  </script>
+
   <style>
     /* Keep essential styles from original */
     html {
@@ -835,40 +870,7 @@
       dismissedVideos = new Set();
     }
 
-    /**
-     * Toggle collapsible sections for the guided controls
-     */
-    window.toggleCollapsible = function(sectionId) {
-      const panel = document.getElementById(sectionId);
-      if (!panel) {
-        console.error(`[toggleCollapsible] Panel not found: ${sectionId}`);
-        return;
-      }
-      const toggle = panel.previousElementSibling;
-      const wasOpen = panel.classList.contains('open');
-      
-      // Toggle the open class
-      if (wasOpen) {
-        panel.classList.remove('open');
-      } else {
-        panel.classList.add('open');
-      }
-      
-      const isNowOpen = panel.classList.contains('open');
-      
-      // Update aria-expanded attribute
-      if (toggle && toggle.tagName === 'BUTTON') {
-        toggle.setAttribute('aria-expanded', isNowOpen.toString());
-      }
-      
-      // Load archive data when archive section is opened
-      if (sectionId === 'archiveSection' && isNowOpen && !wasOpen) {
-        setTimeout(() => {
-          if (typeof loadArchiveFolders === 'function') loadArchiveFolders();
-          if (typeof loadArchiveManifest === 'function') loadArchiveManifest();
-        }, 100);
-      }
-    };
+    // toggleCollapsible is defined in the head section for early availability
 
     const getVideoId = (video) => video?.jobId || video?.videoId || video?.id || '';
 
