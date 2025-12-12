@@ -178,7 +178,7 @@
                     <button 
                       id="generateVideoBtn" 
                       onclick="generateVideo()"
-                      class="btn-base btn-primary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
+                      class="btn-base btn-primary full-btn rounded text-center whitespace-nowrap"
                       style="transition: all 0.3s ease; background: var(--color-yellow-75); color: black; font-weight: bold; border-radius: 10px;"
                     >
                       <span id="generateBtnText">GENERATE VIDEO</span>
@@ -208,7 +208,7 @@
                       id="uploadVideoBtn" 
                       onclick="showUploadModal()"
                       class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
-                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold;"
+                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
                     >
                       Upload Video
                     </button>
@@ -216,10 +216,61 @@
                       id="uploadMixBtn" 
                       onclick="showUploadMixModal()"
                       class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
-                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold;"
+                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
                     >
                       Upload Mix
                     </button>
+                  </div>
+                </div>
+                <div class="step-block">
+                  <div class="step-label">View uploaded videos</div>
+                  <div class="step-hint">Browse folders and delete assets.</div>
+                  <div id="uploadedVideosSection" style="margin-top: 0.75rem;">
+                    <!-- Folder List View -->
+                    <div id="folderListView" class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+                      <div style="background-color: var(--color-yellow-75); padding: 1rem;">
+                        <h2 style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0; text-align: center;">
+                          📂 Video Folders
+                        </h2>
+                      </div>
+                      <div style="padding: 1.5rem;">
+                        <div id="foldersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; width: 100%;">
+                          <!-- Folders will be populated here -->
+                        </div>
+                        <div id="foldersLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                          Loading folders...
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Folder Detail View -->
+                    <div id="folderDetailView" style="display: none;">
+                      <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+                        <div style="background-color: var(--color-yellow-75); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                          <h2 id="folderDetailTitle" style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0;">
+                            📂 Folder Name
+                          </h2>
+                          <button 
+                            onclick="backToFolders()"
+                            class="btn-base btn-secondary"
+                            style="padding: 0.5rem 1rem; background: black; color: var(--color-yellow-75); border: none; border-radius: 10px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem; width: auto; min-width: 120px;"
+                          >
+                            ← Back
+                          </button>
+                        </div>
+                        <div style="padding: 1.5rem;">
+                          <div id="videosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; width: 100%;">
+                            <!-- Videos will be populated here -->
+                          </div>
+                          <div id="videosLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                            Loading videos...
+                          </div>
+                          <div id="videosEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
+                            No videos found in this folder.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -255,6 +306,184 @@
                     >
                       View Site
                     </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="collapsible-card">
+            <button class="collapsible-toggle" onclick="toggleCollapsible('generatedVideosSection')" aria-expanded="false">
+              <div>
+                <div style="font-family: var(--font-mathias);">Generated videos</div>
+                <div class="meta">Status, actions, lazy loading</div>
+              </div>
+              <span class="chevron">▸</span>
+            </button>
+            <div id="generatedVideosSection" class="collapsible-body">
+              <!-- Videos Table -->
+              <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+                <div class="table-container">
+                  <table class="table-edittrax" style="border: none; margin: 0; border-collapse: collapse; width: 100%;">
+                    <thead style="background-color: var(--color-yellow-75); border: none;">
+                      <tr style="border: none;">
+                        <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center; border: none;">ARTIST</th>
+                        <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">DURATION</th>
+                        <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">STATUS</th>
+                        <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody id="videosTable">
+                      <!-- Video rows will be populated dynamically -->
+                      <tr>
+                        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                          No videos generated yet. Click "GENERATE VIDEO" to create your first video!
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="videos-mobile-list" id="videosMobileList" style="padding: 1rem;"></div>
+                <div style="display: flex; gap: 0.75rem; padding: 0.5rem 1rem 1.25rem; flex-wrap: wrap; justify-content: center;">
+                  <button 
+                    id="loadMoreBtn" 
+                    onclick="loadMoreVideos()" 
+                    class="btn-base btn-secondary full-btn" 
+                    style="display: none; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
+                  >
+                    Load More
+                  </button>
+                  <button 
+                    id="resetDismissedBtn" 
+                    onclick="resetDismissedVideos()" 
+                    class="btn-base btn-secondary full-btn" 
+                    style="display: none; background: rgba(239,68,68,0.15); color: #ef4444; border: 2px solid #ef4444; font-weight: bold; border-radius: 10px;"
+                  >
+                    Restore Hidden Rows
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="collapsible-card">
+            <button class="collapsible-toggle" onclick="toggleCollapsible('archiveSection')" aria-expanded="false">
+              <div>
+                <div style="font-family: var(--font-mathias);">Archive</div>
+                <div class="meta">Upload to Arweave and view manifest</div>
+              </div>
+              <span class="chevron">▸</span>
+            </button>
+            <div id="archiveSection" class="collapsible-body">
+              <!-- Expectations Management Section -->
+              <div style="background: rgba(230, 233, 224, 0.1); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
+                <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin-bottom: 1rem; text-align: center;">
+                  ⚠️ Important: Blockchain Confirmation Delays
+                </h2>
+                <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.6; font-family: var(--font-body);">
+                  <p style="margin-bottom: 0.75rem;">
+                    <strong>Files are not immediately viewable:</strong> After uploading, files must be confirmed on the Arweave blockchain. This typically takes 2-10 minutes.
+                  </p>
+                  <p style="margin-bottom: 0.75rem;">
+                    <strong>Costs:</strong> Uploading to Arweave has minimal costs (typically less than $0.01 per file), but costs do exist and are paid from your wallet.
+                  </p>
+                  <p style="margin-bottom: 0.75rem;">
+                    <strong>Access:</strong> Once confirmed, files will be permanently stored on Arweave and accessible via the provided URLs. You can check transaction status on <a href="https://arweave.net" target="_blank" style="color: var(--color-yellow-75); text-decoration: underline;">arweave.net</a>.
+                  </p>
+                  <p>
+                    <strong>Purpose:</strong> This archives your Firebase Storage files to Arweave for permanent, decentralized storage. Archived files can be used in video generation instead of Firebase URLs.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Folder Selection Section -->
+              <div style="background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
+                <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin-bottom: 1rem; text-align: center;">
+                  📁 Select Folder
+                </h2>
+                <div id="archiveFoldersContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; width: 100%;">
+                  <!-- Folders will be populated here -->
+                </div>
+                <div id="archiveFoldersLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                  Loading folders...
+                </div>
+              </div>
+
+              <!-- File Selection Section -->
+              <div id="archiveFileSelectionSection" style="display: none; background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin: 0;">
+                    📄 Files in <span id="archiveSelectedFolderName"></span>
+                  </h2>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <button onclick="archiveSelectAllFiles()" class="btn-base btn-secondary" style="padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;">
+                      Select All
+                    </button>
+                    <button onclick="archiveDeselectAllFiles()" class="btn-base btn-secondary" style="padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;">
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+                <div id="archiveFilesContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; width: 100%; max-height: 500px; overflow-y: auto;">
+                  <!-- Files will be populated here -->
+                </div>
+                <div id="archiveFilesLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
+                  Loading files...
+                </div>
+                <div id="archiveFilesEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
+                  No files in this folder.
+                </div>
+              </div>
+
+              <!-- Upload Section -->
+              <div id="archiveUploadSection" style="display: none; background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
+                <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin-bottom: 1rem; text-align: center;">
+                  🚀 Archive Selected Files
+                </h2>
+                <div style="text-align: center; margin-bottom: 1.5rem;">
+                  <button 
+                    id="archiveBtn" 
+                    onclick="archiveSelectedFiles()"
+                    class="btn-base btn-primary full-btn"
+                    style="border-radius: 10px; background: var(--color-yellow-75); color: black; border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
+                  >
+                    📤 Archive <span id="archiveSelectedCount">0</span> File(s) to Arweave
+                  </button>
+                </div>
+                
+                <!-- Progress Section -->
+                <div id="archiveProgressSection" style="display: none;">
+                  <h3 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1rem; margin-bottom: 1rem;">
+                    Upload Progress
+                  </h3>
+                  <div style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                      <span style="color: var(--color-yellow-75); font-size: 0.875rem;">Overall Progress</span>
+                      <span id="archiveOverallProgress" style="color: var(--color-yellow-75); font-size: 0.875rem;">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 20px; background: #0a0a0a; border: 1px solid var(--color-yellow-75); border-radius: 10px; overflow: hidden;">
+                      <div id="archiveOverallProgressBar" style="height: 100%; background: var(--color-yellow-75); width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                  </div>
+                  <div id="archiveFileProgressList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Individual file progress will be shown here -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Archive Manifest View -->
+              <div style="background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin: 0;">
+                    📋 Archive Manifest
+                  </h2>
+                  <button onclick="loadArchiveManifest()" class="btn-base btn-secondary" style="padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;">
+                    Refresh
+                  </button>
+                </div>
+                <div id="archiveManifestContainer" style="max-height: 500px; overflow-y: auto;">
+                  <div style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                    Loading manifest...
                   </div>
                 </div>
               </div>
@@ -563,146 +792,8 @@
       </div>
     </div>
 
-    <!-- Tab Navigation -->
-    <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem; padding: 0 1rem;">
-      <button 
-        id="tabGenerated" 
-        onclick="switchTab('generated')"
-        style="padding: 0.75rem 1.5rem; background: var(--color-yellow-75); color: black; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
-      >
-        📹 Generated Videos
-      </button>
-      <button 
-        id="tabPreview" 
-        onclick="switchTab('preview')"
-        style="padding: 0.75rem 1.5rem; background: #0a0a0a; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
-      >
-        📂 Uploaded Videos Preview
-      </button>
-    </div>
-
-    <!-- Results Container -->
-    <div id="resultsContainer" style="padding-left: 1rem; padding-right: 1rem;">
-      <div class="collapsible-card">
-        <button class="collapsible-toggle" onclick="toggleCollapsible('generatedVideosSection')" aria-expanded="false">
-          <div>
-            <div style="font-family: var(--font-mathias);">Generated videos</div>
-            <div class="meta">Status, actions, lazy loading</div>
-          </div>
-          <span class="chevron">▸</span>
-        </button>
-        <div id="generatedVideosSection" class="collapsible-body">
-          <!-- Videos Table -->
-          <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
-            <div class="table-container">
-              <table class="table-edittrax" style="border: none; margin: 0; border-collapse: collapse; width: 100%;">
-                <thead style="background-color: var(--color-yellow-75); border: none;">
-                  <tr style="border: none;">
-                    <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center; border: none;">ARTIST</th>
-                    <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">DURATION</th>
-                    <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">STATUS</th>
-                    <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">ACTIONS</th>
-                  </tr>
-                </thead>
-                <tbody id="videosTable">
-                  <!-- Video rows will be populated dynamically -->
-                  <tr>
-                    <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-                      No videos generated yet. Click "GENERATE VIDEO" to create your first video!
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="videos-mobile-list" id="videosMobileList" style="padding: 1rem;"></div>
-            <div style="display: flex; gap: 0.75rem; padding: 0.5rem 1rem 1.25rem; flex-wrap: wrap; justify-content: center;">
-              <button 
-                id="loadMoreBtn" 
-                onclick="loadMoreVideos()" 
-                class="btn-base btn-secondary full-btn" 
-                style="display: none; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
-              >
-                Load More
-              </button>
-              <button 
-                id="resetDismissedBtn" 
-                onclick="resetDismissedVideos()" 
-                class="btn-base btn-secondary full-btn" 
-                style="display: none; background: rgba(239,68,68,0.15); color: #ef4444; border: 2px solid #ef4444; font-weight: bold; border-radius: 10px;"
-              >
-                Restore Hidden Rows
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="collapsible-card">
-        <button class="collapsible-toggle" onclick="toggleCollapsible('archiveSection')" aria-expanded="false">
-          <div>
-            <div style="font-family: var(--font-mathias);">Archive</div>
-            <div class="meta">View uploaded videos and manifest</div>
-          </div>
-          <span class="chevron">▸</span>
-        </button>
-        <div id="archiveSection" class="collapsible-body">
-          <div class="action-row" style="margin-bottom: 0.75rem;">
-            <a href="/archive.html" class="btn-base btn-secondary full-btn" style="text-decoration: none; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold;">
-              Open Archive Page
-            </a>
-          </div>
-    </div>
-
-    <!-- Preview Container -->
-    <div id="previewContainer" style="padding-left: 1rem; padding-right: 1rem; display: none;">
-          <div id="uploadedVideosSection" class="collapsible-body" style="padding-top: 0;">
-            <!-- Folder List View -->
-            <div id="folderListView" class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
-              <div style="background-color: var(--color-yellow-75); padding: 1rem;">
-                <h2 style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0; text-align: center;">
-                  📂 Video Folders
-                </h2>
-              </div>
-              <div style="padding: 1.5rem;">
-                <div id="foldersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; width: 100%;">
-                  <!-- Folders will be populated here -->
-                </div>
-                <div id="foldersLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-                  Loading folders...
-                </div>
-              </div>
-            </div>
-
-            <!-- Folder Detail View -->
-            <div id="folderDetailView" style="display: none;">
-              <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
-                <div style="background-color: var(--color-yellow-75); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                  <h2 id="folderDetailTitle" style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0;">
-                    📂 Folder Name
-                  </h2>
-                  <button 
-                    onclick="backToFolders()"
-                    class="btn-base btn-secondary"
-                    style="padding: 0.5rem 1rem; background: black; color: var(--color-yellow-75); border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem; width: auto; min-width: 120px;"
-                  >
-                    ← Back
-                  </button>
-                </div>
-                <div style="padding: 1.5rem;">
-                  <div id="videosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; width: 100%;">
-                    <!-- Videos will be populated here -->
-                  </div>
-                  <div id="videosLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-                    Loading videos...
-                  </div>
-                  <div id="videosEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
-                    No videos found in this folder.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-    </div>
+    <!-- Results Container (for loading/error states) -->
+    <div id="resultsContainer" style="padding-left: 1rem; padding-right: 1rem;"></div>
   </main>
 
   <script>
@@ -755,6 +846,14 @@
       panel.classList.toggle('open');
       if (toggle) {
         toggle.setAttribute('aria-expanded', (!isOpen).toString());
+      }
+      
+      // Load archive data when archive section is opened
+      if (sectionId === 'archiveSection' && !isOpen) {
+        setTimeout(() => {
+          loadArchiveFolders();
+          loadArchiveManifest();
+        }, 100);
       }
     }
 
@@ -999,12 +1098,14 @@
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          padding: 0.5rem;
+          padding: 0.75rem;
           background: #1a1a1a;
           border: 2px solid var(--color-yellow-75);
-          border-radius: 5px;
+          border-radius: 10px;
           cursor: pointer;
           transition: all 0.3s ease;
+          width: 100%;
+          min-height: 48px;
         `;
         
         const checkbox = document.createElement('input');
@@ -1463,13 +1564,6 @@
           </div>
           <div class="video-item-actions">
             ${actions}
-            <button 
-              class="btn-base btn-secondary" 
-              style="background: transparent; color: #ef4444; border: 2px solid #ef4444; font-weight: bold;" 
-              onclick="dismissVideo('${videoId}')"
-            >
-              Remove
-            </button>
           </div>
         `;
         container.appendChild(card);
@@ -1537,14 +1631,14 @@
             <button 
               onclick="viewVideo('${escapedUrl}')" 
               class="btn-base btn-secondary px-3 py-1 text-xs rounded"
-              style="background: var(--color-yellow-75); color: black; border: none; cursor: pointer; font-family: var(--font-mathias);"
+              style="background: black; color: white; border: 2px solid white; cursor: pointer; font-family: var(--font-mathias); border-radius: 10px;"
             >
               VIEW
             </button>
             <button 
               onclick="downloadVideo('${escapedUrl}', '${filename}')" 
               class="btn-base btn-secondary px-3 py-1 text-xs rounded"
-              style="background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias);"
+              style="background: black; color: white; border: 2px solid white; cursor: pointer; font-family: var(--font-mathias); border-radius: 10px;"
             >
               DOWNLOAD
             </button>
@@ -2576,48 +2670,7 @@ Note: Access the website using the URLs above with /index.html included.
       }
     });
 
-    // Tab management
-    let currentTab = 'generated';
     let currentFolder = null;
-
-    /**
-     * Switch between tabs
-     */
-    function switchTab(tab) {
-      currentTab = tab;
-      
-      const generatedTab = document.getElementById('tabGenerated');
-      const previewTab = document.getElementById('tabPreview');
-      const resultsContainer = document.getElementById('resultsContainer');
-      const previewContainer = document.getElementById('previewContainer');
-      
-      if (tab === 'generated') {
-        generatedTab.style.background = 'var(--color-yellow-75)';
-        generatedTab.style.color = 'black';
-        generatedTab.style.border = 'none';
-        previewTab.style.background = '#0a0a0a';
-        previewTab.style.color = 'var(--color-yellow-75)';
-        previewTab.style.border = '2px solid var(--color-yellow-75)';
-        
-        resultsContainer.style.display = 'block';
-        previewContainer.style.display = 'none';
-      } else {
-        previewTab.style.background = 'var(--color-yellow-75)';
-        previewTab.style.color = 'black';
-        previewTab.style.border = 'none';
-        generatedTab.style.background = '#0a0a0a';
-        generatedTab.style.color = 'var(--color-yellow-75)';
-        generatedTab.style.border = '2px solid var(--color-yellow-75)';
-        
-        resultsContainer.style.display = 'none';
-        previewContainer.style.display = 'block';
-        
-        // Load folders if not already loaded
-        if (currentFolder === null) {
-          loadFolders();
-        }
-      }
-    }
 
     /**
      * Load folders with video counts
@@ -2641,7 +2694,8 @@ Note: Access the website using the URLs above with /index.html included.
             folderCard.style.cssText = `
               background: #1a1a1a;
               border: 2px solid var(--color-yellow-75);
-              border-radius: 8px;
+              border-radius: 10px;
+              width: 100%;
               padding: 1.5rem;
               cursor: pointer;
               transition: all 0.3s ease;
@@ -2717,9 +2771,10 @@ Note: Access the website using the URLs above with /index.html included.
               videoCard.style.cssText = `
                 background: #1a1a1a;
                 border: 2px solid var(--color-yellow-75);
-                border-radius: 8px;
+                border-radius: 10px;
                 overflow: hidden;
                 transition: all 0.3s ease;
+                width: 100%;
               `;
               videoCard.onmouseover = () => {
                 videoCard.style.transform = 'scale(1.02)';
@@ -2761,19 +2816,19 @@ Note: Access the website using the URLs above with /index.html included.
                   <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button 
                       onclick="window.open('${escapedUrl}', '_blank')"
-                      style="flex: 1; min-width: 80px; padding: 0.5rem; background: var(--color-yellow-75); color: black; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
+                      style="flex: 1; min-width: 80px; padding: 0.5rem; background: var(--color-yellow-75); color: black; border: none; border-radius: 10px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
                     >
                       View
                     </button>
                     <button 
                       onclick="downloadVideo('${escapedUrl}', '${escapedName}')"
-                      style="flex: 1; min-width: 80px; padding: 0.5rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
+                      style="flex: 1; min-width: 80px; padding: 0.5rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
                     >
                       Download
                     </button>
                     <button 
                       onclick="deleteVideo('${currentFolder}', '${escapedName}')"
-                      style="flex: 1; min-width: 80px; padding: 0.5rem; background: transparent; color: #ef4444; border: 2px solid #ef4444; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
+                      style="flex: 1; min-width: 80px; padding: 0.5rem; background: transparent; color: #ef4444; border: 2px solid #ef4444; border-radius: 10px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
                     >
                       Delete
                     </button>
@@ -2879,6 +2934,439 @@ Note: Access the website using the URLs above with /index.html included.
         showToast(`Failed to delete video: ${error.message}`, 'error');
       }
     }
+
+    // Archive functionality
+    let archiveAvailableFolders = [];
+    let archiveSelectedFolder = null;
+    let archiveFolderFiles = [];
+    let archiveSelectedFiles = new Set();
+    let archiveUploadJobs = new Map();
+
+    // Load archive folders
+    async function loadArchiveFolders() {
+      const container = document.getElementById('archiveFoldersContainer');
+      const loading = document.getElementById('archiveFoldersLoading');
+      
+      if (!container || !loading) return;
+      
+      container.innerHTML = '';
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch('/api/video-folders');
+        const data = await response.json();
+
+        if (data.success && data.folders) {
+          archiveAvailableFolders = data.folders;
+          loading.style.display = 'none';
+
+          if (archiveAvailableFolders.length === 0) {
+            container.innerHTML = '<p style="color: var(--color-yellow-75); text-align: center; grid-column: 1/-1;">No folders available.</p>';
+            return;
+          }
+
+          archiveAvailableFolders.forEach(folder => {
+            const folderCard = document.createElement('div');
+            folderCard.style.cssText = `
+              background: #1a1a1a;
+              border: 2px solid var(--color-yellow-75);
+              border-radius: 10px;
+              padding: 1rem;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              text-align: center;
+              width: 100%;
+            `;
+            folderCard.onmouseover = () => {
+              folderCard.style.transform = 'scale(1.02)';
+              folderCard.style.borderColor = '#fff';
+            };
+            folderCard.onmouseout = () => {
+              folderCard.style.transform = 'scale(1)';
+              folderCard.style.borderColor = 'var(--color-yellow-75)';
+            };
+            folderCard.onclick = () => archiveSelectFolder(folder.name);
+
+            folderCard.innerHTML = `
+              <div style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-weight: bold; margin-bottom: 0.5rem;">
+                ${folder.displayName || folder.name}
+              </div>
+              <div style="font-size: 0.75rem; color: #888;">
+                ${folder.count} ${folder.type === 'image' ? 'image' : 'video'}(s)
+              </div>
+            `;
+
+            container.appendChild(folderCard);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading archive folders:', error);
+        if (loading) loading.innerHTML = '<p style="color: #ef4444;">Error loading folders. Please try again.</p>';
+      }
+    }
+
+    // Select archive folder and load files
+    async function archiveSelectFolder(folderName) {
+      archiveSelectedFolder = folderName;
+      archiveSelectedFiles.clear();
+      
+      const fileSection = document.getElementById('archiveFileSelectionSection');
+      const uploadSection = document.getElementById('archiveUploadSection');
+      const selectedName = document.getElementById('archiveSelectedFolderName');
+      const filesLoading = document.getElementById('archiveFilesLoading');
+      const filesEmpty = document.getElementById('archiveFilesEmpty');
+      const filesContainer = document.getElementById('archiveFilesContainer');
+
+      if (fileSection) fileSection.style.display = 'block';
+      if (selectedName) selectedName.textContent = folderName;
+      if (uploadSection) uploadSection.style.display = 'block';
+      if (filesLoading) filesLoading.style.display = 'block';
+      if (filesEmpty) filesEmpty.style.display = 'none';
+      if (filesContainer) filesContainer.innerHTML = '';
+
+      try {
+        const response = await fetch(`/api/video-folders?folder=${encodeURIComponent(folderName)}`);
+        const data = await response.json();
+
+        if (filesLoading) filesLoading.style.display = 'none';
+
+        if (data.success && (data.items || data.videos) && (data.items || data.videos).length > 0) {
+          archiveFolderFiles = data.items || data.videos;
+          archiveRenderFiles();
+        } else {
+          if (filesEmpty) filesEmpty.style.display = 'block';
+          archiveFolderFiles = [];
+        }
+      } catch (error) {
+        console.error('Error loading archive files:', error);
+        if (filesLoading) filesLoading.innerHTML = '<p style="color: #ef4444;">Error loading files.</p>';
+      }
+    }
+
+    // Render archive files
+    function archiveRenderFiles() {
+      const container = document.getElementById('archiveFilesContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      archiveFolderFiles.forEach(file => {
+        const fileCard = document.createElement('div');
+        fileCard.style.cssText = `
+          background: #1a1a1a;
+          border: 2px solid var(--color-yellow-75);
+          border-radius: 10px;
+          padding: 1rem;
+          width: 100%;
+        `;
+
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        const isSelected = archiveSelectedFiles.has(file.name);
+
+        fileCard.innerHTML = `
+          <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+            <input 
+              type="checkbox" 
+              ${isSelected ? 'checked' : ''}
+              onchange="archiveToggleFileSelection('${file.name.replace(/'/g, "\\'")}')"
+              style="width: 20px; height: 20px; cursor: pointer;"
+            />
+            <div style="flex: 1;">
+              <div style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-weight: bold; margin-bottom: 0.25rem;">
+                ${file.name}
+              </div>
+              <div style="font-size: 0.75rem; color: #888;">
+                ${fileSizeMB} MB • ${file.contentType || file.type || 'file'}
+              </div>
+            </div>
+          </label>
+        `;
+
+        container.appendChild(fileCard);
+      });
+
+      archiveUpdateSelectedCount();
+    }
+
+    // Toggle archive file selection
+    function archiveToggleFileSelection(fileName) {
+      if (archiveSelectedFiles.has(fileName)) {
+        archiveSelectedFiles.delete(fileName);
+      } else {
+        archiveSelectedFiles.add(fileName);
+      }
+      archiveRenderFiles();
+    }
+
+    // Select all archive files
+    function archiveSelectAllFiles() {
+      archiveFolderFiles.forEach(file => archiveSelectedFiles.add(file.name));
+      archiveRenderFiles();
+    }
+
+    // Deselect all archive files
+    function archiveDeselectAllFiles() {
+      archiveSelectedFiles.clear();
+      archiveRenderFiles();
+    }
+
+    // Update archive selected count
+    function archiveUpdateSelectedCount() {
+      const countEl = document.getElementById('archiveSelectedCount');
+      if (countEl) countEl.textContent = archiveSelectedFiles.size;
+    }
+
+    // Archive selected files
+    async function archiveSelectedFiles() {
+      if (archiveSelectedFiles.size === 0) {
+        alert('Please select at least one file to archive.');
+        return;
+      }
+
+      if (!archiveSelectedFolder) {
+        alert('Please select a folder first.');
+        return;
+      }
+
+      const btn = document.getElementById('archiveBtn');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Archiving...';
+      }
+
+      const progressSection = document.getElementById('archiveProgressSection');
+      const fileProgressList = document.getElementById('archiveFileProgressList');
+      if (progressSection) progressSection.style.display = 'block';
+      if (fileProgressList) fileProgressList.innerHTML = '';
+
+      const filesToArchive = Array.from(archiveSelectedFiles);
+      let completed = 0;
+      let failed = 0;
+
+      filesToArchive.forEach(fileName => {
+        const jobId = `archive_${Date.now()}_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        archiveUploadJobs.set(fileName, {
+          jobId: jobId,
+          fileName: fileName,
+          status: 'uploading',
+          progress: 0
+        });
+
+        const progressItem = document.createElement('div');
+        progressItem.id = `archiveProgress_${fileName}`;
+        progressItem.style.cssText = `
+          background: #1a1a1a;
+          border: 1px solid var(--color-yellow-75);
+          border-radius: 10px;
+          padding: 0.75rem;
+          margin-bottom: 0.5rem;
+          width: 100%;
+        `;
+        progressItem.innerHTML = `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="color: var(--color-yellow-75); font-size: 0.875rem; font-family: var(--font-mathias);">${fileName}</span>
+            <span id="archiveStatus_${fileName}" style="color: var(--color-yellow-75); font-size: 0.75rem;">Uploading...</span>
+          </div>
+          <div style="width: 100%; height: 8px; background: #0a0a0a; border-radius: 10px; overflow: hidden;">
+            <div id="archiveBar_${fileName}" style="height: 100%; background: var(--color-yellow-75); width: 0%; transition: width 0.3s ease;"></div>
+          </div>
+        `;
+        if (fileProgressList) fileProgressList.appendChild(progressItem);
+      });
+
+      for (const fileName of filesToArchive) {
+        try {
+          archiveUpdateFileProgress(fileName, 50, 'Uploading to Arweave...');
+
+          const response = await fetch('/api/archive-upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              folder: archiveSelectedFolder,
+              fileName: fileName
+            })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            archiveUpdateFileProgress(fileName, 100, 'Complete');
+            archiveUpdateFileStatus(fileName, 'completed', result.transactionId, result.arweaveUrl);
+            completed++;
+            archivePollJobStatus(result.jobId, fileName);
+          } else {
+            archiveUpdateFileProgress(fileName, 0, 'Failed');
+            archiveUpdateFileStatus(fileName, 'failed', null, null, result.error);
+            failed++;
+          }
+        } catch (error) {
+          console.error(`Error archiving ${fileName}:`, error);
+          archiveUpdateFileProgress(fileName, 0, 'Error');
+          archiveUpdateFileStatus(fileName, 'failed', null, null, error.message);
+          failed++;
+        }
+
+        const overallProgress = Math.round(((completed + failed) / filesToArchive.length) * 100);
+        const overallProgressEl = document.getElementById('archiveOverallProgress');
+        const overallProgressBar = document.getElementById('archiveOverallProgressBar');
+        if (overallProgressEl) overallProgressEl.textContent = `${overallProgress}%`;
+        if (overallProgressBar) overallProgressBar.style.width = `${overallProgress}%`;
+      }
+
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = `📤 Archive ${archiveSelectedFiles.size} File(s) to Arweave`;
+      }
+
+      setTimeout(() => {
+        loadArchiveManifest();
+      }, 2000);
+    }
+
+    // Update archive file progress
+    function archiveUpdateFileProgress(fileName, percent, status) {
+      const bar = document.getElementById(`archiveBar_${fileName}`);
+      const statusEl = document.getElementById(`archiveStatus_${fileName}`);
+      if (bar) bar.style.width = `${percent}%`;
+      if (statusEl) statusEl.textContent = status;
+    }
+
+    // Update archive file status
+    function archiveUpdateFileStatus(fileName, status, transactionId, arweaveUrl, error = null) {
+      const job = archiveUploadJobs.get(fileName);
+      if (job) {
+        job.status = status;
+        job.transactionId = transactionId;
+        job.arweaveUrl = arweaveUrl;
+        job.error = error;
+      }
+
+      const statusEl = document.getElementById(`archiveStatus_${fileName}`);
+      if (statusEl) {
+        if (status === 'completed') {
+          statusEl.innerHTML = `<a href="${arweaveUrl}" target="_blank" style="color: #22c55e; text-decoration: underline;">View on Arweave</a>`;
+        } else if (status === 'failed') {
+          statusEl.style.color = '#ef4444';
+          statusEl.textContent = `Failed: ${error || 'Unknown error'}`;
+        } else if (status === 'pending_confirmation') {
+          statusEl.style.color = '#f59e0b';
+          statusEl.textContent = 'Pending confirmation...';
+        }
+      }
+    }
+
+    // Poll archive job status
+    async function archivePollJobStatus(jobId, fileName) {
+      const maxAttempts = 30;
+      let attempts = 0;
+
+      const poll = async () => {
+        if (attempts >= maxAttempts) {
+          archiveUpdateFileStatus(fileName, 'pending_confirmation', null, null);
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/archive-status?jobId=${jobId}`);
+          const data = await response.json();
+
+          if (data.success && data.job) {
+            if (data.job.status === 'pending_confirmation') {
+              archiveUpdateFileStatus(fileName, 'pending_confirmation', data.job.transactionId, data.job.arweaveUrl);
+              attempts++;
+              setTimeout(poll, 10000);
+            } else if (data.job.status === 'completed') {
+              archiveUpdateFileStatus(fileName, 'completed', data.job.transactionId, data.job.arweaveUrl);
+            } else if (data.job.status === 'failed') {
+              archiveUpdateFileStatus(fileName, 'failed', null, null, data.job.error);
+            }
+          }
+        } catch (error) {
+          console.error('Error polling archive job status:', error);
+          attempts++;
+          if (attempts < maxAttempts) {
+            setTimeout(poll, 10000);
+          }
+        }
+      };
+
+      setTimeout(poll, 10000);
+    }
+
+    // Load archive manifest
+    async function loadArchiveManifest() {
+      const container = document.getElementById('archiveManifestContainer');
+      if (!container) return;
+      container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">Loading manifest...</div>';
+
+      try {
+        const response = await fetch('/api/archive-manifest');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+
+        if (data.success && data.manifest) {
+          const manifest = data.manifest;
+          const folders = manifest.folders || {};
+
+          if (Object.keys(folders).length === 0) {
+            container.innerHTML = '<p style="color: var(--color-yellow-75); text-align: center;">No files archived yet.</p>';
+            return;
+          }
+
+          let html = '';
+          Object.entries(folders).forEach(([folderName, folderData]) => {
+            const files = folderData.files || [];
+            if (files.length === 0) return;
+
+            html += `
+              <div style="margin-bottom: 1.5rem; border-bottom: 1px solid rgba(230, 233, 224, 0.2); padding-bottom: 1rem;">
+                <h3 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1rem; margin-bottom: 0.75rem;">
+                  ${folderName} (${files.length} file${files.length !== 1 ? 's' : ''})
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.75rem; width: 100%;">
+            `;
+
+            files.forEach(file => {
+              html += `
+                <div style="background: #1a1a1a; border: 1px solid var(--color-yellow-75); border-radius: 10px; padding: 0.75rem; width: 100%;">
+                  <div style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: bold;">
+                    ${file.name}
+                  </div>
+                  <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.5rem;">
+                    ${(file.fileSize / (1024 * 1024)).toFixed(2)} MB • Archived: ${new Date(file.archivedAt).toLocaleDateString()}
+                  </div>
+                  <a href="${file.arweaveUrl}" target="_blank" style="color: var(--color-yellow-75); text-decoration: underline; font-size: 0.75rem;">
+                    View on Arweave →
+                  </a>
+                </div>
+              `;
+            });
+
+            html += `
+                </div>
+              </div>
+            `;
+          });
+
+          container.innerHTML = html;
+        }
+      } catch (error) {
+        console.error('[Archive] Error loading manifest:', error);
+        container.innerHTML = `
+          <div style="color: #ef4444; text-align: center; padding: 1rem;">
+            <p style="margin-bottom: 0.5rem;">❌ Error loading manifest</p>
+            <p style="font-size: 0.875rem; color: #888;">${error.message}</p>
+            <button onclick="loadArchiveManifest()" class="btn-base btn-secondary" style="margin-top: 1rem; padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: #ef4444; border: 2px solid #ef4444; cursor: pointer;">
+              Retry
+            </button>
+          </div>
+        `;
+      }
+    }
+
   </script>
 
   <!-- Particles.js Library -->

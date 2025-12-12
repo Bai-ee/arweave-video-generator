@@ -149,7 +149,7 @@ textarea {
 .btn-base {
   font-family: var(--font-mathias);
   padding: var(--spacing-4) var(--spacing-6);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   border: var(--border-2) solid;
   transition: background-color var(--transition-base), box-shadow var(--transition-base);
   cursor: pointer;
@@ -743,6 +743,12 @@ textarea {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .dismiss-chip {
+    display: none;
+  }
 }
 
 /* ========================================
