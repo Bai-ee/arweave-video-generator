@@ -20,6 +20,12 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Handle HEAD request (for health checks)
+  if (req.method === 'HEAD') {
+    res.status(200).end();
+    return;
+  }
+
   // Only allow GET
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
