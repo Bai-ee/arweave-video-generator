@@ -774,171 +774,117 @@
     <div id="artistImageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
       <div style="background: radial-gradient(ellipse at center, rgba(20, 20, 30, 0.7) 0%, rgba(0, 0, 0, 0.6) 100%); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">🖼️ Upload Image</h2>
+          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">🖼️ UPLOAD ARTIST IMAGE</h2>
           <button onclick="hideArtistImageModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
         </div>
         
-        <!-- Step 1: Select file -->
-        <div id="imageStep1" style="display: block;">
-          <div style="margin-bottom: 1rem;">
+        <form id="artistImageForm" onsubmit="handleArtistImageUpload(event)" style="display: flex; flex-direction: column; gap: 1rem;">
+          <!-- Artist Selection -->
+          <div>
             <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Select Image File <span style="color: #ef4444;">*</span>
+              Artist <span style="color: #ef4444;">*</span>
+            </label>
+            <select 
+              id="imageArtistSelect"
+              onchange="handleImageArtistChange()"
+              required
+              style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white; font-family: var(--font-body);"
+            >
+              <option value="">Select an artist...</option>
+              <option value="__NEW__">+ New Artist</option>
+            </select>
+          </div>
+
+          <!-- New Artist Fields (hidden by default) -->
+          <div id="newArtistFields" style="display: none;">
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
+                New Artist Name <span style="color: #ef4444;">*</span>
+              </label>
+              <input 
+                type="text" 
+                id="newArtistNameInput"
+                placeholder="e.g. DJ EXAMPLE"
+                style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white; font-family: var(--font-body);"
+              />
+            </div>
+            <div>
+              <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
+                Genre <span style="color: #ef4444;">*</span>
+              </label>
+              <select 
+                id="newArtistGenreSelect"
+                style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white; font-family: var(--font-body);"
+              >
+                <option value="house">House</option>
+                <option value="techno">Techno</option>
+                <option value="acid">Acid</option>
+                <option value="electronic">Electronic</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Image File -->
+          <div>
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
+              Image File (.jpg, .png, .gif, .webp) <span style="color: #ef4444;">*</span>
             </label>
             <input 
               type="file" 
-              id="artistImageFile" 
+              id="artistImageFileInput" 
               accept=".jpg,.jpeg,.png,.gif,.webp"
-              onchange="handleImageFileSelect(event)"
+              required
               style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white;"
             />
+            <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">Max file size: 50MB. File will be uploaded to Arweave.</p>
           </div>
-          <div id="imagePreviewContainer" style="display: none; margin-bottom: 1rem; text-align: center;">
-            <img id="imagePreview" style="max-width: 200px; max-height: 200px; border-radius: 5px; border: 1px solid var(--color-yellow-75);" />
-          </div>
-        </div>
 
-        <!-- Step 2: Is this for an artist? -->
-        <div id="imageStep2" style="display: none;">
-          <div style="margin-bottom: 1rem;">
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              What is this image for?
+          <!-- Main Thumbnail Checkbox -->
+          <div style="padding: 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px;">
+            <label style="display: flex; align-items: center; gap: 0.75rem; color: white; cursor: pointer;">
+              <input 
+                type="checkbox" 
+                id="isMainThumbnail" 
+                checked
+                style="width: 20px; height: 20px; accent-color: var(--color-yellow-75);"
+              />
+              <span style="font-family: var(--font-body);">This is the main artist thumbnail</span>
             </label>
-            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-              <button type="button" onclick="selectImageType('artist')" class="image-type-btn" style="padding: 1rem; background: rgba(0,0,0,0.3); border: 2px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer; text-align: left; font-family: var(--font-body);">
-                <strong>🎤 Artist Image</strong><br/>
-                <span style="font-size: 0.8rem; opacity: 0.8;">Thumbnail for an artist on the website</span>
-              </button>
-              <button type="button" onclick="selectImageType('folder')" class="image-type-btn" style="padding: 1rem; background: rgba(0,0,0,0.3); border: 2px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer; text-align: left; font-family: var(--font-body);">
-                <strong>📁 Other Folder</strong><br/>
-                <span style="font-size: 0.8rem; opacity: 0.8;">Logos, backgrounds, or other assets</span>
-              </button>
+            <p style="color: #888; font-size: 0.75rem; margin-top: 0.5rem; margin-left: 2rem;">
+              If checked, this image will be shown on the homepage and artist page. If unchecked, it will just be added to the artist's folder.
+            </p>
+          </div>
+
+          <!-- Progress -->
+          <div id="imageUploadProgress" style="display: none;">
+            <div style="background: rgba(0,0,0,0.3); border-radius: 5px; overflow: hidden;">
+              <div id="imageProgressBar" style="width: 0%; height: 8px; background: var(--color-yellow-75); transition: width 0.3s;"></div>
             </div>
+            <p id="imageProgressText" style="color: var(--color-yellow-75); text-align: center; margin-top: 0.5rem; font-size: 0.875rem;">Uploading...</p>
           </div>
-        </div>
 
-        <!-- Step 3a: Artist - New or Existing? -->
-        <div id="imageStep3a" style="display: none;">
-          <div style="margin-bottom: 1rem;">
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              New or Existing Artist?
-            </label>
-            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-              <button type="button" onclick="selectArtistType('new')" class="image-type-btn" style="padding: 1rem; background: rgba(0,0,0,0.3); border: 2px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer; text-align: left; font-family: var(--font-body);">
-                <strong>✨ New Artist</strong><br/>
-                <span style="font-size: 0.8rem; opacity: 0.8;">Create a new artist with this image</span>
-              </button>
-              <button type="button" onclick="selectArtistType('existing')" class="image-type-btn" style="padding: 1rem; background: rgba(0,0,0,0.3); border: 2px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer; text-align: left; font-family: var(--font-body);">
-                <strong>👤 Existing Artist</strong><br/>
-                <span style="font-size: 0.8rem; opacity: 0.8;">Update or add to existing artist</span>
-              </button>
-            </div>
-          </div>
-        </div>
+          <!-- Status Message -->
+          <div id="imageUploadStatus" style="display: none; padding: 1rem; border-radius: 5px;"></div>
 
-        <!-- Step 3b: Folder Selection -->
-        <div id="imageStep3b" style="display: none;">
-          <div style="margin-bottom: 1rem;">
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Select Folder <span style="color: #ef4444;">*</span>
-            </label>
-            <select 
-              id="imageFolderSelect"
-              style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white; font-family: var(--font-body);"
+          <!-- Buttons -->
+          <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+            <button 
+              type="submit" 
+              id="imageUploadBtn"
+              style="flex: 1; padding: 1rem; background: rgba(0,0,0,0.5); border: 2px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
             >
-              <option value="">-- Select Folder --</option>
-              <option value="logos">Logos</option>
-              <option value="paper_backgrounds">Paper Backgrounds</option>
-              <option value="covers">Mix Covers</option>
-              <option value="overlays">Video Overlays</option>
-            </select>
-          </div>
-          <button type="button" onclick="submitFolderImage()" style="width: 100%; padding: 1rem; background: #10b981; border: none; border-radius: 5px; color: white; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;">
-            Upload to Folder
-          </button>
-        </div>
-
-        <!-- Step 4a: New Artist Form -->
-        <div id="imageStep4a" style="display: none;">
-          <div style="margin-bottom: 1rem;">
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Artist Name <span style="color: #ef4444;">*</span>
-            </label>
-            <input 
-              type="text" 
-              id="newArtistName"
-              placeholder="e.g. DJ EXAMPLE"
-              style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white; font-family: var(--font-body);"
-            />
-          </div>
-          <div style="margin-bottom: 1rem;">
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Genre <span style="color: #ef4444;">*</span>
-            </label>
-            <select 
-              id="newArtistGenre"
-              style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white; font-family: var(--font-body);"
+              Upload to Arweave
+            </button>
+            <button 
+              type="button" 
+              onclick="hideArtistImageModal()"
+              style="flex: 1; padding: 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); font-family: var(--font-body); cursor: pointer;"
             >
-              <option value="house">House</option>
-              <option value="techno">Techno</option>
-              <option value="acid">Acid</option>
-              <option value="electronic">Electronic</option>
-              <option value="other">Other</option>
-            </select>
+              Cancel
+            </button>
           </div>
-          <button type="button" onclick="submitNewArtist()" style="width: 100%; padding: 1rem; background: #10b981; border: none; border-radius: 5px; color: white; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;">
-            Create Artist & Upload Image
-          </button>
-        </div>
-
-        <!-- Step 4b: Existing Artist Selection -->
-        <div id="imageStep4b" style="display: none;">
-          <div style="margin-bottom: 1rem;">
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Select Artist <span style="color: #ef4444;">*</span>
-            </label>
-            <select 
-              id="existingArtistSelect"
-              style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white; font-family: var(--font-body);"
-            >
-              <option value="">-- Select Artist --</option>
-            </select>
-          </div>
-          <div style="margin-bottom: 1rem;">
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              What should this image be?
-            </label>
-            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-              <label style="display: flex; align-items: center; gap: 0.5rem; color: white; cursor: pointer;">
-                <input type="radio" name="existingArtistAction" value="replace" checked style="accent-color: var(--color-yellow-75);" />
-                <span>Replace artist thumbnail</span>
-              </label>
-              <label style="display: flex; align-items: center; gap: 0.5rem; color: white; cursor: pointer;">
-                <input type="radio" name="existingArtistAction" value="add" style="accent-color: var(--color-yellow-75);" />
-                <span>Add to artist's folder (don't replace thumbnail)</span>
-              </label>
-            </div>
-          </div>
-          <button type="button" onclick="submitExistingArtist()" style="width: 100%; padding: 1rem; background: #10b981; border: none; border-radius: 5px; color: white; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;">
-            Upload Image
-          </button>
-        </div>
-
-        <!-- Progress/Status -->
-        <div id="imageUploadProgress" style="display: none; margin-top: 1rem;">
-          <div style="background: rgba(0,0,0,0.3); border-radius: 5px; overflow: hidden;">
-            <div id="imageProgressBar" style="width: 0%; height: 8px; background: var(--color-yellow-75); transition: width 0.3s;"></div>
-          </div>
-          <p id="imageProgressText" style="color: var(--color-yellow-75); text-align: center; margin-top: 0.5rem; font-size: 0.875rem;">Uploading...</p>
-        </div>
-
-        <div id="imageUploadStatus" style="display: none; margin-top: 1rem; padding: 1rem; border-radius: 5px;"></div>
-
-        <!-- Back button -->
-        <div id="imageBackBtn" style="display: none; margin-top: 1rem;">
-          <button type="button" onclick="goBackImageStep()" style="width: 100%; padding: 0.75rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); font-family: var(--font-body); cursor: pointer;">
-            ← Back
-          </button>
-        </div>
+        </form>
       </div>
     </div>
 
@@ -2233,22 +2179,14 @@
     // =====================================================
     // Artist Image Upload Modal Functions
     // =====================================================
-    
-    let artistImageState = {
-      file: null,
-      step: 1,
-      imageType: null, // 'artist' or 'folder'
-      artistType: null, // 'new' or 'existing'
-      history: []
-    };
 
     /**
      * Show artist image upload modal
      */
-    window.showArtistImageModal = function() {
+    window.showArtistImageModal = async function() {
       document.getElementById('artistImageModal').style.display = 'flex';
       resetArtistImageModal();
-      loadArtistsForImageModal();
+      await loadArtistsForImageModal();
     };
 
     /**
@@ -2263,30 +2201,25 @@
      * Reset the artist image modal state
      */
     function resetArtistImageModal() {
-      artistImageState = { file: null, step: 1, imageType: null, artistType: null, history: [] };
-      document.getElementById('artistImageFile').value = '';
-      document.getElementById('imagePreviewContainer').style.display = 'none';
-      document.getElementById('imageStep1').style.display = 'block';
-      document.getElementById('imageStep2').style.display = 'none';
-      document.getElementById('imageStep3a').style.display = 'none';
-      document.getElementById('imageStep3b').style.display = 'none';
-      document.getElementById('imageStep4a').style.display = 'none';
-      document.getElementById('imageStep4b').style.display = 'none';
+      document.getElementById('artistImageForm').reset();
+      document.getElementById('newArtistFields').style.display = 'none';
       document.getElementById('imageUploadProgress').style.display = 'none';
       document.getElementById('imageUploadStatus').style.display = 'none';
-      document.getElementById('imageBackBtn').style.display = 'none';
+      document.getElementById('imageUploadBtn').disabled = false;
     }
 
     /**
-     * Load artists for the existing artist dropdown
+     * Load artists for the artist dropdown
      */
     async function loadArtistsForImageModal() {
       try {
         const response = await fetch('/api/artists');
         const data = await response.json();
         if (data.success && data.artists) {
-          const select = document.getElementById('existingArtistSelect');
-          select.innerHTML = '<option value="">-- Select Artist --</option>';
+          const select = document.getElementById('imageArtistSelect');
+          // Keep the first two options (placeholder and New Artist)
+          select.innerHTML = '<option value="">Select an artist...</option><option value="__NEW__">+ New Artist</option>';
+          // Add existing artists
           data.artists.forEach(artist => {
             const option = document.createElement('option');
             option.value = artist.artistName;
@@ -2300,189 +2233,80 @@
     }
 
     /**
-     * Handle image file selection
+     * Handle artist selection change
      */
-    window.handleImageFileSelect = function(event) {
-      const file = event.target.files[0];
-      if (file) {
-        artistImageState.file = file;
-        
-        // Show preview
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          document.getElementById('imagePreview').src = e.target.result;
-          document.getElementById('imagePreviewContainer').style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-        
-        // Move to step 2
-        artistImageState.history.push(1);
-        artistImageState.step = 2;
-        document.getElementById('imageStep1').style.display = 'none';
-        document.getElementById('imageStep2').style.display = 'block';
-        document.getElementById('imageBackBtn').style.display = 'block';
-      }
-    };
-
-    /**
-     * Select image type (artist or folder)
-     */
-    window.selectImageType = function(type) {
-      artistImageState.imageType = type;
-      artistImageState.history.push(2);
-      document.getElementById('imageStep2').style.display = 'none';
+    window.handleImageArtistChange = function() {
+      const select = document.getElementById('imageArtistSelect');
+      const newArtistFields = document.getElementById('newArtistFields');
+      const newArtistNameInput = document.getElementById('newArtistNameInput');
       
-      if (type === 'artist') {
-        artistImageState.step = 3;
-        document.getElementById('imageStep3a').style.display = 'block';
+      if (select.value === '__NEW__') {
+        newArtistFields.style.display = 'block';
+        newArtistNameInput.required = true;
       } else {
-        artistImageState.step = 3;
-        document.getElementById('imageStep3b').style.display = 'block';
+        newArtistFields.style.display = 'none';
+        newArtistNameInput.required = false;
       }
     };
 
     /**
-     * Select artist type (new or existing)
+     * Handle artist image upload form submission
      */
-    window.selectArtistType = function(type) {
-      artistImageState.artistType = type;
-      artistImageState.history.push(3);
-      document.getElementById('imageStep3a').style.display = 'none';
+    window.handleArtistImageUpload = async function(event) {
+      event.preventDefault();
       
-      if (type === 'new') {
-        artistImageState.step = 4;
-        document.getElementById('imageStep4a').style.display = 'block';
-      } else {
-        artistImageState.step = 4;
-        document.getElementById('imageStep4b').style.display = 'block';
-      }
-    };
-
-    /**
-     * Go back to previous step
-     */
-    window.goBackImageStep = function() {
-      const prevStep = artistImageState.history.pop();
-      if (!prevStep) return;
+      const select = document.getElementById('imageArtistSelect');
+      const fileInput = document.getElementById('artistImageFileInput');
+      const isMainThumbnail = document.getElementById('isMainThumbnail').checked;
+      const uploadBtn = document.getElementById('imageUploadBtn');
       
-      // Hide all steps
-      document.getElementById('imageStep1').style.display = 'none';
-      document.getElementById('imageStep2').style.display = 'none';
-      document.getElementById('imageStep3a').style.display = 'none';
-      document.getElementById('imageStep3b').style.display = 'none';
-      document.getElementById('imageStep4a').style.display = 'none';
-      document.getElementById('imageStep4b').style.display = 'none';
+      // Determine artist name
+      let artistName = '';
+      let isNewArtist = false;
+      let genre = 'electronic';
       
-      // Show previous step
-      if (prevStep === 1) {
-        document.getElementById('imageStep1').style.display = 'block';
-        document.getElementById('imageBackBtn').style.display = 'none';
-      } else if (prevStep === 2) {
-        document.getElementById('imageStep2').style.display = 'block';
-      } else if (prevStep === 3) {
-        if (artistImageState.imageType === 'artist') {
-          document.getElementById('imageStep3a').style.display = 'block';
-        } else {
-          document.getElementById('imageStep3b').style.display = 'block';
+      if (select.value === '__NEW__') {
+        artistName = document.getElementById('newArtistNameInput').value.trim();
+        genre = document.getElementById('newArtistGenreSelect').value;
+        isNewArtist = true;
+        
+        if (!artistName) {
+          showToast('Please enter a new artist name', 'error');
+          return;
         }
-      }
-      
-      artistImageState.step = prevStep;
-    };
-
-    /**
-     * Submit folder image upload
-     */
-    window.submitFolderImage = async function() {
-      const folder = document.getElementById('imageFolderSelect').value;
-      if (!folder) {
-        alert('Please select a folder');
+      } else if (select.value) {
+        artistName = select.value;
+      } else {
+        showToast('Please select an artist', 'error');
         return;
       }
       
-      await uploadArtistImage({
-        type: 'folder',
-        folder: folder
-      });
-    };
-
-    /**
-     * Submit new artist creation
-     */
-    window.submitNewArtist = async function() {
-      const artistName = document.getElementById('newArtistName').value.trim();
-      const genre = document.getElementById('newArtistGenre').value;
-      
-      if (!artistName) {
-        alert('Please enter an artist name');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        showToast('Please select an image file', 'error');
         return;
       }
       
-      await uploadArtistImage({
-        type: 'new-artist',
-        artistName: artistName,
-        genre: genre
-      });
-    };
-
-    /**
-     * Submit existing artist update
-     */
-    window.submitExistingArtist = async function() {
-      const artistName = document.getElementById('existingArtistSelect').value;
-      const action = document.querySelector('input[name="existingArtistAction"]:checked').value;
-      
-      if (!artistName) {
-        alert('Please select an artist');
-        return;
-      }
-      
-      await uploadArtistImage({
-        type: 'existing-artist',
-        artistName: artistName,
-        action: action // 'replace' or 'add'
-      });
-    };
-
-    /**
-     * Upload the image with the specified options
-     */
-    async function uploadArtistImage(options) {
-      if (!artistImageState.file) {
-        alert('No file selected');
-        return;
-      }
-      
-      // Show progress
-      document.getElementById('imageStep1').style.display = 'none';
-      document.getElementById('imageStep2').style.display = 'none';
-      document.getElementById('imageStep3a').style.display = 'none';
-      document.getElementById('imageStep3b').style.display = 'none';
-      document.getElementById('imageStep4a').style.display = 'none';
-      document.getElementById('imageStep4b').style.display = 'none';
-      document.getElementById('imageBackBtn').style.display = 'none';
+      // Disable button and show progress
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'Uploading...';
       document.getElementById('imageUploadProgress').style.display = 'block';
       document.getElementById('imageProgressBar').style.width = '10%';
       document.getElementById('imageProgressText').textContent = 'Preparing upload...';
       
       try {
         const formData = new FormData();
-        formData.append('file', artistImageState.file);
+        formData.append('file', fileInput.files[0]);
         formData.append('type', 'image');
+        formData.append('artistName', artistName);
         
-        // Add action-specific fields
-        if (options.type === 'folder') {
-          formData.append('imageAction', 'folder');
-          formData.append('targetFolder', options.folder);
-          formData.append('artistName', 'system'); // Required by API but not used for folder uploads
-        } else if (options.type === 'new-artist') {
+        if (isNewArtist) {
           formData.append('imageAction', 'new-artist');
-          formData.append('artistName', options.artistName);
-          formData.append('artistGenre', options.genre);
+          formData.append('artistGenre', genre);
           formData.append('isNewArtist', 'true');
-        } else if (options.type === 'existing-artist') {
-          formData.append('imageAction', options.action === 'replace' ? 'replace-thumbnail' : 'add-to-folder');
-          formData.append('artistName', options.artistName);
+        } else if (isMainThumbnail) {
+          formData.append('imageAction', 'replace-thumbnail');
+        } else {
+          formData.append('imageAction', 'add-to-folder');
         }
         
         document.getElementById('imageProgressBar').style.width = '30%';
@@ -2508,26 +2332,22 @@
           statusDiv.innerHTML = `
             <div style="color: #10b981; font-weight: bold; margin-bottom: 0.5rem;">✅ Upload Successful!</div>
             <div style="color: white; font-size: 0.875rem;">
-              ${options.type === 'new-artist' ? `Created new artist: <strong>${options.artistName}</strong><br/>` : ''}
-              ${options.type === 'existing-artist' && options.action === 'replace' ? `Updated thumbnail for: <strong>${options.artistName}</strong><br/>` : ''}
+              ${isNewArtist ? `Created new artist: <strong>${artistName}</strong><br/>` : ''}
+              ${!isNewArtist && isMainThumbnail ? `Updated thumbnail for: <strong>${artistName}</strong><br/>` : ''}
+              ${!isNewArtist && !isMainThumbnail ? `Added image to ${artistName}'s folder<br/>` : ''}
               <span style="opacity: 0.8; word-break: break-all;">Arweave URL: ${result.arweaveUrl}</span>
             </div>
             <button onclick="hideArtistImageModal()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #10b981; border: none; border-radius: 5px; color: white; cursor: pointer;">
               Done
             </button>
           `;
-          
-          // Refresh folders if needed
-          if (typeof loadFolders === 'function') {
-            loadFolders();
-          }
         } else {
           statusDiv.style.background = 'rgba(239, 68, 68, 0.2)';
           statusDiv.style.border = '1px solid #ef4444';
           statusDiv.innerHTML = `
             <div style="color: #ef4444; font-weight: bold; margin-bottom: 0.5rem;">❌ Upload Failed</div>
             <div style="color: white; font-size: 0.875rem;">${result.error || 'Unknown error'}</div>
-            <button onclick="resetArtistImageModal()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer;">
+            <button onclick="resetArtistImageModal(); document.getElementById('imageUploadBtn').textContent = 'Upload to Arweave';" style="margin-top: 1rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer;">
               Try Again
             </button>
           `;
@@ -2542,12 +2362,15 @@
         statusDiv.innerHTML = `
           <div style="color: #ef4444; font-weight: bold; margin-bottom: 0.5rem;">❌ Upload Failed</div>
           <div style="color: white; font-size: 0.875rem;">${error.message}</div>
-          <button onclick="resetArtistImageModal()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer;">
+          <button onclick="resetArtistImageModal(); document.getElementById('imageUploadBtn').textContent = 'Upload to Arweave';" style="margin-top: 1rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer;">
             Try Again
           </button>
         `;
       }
-    }
+      
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Upload to Arweave';
+    };
 
     // Close artist image modal when clicking outside
     document.getElementById('artistImageModal')?.addEventListener('click', (e) => {
