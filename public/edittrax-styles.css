@@ -921,6 +921,14 @@ textarea {
   h1 {
     font-size: 1.25rem;
   }
+  
+  /* Remove header padding on mobile */
+  .header-edittrax {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
 
   .modal-content {
     width: 95vw;

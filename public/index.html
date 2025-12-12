@@ -224,6 +224,55 @@
                     </button>
                   </div>
                 </div>
+
+                <div class="step-block">
+                  <div class="step-label">6. View Generated Videos</div>
+                  <div class="step-hint">Status, actions, lazy loading</div>
+                  <div style="margin-top: 0.75rem;">
+                    <!-- Videos Table -->
+                    <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+                      <div class="table-container">
+                        <table class="table-edittrax" style="border: none; margin: 0; border-collapse: collapse; width: 100%;">
+                          <thead style="background-color: var(--color-yellow-75); border: none;">
+                            <tr style="border: none;">
+                              <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center; border: none;">ARTIST</th>
+                              <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">DURATION</th>
+                              <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">STATUS</th>
+                              <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">ACTIONS</th>
+                            </tr>
+                          </thead>
+                          <tbody id="videosTable">
+                            <!-- Video rows will be populated dynamically -->
+                            <tr>
+                              <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                                No videos generated yet. Click "GENERATE VIDEO" to create your first video!
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="videos-mobile-list" id="videosMobileList" style="padding: 1rem;"></div>
+                      <div style="display: flex; gap: 0.75rem; padding: 0.5rem 1rem 1.25rem; flex-wrap: wrap; justify-content: center;">
+                        <button 
+                          id="loadMoreBtn" 
+                          onclick="loadMoreVideos()" 
+                          class="btn-base btn-secondary full-btn" 
+                          style="display: none; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
+                        >
+                          Load More
+                        </button>
+                        <button 
+                          id="resetDismissedBtn" 
+                          onclick="resetDismissedVideos()" 
+                          class="btn-base btn-secondary full-btn" 
+                          style="display: none; background: rgba(239,68,68,0.15); color: #ef4444; border: 2px solid #ef4444; font-weight: bold; border-radius: 10px;"
+                        >
+                          Restore Hidden Rows
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -351,60 +400,6 @@
           </div>
 
           <div class="collapsible-card">
-            <button class="collapsible-toggle" onclick="toggleCollapsible('generatedVideosSection')" aria-expanded="false">
-              <div>
-                <div style="font-family: var(--font-mathias);">VIEW Videos</div>
-                <div class="meta">Status, actions, lazy loading</div>
-              </div>
-              <span class="chevron">▸</span>
-            </button>
-            <div id="generatedVideosSection" class="collapsible-body">
-              <!-- Videos Table -->
-              <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
-                <div class="table-container">
-                  <table class="table-edittrax" style="border: none; margin: 0; border-collapse: collapse; width: 100%;">
-                    <thead style="background-color: var(--color-yellow-75); border: none;">
-                      <tr style="border: none;">
-                        <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center; border: none;">ARTIST</th>
-                        <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">DURATION</th>
-                        <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">STATUS</th>
-                        <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">ACTIONS</th>
-                      </tr>
-                    </thead>
-                    <tbody id="videosTable">
-                      <!-- Video rows will be populated dynamically -->
-                      <tr>
-                        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-                          No videos generated yet. Click "GENERATE VIDEO" to create your first video!
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div class="videos-mobile-list" id="videosMobileList" style="padding: 1rem;"></div>
-                <div style="display: flex; gap: 0.75rem; padding: 0.5rem 1rem 1.25rem; flex-wrap: wrap; justify-content: center;">
-                  <button 
-                    id="loadMoreBtn" 
-                    onclick="loadMoreVideos()" 
-                    class="btn-base btn-secondary full-btn" 
-                    style="display: none; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
-                  >
-                    Load More
-                  </button>
-                  <button 
-                    id="resetDismissedBtn" 
-                    onclick="resetDismissedVideos()" 
-                    class="btn-base btn-secondary full-btn" 
-                    style="display: none; background: rgba(239,68,68,0.15); color: #ef4444; border: 2px solid #ef4444; font-weight: bold; border-radius: 10px;"
-                  >
-                    Restore Hidden Rows
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="collapsible-card">
             <button class="collapsible-toggle" onclick="toggleCollapsible('archiveSection')" aria-expanded="false">
               <div>
                 <div style="font-family: var(--font-mathias);">MANAGE Archive</div>
@@ -413,27 +408,6 @@
               <span class="chevron">▸</span>
             </button>
             <div id="archiveSection" class="collapsible-body">
-              <!-- Expectations Management Section -->
-              <div style="background: rgba(230, 233, 224, 0.1); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
-                <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin-bottom: 1rem; text-align: center;">
-                  ⚠️ Important: Blockchain Confirmation Delays
-                </h2>
-                <div style="color: var(--color-yellow-75); font-size: 0.875rem; line-height: 1.6; font-family: var(--font-body);">
-                  <p style="margin-bottom: 0.75rem;">
-                    <strong>Files are not immediately viewable:</strong> After uploading, files must be confirmed on the Arweave blockchain. This typically takes 2-10 minutes.
-                  </p>
-                  <p style="margin-bottom: 0.75rem;">
-                    <strong>Costs:</strong> Uploading to Arweave has minimal costs (typically less than $0.01 per file), but costs do exist and are paid from your wallet.
-                  </p>
-                  <p style="margin-bottom: 0.75rem;">
-                    <strong>Access:</strong> Once confirmed, files will be permanently stored on Arweave and accessible via the provided URLs. You can check transaction status on <a href="https://arweave.net" target="_blank" style="color: var(--color-yellow-75); text-decoration: underline;">arweave.net</a>.
-                  </p>
-                  <p>
-                    <strong>Purpose:</strong> This archives your Firebase Storage files to Arweave for permanent, decentralized storage. Archived files can be used in video generation instead of Firebase URLs.
-                  </p>
-                </div>
-              </div>
-
               <!-- Folder Selection Section -->
               <div style="background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
                 <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin-bottom: 1rem; text-align: center;">
@@ -451,7 +425,7 @@
               <div id="archiveFileSelectionSection" style="display: none; background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                   <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin: 0;">
-                    📄 Files in <span id="archiveSelectedFolderName"></span>
+                    Files in <span id="archiveSelectedFolderName"></span>
                   </h2>
                   <div style="display: flex; gap: 0.5rem;">
                     <button onclick="archiveSelectAllFiles()" class="btn-base btn-secondary" style="padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;">
@@ -476,7 +450,7 @@
               <!-- Upload Section -->
               <div id="archiveUploadSection" style="display: none; background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
                 <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin-bottom: 1rem; text-align: center;">
-                  🚀 Archive Selected Files
+                  Archive Selected Files
                 </h2>
                 <div style="text-align: center; margin-bottom: 1.5rem;">
                   <button 
@@ -513,7 +487,7 @@
               <div style="background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                   <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin: 0;">
-                    📋 Archive Manifest
+                    Archive Manifest
                   </h2>
                   <button onclick="loadArchiveManifest()" class="btn-base btn-secondary" style="padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;">
                     Refresh
