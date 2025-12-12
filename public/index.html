@@ -325,15 +325,30 @@
                   </div>
                 </div>
 
+                <div id="filterSelectionContainer" class="step-block" style="display: none;">
+                  <div class="step-label">4. Video filter</div>
+                  <div class="step-hint">Choose a visual style for your video.</div>
+                  <select 
+                    id="filterSelect"
+                    style="width: 100%; margin: 0.35rem auto 0; display: block; padding: 0.85rem; border: 2px solid var(--color-yellow-75); border-radius: 8px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-body); cursor: pointer;"
+                    onchange="updateFilterSelection(this.value)"
+                  >
+                    <option value="look_hard_bw_street_doc">Hard B&W Street Doc (Default)</option>
+                    <option value="look_bw_contrast">B&W Contrast</option>
+                    <option value="look_soft_bw">Soft B&W</option>
+                    <option value="look_vintage_warm">Vintage Warm</option>
+                    <option value="look_cool_blue">Cool Blue</option>
+                  </select>
+                </div>
+
                 <div id="overlayToggleContainer" class="step-block" style="display: none;">
-                  <div class="step-label">4. Overlay effect</div>
+                  <div class="step-label">5. Overlay effect</div>
                   <div class="step-hint">Add a texture/grit overlay. Turn off for fastest renders.</div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; width: 100%; margin: 0 auto;">
                     <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem 1.25rem; background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 10px; transition: all 0.3s ease; width: 100%;">
                       <input 
                         type="checkbox" 
-                        id="enableOverlay" 
-                        checked
+                        id="enableOverlay"
                         style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-yellow-75);"
                         onchange="updateOverlayToggle(this.checked)"
                       />
@@ -345,7 +360,7 @@
                 </div>
 
                 <div class="step-block">
-                  <div class="step-label">5. Generate</div>
+                  <div class="step-label">6. Generate</div>
                   <div class="step-hint">Review selections then start rendering.</div>
                   <div class="action-row" style="margin-top: 0.25rem;">
                     <button 
@@ -936,15 +951,15 @@
         window.open('/website/index.html', '_blank');
       }
     };
-    // Always use Hard B&W Street Doc filter at 80% intensity
-    const selectedFilter = 'look_hard_bw_street_doc'; // Always use Hard B&W Street Doc
+    // Video filter settings
+    let selectedFilter = 'look_hard_bw_street_doc'; // Default filter
     const filterIntensity = 0.8; // Always use 80% intensity (0.8)
-    let selectedAudioSource = null; // 'mixes' or 'tracks'
-    let selectedArtist = 'random'; // Selected artist (or 'random')
+    let selectedAudioSource = 'mixes'; // Default to 'mixes' for one-click generation
+    let selectedArtist = 'random'; // Default to 'random' for one-click generation
     let availableArtists = []; // List of available artists
     let selectedFolders = new Set(); // Set of selected folder names
     let availableFolders = []; // List of available folders for current mode
-    let enableOverlay = true; // Overlay feature enabled by default
+    let enableOverlay = false; // Overlay feature OFF by default
     const VIDEOS_PAGE_SIZE = 8;
     let visibleVideoCount = 0;
     let dismissedVideos = new Set();
@@ -1005,6 +1020,11 @@
       loadAvailableFolders();
       populateUploadFolderSelect();
       // loadFolders is now lazy-loaded when upload section is opened
+      
+      // Pre-select mixes as default audio source for one-click generation
+      setTimeout(() => {
+        selectAudioSource('mixes');
+      }, 500);
     });
 
     /**
@@ -1107,6 +1127,8 @@
       const tracksBtn = document.getElementById('audioSourceTracks');
       const artistContainer = document.getElementById('artistSelectionContainer');
       const folderContainer = document.getElementById('folderSelectionContainer');
+      const filterContainer = document.getElementById('filterSelectionContainer');
+      const overlayContainer = document.getElementById('overlayToggleContainer');
       
       if (source === 'mixes') {
         mixesBtn.style.background = 'var(--color-yellow-75)';
@@ -1271,6 +1293,14 @@
         });
       }
     });
+
+    /**
+     * Update filter selection
+     */
+    window.updateFilterSelection = function(filterValue) {
+      selectedFilter = filterValue;
+      console.log(`✅ Selected filter: ${selectedFilter}`);
+    }
 
     /**
      * Update overlay toggle state
@@ -1478,9 +1508,11 @@
               clearInterval(interval);
               activeJobs.delete(jobId);
               
-              // Reload videos list
+              // Reload videos list after a short delay to ensure backend has updated
               if (data.status === 'completed') {
-                loadVideos();
+                setTimeout(() => {
+                  loadVideos();
+                }, 1000); // 1 second delay
               }
             }
           }
@@ -1518,6 +1550,13 @@
           videos = data.videos || [];
           console.log(`📹 Loaded ${videos.length} videos from API`);
           console.log(`📹 Raw API response sample:`, videos[0]);
+          
+          // Sort videos by creation date (newest first)
+          videos.sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateB - dateA; // Newest first
+          });
           
           // Normalize videoUrl - ensure it's always a string or null
           videos = videos.map(v => {
