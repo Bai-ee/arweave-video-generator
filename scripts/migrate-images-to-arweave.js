@@ -14,15 +14,16 @@ import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Arweave from 'arweave';
-import { TurboFactory } from '@ardrive/turbo-sdk';
-import { ArweaveSigner } from 'arbundles';
+import { TurboFactory, ArweaveSigner } from '@ardrive/turbo-sdk';
 import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, '..');
 
-// Load environment variables
+// Load environment variables (try multiple locations)
+dotenv.config({ path: path.join(projectRoot, '.env.local') });
+dotenv.config({ path: path.join(projectRoot, '.env.production') });
 dotenv.config({ path: path.join(projectRoot, '.env') });
 
 // Original manifest ID that contains some images

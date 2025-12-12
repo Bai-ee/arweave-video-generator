@@ -10,12 +10,19 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, '..');
+
+// Load environment variables
+dotenv.config({ path: path.join(projectRoot, '.env.local') });
+dotenv.config({ path: path.join(projectRoot, '.env.production') });
+dotenv.config({ path: path.join(projectRoot, '.env') });
+
+// Use existing Firebase admin module
+import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
 
 async function applyUpdates() {
   console.log('='.repeat(60));
@@ -34,28 +41,14 @@ async function applyUpdates() {
   console.log(`Loaded ${Object.keys(imageMapping).length} image mappings`);
   console.log('');
   
-  // Initialize Firebase
-  let serviceAccount;
+  // Initialize Firebase using existing module
   try {
-    // Try environment variable first
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-    } else {
-      // Try local file
-      const keyPath = path.join(projectRoot, 'firebase-key.json');
-      if (fs.existsSync(keyPath)) {
-        serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
-      } else {
-        throw new Error('No Firebase credentials found');
-      }
-    }
+    initializeFirebaseAdmin();
   } catch (error) {
-    console.error('❌ Could not load Firebase credentials:', error.message);
-    console.error('Set FIREBASE_SERVICE_ACCOUNT_KEY env var or create firebase-key.json');
+    console.error('❌ Could not initialize Firebase:', error.message);
     process.exit(1);
   }
   
-  initializeApp({ credential: cert(serviceAccount) });
   const db = getFirestore();
   
   console.log('Connected to Firebase');
