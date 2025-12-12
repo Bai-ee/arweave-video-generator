@@ -859,6 +859,10 @@ textarea {
     gap: 1rem;
   }
   
+  .collapsible-toggle .chevron {
+    display: none;
+  }
+  
   .collapsible-body {
     padding: 0.5rem;
   }
