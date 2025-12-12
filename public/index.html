@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arweave Video Generator</title>
+  <title>EditVideos</title>
   
   <link rel="icon" type="image/svg+xml" href="/logos/logo.svg">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -90,11 +90,11 @@
       
       <!-- Navigation -->
       <div style="position: absolute; top: 25px; left: 0; z-index: 50; font-family: var(--font-mathias); font-size: 0.75rem; display: flex; gap: 1rem;">
-        <a href="/archive.html" style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; text-decoration: none; font-weight: bold;">
-          📦 ARCHIVE
+        <a href="/archive.html" style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; text-decoration: none; font-weight: bold; letter-spacing: 0.08em;">
+          ARCHIVE
         </a>
-        <a href="#" onclick="openWebsite(); return false;" style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; text-decoration: none; font-weight: bold;">
-          🌐 WEBSITE
+        <a href="#" onclick="openWebsite(); return false;" style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; text-decoration: none; font-weight: bold; letter-spacing: 0.08em;">
+          WEBSITE
         </a>
       </div>
       
@@ -114,171 +114,173 @@
         </button>
       </div>
       
-      <div class="flex flex-col items-center gap-3 w-full">
+      <div class="flex flex-col items-center gap-4 w-full px-4 sm:px-0">
         <div class="logo-container flex flex-col items-center gap-2">
-          <img src="/logos/load.gif" alt="Loading Animation" style="width: 140px; height: auto;">
-          <h1 style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 1.5rem; text-transform: uppercase;">Arweave Video Generator</h1>
+          <img src="/logos/load.gif" alt="Loading Animation" style="width: 120px; height: auto;">
+          <h1 style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 1.6rem; text-transform: uppercase; letter-spacing: 0.08em;">EditVideos</h1>
         </div>
-        
-        <!-- Audio Source Selection (MIXES vs TRACKS) -->
-        <div style="width: 100%; max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem;">
-          <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
-            🎵 SELECT AUDIO SOURCE (Required)
-          </label>
-          <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 1.5rem;">
-            <button 
-              id="audioSourceMixes" 
-              onclick="selectAudioSource('mixes')"
-              style="padding: 0.75rem 2rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: var(--color-yellow-75); color: black; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
-            >
-              🎧 DJ MIXES
+
+        <div class="control-stack">
+          <div class="collapsible-card">
+            <button class="collapsible-toggle" onclick="toggleCollapsible('generateSection')" aria-expanded="true">
+              <span>Generate video</span>
+              <span class="meta">Guided steps on tap</span>
             </button>
-            <button 
-              id="audioSourceTracks" 
-              onclick="selectAudioSource('tracks')"
-              style="padding: 0.75rem 2rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
-            >
-              🎵 ORIGINAL TRACKS
-            </button>
-          </div>
-          
-          <!-- Artist Selection (only shown for MIXES) -->
-          <div id="artistSelectionContainer" style="display: none; margin-bottom: 1.5rem;">
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
-              🎤 SELECT ARTIST
-            </label>
-            <select 
-              id="artistSelect"
-              style="width: 100%; max-width: 400px; margin: 0 auto; display: block; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); cursor: pointer;"
-            >
-              <option value="random">🎲 Random Artist</option>
-              <!-- Artists will be populated by JavaScript -->
-            </select>
-          </div>
-          
-          <!-- Video Folder Selection -->
-          <div id="folderSelectionContainer" style="display: none; margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(230, 233, 224, 0.2);">
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
-              📁 SELECT VIDEO FOLDERS (at least one required):
-            </label>
-            <div id="folderCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; max-width: 800px; margin: 0 auto;">
-              <!-- Folders will be populated dynamically -->
-            </div>
-          </div>
-          
-          <!-- Overlay Toggle -->
-          <div id="overlayToggleContainer" style="display: none; margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(230, 233, 224, 0.2);">
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
-              🎨 VIDEO OVERLAY EFFECT
-            </label>
-            <div style="display: flex; align-items: center; justify-content: center; gap: 1rem;">
-              <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem 1.5rem; background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 5px; transition: all 0.3s ease;">
-                <input 
-                  type="checkbox" 
-                  id="enableOverlay" 
-                  checked
-                  style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-yellow-75);"
-                  onchange="updateOverlayToggle(this.checked)"
-                />
-                <span style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; font-size: 0.875rem;">
-                  Enable Overlay Effect
-                </span>
-              </label>
-            </div>
-            <p style="color: #888; font-size: 0.75rem; text-align: center; margin-top: 0.5rem; font-family: var(--font-mathias);">
-              Adds texture/grit overlay effect (may increase processing time)
-            </p>
-          </div>
-        </div>
-        
-        <!-- Filter Selection - OFF by default, user can enable -->
-        <div style="width: 100%; max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem;">
-          <!-- Enable Filter Toggle -->
-          <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 1rem;">
-            <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem; font-weight: bold; cursor: pointer;">
-              <input 
-                type="checkbox" 
-                id="enableFilterToggle" 
-                onchange="toggleFilterUI(this.checked)"
-                style="width: 20px; height: 20px; cursor: pointer;"
-              />
-              <span>🎨 ENABLE VIDEO FILTER</span>
-            </label>
-          </div>
-          
-          <!-- Filter Selection UI (hidden by default) -->
-          <div id="filterSelectionContainer" style="display: none;">
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
-              🎨 SELECT VIDEO FILTER
-            </label>
-            <div id="filterButtons" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
-              <!-- Filter buttons will be populated by JavaScript -->
-            </div>
-            
-            <!-- Filter Intensity Slider (shown only when filter is selected) -->
-            <div id="filterIntensityContainer" style="display: none; margin-top: 1.5rem; margin-bottom: 1rem;">
-              <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center; font-weight: bold;">
-                🎚️ FILTER INTENSITY: <span id="filterIntensityValue">80%</span>
-              </label>
-              <div style="max-width: 600px; margin: 0 auto;">
-                <input 
-                  type="range" 
-                  id="filterIntensitySlider" 
-                  min="0" 
-                  max="100" 
-                  value="80" 
-                  step="1"
-                  style="width: 100%; height: 8px; background: #0a0a0a; border: 2px solid var(--color-yellow-75); border-radius: 5px; outline: none; cursor: pointer;"
-                  oninput="updateFilterIntensity(this.value)"
-                />
-                <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; color: #888; font-size: 0.75rem; font-family: var(--font-mathias);">
-                  <span>0% (None)</span>
-                  <span>80% (Default)</span>
-                  <span>100% (Extreme)</span>
+            <div id="generateSection" class="collapsible-body open">
+              <div class="stepper-card">
+                <div class="step-block">
+                  <div class="step-label">1. Select audio source</div>
+                  <div class="step-hint">Choose whether to work from DJ mixes or original tracks.</div>
+                  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; margin-top: 0.5rem;">
+                    <button 
+                      id="audioSourceMixes" 
+                      onclick="selectAudioSource('mixes')"
+                      class="btn-base btn-primary"
+                      style="padding: 0.75rem 1.5rem; border-radius: 8px;"
+                    >
+                      DJ MIXES
+                    </button>
+                    <button 
+                      id="audioSourceTracks" 
+                      onclick="selectAudioSource('tracks')"
+                      class="btn-base btn-secondary"
+                      style="padding: 0.75rem 1.5rem; border-radius: 8px; background: #0a0a0a; color: var(--color-yellow-75);"
+                    >
+                      ORIGINAL TRACKS
+                    </button>
+                  </div>
+                </div>
+
+                <div id="artistSelectionContainer" class="step-block" style="display: none;">
+                  <div class="step-label">2. Select artist</div>
+                  <div class="step-hint">Pick an artist for mixes or choose random.</div>
+                  <select 
+                    id="artistSelect"
+                    style="width: 100%; max-width: 420px; margin: 0.35rem auto 0; display: block; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 8px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-body); cursor: pointer;"
+                  >
+                    <option value="random">Random Artist</option>
+                  </select>
+                </div>
+
+                <div id="folderSelectionContainer" class="step-block" style="display: none;">
+                  <div class="step-label">3. Select video folders</div>
+                  <div class="step-hint">Choose at least one folder to pull footage from.</div>
+                  <div id="folderCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; max-width: 800px; margin: 0 auto;">
+                    <!-- Folders will be populated dynamically -->
+                  </div>
+                </div>
+
+                <div id="overlayToggleContainer" class="step-block" style="display: none;">
+                  <div class="step-label">4. Overlay effect</div>
+                  <div class="step-hint">Add a texture/grit overlay. Turn off for fastest renders.</div>
+                  <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem 1.25rem; background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 10px; transition: all 0.3s ease;">
+                      <input 
+                        type="checkbox" 
+                        id="enableOverlay" 
+                        checked
+                        style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-yellow-75);"
+                        onchange="updateOverlayToggle(this.checked)"
+                      />
+                      <span style="color: var(--color-yellow-75); font-family: var(--font-body); font-weight: 700; font-size: 0.95rem;">
+                        Enable Overlay Effect
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="step-block">
+                  <div class="step-label">5. Generate</div>
+                  <div class="step-hint">Review selections then start rendering.</div>
+                  <div class="action-row" style="margin-top: 0.25rem;">
+                    <button 
+                      id="generateVideoBtn" 
+                      onclick="generateVideo()"
+                      class="btn-base btn-primary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
+                      style="transition: all 0.3s ease; background: var(--color-yellow-75); color: black; font-weight: bold; border-radius: 10px;"
+                    >
+                      <span id="generateBtnText">GENERATE VIDEO</span>
+                      <span id="generateBtnLoading" style="display: none;">Generating...</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        <!-- Action Buttons -->
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
-        <button 
-          id="generateVideoBtn" 
-          onclick="generateVideo()"
-          class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
-          style="transition: all 0.3s ease; background: var(--color-yellow-75); color: black; font-weight: bold; font-family: var(--font-mathias);"
-        >
-          <span id="generateBtnText">🎬 GENERATE VIDEO</span>
-          <span id="generateBtnLoading" style="display: none;">⏳ Generating...</span>
-        </button>
-          
-          <button 
-            id="uploadVideoBtn" 
-            onclick="showUploadModal()"
-            class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
-            style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; font-family: var(--font-mathias);"
-          >
-            📤 UPLOAD VIDEO
-        </button>
-        
-        <button 
-            id="uploadMixBtn" 
-            onclick="showUploadMixModal()"
-            class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
-            style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; font-family: var(--font-mathias);"
-          >
-            🎵 UPLOAD MIX
-        </button>
-        
-          <button 
-            id="deployWebsiteBtn" 
-            onclick="deployWebsite()"
-            class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
-            style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; font-family: var(--font-mathias);"
-          >
-            🌐 DEPLOY WEBSITE
-        </button>
+
+          <div class="collapsible-card">
+            <button class="collapsible-toggle" onclick="toggleCollapsible('uploadSection')" aria-expanded="false">
+              <span>Uploads</span>
+              <span class="meta">Mixes, videos, assets</span>
+            </button>
+            <div id="uploadSection" class="collapsible-body">
+              <div class="stepper-card">
+                <div class="step-block">
+                  <div class="step-label">Quick actions</div>
+                  <div class="step-hint">Upload new source files or mixes. Keep filenames clean.</div>
+                  <div class="action-row" style="margin-top: 0.35rem;">
+                    <button 
+                      id="uploadVideoBtn" 
+                      onclick="showUploadModal()"
+                      class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
+                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold;"
+                    >
+                      Upload Video
+                    </button>
+                    <button 
+                      id="uploadMixBtn" 
+                      onclick="showUploadMixModal()"
+                      class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
+                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold;"
+                    >
+                      Upload Mix
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="collapsible-card">
+            <button class="collapsible-toggle" onclick="toggleCollapsible('toolsSection')" aria-expanded="false">
+              <span>Tools & deploy</span>
+              <span class="meta">Refresh, website, archive</span>
+            </button>
+            <div id="toolsSection" class="collapsible-body">
+              <div class="stepper-card">
+                <div class="step-block">
+                  <div class="step-label">Management</div>
+                  <div class="step-hint">Deploy the site, refresh video list, or open the public site.</div>
+                  <div class="action-row" style="margin-top: 0.35rem;">
+                    <button 
+                      id="refreshBtn" 
+                      onclick="loadVideos()"
+                      class="btn-base btn-secondary"
+                      style="background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
+                      title="Refresh Videos"
+                    >
+                      Refresh Videos
+                    </button>
+                    <button 
+                      id="deployWebsiteBtn" 
+                      onclick="deployWebsite()"
+                      class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
+                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold;"
+                    >
+                      Deploy Website
+                    </button>
+                    <button 
+                      onclick="openWebsite(); return false;"
+                      class="btn-base btn-secondary"
+                      style="background: #0a0a0a; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px;"
+                    >
+                      View Site
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -300,20 +302,6 @@
       <button onclick="loadVideos()" class="mt-3 btn-primary px-4 py-2 text-sm rounded" style="background: var(--color-yellow-75); color: black; border: none; cursor: pointer;">
         Retry
       </button>
-    </div>
-
-    <!-- Deploy Website Success Modal -->
-    <div id="deployWebsiteSuccessModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
-      <div style="background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">🌐 Website Deployment Success</h2>
-          <button onclick="hideDeployWebsiteSuccessModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
-        </div>
-        
-        <div id="deployWebsiteSuccessContent" style="color: var(--color-yellow-75); font-family: var(--font-mathias);">
-          <!-- Content will be populated by JavaScript -->
-        </div>
-      </div>
     </div>
 
     <!-- Upload Mix Modal -->
@@ -447,21 +435,6 @@
                 style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
               />
             </div>
-          </div>
-          
-          <div>
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Mix Thumbnail Image <span style="color: #888; font-size: 0.75rem;">(Optional)</span>
-            </label>
-            <input 
-              type="file" 
-              id="mixThumbnailInput" 
-              accept=".jpg,.jpeg,.png,.gif,.webp,image/*"
-              style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
-            />
-            <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
-              Upload a thumbnail image for this mix/track (.jpg, .png, .gif, .webp). Will be displayed on the website.
-            </p>
           </div>
           
           <div>
@@ -654,6 +627,25 @@
             </tbody>
           </table>
         </div>
+        <div class="videos-mobile-list" id="videosMobileList" style="padding: 1rem;"></div>
+        <div style="display: flex; gap: 0.75rem; padding: 0.5rem 1rem 1.25rem; flex-wrap: wrap; justify-content: center;">
+          <button 
+            id="loadMoreBtn" 
+            onclick="loadMoreVideos()" 
+            class="btn-base btn-secondary" 
+            style="display: none; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
+          >
+            Load More
+          </button>
+          <button 
+            id="resetDismissedBtn" 
+            onclick="resetDismissedVideos()" 
+            class="btn-base btn-secondary" 
+            style="display: none; background: rgba(239,68,68,0.15); color: #ef4444; border: 2px solid #ef4444; font-weight: bold; border-radius: 10px;"
+          >
+            Restore Hidden Rows
+          </button>
+        </div>
       </div>
     </div>
 
@@ -727,16 +719,66 @@
         window.open('/website/index.html', '_blank');
       }
     }
-    // Filter settings - OFF by default
-    let filterEnabled = false; // Filter is OFF by default
-    let selectedFilter = 'look_hard_bw_street_doc'; // Default filter when enabled
-    let filterIntensity = 0.8; // Default 80% intensity (0.8)
+    // Always use Hard B&W Street Doc filter at 80% intensity
+    const selectedFilter = 'look_hard_bw_street_doc'; // Always use Hard B&W Street Doc
+    const filterIntensity = 0.8; // Always use 80% intensity (0.8)
     let selectedAudioSource = null; // 'mixes' or 'tracks'
     let selectedArtist = 'random'; // Selected artist (or 'random')
     let availableArtists = []; // List of available artists
     let selectedFolders = new Set(); // Set of selected folder names
     let availableFolders = []; // List of available folders for current mode
     let enableOverlay = true; // Overlay feature enabled by default
+    const VIDEOS_PAGE_SIZE = 8;
+    let visibleVideoCount = 0;
+    let dismissedVideos = new Set();
+    try {
+      const storedDismissed = JSON.parse(localStorage.getItem('dismissedVideos') || '[]');
+      dismissedVideos = new Set(storedDismissed);
+    } catch (err) {
+      dismissedVideos = new Set();
+    }
+
+    /**
+     * Toggle collapsible sections for the guided controls
+     */
+    function toggleCollapsible(sectionId) {
+      const panel = document.getElementById(sectionId);
+      if (!panel) return;
+      const toggle = panel.previousElementSibling;
+      const isOpen = panel.classList.contains('open');
+      panel.classList.toggle('open');
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', (!isOpen).toString());
+      }
+    }
+
+    const getVideoId = (video) => video?.jobId || video?.videoId || video?.id || '';
+
+    function rememberDismissed() {
+      try {
+        localStorage.setItem('dismissedVideos', JSON.stringify([...dismissedVideos]));
+      } catch (err) {
+        console.warn('Unable to persist dismissed videos', err);
+      }
+    }
+
+    function dismissVideo(jobId) {
+      if (!jobId) return;
+      dismissedVideos.add(jobId);
+      rememberDismissed();
+      displayVideos(true);
+    }
+
+    function resetDismissedVideos() {
+      dismissedVideos.clear();
+      rememberDismissed();
+      displayVideos(true);
+    }
+
+    function loadMoreVideos() {
+      visibleVideoCount += VIDEOS_PAGE_SIZE;
+      displayVideos(false);
+    }
 
     // Video filter definitions (must match backend)
     const VIDEO_FILTERS = {
@@ -1051,44 +1093,13 @@
     }
 
     /**
-     * Toggle filter UI on/off
-     * Make it globally accessible for inline onchange handler
-     */
-    window.toggleFilterUI = function(enabled) {
-      filterEnabled = enabled;
-      const container = document.getElementById('filterSelectionContainer');
-      
-      if (enabled) {
-        // Show filter selection UI
-        if (container) {
-          container.style.display = 'block';
-        }
-        // Initialize filter buttons if not already done
-        const filterButtons = document.getElementById('filterButtons');
-        if (filterButtons && filterButtons.children.length === 0) {
-          initializeFilterButtons();
-        }
-        // Select default filter
-        selectFilter(selectedFilter);
-        console.log('✅ Filter enabled');
-      } else {
-        // Hide filter selection UI
-        if (container) {
-          container.style.display = 'none';
-        }
-        console.log('✅ Filter disabled');
-      }
-    };
-
-    /**
      * Initialize filter selection buttons
+     * COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity
      */
+    /*
     function initializeFilterButtons() {
       const container = document.getElementById('filterButtons');
       if (!container) return;
-
-      // Clear existing buttons
-      container.innerHTML = '';
 
       Object.keys(VIDEO_FILTERS).forEach(filterKey => {
         const filter = VIDEO_FILTERS[filterKey];
@@ -1152,6 +1163,7 @@
       }
       console.log(`✅ Filter intensity: ${value}%`);
     }
+    */
 
     /**
      * Generate a new video
@@ -1169,6 +1181,8 @@
         return;
       }
       
+      // Filter check removed - always using Hard B&W Street Doc @ 80%
+
       const btn = document.getElementById('generateVideoBtn');
       const btnText = document.getElementById('generateBtnText');
       const btnLoading = document.getElementById('generateBtnLoading');
@@ -1180,22 +1194,15 @@
 
       try {
         // Prepare request body
-        // Normalize folder names: remove 'assets/' prefix for consistent backend handling
-        const normalizedFolders = Array.from(selectedFolders).map(folder => {
-          // Remove 'assets/' prefix if present, backend will map it correctly
-          return folder.replace(/^assets\//, '');
-        });
-        
+        // Always use Hard B&W Street Doc filter at 80% intensity
         const requestBody = {
           duration: 30,
-          videoFilter: filterEnabled ? selectedFilter : null, // Only send filter if enabled
-          filterIntensity: filterEnabled ? filterIntensity : 0, // Only send intensity if filter enabled
+          videoFilter: selectedFilter, // Always 'look_hard_bw_street_doc'
+          filterIntensity: filterIntensity, // Always 0.8 (80%)
           useTrax: selectedAudioSource === 'tracks', // true for tracks, false for mixes
-          selectedFolders: normalizedFolders, // Array of normalized folder names (without assets/ prefix)
+          selectedFolders: Array.from(selectedFolders), // Array of selected folder names
           enableOverlay: enableOverlay // Overlay feature toggle
         };
-        
-        console.log(`[Generate Video] Sending normalized folders:`, normalizedFolders);
         
         // Add artist selection only for mixes
         if (selectedAudioSource === 'mixes') {
@@ -1358,49 +1365,116 @@
     }
 
     /**
-     * Display videos in table
+     * Display videos in table and mobile cards with lazy loading
      */
-    function displayVideos() {
+    function displayVideos(resetVisible = true) {
       const tableBody = document.getElementById('videosTable');
-      tableBody.innerHTML = '';
+      const mobileList = document.getElementById('videosMobileList');
+      const loadMoreBtn = document.getElementById('loadMoreBtn');
+      const resetBtn = document.getElementById('resetDismissedBtn');
 
-      if (videos.length === 0) {
-        tableBody.innerHTML = `
-          <tr>
-            <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-              No videos generated yet. Click "GENERATE VIDEO" to create your first video!
-            </td>
-          </tr>
-        `;
+      if (tableBody) tableBody.innerHTML = '';
+      if (mobileList) mobileList.innerHTML = '';
+
+      const filteredVideos = videos.filter(video => !dismissedVideos.has(getVideoId(video)));
+
+      if (resetVisible || visibleVideoCount === 0) {
+        visibleVideoCount = Math.min(VIDEOS_PAGE_SIZE, filteredVideos.length || VIDEOS_PAGE_SIZE);
+      }
+      if (visibleVideoCount > filteredVideos.length) {
+        visibleVideoCount = filteredVideos.length;
+      }
+
+      if (filteredVideos.length === 0) {
+        if (tableBody) {
+          tableBody.innerHTML = `
+            <tr>
+              <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                No videos available. Generate a video to see it here.
+              </td>
+            </tr>
+          `;
+        }
+        if (mobileList) {
+          mobileList.innerHTML = `
+            <div class="video-item-card" style="text-align: center; font-family: var(--font-body);">
+              No videos available. Generate a video to see it here.
+            </div>
+          `;
+        }
+        if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+        if (resetBtn) resetBtn.style.display = dismissedVideos.size ? 'inline-flex' : 'none';
         return;
       }
 
       // Sort by creation date (newest first)
-      const sortedVideos = [...videos].sort((a, b) => {
+      const sortedVideos = [...filteredVideos].sort((a, b) => {
         const dateA = new Date(a.createdAt || 0);
         const dateB = new Date(b.createdAt || 0);
         return dateB - dateA;
       });
 
-      console.log(`📺 Displaying ${sortedVideos.length} videos in table`);
-      sortedVideos.forEach((video, index) => {
+      const visibleSlice = sortedVideos.slice(0, visibleVideoCount);
+
+      renderVideoTableRows(visibleSlice, tableBody);
+      renderMobileVideos(visibleSlice, mobileList);
+
+      const hasMore = sortedVideos.length > visibleSlice.length;
+      if (loadMoreBtn) loadMoreBtn.style.display = hasMore ? 'inline-flex' : 'none';
+      if (resetBtn) resetBtn.style.display = dismissedVideos.size ? 'inline-flex' : 'none';
+    }
+
+    /**
+     * Render the desktop table rows
+     */
+    function renderVideoTableRows(videoList, tableBody) {
+      if (!tableBody) return;
+      if (videoList.length === 0) return;
+
+      videoList.forEach(video => {
         // Ensure videoUrl is a string, not an object
         if (video.videoUrl && typeof video.videoUrl === 'object') {
-          console.warn(`⚠️ Video ${video.jobId} has videoUrl as object:`, video.videoUrl);
-          video.videoUrl = null; // Reset to null if it's an object
+          video.videoUrl = null;
         }
-        
-        console.log(`📺 Video ${index + 1}:`, {
-          jobId: video.jobId,
-          status: video.status,
-          videoUrl: video.videoUrl || 'NO URL',
-          videoUrlType: typeof video.videoUrl,
-          videoUrlLength: video.videoUrl ? video.videoUrl.length : 0,
-          artist: video.artist,
-          fullVideoObject: video // Log entire object
-        });
         const row = createVideoRow(video);
         tableBody.appendChild(row);
+      });
+    }
+
+    /**
+     * Render the mobile-friendly cards
+     */
+    function renderMobileVideos(videoList, container) {
+      if (!container) return;
+      if (videoList.length === 0) return;
+
+      videoList.forEach(video => {
+        const videoId = getVideoId(video);
+        const statusDisplay = getStatusDisplay(video.status || 'completed');
+        const actions = getActionsHtml(video);
+        const card = document.createElement('div');
+        card.className = 'video-item-card';
+        card.innerHTML = `
+          <button class="dismiss-chip" onclick="dismissVideo('${videoId}')">&times;</button>
+          <div style="font-family: var(--font-mathias); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-yellow-75); font-size: 1rem;">
+            ${video.artist || 'Unknown'}
+          </div>
+          <div class="video-item-meta">
+            <span>Duration: ${video.duration || 30}s</span>
+            <span>Status: ${statusDisplay}</span>
+          </div>
+          <div class="video-item-actions">
+            ${actions}
+            <button 
+              class="btn-base btn-secondary" 
+              style="background: transparent; color: #ef4444; border: 2px solid #ef4444; font-weight: bold;" 
+              onclick="dismissVideo('${videoId}')"
+            >
+              Remove
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
       });
     }
 
@@ -1409,7 +1483,8 @@
      */
     function createVideoRow(video) {
       const row = document.createElement('tr');
-      row.id = `video-row-${video.videoId || video.jobId}`;
+      const videoId = getVideoId(video);
+      row.id = `video-row-${videoId}`;
       row.className = 'video-row';
 
       const status = video.status || 'completed';
@@ -1417,17 +1492,26 @@
       const actions = getActionsHtml(video);
 
       row.innerHTML = `
-        <td class="px-2" style="padding: 1rem; text-align: center; color: var(--color-yellow-75); font-family: var(--font-mathias);">
+        <td class="px-2" style="padding: 1rem; text-align: center; color: var(--color-yellow-75); font-family: var(--font-body);">
           ${video.artist || 'Unknown'}
         </td>
-        <td class="px-2" style="padding: 1rem; text-align: center; color: var(--color-yellow-75);">
+        <td class="px-2" style="padding: 1rem; text-align: center; color: var(--color-yellow-75); font-family: var(--font-body);">
           ${video.duration || 30}s
         </td>
         <td class="px-2" style="padding: 1rem; text-align: center;">
           ${statusDisplay}
         </td>
         <td class="px-2" style="padding: 1rem; text-align: center;">
-          ${actions}
+          <div class="video-actions-inline" style="justify-content: center;">
+            ${actions}
+            <button 
+              class="btn-base btn-secondary px-3 py-1 text-xs rounded"
+              style="background: transparent; color: #ef4444; border: 2px solid #ef4444; cursor: pointer; font-family: var(--font-body);"
+              onclick="dismissVideo('${videoId}')"
+            >
+              × Hide
+            </button>
+          </div>
         </td>
       `;
 
@@ -1451,23 +1535,14 @@
      * Get actions HTML
      */
     function getActionsHtml(video) {
-      console.log(`[getActionsHtml] Video ${video.jobId}:`, {
-        status: video.status,
-        videoUrl: video.videoUrl || 'NULL',
-        videoUrlType: typeof video.videoUrl,
-        hasVideoUrl: !!video.videoUrl,
-        fullVideo: video
-      });
+      const videoId = getVideoId(video);
       
       if (video.status === 'completed' && video.videoUrl) {
-        // Escape single quotes in URL for onclick handler
         const escapedUrl = video.videoUrl.replace(/'/g, "\\'");
         const filename = `${video.artist || 'video'}_${video.duration || 30}s.mp4`.replace(/'/g, "\\'");
         
-        console.log(`[getActionsHtml] Creating VIEW/DOWNLOAD buttons for ${video.jobId}`);
-        
         return `
-          <div style="display: flex; gap: 0.5rem; justify-content: center;">
+          <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
             <button 
               onclick="viewVideo('${escapedUrl}')" 
               class="btn-base btn-secondary px-3 py-1 text-xs rounded"
@@ -1485,54 +1560,46 @@
           </div>
         `;
       } else if (video.status === 'pending' || video.status === 'processing') {
-        return '<span style="color: #6b7280; font-size: 0.75rem;">Processing...</span>';
+        return '<span style="color: #6b7280; font-size: 0.9rem; font-family: var(--font-body);">Processing...</span>';
       } else if (video.status === 'failed') {
-        return '<span style="color: #ef4444; font-size: 0.75rem;">Failed</span>';
+        return '<span style="color: #ef4444; font-size: 0.9rem; font-family: var(--font-body);">Failed</span>';
       }
-      return '-';
+      return '<span style="color: #6b7280; font-size: 0.9rem; font-family: var(--font-body);">No actions</span>';
     }
 
     /**
      * Add video row to table (for new jobs)
      */
     function addVideoRowToTable(video) {
-      const tableBody = document.getElementById('videosTable');
-      
-      // Remove empty state message if present
-      if (tableBody.querySelector('td[colspan="4"]')) {
-        tableBody.innerHTML = '';
+      const id = getVideoId(video);
+      if (id) {
+        const existingIndex = videos.findIndex(v => getVideoId(v) === id);
+        if (existingIndex >= 0) {
+          videos[existingIndex] = { ...videos[existingIndex], ...video };
+        } else {
+          videos.unshift(video);
+        }
+      } else {
+        videos.unshift(video);
       }
-
-      const row = createVideoRow(video);
-      tableBody.insertBefore(row, tableBody.firstChild);
+      displayVideos(true);
     }
 
     /**
      * Update video row status
      */
     function updateVideoRowStatus(jobId, status, videoUrl, error) {
-      const row = document.getElementById(`video-row-${jobId}`);
-      if (!row) return;
-
-      // Update status cell
-      const statusCell = row.cells[2];
-      if (statusCell) {
-        statusCell.innerHTML = getStatusDisplay(status);
-      }
-
-      // Update actions cell
-      const actionsCell = row.cells[3];
-      if (actionsCell) {
-        const video = {
-          videoId: jobId,
-          jobId: jobId,
-          status: status,
-          videoUrl: videoUrl,
-          artist: row.cells[0].textContent.trim(),
-          duration: parseInt(row.cells[1].textContent) || 30
+      if (!jobId) return;
+      const idx = videos.findIndex(v => getVideoId(v) === jobId);
+      if (idx >= 0) {
+        videos[idx] = {
+          ...videos[idx],
+          status,
+          videoUrl: videoUrl ?? videos[idx].videoUrl,
+          error
         };
-        actionsCell.innerHTML = getActionsHtml(video);
       }
+      displayVideos(false);
     }
 
     /**
@@ -1566,8 +1633,8 @@
         background: ${type === 'error' ? 'var(--color-red-75)' : 'var(--color-yellow-75)'};
         color: ${type === 'error' ? 'white' : 'black'};
         border-radius: 5px;
-        font-family: var(--font-mathias);
-        font-size: 0.875rem;
+        font-family: var(--font-body);
+        font-size: 0.95rem;
         z-index: 10000;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       `;
@@ -1698,119 +1765,6 @@
      */
     function hideUploadMixModal() {
       document.getElementById('uploadMixModal').style.display = 'none';
-    }
-
-    /**
-     * Show deploy website success modal
-     */
-    function showDeployWebsiteSuccessModal(data) {
-      const modal = document.getElementById('deployWebsiteSuccessModal');
-      const content = document.getElementById('deployWebsiteSuccessContent');
-      
-      const manifestUrl = data.manifestUrl || `https://arweave.net/${data.manifestId}`;
-      const websiteUrl = data.websiteUrl || `https://arweave.net/${data.manifestId}/index.html`;
-      
-      // Build cost info
-      let costInfo = '';
-      if (data.costEstimate && data.costEstimate.costAR > 0) {
-        costInfo = `
-          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #10b981;">
-            <div style="font-size: 0.875rem; color: #10b981;">
-              💰 <strong>Deployment Cost:</strong> ${data.costEstimate.costAR.toFixed(6)} AR (~$${data.costEstimate.costUSD.toFixed(4)} USD)
-            </div>
-          </div>
-        `;
-      }
-      
-      // Build files info
-      let filesInfo = '';
-      if (data.filesUploaded !== undefined) {
-        filesInfo = `
-          <div style="margin-top: 0.75rem; font-size: 0.875rem; color: #10b981;">
-            📊 <strong>Files:</strong> ${data.filesUploaded} uploaded${data.filesUnchanged ? `, ${data.filesUnchanged} unchanged (reused)` : ''}
-          </div>
-        `;
-      }
-      
-      content.innerHTML = `
-        <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1.5rem; color: #10b981;">
-          <div style="font-size: 1.25rem; font-weight: bold; margin-bottom: 1rem;">
-            ✅ Website Deployed Successfully!
-          </div>
-          
-          <div style="margin-top: 1rem;">
-            <div style="font-size: 0.875rem; margin-bottom: 0.5rem; color: #10b981;">
-              <strong>📋 Manifest ID:</strong>
-            </div>
-            <div style="background: #0a0a0a; padding: 0.5rem; border-radius: 3px; font-family: monospace; font-size: 0.75rem; word-break: break-all; margin-bottom: 1rem;">
-              ${data.manifestId}
-            </div>
-          </div>
-          
-          <div style="margin-top: 1rem;">
-            <div style="font-size: 0.875rem; margin-bottom: 0.75rem; color: #10b981;">
-              <strong>🌐 Website URLs:</strong>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-              <a 
-                href="${websiteUrl}" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                style="background: #10b981; color: white; padding: 0.75rem; border-radius: 5px; text-decoration: none; text-align: center; font-weight: bold; display: block;"
-                onmouseover="this.style.background='#059669'" 
-                onmouseout="this.style.background='#10b981'"
-              >
-                🌐 Primary: ${websiteUrl}
-              </a>
-              <a 
-                href="https://arweave.dev/${data.manifestId}/index.html" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                style="background: transparent; color: #10b981; padding: 0.5rem; border: 2px solid #10b981; border-radius: 5px; text-decoration: none; text-align: center; font-size: 0.875rem; display: block;"
-                onmouseover="this.style.background='#10b981'; this.style.color='white'" 
-                onmouseout="this.style.background='transparent'; this.style.color='#10b981'"
-              >
-                🔗 Alternative: arweave.dev
-              </a>
-              <a 
-                href="https://ar-io.dev/${data.manifestId}/index.html" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                style="background: transparent; color: #10b981; padding: 0.5rem; border: 2px solid #10b981; border-radius: 5px; text-decoration: none; text-align: center; font-size: 0.875rem; display: block;"
-                onmouseover="this.style.background='#10b981'; this.style.color='white'" 
-                onmouseout="this.style.background='transparent'; this.style.color='#10b981'"
-              >
-                🔗 Alternative: ar-io.dev
-              </a>
-            </div>
-          </div>
-          
-          ${filesInfo}
-          ${costInfo}
-          
-          <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #10b981;">
-            <div style="font-size: 0.75rem; color: #10b981; opacity: 0.8;">
-              💡 <strong>Note:</strong> Your website is now live on Arweave! Access it using any of the URLs above.
-            </div>
-          </div>
-        </div>
-      `;
-      
-      modal.style.display = 'flex';
-      
-      // Copy primary URL to clipboard
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(websiteUrl).then(() => {
-          console.log('Website URL copied to clipboard');
-        });
-      }
-    }
-
-    /**
-     * Hide deploy website success modal
-     */
-    function hideDeployWebsiteSuccessModal() {
-      document.getElementById('deployWebsiteSuccessModal').style.display = 'none';
     }
 
     /**
@@ -2006,50 +1960,6 @@
           });
         }
         
-        // Handle mix thumbnail image upload if provided
-        let mixThumbnailPath = null;
-        const mixThumbnailInput = document.getElementById('mixThumbnailInput');
-        if (mixThumbnailInput.files && mixThumbnailInput.files.length > 0) {
-          const mixThumbnailFile = mixThumbnailInput.files[0];
-          progressStatus.textContent = 'Uploading mix thumbnail to Firebase...';
-          progressBar.style.width = '28%';
-          progressPercent.textContent = '28%';
-          
-          const { storage, ref, uploadBytesResumable } = window.firebase;
-          const thumbnailFileName = `mix_thumbnail_${Date.now()}_${mixThumbnailFile.name}`;
-          const thumbnailStoragePath = `mix-thumbnails/${artistName}/${thumbnailFileName}`;
-          const thumbnailStorageRef = ref(storage, thumbnailStoragePath);
-          
-          await new Promise((resolve, reject) => {
-            const thumbnailUploadTask = uploadBytesResumable(thumbnailStorageRef, mixThumbnailFile, {
-              contentType: mixThumbnailFile.type || 'image/jpeg',
-              customMetadata: {
-                artist: artistName,
-                mixTitle: mixTitle || 'Untitled',
-                uploadedAt: new Date().toISOString()
-              }
-            });
-            
-            thumbnailUploadTask.on(
-              'state_changed',
-              (snapshot) => {
-                const thumbnailProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                progressBar.style.width = `${28 + (thumbnailProgress * 0.02)}%`;
-                progressPercent.textContent = `${Math.round(28 + (thumbnailProgress * 0.02))}%`;
-              },
-              (error) => {
-                console.error('Mix thumbnail Firebase upload error:', error);
-                reject(error);
-              },
-              () => {
-                mixThumbnailPath = thumbnailStoragePath;
-                console.log('[Mix Upload] Mix thumbnail uploaded to Firebase:', mixThumbnailPath);
-                resolve();
-              }
-            );
-          });
-        }
-        
         progressStatus.textContent = 'Uploading to Arweave...';
         progressBar.style.width = '30%';
         progressPercent.textContent = '30%';
@@ -2073,10 +1983,6 @@
         
         if (artistImagePath) {
           requestBody.artistImagePath = artistImagePath;
-        }
-        
-        if (mixThumbnailPath) {
-          requestBody.mixThumbnailPath = mixThumbnailPath;
         }
         
         // Upload to API (JSON, not FormData - matches archive upload!)
@@ -2616,9 +2522,45 @@
           throw new Error(data.error || data.message || 'Deployment failed');
         }
         
-        // Show success modal
+        // Show success with manifest URL
+        const manifestUrl = data.manifestUrl || `https://arweave.net/${data.manifestId}`;
+        const websiteUrl = data.websiteUrl || `https://arweave.net/${data.manifestId}/index.html`;
+        
         showToast('✅ Website deployed successfully!', 'success');
-        showDeployWebsiteSuccessModal(data);
+        
+        // Build cost info
+        let costInfo = '';
+        if (data.costEstimate && data.costEstimate.costAR > 0) {
+          costInfo = `\n💰 Deployment Cost: ${data.costEstimate.costAR.toFixed(6)} AR (~$${data.costEstimate.costUSD.toFixed(4)} USD)`;
+        }
+        
+        // Show detailed success message
+        const message = `
+🎉 Website Deployed Successfully!
+
+📋 Manifest ID: ${data.manifestId}
+📋 Manifest URL: ${manifestUrl}
+
+🌐 Website URLs (use /index.html):
+   Primary: ${websiteUrl}
+   Alternative: https://arweave.dev/${data.manifestId}/index.html
+   Alternative: https://ar-io.dev/${data.manifestId}/index.html
+
+📊 Files: ${data.filesUploaded} uploaded, ${data.filesUnchanged || 0} unchanged (reused)
+${costInfo}
+
+Your website is now live on Arweave!
+Note: Access the website using the URLs above with /index.html included.
+        `;
+        
+        alert(message);
+        
+        // Copy manifest URL to clipboard if possible
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(websiteUrl).then(() => {
+            console.log('Website URL copied to clipboard');
+          });
+        }
         
       } catch (error) {
         console.error('Error deploying website:', error);
@@ -2640,12 +2582,6 @@
     document.getElementById('uploadMixModal')?.addEventListener('click', (e) => {
       if (e.target.id === 'uploadMixModal') {
         hideUploadMixModal();
-      }
-    });
-    
-    document.getElementById('deployWebsiteSuccessModal')?.addEventListener('click', (e) => {
-      if (e.target.id === 'deployWebsiteSuccessModal') {
-        hideDeployWebsiteSuccessModal();
       }
     });
 
