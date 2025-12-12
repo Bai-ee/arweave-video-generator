@@ -129,32 +129,32 @@
   <header class="header-edittrax">
     <div class="max-w-6xl mx-auto pt-3" style="position: relative;">
       
-      <!-- System Status and Actions -->
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; padding: 0 1rem; flex-wrap: wrap; gap: 0.75rem;">
+      <!-- System Status and Actions - Fixed Position -->
+      <div style="position: fixed; top: 10px; left: 0; right: 0; z-index: 1000; display: flex; justify-content: space-between; align-items: center; padding: 0 1rem; pointer-events: none;">
         <!-- System Health Status -->
-        <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start;">
+        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; pointer-events: auto;">
           <div id="statusVideoGen" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
             <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-            <span style="font-family: var(--font-body); color: var(--color-yellow-75); font-size: 0.75rem; white-space: nowrap;">Video Gen</span>
+            <span style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">VIDEO GEN</span>
           </div>
           <div id="statusArweave" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
             <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-            <span style="font-family: var(--font-body); color: var(--color-yellow-75); font-size: 0.75rem; white-space: nowrap;">Arweave</span>
+            <span style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">ARWEAVE</span>
           </div>
           <div id="statusWebsite" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
             <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-            <span style="font-family: var(--font-body); color: var(--color-yellow-75); font-size: 0.75rem; white-space: nowrap;">Website</span>
+            <span style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">WEBSITE</span>
           </div>
           <div id="statusStorage" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
             <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-            <span style="font-family: var(--font-body); color: var(--color-yellow-75); font-size: 0.75rem; white-space: nowrap;">Storage</span>
+            <span style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">STORAGE</span>
           </div>
         </div>
         
         <!-- Refresh Button -->
         <button 
           onclick="window.location.reload()"
-          style="padding: 0.5rem 1rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; cursor: pointer; font-family: var(--font-mathias); font-size: 0.75rem; font-weight: bold; transition: all 0.3s ease; white-space: nowrap;"
+          style="padding: 0.5rem 1rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; cursor: pointer; font-family: var(--font-mathias); font-size: 0.7rem; font-weight: bold; transition: all 0.3s ease; white-space: nowrap; pointer-events: auto;"
           onmouseover="this.style.background='var(--color-yellow-75)'; this.style.color='black';"
           onmouseout="this.style.background='transparent'; this.style.color='var(--color-yellow-75)';"
         >
