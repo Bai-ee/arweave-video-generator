@@ -98,7 +98,8 @@
       "maxDuration": 60
     },
     "api/deploy-website.js": {
-      "maxDuration": 300
+      "maxDuration": 300,
+      "includeFiles": "website/**"
     }
   }
 }
