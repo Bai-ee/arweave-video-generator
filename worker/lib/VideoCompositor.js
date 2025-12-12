@@ -128,9 +128,31 @@ export class VideoCompositor {
       console.log('[VideoCompositor] Executing FFmpeg composition...');
 
       // Execute FFmpeg using spawn for better control
-      return await this.executeFFmpeg(command, config.outputPath);
+      const result = await this.executeFFmpeg(command, config.outputPath);
+      
+      // Clean up filter complex file if it was created
+      if (filterComplexFile) {
+        try {
+          await fs.remove(filterComplexFile);
+          console.log(`[VideoCompositor] Cleaned up filter complex file`);
+        } catch (cleanupError) {
+          console.warn(`[VideoCompositor] Failed to cleanup filter complex file: ${cleanupError.message}`);
+        }
+      }
+      
+      return result;
     } catch (error) {
       console.error('[VideoCompositor] Error composing video:', error);
+      
+      // Clean up filter complex file if it was created
+      if (filterComplexFile) {
+        try {
+          await fs.remove(filterComplexFile);
+        } catch (cleanupError) {
+          // Ignore cleanup errors in error path
+        }
+      }
+      
       throw error;
     }
   }
@@ -762,9 +784,22 @@ export class VideoCompositor {
       command.push('-i', layer.source);
     });
 
-    // Filter complex
+    // Filter complex - write to file if too long to avoid command-line length issues
+    let filterComplexFile = null;
     if (filterComplex) {
-      command.push('-filter_complex', filterComplex);
+      // If filter_complex is longer than 8000 chars, write to temp file
+      // This prevents command-line truncation and parsing issues
+      if (filterComplex.length > 8000) {
+        const tempDir = path.join(process.cwd(), 'worker', 'temp-uploads');
+        await fs.ensureDir(tempDir);
+        filterComplexFile = path.join(tempDir, `filter_complex_${Date.now()}.txt`);
+        await fs.writeFile(filterComplexFile, filterComplex, 'utf8');
+        console.log(`[VideoCompositor] Filter complex too long (${filterComplex.length} chars), wrote to file: ${path.basename(filterComplexFile)}`);
+        command.push('-filter_complex_script', filterComplexFile);
+      } else {
+        console.log(`[VideoCompositor] Filter complex length: ${filterComplex.length} chars (using command-line arg)`);
+        command.push('-filter_complex', filterComplex);
+      }
 
       // Determine final output label - use the labels that were actually created
       // PRIORITY: Text layers > Image layers > Faded video > Base
