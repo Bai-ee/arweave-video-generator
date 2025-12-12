@@ -105,10 +105,19 @@ export default async function handler(req, res) {
     
     // If updateOnly is true, just sync and regenerate (don't deploy)
     if (updateOnly) {
+      const isVercelProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+      
+      if (isVercelProduction) {
+        // In Vercel, we can't write files - this operation needs to be done locally
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot regenerate website in Vercel production (read-only filesystem)',
+          message: 'Run this operation locally: sync Firebase and generate pages, then commit changes'
+        });
+      }
+      
       const websiteRoot = path.join(process.cwd(), websitePath);
       const websiteArtistsJsonPath = path.join(websiteRoot, 'artists.json');
-      const websiteTemplateHtmlPath = path.join(websiteRoot, 'templates', 'artist.html');
-      const websiteIndexHtmlPath = path.join(websiteRoot, 'index.html');
 
       console.log('[Deploy Website] Updating website HTML only (no deployment)...');
 
@@ -158,38 +167,46 @@ export default async function handler(req, res) {
     }
 
     // Full deployment: sync, regenerate, then deploy
+    const isVercelProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
     const websiteRoot = path.join(process.cwd(), websitePath);
-    const websiteArtistsJsonPath = path.join(websiteRoot, 'artists.json');
-    const websiteTemplateHtmlPath = path.join(websiteRoot, 'templates', 'artist.html');
-    const websiteIndexHtmlPath = path.join(websiteRoot, 'index.html');
-
-    // Step 1: Sync Firebase to website/artists.json
-    const syncResult = await syncFirebaseToWebsiteJSON(db, websitePath);
-    if (!syncResult.success) {
-      throw new Error(`Failed to sync Firebase: ${syncResult.error}`);
-    }
-    console.log('[Deploy Website] ✅ Synced Firebase to website/artists.json');
-
-    // Step 2: Generate HTML pages
-    try {
-      const generateScript = require(path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js'));
+    
+    // In Vercel, we can't write files to /var/task (read-only)
+    // So we skip sync and regeneration - just deploy existing committed files
+    if (isVercelProduction) {
+      console.log('[Deploy Website] Vercel production detected - deploying existing committed files');
+      console.log('[Deploy Website] Note: To update website content, run sync/generate locally and commit changes');
+    } else {
+      // Local development: do full sync and regeneration
+      const websiteArtistsJsonPath = path.join(websiteRoot, 'artists.json');
       
-      if (!generateScript || typeof generateScript.generatePages !== 'function') {
-        throw new Error('generatePages function not found in generate_artist_pages.js module');
+      // Step 1: Sync Firebase to website/artists.json
+      const syncResult = await syncFirebaseToWebsiteJSON(db, websitePath);
+      if (!syncResult.success) {
+        throw new Error(`Failed to sync Firebase: ${syncResult.error}`);
       }
-      
-      // generatePages can take optional params, but defaults work if paths are correct
-      const generateResult = generateScript.generatePages(websiteArtistsJsonPath, websiteRoot);
-      
-      if (!generateResult || !generateResult.success) {
-        const errorMsg = generateResult?.error || 'Unknown error';
-        console.error('[Deploy Website] Generate pages error:', errorMsg);
-        throw new Error(`Failed to generate HTML pages: ${errorMsg}`);
+      console.log('[Deploy Website] ✅ Synced Firebase to website/artists.json');
+
+      // Step 2: Generate HTML pages
+      try {
+        const generateScript = require(path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js'));
+        
+        if (!generateScript || typeof generateScript.generatePages !== 'function') {
+          throw new Error('generatePages function not found in generate_artist_pages.js module');
+        }
+        
+        // generatePages can take optional params, but defaults work if paths are correct
+        const generateResult = generateScript.generatePages(websiteArtistsJsonPath, websiteRoot);
+        
+        if (!generateResult || !generateResult.success) {
+          const errorMsg = generateResult?.error || 'Unknown error';
+          console.error('[Deploy Website] Generate pages error:', errorMsg);
+          throw new Error(`Failed to generate HTML pages: ${errorMsg}`);
+        }
+        console.log('[Deploy Website] ✅ Generated HTML pages');
+      } catch (genError) {
+        console.error('[Deploy Website] Error requiring or calling generatePages:', genError.message);
+        throw new Error(`Failed to generate HTML pages: ${genError.message}`);
       }
-      console.log('[Deploy Website] ✅ Generated HTML pages');
-    } catch (genError) {
-      console.error('[Deploy Website] Error requiring or calling generatePages:', genError.message);
-      throw new Error(`Failed to generate HTML pages: ${genError.message}`);
     }
 
     // Step 3: Deploy to Arweave (with database for incremental uploads)
