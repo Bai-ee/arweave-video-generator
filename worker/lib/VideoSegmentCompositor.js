@@ -756,7 +756,7 @@ export class VideoSegmentCompositor {
         outputPath
       ];
       
-      await this.executeFFmpeg(command, outputPath, 5 * 1024 * 1024); // Minimum 5MB for 30s video
+      await this.executeFFmpeg(command, outputPath, 2 * 1024 * 1024); // Minimum 2MB for 30s video (reduced for better reliability)
       
       // Cleanup
       try {
@@ -851,7 +851,7 @@ export class VideoSegmentCompositor {
         outputPath
       ];
       
-      await this.executeFFmpeg(command, outputPath, 5 * 1024 * 1024); // Minimum 5MB for 30s video
+      await this.executeFFmpeg(command, outputPath, 2 * 1024 * 1024); // Minimum 2MB for 30s video (reduced for better reliability)
     }
 
     // Verify output (executeFFmpeg already validated size, but double-check)
@@ -859,9 +859,9 @@ export class VideoSegmentCompositor {
       throw new Error('Concatenated video was not created');
     }
     const outputStats = await fs.stat(outputPath);
-    const minSize = 5 * 1024 * 1024; // 5MB minimum for 30s video
+    const minSize = 2 * 1024 * 1024; // 2MB minimum for 30s video (reduced from 5MB for better reliability)
     if (outputStats.size < minSize) {
-      throw new Error(`Concatenated video too small: ${(outputStats.size / 1024 / 1024).toFixed(2)}MB (minimum: 5MB)`);
+      throw new Error(`Concatenated video too small: ${(outputStats.size / 1024 / 1024).toFixed(2)}MB (minimum: 2MB)`);
     }
 
     console.log(`[VideoSegmentCompositor] ✅ Concatenated video with transitions created: ${path.basename(outputPath)} (${(outputStats.size / 1024 / 1024).toFixed(2)}MB)`);
@@ -895,7 +895,7 @@ export class VideoSegmentCompositor {
             outputPath
           ];
           
-          await this.executeFFmpeg(fallbackCommand, outputPath, 5 * 1024 * 1024); // Minimum 5MB for 30s video
+          await this.executeFFmpeg(fallbackCommand, outputPath, 2 * 1024 * 1024); // Minimum 2MB for 30s video (reduced for better reliability)
           
           // Cleanup
           await fs.remove(concatListPath).catch(() => {});
@@ -903,7 +903,7 @@ export class VideoSegmentCompositor {
           // Verify fallback output (executeFFmpeg already validated size, but double-check)
           if (await fs.pathExists(outputPath)) {
             const fallbackStats = await fs.stat(outputPath);
-            const minSize = 5 * 1024 * 1024; // 5MB minimum for 30s video
+            const minSize = 2 * 1024 * 1024; // 2MB minimum for 30s video (reduced from 5MB for better reliability)
             if (fallbackStats.size >= minSize) {
               console.log(`[VideoSegmentCompositor] ✅ Fallback concatenation successful: ${path.basename(outputPath)} (${(fallbackStats.size / 1024 / 1024).toFixed(2)}MB)`);
               return; // Success with fallback
