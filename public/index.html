@@ -1097,17 +1097,21 @@
         
         const checkboxContainer = document.createElement('div');
         checkboxContainer.style.cssText = `
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.75rem;
           background: #1a1a1a;
           border: 2px solid var(--color-yellow-75);
           border-radius: 10px;
-          cursor: pointer;
+          padding: 0.75rem;
           transition: all 0.3s ease;
           width: 100%;
-          min-height: 48px;
+        `;
+        
+        const label = document.createElement('label');
+        label.style.cssText = `
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          cursor: pointer;
+          width: 100%;
         `;
         
         const checkbox = document.createElement('input');
@@ -1115,6 +1119,12 @@
         checkbox.id = `folder-${folderName}`;
         checkbox.value = actualFolderName;
         checkbox.checked = true; // Default to all selected
+        checkbox.style.cssText = `
+          width: 20px;
+          height: 20px;
+          cursor: pointer;
+          accent-color: var(--color-yellow-75);
+        `;
         selectedFolders.add(actualFolderName);
         
         checkbox.addEventListener('change', (e) => {
@@ -1130,26 +1140,32 @@
           console.log(`✅ Selected folders:`, Array.from(selectedFolders));
         });
         
-        const label = document.createElement('label');
-        label.htmlFor = `folder-${folderName}`;
-        label.style.cssText = `
-          color: var(--color-yellow-75);
-          font-family: var(--font-mathias);
-          font-size: 0.875rem;
-          font-weight: bold;
-          cursor: pointer;
+        const labelText = document.createElement('div');
+        labelText.style.cssText = `
           flex: 1;
         `;
-        label.textContent = `${displayName} (${count})`;
         
-        checkboxContainer.appendChild(checkbox);
+        const folderNameDiv = document.createElement('div');
+        folderNameDiv.style.cssText = `
+          font-family: var(--font-mathias);
+          color: var(--color-yellow-75);
+          font-weight: bold;
+          margin-bottom: 0.25rem;
+        `;
+        folderNameDiv.textContent = displayName;
+        
+        const folderCountDiv = document.createElement('div');
+        folderCountDiv.style.cssText = `
+          font-size: 0.75rem;
+          color: #888;
+        `;
+        folderCountDiv.textContent = `${count} video${count !== 1 ? 's' : ''}`;
+        
+        labelText.appendChild(folderNameDiv);
+        labelText.appendChild(folderCountDiv);
+        label.appendChild(checkbox);
+        label.appendChild(labelText);
         checkboxContainer.appendChild(label);
-        checkboxContainer.addEventListener('click', (e) => {
-          if (e.target !== checkbox) {
-            checkbox.checked = !checkbox.checked;
-            checkbox.dispatchEvent(new Event('change'));
-          }
-        });
         
         // Set initial style
         checkboxContainer.style.background = '#2a2a2a';
@@ -1629,18 +1645,18 @@
         const filename = `${video.artist || 'video'}_${video.duration || 30}s.mp4`.replace(/'/g, "\\'");
         
         return `
-          <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+          <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; width: 100%;">
             <button 
               onclick="viewVideo('${escapedUrl}')" 
-              class="btn-base btn-secondary px-3 py-1 text-xs rounded"
-              style="background: black; color: white; border: 2px solid white; cursor: pointer; font-family: var(--font-mathias); border-radius: 10px;"
+              class="btn-base btn-secondary"
+              style="flex: 1; width: 100%; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias); border-radius: 10px; padding: 0.75rem 1rem; font-weight: bold;"
             >
               VIEW
             </button>
             <button 
               onclick="downloadVideo('${escapedUrl}', '${filename}')" 
-              class="btn-base btn-secondary px-3 py-1 text-xs rounded"
-              style="background: black; color: white; border: 2px solid white; cursor: pointer; font-family: var(--font-mathias); border-radius: 10px;"
+              class="btn-base btn-secondary"
+              style="flex: 1; width: 100%; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias); border-radius: 10px; padding: 0.75rem 1rem; font-weight: bold;"
             >
               DOWNLOAD
             </button>
