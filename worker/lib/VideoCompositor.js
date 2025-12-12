@@ -119,14 +119,15 @@ export class VideoCompositor {
         console.warn(`[VideoCompositor] Video will be created without audio`);
       }
 
-      // Build filter complex
-      const filterComplex = this.buildFilterComplex(config);
+      // Build filter complex (async because it writes text files)
+      const filterComplex = await this.buildFilterComplex(config);
 
       // Build FFmpeg command (now async due to potential file write)
-      const { command, filterComplexFile } = await this.buildFFmpegCommand(config, filterComplex, hasAudioStream);
+      const { command, filterComplexFile, textFilesToCleanup } = await this.buildFFmpegCommand(config, filterComplex, hasAudioStream);
       
-      // Store filterComplexFile reference for cleanup
+      // Store file references for cleanup
       let filterFile = filterComplexFile;
+      let textFiles = textFilesToCleanup || [];
 
       console.log('[VideoCompositor] Executing FFmpeg composition...');
 
@@ -143,6 +144,18 @@ export class VideoCompositor {
         }
       }
       
+      // Clean up text files if any were created
+      for (const textFile of textFiles) {
+        try {
+          await fs.remove(textFile);
+        } catch (cleanupError) {
+          // Ignore cleanup errors
+        }
+      }
+      if (textFiles.length > 0) {
+        console.log(`[VideoCompositor] Cleaned up ${textFiles.length} text file(s)`);
+      }
+      
       return result;
     } catch (error) {
       console.error('[VideoCompositor] Error composing video:', error);
@@ -156,6 +169,17 @@ export class VideoCompositor {
         }
       }
       
+      // Clean up text files if any were created (from outer scope)
+      if (typeof textFiles !== 'undefined' && textFiles) {
+        for (const textFile of textFiles) {
+          try {
+            await fs.remove(textFile);
+          } catch (cleanupError) {
+            // Ignore cleanup errors
+          }
+        }
+      }
+      
       throw error;
     }
   }
@@ -163,7 +187,7 @@ export class VideoCompositor {
   /**
    * Build FFmpeg filter complex for multi-layer composition
    */
-  buildFilterComplex(config) {
+  async buildFilterComplex(config) {
     const filters = [];
     const canvasWidth = config.width;
     const canvasHeight = config.height;
@@ -213,9 +237,12 @@ export class VideoCompositor {
     // Track created labels as we build the filter complex
     const createdTextLabels = [];
     const createdImageLabels = [];
+    
+    // Track text files created for cleanup
+    const textFilesToCleanup = [];
 
     // Process layers that should appear BEFORE fade
-    allLayersBeforeFade.forEach((layer) => {
+    for (const layer of allLayersBeforeFade) {
       if (layer.type === 'text') {
         // Process text layer
         const outputLabel = `[text_layer${textLayerIndex}]`;
@@ -223,23 +250,19 @@ export class VideoCompositor {
         // Calculate font size based on layer height (or use stored fontSize)
         const fontSize = layer.fontSize || Math.round(layer.size.height * 0.7); // 70% of layer height or stored value
 
-        // Escape text for FFmpeg drawtext filter
-        // Need to escape: single quotes, colons, brackets, parentheses, backslashes, and other special chars
-        // For newlines, FFmpeg drawtext uses %{n} syntax (NOT \n)
-        let escapedText = layer.source
-          .replace(/\\/g, '\\\\')  // Escape backslashes first
-          .replace(/\r/g, '')       // Remove carriage returns
-          .replace(/%/g, '%%')      // Escape percent signs BEFORE adding %{n}
-          .replace(/\n/g, '%{n}')   // Use FFmpeg's %{n} for newlines in drawtext
-          .replace(/'/g, "\\'")     // Escape single quotes
-          .replace(/"/g, '\\"')     // Escape double quotes
-          .replace(/:/g, "\\:")     // Escape colons
-          .replace(/\[/g, "\\[")    // Escape brackets
-          .replace(/\]/g, "\\]")    // Escape brackets
-          .replace(/\(/g, "\\(")    // Escape parentheses
-          .replace(/\)/g, "\\)")    // Escape parentheses
-          .replace(/\$/g, "\\$")    // Escape dollar signs (used in expressions)
-          .replace(/\@/g, "\\@");   // Escape @ symbols
+        // Write text to a file for FFmpeg textfile= parameter
+        // This is the ONLY reliable way to get multi-line text in drawtext
+        const textFileDir = path.join(process.cwd(), 'temp-uploads');
+        await fs.ensureDir(textFileDir);
+        const textFilePath = path.join(textFileDir, `text_${Date.now()}_${textLayerIndex}.txt`);
+        
+        // Write text with actual newlines (no escaping needed for file content)
+        const textContent = layer.source
+          .replace(/\r/g, '')  // Remove carriage returns, keep \n newlines
+          .trim();
+        await fs.writeFile(textFilePath, textContent, 'utf8');
+        textFilesToCleanup.push(textFilePath);
+        console.log(`[VideoCompositor] Text file created: ${path.basename(textFilePath)} with content: "${textContent.replace(/\n/g, '\\n')}"`);
 
         // FFmpeg drawtext uses x,y for top-left corner
         let xPos = layer.position.x;
@@ -259,12 +282,11 @@ export class VideoCompositor {
         const borderColor = textColor === '0xFFFFFF' ? '0x000000' : '0xFFFFFF';
         const borderWidth = actualFontSize < 30 ? 1 : 2; // Thinner border for small text
         
-        // Build drawtext parameters
-        // Use escaped text without quotes (FFmpeg will handle it)
+        // Build drawtext parameters using textfile= for proper newline support
         // Add lineheight for line spacing (0.75x font size - half of previous 1.5x)
         const lineHeight = Math.round(actualFontSize * 0.75);
         const drawtextParams = [
-          `text='${escapedText}'`, // Single quotes around escaped text (no quotes in content itself)
+          `textfile='${textFilePath}'`, // Use textfile= for multi-line text support
           `fontsize=${actualFontSize}`,
           `fontcolor=${textColor}`, // Use layer's text color (default black)
           `borderw=${borderWidth}`, // Border width
@@ -441,7 +463,7 @@ export class VideoCompositor {
         currentInput = outputLabel;
         imageLayerIndex++;
       }
-    });
+    }
 
     // OLD CODE - REMOVED: Separate processing of image and text layers
     // This caused z-index ordering issues
@@ -521,27 +543,26 @@ export class VideoCompositor {
     // Process layers that should appear AFTER fade (these won't fade out)
     if (allLayersAfterFade.length > 0) {
       console.log(`[VideoCompositor] Processing ${allLayersAfterFade.length} layer(s) after fade (won't fade out)`);
-      allLayersAfterFade.forEach((layer) => {
+      for (const layer of allLayersAfterFade) {
         if (layer.type === 'text') {
           // Process text layer (same as before, but on faded video)
           const outputLabel = `[text_layer_after${textLayerIndex}]`;
           const fontSize = layer.fontSize || Math.round(layer.size.height * 0.7);
-          // Escape text for FFmpeg drawtext filter (same as above)
-          // For newlines, FFmpeg drawtext uses %{n} syntax (NOT \n)
-          let escapedText = layer.source
-            .replace(/\\/g, '\\\\')  // Escape backslashes first
-            .replace(/\r/g, '')       // Remove carriage returns
-            .replace(/%/g, '%%')      // Escape percent signs BEFORE adding %{n}
-            .replace(/\n/g, '%{n}')   // Use FFmpeg's %{n} for newlines in drawtext
-            .replace(/'/g, "\\'")     // Escape single quotes
-            .replace(/"/g, '\\"')     // Escape double quotes
-            .replace(/:/g, "\\:")     // Escape colons
-            .replace(/\[/g, "\\[")    // Escape brackets
-            .replace(/\]/g, "\\]")    // Escape brackets
-            .replace(/\(/g, "\\(")    // Escape parentheses
-            .replace(/\)/g, "\\)")    // Escape parentheses
-            .replace(/\$/g, "\\$")    // Escape dollar signs (used in expressions)
-            .replace(/\@/g, "\\@");   // Escape @ symbols
+          
+          // Write text to a file for FFmpeg textfile= parameter (same as above)
+          // This is the ONLY reliable way to get multi-line text in drawtext
+          const textFileDir = path.join(process.cwd(), 'temp-uploads');
+          await fs.ensureDir(textFileDir);
+          const textFilePath = path.join(textFileDir, `text_after_${Date.now()}_${textLayerIndex}.txt`);
+          
+          // Write text with actual newlines (no escaping needed for file content)
+          const textContent = layer.source
+            .replace(/\r/g, '')  // Remove carriage returns, keep \n newlines
+            .trim();
+          await fs.writeFile(textFilePath, textContent, 'utf8');
+          textFilesToCleanup.push(textFilePath);
+          console.log(`[VideoCompositor] Text file (after fade) created: ${path.basename(textFilePath)}`);
+          
           let xPos = layer.position.x;
           let yPos = layer.position.y;
           const isCentered = Math.abs(xPos - (canvasWidth / 2)) < 10;
@@ -551,10 +572,10 @@ export class VideoCompositor {
           const borderColor = textColor === '0xFFFFFF' ? '0x000000' : '0xFFFFFF';
           const borderWidth = actualFontSize < 30 ? 1 : 2;
           
-          // Add lineheight for line spacing (0.75x font size - half of previous 1.5x)
+          // Build drawtext parameters using textfile= for proper newline support
           const lineHeight = Math.round(actualFontSize * 0.75);
           const drawtextParams = [
-            `text='${escapedText}'`, // Single quotes around escaped text (no quotes in content itself)
+            `textfile='${textFilePath}'`, // Use textfile= for multi-line text support
             `fontsize=${actualFontSize}`,
             `fontcolor=${textColor}`,
             `borderw=${borderWidth}`,
@@ -689,7 +710,7 @@ export class VideoCompositor {
           currentInput = outputLabel;
           imageLayerIndex++;
         }
-      });
+      }
       finalVideoLabel = currentInput; // Update final label to include after-fade layers
     }
 
@@ -743,6 +764,7 @@ export class VideoCompositor {
     config._createdImageLabels = createdImageLabels;
     config._finalVideoLabel = finalVideoLabel; // Store final video label (faded_video if fade applied)
     config._hasTextBeforeFade = hasTextBeforeFade; // Track if text was processed before fade
+    config._textFilesToCleanup = textFilesToCleanup; // Store text files for cleanup
     
     return filterComplex;
   }
@@ -755,6 +777,9 @@ export class VideoCompositor {
     // In GitHub Actions, this will be system FFmpeg (has drawtext)
     const command = [ffmpegPath];
     let filterComplexFile = null; // Will be set if filter is written to file
+    
+    // Get text files to cleanup from buildFilterComplex
+    const textFilesToCleanup = config._textFilesToCleanup || [];
 
     // Input base image/video
     const isImage = config.baseVideo.match(/\.(jpg|jpeg|png|webp)$/i);
@@ -951,7 +976,7 @@ export class VideoCompositor {
     // Output
     command.push('-y', config.outputPath);
 
-    return { command, filterComplexFile };
+    return { command, filterComplexFile, textFilesToCleanup };
   }
 
   /**
