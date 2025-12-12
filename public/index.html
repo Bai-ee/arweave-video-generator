@@ -76,8 +76,8 @@
       // Load archive data when archive section is opened
       if (sectionId === 'archiveSection' && isNowOpen && !wasOpen) {
         setTimeout(() => {
-          if (typeof loadArchiveFolders === 'function') loadArchiveFolders();
-          if (typeof loadArchiveManifest === 'function') loadArchiveManifest();
+          if (typeof window.loadArchiveFolders === 'function') window.loadArchiveFolders();
+          if (typeof window.loadArchiveManifest === 'function') window.loadArchiveManifest();
         }, 100);
       }
     };
@@ -135,7 +135,7 @@
           <div class="collapsible-card">
             <button class="collapsible-toggle" onclick="toggleCollapsible('generateSection')" aria-expanded="false">
               <div>
-                <div style="font-family: var(--font-mathias);">Generate videos</div>
+                <div style="font-family: var(--font-mathias);">Generate</div>
                 <div class="meta">Guided steps on tap</div>
               </div>
               <span class="chevron">▸</span>
@@ -228,7 +228,7 @@
           <div class="collapsible-card">
             <button class="collapsible-toggle" onclick="toggleCollapsible('uploadSection')" aria-expanded="false">
               <div>
-                <div style="font-family: var(--font-mathias);">Upload assets</div>
+                <div style="font-family: var(--font-mathias);">UPLOAD</div>
                 <div class="meta">Mixes, videos, assets</div>
               </div>
               <span class="chevron">▸</span>
@@ -315,7 +315,7 @@
           <div class="collapsible-card">
             <button class="collapsible-toggle" onclick="toggleCollapsible('toolsSection')" aria-expanded="false">
               <div>
-                <div style="font-family: var(--font-mathias);">Deploy website</div>
+                <div style="font-family: var(--font-mathias);">Deploy</div>
                 <div class="meta">Refresh, website, archive</div>
               </div>
               <span class="chevron">▸</span>
@@ -330,7 +330,7 @@
                       id="deployWebsiteBtn" 
                       onclick="deployWebsite()"
                       class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
-                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold;"
+                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; font-weight: bold;"
                     >
                       Deploy Website
                     </button>
@@ -839,7 +839,7 @@
     /**
      * Open website (local or production)
      */
-    function openWebsite() {
+    window.openWebsite = function() {
       // Check if we're on localhost
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       
@@ -850,7 +850,7 @@
         // For production, use the relative path
         window.open('/website/index.html', '_blank');
       }
-    }
+    };
     // Always use Hard B&W Street Doc filter at 80% intensity
     const selectedFilter = 'look_hard_bw_street_doc'; // Always use Hard B&W Street Doc
     const filterIntensity = 0.8; // Always use 80% intensity (0.8)
@@ -882,23 +882,23 @@
       }
     }
 
-    function dismissVideo(jobId) {
+    window.dismissVideo = function(jobId) {
       if (!jobId) return;
       dismissedVideos.add(jobId);
       rememberDismissed();
       displayVideos(true);
-    }
+    };
 
-    function resetDismissedVideos() {
+    window.resetDismissedVideos = function() {
       dismissedVideos.clear();
       rememberDismissed();
       displayVideos(true);
-    }
+    };
 
-    function loadMoreVideos() {
+    window.loadMoreVideos = function() {
       visibleVideoCount += VIDEOS_PAGE_SIZE;
       displayVideos(false);
-    }
+    };
 
     // Video filter definitions (must match backend)
     const VIDEO_FILTERS = {
@@ -1282,7 +1282,7 @@
     /**
      * Generate a new video
      */
-    async function generateVideo() {
+    window.generateVideo = async function() {
       // Check if audio source is selected
       if (!selectedAudioSource) {
         showToast('Please select an audio source (MIXES or TRACKS) first!', 'error');
@@ -1410,7 +1410,7 @@
     /**
      * Load all videos from API
      */
-    async function loadVideos() {
+    window.loadVideos = async function() {
       const loadingState = document.getElementById('loadingState');
       const resultsContainer = document.getElementById('resultsContainer');
       const errorState = document.getElementById('errorState');
@@ -1705,14 +1705,14 @@
     /**
      * View video in new tab
      */
-    function viewVideo(videoUrl) {
+    window.viewVideo = function(videoUrl) {
       window.open(videoUrl, '_blank');
-    }
+    };
 
     /**
      * Download video
      */
-    function downloadVideo(videoUrl, filename) {
+    window.downloadVideo = function(videoUrl, filename) {
       const link = document.createElement('a');
       link.href = videoUrl;
       link.download = filename;
@@ -1759,7 +1759,7 @@
     /**
      * Show upload modal
      */
-    function showUploadModal() {
+    window.showUploadModal = function() {
       document.getElementById('uploadModal').style.display = 'flex';
       // Reset form
       document.getElementById('uploadForm').reset();
@@ -1772,7 +1772,7 @@
     /**
      * Show upload mix modal
      */
-    async function showUploadMixModal() {
+    window.showUploadMixModal = async function() {
       document.getElementById('uploadMixModal').style.display = 'flex';
       // Reset form
       document.getElementById('uploadMixForm').reset();
@@ -1863,9 +1863,9 @@
     /**
      * Hide upload mix modal
      */
-    function hideUploadMixModal() {
+    window.hideUploadMixModal = function() {
       document.getElementById('uploadMixModal').style.display = 'none';
-    }
+    };
 
     /**
      * Toggle between file upload and URL input
@@ -2271,9 +2271,9 @@
     /**
      * Hide upload modal
      */
-    function hideUploadModal() {
+    window.hideUploadModal = function() {
       document.getElementById('uploadModal').style.display = 'none';
-    }
+    };
 
     /**
      * Handle video upload (supports multiple files)
@@ -2563,7 +2563,7 @@
       }
     }
 
-    async function deployWebsite() {
+    window.deployWebsite = async function() {
       const deployBtn = document.getElementById('deployWebsiteBtn');
       const originalText = deployBtn.innerHTML;
       
@@ -2870,7 +2870,7 @@ Note: Access the website using the URLs above with /index.html included.
     /**
      * Go back to folder list
      */
-    function backToFolders() {
+    window.backToFolders = function() {
       currentFolder = null;
       const folderListView = document.getElementById('folderListView');
       const folderDetailView = document.getElementById('folderDetailView');
@@ -2958,7 +2958,7 @@ Note: Access the website using the URLs above with /index.html included.
     let archiveUploadJobs = new Map();
 
     // Load archive folders
-    async function loadArchiveFolders() {
+    window.loadArchiveFolders = async function() {
       const container = document.getElementById('archiveFoldersContainer');
       const loading = document.getElementById('archiveFoldersLoading');
       
@@ -3021,7 +3021,7 @@ Note: Access the website using the URLs above with /index.html included.
     }
 
     // Select archive folder and load files
-    async function archiveSelectFolder(folderName) {
+    window.archiveSelectFolder = async function(folderName) {
       archiveSelectedFolder = folderName;
       archiveSelectedFiles.clear();
       
@@ -3103,7 +3103,7 @@ Note: Access the website using the URLs above with /index.html included.
     }
 
     // Toggle archive file selection
-    function archiveToggleFileSelection(fileName) {
+    window.archiveToggleFileSelection = function(fileName) {
       if (archiveSelectedFiles.has(fileName)) {
         archiveSelectedFiles.delete(fileName);
       } else {
@@ -3113,13 +3113,13 @@ Note: Access the website using the URLs above with /index.html included.
     }
 
     // Select all archive files
-    function archiveSelectAllFiles() {
+    window.archiveSelectAllFiles = function() {
       archiveFolderFiles.forEach(file => archiveSelectedFiles.add(file.name));
       archiveRenderFiles();
     }
 
     // Deselect all archive files
-    function archiveDeselectAllFiles() {
+    window.archiveDeselectAllFiles = function() {
       archiveSelectedFiles.clear();
       archiveRenderFiles();
     }
@@ -3131,7 +3131,7 @@ Note: Access the website using the URLs above with /index.html included.
     }
 
     // Archive selected files
-    async function archiveSelectedFiles() {
+    window.archiveSelectedFiles = async function() {
       if (archiveSelectedFiles.size === 0) {
         alert('Please select at least one file to archive.');
         return;
@@ -3308,7 +3308,7 @@ Note: Access the website using the URLs above with /index.html included.
     }
 
     // Load archive manifest
-    async function loadArchiveManifest() {
+    window.loadArchiveManifest = async function() {
       const container = document.getElementById('archiveManifestContainer');
       if (!container) return;
       container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">Loading manifest...</div>';
