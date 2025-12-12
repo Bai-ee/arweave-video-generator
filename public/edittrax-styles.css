@@ -847,6 +847,11 @@ textarea {
     padding: 0.5rem;
   }
   
+  .stepper-card {
+    padding: 0;
+    gap: 1rem;
+  }
+  
   /* Prevent overflow on mobile */
   * {
     max-width: 100%;
@@ -859,6 +864,8 @@ textarea {
     margin-left: 0;
     margin-right: 0;
     max-width: 100%;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
   
   /* Fix table and grid overflow */
@@ -870,6 +877,27 @@ textarea {
   /* Fix button containers */
   .action-row {
     padding: 0;
+    margin: 0;
+  }
+  
+  /* Minimize folder checkboxes padding */
+  #folderCheckboxes,
+  #archiveFilesContainer {
+    padding: 0;
+    margin: 0;
+  }
+  
+  /* Minimize video cards padding */
+  .video-item-card {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  
+  /* Minimize uploaded videos section padding */
+  #uploadedVideosSection,
+  #foldersGrid,
+  #videosGrid {
+    padding: 0.5rem !important;
   }
   
   .step-block .step-label {
