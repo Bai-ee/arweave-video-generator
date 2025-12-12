@@ -840,16 +840,29 @@
      */
     function toggleCollapsible(sectionId) {
       const panel = document.getElementById(sectionId);
-      if (!panel) return;
+      if (!panel) {
+        console.error(`[toggleCollapsible] Panel not found: ${sectionId}`);
+        return;
+      }
       const toggle = panel.previousElementSibling;
-      const isOpen = panel.classList.contains('open');
-      panel.classList.toggle('open');
-      if (toggle) {
-        toggle.setAttribute('aria-expanded', (!isOpen).toString());
+      const wasOpen = panel.classList.contains('open');
+      
+      // Toggle the open class
+      if (wasOpen) {
+        panel.classList.remove('open');
+      } else {
+        panel.classList.add('open');
+      }
+      
+      const isNowOpen = panel.classList.contains('open');
+      
+      // Update aria-expanded attribute
+      if (toggle && toggle.tagName === 'BUTTON') {
+        toggle.setAttribute('aria-expanded', isNowOpen.toString());
       }
       
       // Load archive data when archive section is opened
-      if (sectionId === 'archiveSection' && !isOpen) {
+      if (sectionId === 'archiveSection' && isNowOpen && !wasOpen) {
         setTimeout(() => {
           loadArchiveFolders();
           loadArchiveManifest();

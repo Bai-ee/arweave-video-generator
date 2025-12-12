@@ -637,13 +637,13 @@ textarea {
 
 .collapsible-body {
   padding: 1rem 1.2rem 1.25rem;
-  display: none;
+  display: none !important;
   background: rgba(0, 0, 0, 0.5);
   border-top: 2px solid var(--color-yellow-75);
 }
 
 .collapsible-body.open {
-  display: block;
+  display: block !important;
 }
 
 .stepper-card {
