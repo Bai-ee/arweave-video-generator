@@ -968,7 +968,21 @@ export class VideoCompositor {
       const ffmpegPath = command[0];
       const args = command.slice(1);
 
-      console.log(`[VideoCompositor] FFmpeg command: ${ffmpegPath} ${args.slice(0, 5).join(' ')}...`);
+      // Log full command for debugging (truncate filter_complex if too long)
+      const debugArgs = args.map(arg => {
+        if (arg.length > 500) {
+          return arg.substring(0, 500) + '... (truncated, length: ' + arg.length + ')';
+        }
+        return arg;
+      });
+      console.log(`[VideoCompositor] FFmpeg command: ${ffmpegPath} ${debugArgs.join(' ')}`);
+      
+      // Check for filter_complex arg and log its length
+      const filterComplexIndex = args.indexOf('-filter_complex');
+      if (filterComplexIndex >= 0 && args[filterComplexIndex + 1]) {
+        console.log(`[VideoCompositor] Filter complex length: ${args[filterComplexIndex + 1].length} chars`);
+        console.log(`[VideoCompositor] Filter complex start: ${args[filterComplexIndex + 1].substring(0, 100)}...`);
+      }
 
       const ffmpegProcess = spawn(ffmpegPath, args, { stdio: 'pipe' });
 
