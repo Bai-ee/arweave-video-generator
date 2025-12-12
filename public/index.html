@@ -73,12 +73,18 @@
         toggle.setAttribute('aria-expanded', isNowOpen.toString());
       }
       
-      // Load archive data when archive section is opened
-      if (sectionId === 'archiveSection' && isNowOpen && !wasOpen) {
-        setTimeout(() => {
-          if (typeof window.loadArchiveFolders === 'function') window.loadArchiveFolders();
-          if (typeof window.loadArchiveManifest === 'function') window.loadArchiveManifest();
-        }, 100);
+      // Load data when sections are opened
+      if (isNowOpen && !wasOpen) {
+        if (sectionId === 'archiveSection') {
+          setTimeout(() => {
+            if (typeof window.loadArchiveFolders === 'function') window.loadArchiveFolders();
+            if (typeof window.loadArchiveManifest === 'function') window.loadArchiveManifest();
+          }, 100);
+        } else if (sectionId === 'uploadSection') {
+          setTimeout(() => {
+            if (typeof window.loadFolders === 'function') window.loadFolders();
+          }, 100);
+        }
       }
     };
   </script>
@@ -172,16 +178,13 @@
                     id="artistSelect"
                     style="width: 100%; margin: 0.35rem auto 0; display: block; padding: 0.85rem; border: 2px solid var(--color-yellow-75); border-radius: 8px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-body); cursor: pointer;"
                   >
-                    <option value="random">🎲 Random Artist</option>
+                    <option value="random">Random Artist</option>
                   </select>
                 </div>
 
                 <div id="folderSelectionContainer" class="step-block" style="display: none;">
                   <div class="step-label">3. Select video folders</div>
                   <div class="step-hint">Choose at least one folder to pull footage from.</div>
-                  <div class="body-text" style="color: #c4c7bd; margin-top: 0.35rem;">
-                    Skyline (32) · Artist (0) · Decks (20) · Equipment (3) · Family (2) · Neighborhood (16) · Chicago Skyline (6)
-                  </div>
                   <div id="folderCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; width: 100%; margin: 0 auto;">
                     <!-- Folders will be populated dynamically -->
                   </div>
@@ -190,8 +193,8 @@
                 <div id="overlayToggleContainer" class="step-block" style="display: none;">
                   <div class="step-label">4. Overlay effect</div>
                   <div class="step-hint">Add a texture/grit overlay. Turn off for fastest renders.</div>
-                  <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-                    <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem 1.25rem; background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 10px; transition: all 0.3s ease;">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; width: 100%; margin: 0 auto;">
+                    <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem 1.25rem; background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 10px; transition: all 0.3s ease; width: 100%;">
                       <input 
                         type="checkbox" 
                         id="enableOverlay" 
@@ -265,7 +268,7 @@
                     <div id="folderListView" class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
                       <div style="background-color: var(--color-yellow-75); padding: 1rem;">
                         <h2 style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0; text-align: center;">
-                          📂 Video Folders
+                          Video Folders
                         </h2>
                       </div>
                       <div style="padding: 1.5rem;">
@@ -283,7 +286,7 @@
                       <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
                         <div style="background-color: var(--color-yellow-75); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
                           <h2 id="folderDetailTitle" style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0;">
-                            📂 Folder Name
+                            Folder Name
                           </h2>
                           <button 
                             onclick="backToFolders()"
@@ -434,7 +437,7 @@
               <!-- Folder Selection Section -->
               <div style="background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
                 <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin-bottom: 1rem; text-align: center;">
-                  📁 Select Folder
+                  Select Folder
                 </h2>
                 <div id="archiveFoldersContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; width: 100%;">
                   <!-- Folders will be populated here -->
@@ -919,7 +922,7 @@
       loadVideos();
       loadAvailableFolders();
       populateUploadFolderSelect();
-      loadFolders(); // Load uploaded video folders
+      // loadFolders is now lazy-loaded when upload section is opened
     });
 
     /**
@@ -950,7 +953,7 @@
       if (!select) return;
       
       // Clear existing options (keep "Random Artist")
-      select.innerHTML = '<option value="random">🎲 Random Artist</option>';
+      select.innerHTML = '<option value="random">Random Artist</option>';
       
       // Add each artist
       availableArtists.forEach(artist => {
@@ -992,20 +995,6 @@
       // Clear existing options
       folderSelect.innerHTML = '';
       
-      // Map folder names to emoji icons
-      const folderEmojis = {
-        'skyline': '🌆',
-        'artist': '🎨',
-        'decks': '🎧',
-        'equipment': '🎛️',
-        'family': '👨‍👩‍👧‍👦',
-        'neighborhood': '🏘️',
-        'chicago-skyline-videos': '🏙️',
-        'assets/chicago-skyline-videos': '🏙️',
-        'logos': '🖼️',
-        'paper_backgrounds': '📄'
-      };
-      
       // Add all folders as options
       availableFolders.forEach(folder => {
         const option = document.createElement('option');
@@ -1014,10 +1003,7 @@
         // Get display name (remove 'assets/' prefix for display)
         const displayName = folder.displayName || folder.name.replace('assets/', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         
-        // Get emoji (check both with and without 'assets/' prefix)
-        const emoji = folderEmojis[folder.name] || folderEmojis[folder.name.replace('assets/', '')] || '📁';
-        
-        option.textContent = `${emoji} ${displayName} (${folder.count || 0} videos)`;
+        option.textContent = `${displayName} (${folder.count || 0} videos)`;
         folderSelect.appendChild(option);
       });
       
@@ -2728,7 +2714,6 @@ Note: Access the website using the URLs above with /index.html included.
             folderCard.onclick = () => openFolder(folder.name);
             
             folderCard.innerHTML = `
-              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
               <div style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; font-size: 1rem; margin-bottom: 0.5rem;">
                 ${folder.displayName}
               </div>
@@ -2766,7 +2751,7 @@ Note: Access the website using the URLs above with /index.html included.
       
       // Update title
       const displayName = folderName.replace('assets/', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      folderDetailTitle.textContent = `📂 ${displayName}`;
+      folderDetailTitle.textContent = displayName;
       
       videosGrid.innerHTML = '';
       videosLoading.style.display = 'block';
@@ -3342,19 +3327,19 @@ Note: Access the website using the URLs above with /index.html included.
                 <h3 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1rem; margin-bottom: 0.75rem;">
                   ${folderName} (${files.length} file${files.length !== 1 ? 's' : ''})
                 </h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.75rem; width: 100%;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 0.75rem; width: 100%;">
             `;
 
             files.forEach(file => {
               html += `
-                <div style="background: #1a1a1a; border: 1px solid var(--color-yellow-75); border-radius: 10px; padding: 0.75rem; width: 100%;">
-                  <div style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: bold;">
+                <div style="background: #1a1a1a; border: 1px solid var(--color-yellow-75); border-radius: 10px; padding: 0.75rem; width: 100%; max-width: 100%; overflow: hidden;">
+                  <div style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: bold; word-wrap: break-word; overflow-wrap: break-word;">
                     ${file.name}
                   </div>
                   <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.5rem;">
                     ${(file.fileSize / (1024 * 1024)).toFixed(2)} MB • Archived: ${new Date(file.archivedAt).toLocaleDateString()}
                   </div>
-                  <a href="${file.arweaveUrl}" target="_blank" style="color: var(--color-yellow-75); text-decoration: underline; font-size: 0.75rem;">
+                  <a href="${file.arweaveUrl}" target="_blank" style="color: var(--color-yellow-75); text-decoration: underline; font-size: 0.75rem; word-break: break-all; display: inline-block; max-width: 100%;">
                     View on Arweave →
                   </a>
                 </div>

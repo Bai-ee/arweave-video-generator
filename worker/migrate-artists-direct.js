@@ -38,3 +38,5 @@ console.log('   - Load all 14 original artists');
 console.log('   - Merge with existing Firebase data (preserving new uploads)');
 console.log('   - Update Firebase with the complete artist list');
 
+
+

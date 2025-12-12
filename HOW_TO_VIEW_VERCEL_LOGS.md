@@ -49,3 +49,5 @@ When troubleshooting the "Forbidden" error:
 vercel logs arweave-video-generator-1l9add1v8-baiees-projects.vercel.app | grep -A 10 -B 5 "upload\|Upload\|UPLOAD\|Error\|error\|ERROR" | tail -50
 ```
 
+
+

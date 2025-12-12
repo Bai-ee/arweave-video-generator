@@ -80,39 +80,6 @@ Video generation job fails with status 'failed' in Firestore.
 - **Cause**: Firestore update error
 - **Solution**: Check Firestore permissions and network connectivity
 
-**Issue: "FFmpeg output file too small"**
-- **Cause**: File size validation too strict (was 5MB minimum, now 2MB)
-- **Solution**: 
-  - Validation now checks video streams using ffprobe
-  - Accepts videos with valid streams even if slightly below size threshold
-  - Check logs for video stream validation results
-
-**Issue: "Error applying option 'st' to filter 'drawtext': Option not found"**
-- **Cause**: Complex alpha expressions in drawtext filter cause FFmpeg parsing errors
-- **Solution**: 
-  - Fixed by using static alpha instead of complex expressions
-  - Visibility controlled with `enable` parameter instead
-  - Check logs for filter complex if error persists
-
-**Issue: "Concatenation failed" (both complex and simple concat)**
-- **Cause**: 
-  - Input segments corrupted or incompatible
-  - FFmpeg command issues
-  - Missing input validation
-- **Solution**:
-  - Segments are now validated before concatenation (file size, video streams)
-  - Check logs for which segment failed
-  - Verify videos in selected folders are valid
-  - Check FFmpeg error output for specific codec/format issues
-
-**Issue: "Video falls back to static image with partial folder selection"**
-- **Cause**: Folder matching logic failed with partial selections
-- **Solution**:
-  - Fixed with simplified folder matching using folderMap
-  - Frontend now normalizes folder names (removes assets/ prefix)
-  - Backend maps normalized names to correct Firebase paths
-  - Check logs for folder matching messages
-
 ## Upload Failures
 
 ### Symptom
@@ -262,25 +229,6 @@ GitHub Actions workflow fails or doesn't run.
 **Issue: "FFmpeg not found"**
 - **Cause**: FFmpeg not installed in workflow
 - **Solution**: Verify `apt-get install ffmpeg` step in workflow
-
-**Issue: "The operation was canceled" during dependency installation**
-- **Cause**: FFmpeg installation takes 10+ minutes, causing timeout
-- **Solution**:
-  - Workflow now has separate timeout for dependency installation (12 minutes)
-  - Overall timeout increased to 20 minutes
-  - Installation uses `--no-install-recommends` for faster execution
-  - Check installation logs for specific package issues
-
-**Issue: "Workflow timeout"**
-- **Cause**: 
-  - Dependency installation too slow
-  - Video processing too slow
-  - Overall timeout too short
-- **Solution**:
-  - Check dependency installation time in logs
-  - Review video processing time
-  - Consider increasing timeout if needed (current: 20 minutes)
-  - Optimize FFmpeg commands if processing is slow
 
 **Issue: "Node modules install failed"**
 - **Cause**: Package.json or dependency issue

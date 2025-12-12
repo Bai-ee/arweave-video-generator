@@ -41,3 +41,5 @@ The script at `worker/migrate-artists-to-firebase.js` will:
 
 After updating, the dropdown on all pages will show all 14 artists.
 
+
+

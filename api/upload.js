@@ -98,7 +98,7 @@ export default async function handler(req, res) {
       
       // Check if request is JSON (new Firebase-based flow) or multipart (old direct upload)
       const contentType = req.headers['content-type'] || '';
-      let type, artistName, mixTitle, mixUrl, mixDateYear, mixDuration, isTrack, firebasePath, artistImagePath, mixThumbnailPath;
+      let type, artistName, mixTitle, mixUrl, mixDateYear, mixDuration, isTrack, firebasePath, artistImagePath;
       
       if (contentType.includes('application/json')) {
         // New flow: JSON with Firebase path (like archive upload)
@@ -118,7 +118,6 @@ export default async function handler(req, res) {
         isTrack = body.isTrack === 'true' || body.isTrack === true;
         firebasePath = body.firebasePath;
         artistImagePath = body.artistImagePath; // For new artist image uploads
-        mixThumbnailPath = body.mixThumbnailPath; // For mix thumbnail uploads
         
         console.log('[Upload] JSON parsed successfully');
         console.log('[Upload] Firebase path:', firebasePath || 'None (using URL)');
@@ -304,44 +303,13 @@ export default async function handler(req, res) {
         }
       }
       
-      // Handle mix thumbnail image upload if provided
-      let mixThumbnailUrl = '';
-      if (mixThumbnailPath) {
-        console.log(`[Upload] Uploading mix thumbnail from Firebase: ${mixThumbnailPath}`);
-        const storage = getStorage();
-        const bucket = storage.bucket();
-        const thumbnailFileRef = bucket.file(mixThumbnailPath);
-        
-        const [thumbnailExists] = await thumbnailFileRef.exists();
-        if (thumbnailExists) {
-          const thumbnailUploadResult = await uploadFromFirebase(thumbnailFileRef, `mix-thumbnails/${artistName}`, {
-            source: 'firebase',
-            originalFolder: 'mix-thumbnails',
-            metadata: {
-              artist: artistName,
-              mixTitle: mixTitle || 'Untitled',
-              type: 'mix-thumbnail'
-            }
-          });
-          
-          if (thumbnailUploadResult.success) {
-            mixThumbnailUrl = thumbnailUploadResult.arweaveUrl;
-            console.log(`[Upload] ✅ Mix thumbnail uploaded to Arweave: ${mixThumbnailUrl}`);
-          } else {
-            console.warn(`[Upload] Failed to upload mix thumbnail: ${thumbnailUploadResult.error}`);
-          }
-        } else {
-          console.warn(`[Upload] Mix thumbnail file not found in Firebase: ${mixThumbnailPath}`);
-        }
-      }
-      
       // Add to artists JSON in Firebase
       await addMixToArtist(db, artistName, {
         mixTitle: mixTitle || (isTrack ? 'Untitled Track' : 'Untitled Mix'),
         mixArweaveURL: arweaveUrl,
         mixDateYear: mixDateYear || new Date().getFullYear().toString(),
         mixDuration: mixDuration || '0:00',
-        mixImageFilename: mixThumbnailUrl || '',
+        mixImageFilename: '',
         isTrack: isTrack
       });
 

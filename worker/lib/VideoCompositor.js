@@ -262,10 +262,12 @@ export class VideoCompositor {
           // Round endTime to avoid decimal issues in filter expressions
           const roundedEndTime = Math.round(endTime * 100) / 100;
           // Use enable expression with fade-in: opacity goes from 0 to full over 1 second
-          // Use static opacity with enable for timing (more reliable than complex alpha expressions)
-          // Complex alpha expressions can cause FFmpeg parsing errors like "Option not found"
-          drawtextParams.push(`alpha=${opacity}`); // Use static opacity, control visibility with enable
-          // Use gte/lte for enable to control when text appears (more reliable)
+          // FFmpeg doesn't support clamp(), so use if() and min() instead
+          // Formula: alpha = if(t < startTime, 0, min(255, (t - startTime) / fadeDuration * 255))
+          const fadeDuration = 1.0; // 1 second fade-in
+          const fadeAlpha = `if(lt(t\\,${layer.startTime})\\,0\\,min(255\\,(t-${layer.startTime})/${fadeDuration}*255))`;
+          drawtextParams.push(`alpha='${fadeAlpha}'`); // Add dynamic fade alpha
+          // Use gte/lte instead of between to avoid parsing issues
           drawtextParams.push(`enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'`);
           textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
         } else {
@@ -543,13 +545,11 @@ export class VideoCompositor {
             // Round endTime to avoid decimal issues in filter expressions
             const roundedEndTime = Math.round(endTime * 100) / 100;
             const fadeDuration = 1.0;
-          // Use static opacity with enable for timing (more reliable than complex alpha expressions)
-          // Complex alpha expressions can cause FFmpeg parsing errors
-          drawtextParams.push(`alpha=${opacity}`); // Use static opacity, control visibility with enable
-          // Use gte/lte for enable to control when text appears
-          drawtextParams.push(`enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'`);
-          // Build filter string carefully to avoid parsing errors
-          textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
+            const fadeAlpha = `if(lt(t\\,${layer.startTime})\\,0\\,min(255\\,(t-${layer.startTime})/${fadeDuration}*255))`;
+            drawtextParams.push(`alpha='${fadeAlpha}'`);
+            // Use gte/lte instead of between to avoid parsing issues
+            drawtextParams.push(`enable='gte(t\\,${layer.startTime})*lte(t\\,${roundedEndTime})'`);
+            textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
           } else {
             drawtextParams.push(`alpha=${opacity}`);
             textFilter = `${currentInput}drawtext=${drawtextParams.join(':')}${outputLabel}`;
@@ -1006,27 +1006,9 @@ export class VideoCompositor {
           console.error(`[VideoCompositor] ❌ FFmpeg failed with code: ${code}`);
           console.error(`[VideoCompositor] Full stderr output:`);
           console.error(stderr);
-          
-          // Log filter complex if it exists (for debugging drawtext/filter errors)
-          if (config.videoFilter || (filters && filters.length > 0)) {
-            console.error(`[VideoCompositor] Filter complex (first 500 chars): ${filterComplex ? filterComplex.substring(0, 500) : 'N/A'}...`);
-          }
-          
-          // Extract the most relevant error message
-          const errorLines = stderr.split('\n').filter(line => 
-            line.includes('Error') || 
-            line.includes('error') || 
-            line.includes('failed') ||
-            line.includes('Invalid') ||
-            line.includes('not found') ||
-            line.includes('Option not found')
-          );
-          
-          const errorMessage = errorLines.length > 0 
-            ? errorLines.slice(-5).join('; ') 
-            : (stderr.length > 500 ? stderr.substring(stderr.length - 500) : stderr);
-          
-          reject(new Error(`FFmpeg failed with exit code ${code}: ${errorMessage}`));
+          // Show last 1000 chars if stderr is very long
+          const errorSnippet = stderr.length > 1000 ? stderr.substring(stderr.length - 1000) : stderr;
+          reject(new Error(`FFmpeg failed with exit code ${code}: ${errorSnippet}`));
         }
       });
 

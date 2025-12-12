@@ -113,31 +113,14 @@ export default async function handler(req, res) {
       console.log('[Deploy Website] Updating website HTML only (no deployment)...');
 
       // Sync Firebase to website/artists.json
-      console.log('[Deploy Website] Syncing Firebase to website/artists.json...');
       const syncResult = await syncFirebaseToWebsiteJSON(db, websitePath);
       if (!syncResult.success) {
-        console.error('[Deploy Website] Sync failed:', syncResult.error);
         throw new Error(`Failed to sync Firebase: ${syncResult.error}`);
-      }
-      console.log('[Deploy Website] ✅ Synced Firebase');
-      
-      // Handle /tmp location for artists.json
-      let actualArtistsJsonPath = websiteArtistsJsonPath;
-      if (syncResult.filePath && syncResult.filePath.startsWith('/tmp')) {
-        actualArtistsJsonPath = syncResult.filePath;
-        try {
-          const fs = await import('fs-extra');
-          await fs.copy(actualArtistsJsonPath, websiteArtistsJsonPath);
-          console.log('[Deploy Website] Copied artists.json from /tmp');
-        } catch (copyError) {
-          console.warn('[Deploy Website] Could not copy artists.json:', copyError.message);
-        }
       }
 
       // Regenerate HTML pages
       try {
-        // Use lib/WebsitePageGenerator.cjs instead of website/scripts (avoids .vercelignore issues)
-        const scriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.cjs');
+        const scriptPath = path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js');
         console.log('[Deploy Website] Loading script from:', scriptPath);
         
         const generateScript = require(scriptPath);
@@ -152,9 +135,9 @@ export default async function handler(req, res) {
           throw new Error(`generatePages function not found. Available: ${Object.keys(generateScript).join(', ')}`);
         }
         
-        // Use actual path (might be /tmp)
-        console.log('[Deploy Website] Calling generatePages with:', { artistsJson: actualArtistsJsonPath, outputDir: websiteRoot });
-        const generateResult = generateScript.generatePages(actualArtistsJsonPath, websiteRoot);
+        // generatePages can take optional params, but defaults work if paths are correct
+        console.log('[Deploy Website] Calling generatePages with:', { artistsJson: websiteArtistsJsonPath, outputDir: websiteRoot });
+        const generateResult = generateScript.generatePages(websiteArtistsJsonPath, websiteRoot);
         console.log('[Deploy Website] Generate result:', generateResult);
         
         if (!generateResult || !generateResult.success) {
@@ -162,7 +145,6 @@ export default async function handler(req, res) {
           console.error('[Deploy Website] Generate pages error:', errorMsg);
           throw new Error(`Failed to generate HTML pages: ${errorMsg}`);
         }
-        console.log('[Deploy Website] ✅ Generated HTML pages');
       } catch (genError) {
         console.error('[Deploy Website] Error requiring or calling generatePages:', genError.message);
         console.error('[Deploy Website] Error stack:', genError.stack);
@@ -182,142 +164,44 @@ export default async function handler(req, res) {
     const websiteIndexHtmlPath = path.join(websiteRoot, 'index.html');
 
     // Step 1: Sync Firebase to website/artists.json
-    console.log('[Deploy Website] Step 1: Syncing Firebase to website/artists.json...');
     const syncResult = await syncFirebaseToWebsiteJSON(db, websitePath);
     if (!syncResult.success) {
-      console.error('[Deploy Website] Sync failed:', syncResult.error);
       throw new Error(`Failed to sync Firebase: ${syncResult.error}`);
     }
     console.log('[Deploy Website] ✅ Synced Firebase to website/artists.json');
-    console.log(`[Deploy Website] Artists count: ${syncResult.artistsCount}`);
-    console.log(`[Deploy Website] File path: ${syncResult.filePath || 'in-memory'}`);
-    
-    // Handle artists.json location (might be in /tmp in production)
-    let actualArtistsJsonPath = websiteArtistsJsonPath;
-    if (syncResult.filePath && syncResult.filePath.startsWith('/tmp')) {
-      actualArtistsJsonPath = syncResult.filePath;
-      console.log('[Deploy Website] Using artists.json from /tmp');
-      
-      // Copy to website directory if possible (for generatePages)
-      try {
-        const fs = await import('fs-extra');
-        await fs.copy(actualArtistsJsonPath, websiteArtistsJsonPath);
-        console.log('[Deploy Website] Copied artists.json from /tmp to website directory');
-      } catch (copyError) {
-        console.warn('[Deploy Website] Could not copy artists.json, generatePages may use /tmp version:', copyError.message);
-        // generatePages will need to handle /tmp path
-        actualArtistsJsonPath = syncResult.filePath;
-      }
-    }
 
     // Step 2: Generate HTML pages
-    console.log('[Deploy Website] Step 2: Generating HTML pages...');
     try {
-      // Check if we're in Vercel production (read-only filesystem)
-      const isVercelProduction = process.env.VERCEL === '1' || process.cwd() === '/var/task';
-      
-      // In production, copy static files to /tmp/website first
-      if (isVercelProduction) {
-        const tmpWebsiteDir = '/tmp/website';
-        const sourceWebsiteDir = path.join(process.cwd(), 'website');
-        
-        console.log('[Deploy Website] Copying static files to /tmp/website...');
-        const fsModule = await import('fs-extra');
-        const fs = fsModule.default || fsModule;
-        
-        // Copy all static files except HTML files (which will be generated)
-        const staticExtensions = ['.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.ico', '.ttf', '.woff', '.woff2', '.eot', '.json'];
-        
-        async function copyStaticFiles(src, dest) {
-          if (!await fs.pathExists(src)) return;
-          
-          // Use fs-extra's readdir which returns entries with file type info
-          const entries = await fs.readdir(src, { withFileTypes: true });
-          for (const entry of entries) {
-            const srcPath = path.join(src, entry.name);
-            const destPath = path.join(dest, entry.name);
-            
-            // Skip directories that will be handled separately
-            if (entry.isDirectory()) {
-              if (entry.name === 'scripts' || entry.name === 'templates') {
-                continue; // Skip these, they're not needed for deployment
-              }
-              await fs.ensureDir(destPath);
-              await copyStaticFiles(srcPath, destPath);
-            } else if (entry.isFile()) {
-              const ext = path.extname(entry.name).toLowerCase();
-              // Copy static files, but skip HTML files (will be generated)
-              if (staticExtensions.includes(ext) || entry.name === 'artists.json') {
-                await fs.copy(srcPath, destPath, { overwrite: true });
-              }
-            }
-          }
-        }
-        
-        await fs.ensureDir(tmpWebsiteDir);
-        await copyStaticFiles(sourceWebsiteDir, tmpWebsiteDir);
-        console.log('[Deploy Website] ✅ Copied static files to /tmp/website');
-      }
-      
-      // Use lib/WebsitePageGenerator.cjs instead of website/scripts (avoids .vercelignore issues)
-      const generateScriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.cjs');
-      console.log('[Deploy Website] Loading generate script from:', generateScriptPath);
-      
-      const generateScript = require(generateScriptPath);
+      const generateScript = require(path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js'));
       
       if (!generateScript || typeof generateScript.generatePages !== 'function') {
-        console.error('[Deploy Website] Available functions:', Object.keys(generateScript || {}));
-        throw new Error('generatePages function not found in WebsitePageGenerator.js module');
+        throw new Error('generatePages function not found in generate_artist_pages.js module');
       }
       
-      // In Vercel production, generatePages will write to /tmp/website
-      const actualOutputDir = isVercelProduction ? '/tmp/website' : websiteRoot;
-      
-      // Use actual path (might be /tmp in production)
-      console.log('[Deploy Website] Calling generatePages with artists.json:', actualArtistsJsonPath);
-      console.log('[Deploy Website] Output directory:', actualOutputDir);
-      
-      const generateResult = generateScript.generatePages(actualArtistsJsonPath, actualOutputDir);
+      // generatePages can take optional params, but defaults work if paths are correct
+      const generateResult = generateScript.generatePages(websiteArtistsJsonPath, websiteRoot);
       
       if (!generateResult || !generateResult.success) {
         const errorMsg = generateResult?.error || 'Unknown error';
         console.error('[Deploy Website] Generate pages error:', errorMsg);
         throw new Error(`Failed to generate HTML pages: ${errorMsg}`);
       }
-      
       console.log('[Deploy Website] ✅ Generated HTML pages');
-      console.log(`[Deploy Website] Artist pages generated: ${generateResult.artistPagesGenerated || 'N/A'}`);
-      console.log(`[Deploy Website] Index HTML updated: ${generateResult.indexHtmlUpdated || false}`);
     } catch (genError) {
       console.error('[Deploy Website] Error requiring or calling generatePages:', genError.message);
-      console.error('[Deploy Website] Error stack:', genError.stack);
       throw new Error(`Failed to generate HTML pages: ${genError.message}`);
     }
 
     // Step 3: Deploy to Arweave (with database for incremental uploads)
-    // Use /tmp/website in production, otherwise use the original websitePath
-    const isVercelProduction = process.env.VERCEL === '1' || process.cwd() === '/var/task';
-    const actualWebsitePath = isVercelProduction ? '/tmp/website' : websitePath;
-    
-    console.log('[Deploy Website] Step 3: Deploying website to Arweave...');
-    console.log('[Deploy Website] Using website directory:', actualWebsitePath);
-    const deployResult = await deployWebsiteToArweave(actualWebsitePath, db);
+    const deployResult = await deployWebsiteToArweave(websitePath, db);
 
     if (!deployResult.success) {
-      console.error('[Deploy Website] Deployment failed:', deployResult.error);
       return res.status(500).json({
         success: false,
         error: deployResult.error || 'Failed to deploy website',
-        filesUploaded: deployResult.filesUploaded || 0,
-        step: 'deployment'
+        filesUploaded: deployResult.filesUploaded || 0
       });
     }
-    
-    console.log('[Deploy Website] ✅ Deployment successful');
-    console.log(`[Deploy Website] Manifest ID: ${deployResult.manifestId}`);
-    console.log(`[Deploy Website] Website URL: ${deployResult.websiteUrl}`);
-    console.log(`[Deploy Website] Files uploaded: ${deployResult.filesUploaded}`);
-    console.log(`[Deploy Website] Files unchanged: ${deployResult.filesUnchanged || 0}`);
 
     return res.status(200).json({
       success: true,
@@ -332,17 +216,8 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('[Deploy Website] ❌ Error:', error.message);
+    console.error('[Deploy Website] Error:', error.message);
     console.error('[Deploy Website] Stack:', error.stack);
-    const websitePath = req.body?.websiteDir || 'website';
-    console.error('[Deploy Website] Error context:', {
-      websitePath: websitePath,
-      websiteDir: req.body?.websiteDir,
-      updateOnly: req.body?.updateOnly,
-      method: req.method,
-      errorType: error.constructor.name,
-      errorMessage: error.message
-    });
     
     // Ensure we always return valid JSON
     try {
@@ -364,12 +239,7 @@ export default async function handler(req, res) {
   }
   } catch (outerError) {
     // Catch any errors in the handler itself (e.g., header setting)
-    console.error('[Deploy Website] ❌ Outer error:', outerError.message);
-    console.error('[Deploy Website] Outer error context:', {
-      errorType: outerError.constructor.name,
-      errorMessage: outerError.message,
-      stack: outerError.stack
-    });
+    console.error('[Deploy Website] Outer error:', outerError.message);
     try {
       res.status(500).json({
         success: false,
@@ -378,7 +248,6 @@ export default async function handler(req, res) {
       });
     } catch (finalError) {
       // Last resort - send plain text
-      console.error('[Deploy Website] ❌ Failed to send error response:', finalError.message);
       res.status(500).end('Internal Server Error');
     }
   }

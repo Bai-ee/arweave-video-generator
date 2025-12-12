@@ -701,31 +701,6 @@ export class VideoSegmentCompositor {
         console.warn(`[VideoSegmentCompositor] ⚠️  Skipping segment ${path.basename(segPath)}: too small (${stats.size} bytes)`);
         continue;
       }
-      
-      // Validate segment has valid video streams using ffprobe
-      try {
-        const ffprobePath = process.env.GITHUB_ACTIONS === 'true' ? 'ffprobe' : 'ffprobe';
-        const probeCommand = `${ffprobePath} -v error -select_streams v:0 -show_entries stream=codec_name,width,height -of json "${segPath}"`;
-        const probeOutput = execSync(probeCommand, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 10 * 1024 * 1024 });
-        const probeData = JSON.parse(probeOutput);
-        
-        if (!probeData.streams || probeData.streams.length === 0) {
-          console.warn(`[VideoSegmentCompositor] ⚠️  Skipping segment ${path.basename(segPath)}: no video streams found`);
-          continue;
-        }
-        
-        const stream = probeData.streams[0];
-        if (!stream.codec_name || !stream.width || !stream.height) {
-          console.warn(`[VideoSegmentCompositor] ⚠️  Skipping segment ${path.basename(segPath)}: invalid stream data`);
-          continue;
-        }
-        
-        console.log(`[VideoSegmentCompositor] ✅ Segment ${path.basename(segPath)} validated: ${stream.codec_name}, ${stream.width}x${stream.height}`);
-      } catch (probeError) {
-        console.warn(`[VideoSegmentCompositor] ⚠️  Could not validate segment ${path.basename(segPath)}: ${probeError.message}`);
-        // Continue anyway - size check passed, might still be valid
-      }
-      
       validSegments.push(segPath);
     }
     
@@ -781,7 +756,7 @@ export class VideoSegmentCompositor {
         outputPath
       ];
       
-      await this.executeFFmpeg(command, outputPath, 2 * 1024 * 1024); // Minimum 2MB for 30s video (more realistic)
+      await this.executeFFmpeg(command, outputPath, 5 * 1024 * 1024); // Minimum 5MB for 30s video
       
       // Cleanup
       try {
@@ -876,7 +851,7 @@ export class VideoSegmentCompositor {
         outputPath
       ];
       
-      await this.executeFFmpeg(command, outputPath, 2 * 1024 * 1024); // Minimum 2MB for 30s video (more realistic)
+      await this.executeFFmpeg(command, outputPath, 5 * 1024 * 1024); // Minimum 5MB for 30s video
     }
 
     // Verify output (executeFFmpeg already validated size, but double-check)
@@ -884,9 +859,9 @@ export class VideoSegmentCompositor {
       throw new Error('Concatenated video was not created');
     }
     const outputStats = await fs.stat(outputPath);
-    const minSize = 2 * 1024 * 1024; // 2MB minimum for 30s video (more realistic for efficiently encoded videos)
+    const minSize = 5 * 1024 * 1024; // 5MB minimum for 30s video
     if (outputStats.size < minSize) {
-      throw new Error(`Concatenated video too small: ${(outputStats.size / 1024 / 1024).toFixed(2)}MB (minimum: 2MB)`);
+      throw new Error(`Concatenated video too small: ${(outputStats.size / 1024 / 1024).toFixed(2)}MB (minimum: 5MB)`);
     }
 
     console.log(`[VideoSegmentCompositor] ✅ Concatenated video with transitions created: ${path.basename(outputPath)} (${(outputStats.size / 1024 / 1024).toFixed(2)}MB)`);
@@ -928,12 +903,12 @@ export class VideoSegmentCompositor {
           // Verify fallback output (executeFFmpeg already validated size, but double-check)
           if (await fs.pathExists(outputPath)) {
             const fallbackStats = await fs.stat(outputPath);
-            const minSize = 2 * 1024 * 1024; // 2MB minimum for 30s video (more realistic)
+            const minSize = 5 * 1024 * 1024; // 5MB minimum for 30s video
             if (fallbackStats.size >= minSize) {
               console.log(`[VideoSegmentCompositor] ✅ Fallback concatenation successful: ${path.basename(outputPath)} (${(fallbackStats.size / 1024 / 1024).toFixed(2)}MB)`);
               return; // Success with fallback
             } else {
-              throw new Error(`Fallback concatenation produced file too small: ${(fallbackStats.size / 1024 / 1024).toFixed(2)}MB (minimum: 2MB)`);
+              throw new Error(`Fallback concatenation produced file too small: ${(fallbackStats.size / 1024 / 1024).toFixed(2)}MB (minimum: 5MB)`);
             }
           } else {
             throw new Error('Fallback concatenation did not produce output file');
@@ -998,74 +973,13 @@ export class VideoSegmentCompositor {
           if (outputPath && await fs.pathExists(outputPath)) {
             try {
               const stats = await fs.stat(outputPath);
-              
-              // Determine appropriate minimum size based on context
-              // For 5-second segments: 0.5MB is reasonable (100KB per second)
-              // For 30-second videos: 2MB is reasonable
-              // If minSizeBytes is already low (< 1MB), use it as-is (for segments)
-              // Otherwise, use adjusted minimum for final videos
-              let adjustedMinSize;
-              if (minSizeBytes < 1024 * 1024) {
-                // This is a segment extraction (minSizeBytes is 100KB)
-                // Use 0.5MB minimum for 5-second segments (very reasonable)
-                adjustedMinSize = 0.5 * 1024 * 1024; // 0.5MB
-              } else {
-                // This is a final video (30 seconds)
-                // Use 2MB minimum (more realistic than original 5MB)
-                adjustedMinSize = 2 * 1024 * 1024; // 2MB
-              }
-              
-              if (stats.size < adjustedMinSize) {
+              if (stats.size < minSizeBytes) {
                 const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
-                const minMB = (adjustedMinSize / 1024 / 1024).toFixed(2);
-                
-                // Check if file has valid video streams FIRST (more reliable than just size)
-                // If it has valid streams, accept it even if slightly below size threshold
-                let hasValidStreams = false;
-                try {
-                  const ffprobePath = process.env.GITHUB_ACTIONS === 'true' ? 'ffprobe' : 'ffprobe';
-                  const probeCommand = `${ffprobePath} -v error -select_streams v:0 -show_entries stream=codec_name,width,height,duration -of json "${outputPath}"`;
-                  const probeOutput = execSync(probeCommand, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 10 * 1024 * 1024 });
-                  const probeData = JSON.parse(probeOutput);
-                  
-                  if (probeData.streams && probeData.streams.length > 0) {
-                    const stream = probeData.streams[0];
-                    console.log(`[VideoSegmentCompositor] Video has valid stream: ${stream.codec_name}, ${stream.width}x${stream.height}, duration: ${stream.duration || 'unknown'}`);
-                    
-                    // If video has valid streams, accept it even if size is slightly below threshold
-                    // For segments: accept at 50% of minimum (0.25MB)
-                    // For final videos: accept at 70% of minimum (1.4MB)
-                    const acceptanceThreshold = minSizeBytes < 1024 * 1024 ? 0.5 : 0.7;
-                    if (stats.size >= adjustedMinSize * acceptanceThreshold) {
-                      console.log(`[VideoSegmentCompositor] ✅ Output file validated (has valid streams): ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
-                      resolve();
-                      return;
-                    }
-                    hasValidStreams = true;
-                  }
-                } catch (probeError) {
-                  console.warn(`[VideoSegmentCompositor] ⚠️  Could not probe video: ${probeError.message}`);
-                }
-                
-                // Only log error and reject if we don't have valid streams
-                if (!hasValidStreams) {
-                  console.error(`[VideoSegmentCompositor] ❌ Output file too small: ${sizeMB}MB (minimum: ${minMB}MB)`);
-                  console.error(`[VideoSegmentCompositor] ❌ This indicates FFmpeg produced a corrupted or incomplete file`);
-                  reject(new Error(`FFmpeg output file too small: ${sizeMB}MB (expected at least ${minMB}MB)`));
-                  return;
-                } else {
-                  // Has valid streams but still below acceptance threshold - accept anyway if very close
-                  const veryCloseThreshold = minSizeBytes < 1024 * 1024 ? 0.4 : 0.6; // 40% for segments, 60% for videos
-                  if (stats.size >= adjustedMinSize * veryCloseThreshold) {
-                    console.log(`[VideoSegmentCompositor] ✅ Output file validated (has valid streams, close to threshold): ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
-                    resolve();
-                    return;
-                  }
-                  // Still reject if too far below threshold even with valid streams
-                  console.error(`[VideoSegmentCompositor] ❌ Output file too small: ${sizeMB}MB (minimum: ${minMB}MB) - even with valid streams`);
-                  reject(new Error(`FFmpeg output file too small: ${sizeMB}MB (expected at least ${minMB}MB)`));
-                  return;
-                }
+                const minMB = (minSizeBytes / 1024 / 1024).toFixed(2);
+                console.error(`[VideoSegmentCompositor] ❌ Output file too small: ${sizeMB}MB (minimum: ${minMB}MB)`);
+                console.error(`[VideoSegmentCompositor] ❌ This indicates FFmpeg produced a corrupted or incomplete file`);
+                reject(new Error(`FFmpeg output file too small: ${sizeMB}MB (expected at least ${minMB}MB)`));
+                return;
               }
               console.log(`[VideoSegmentCompositor] ✅ Output file validated: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
             } catch (statError) {
@@ -1075,22 +989,10 @@ export class VideoSegmentCompositor {
           resolve();
         } else {
           console.error(`[VideoSegmentCompositor] ❌ FFmpeg failed with code: ${code}`);
-          // Show full error for better debugging (last 2000 chars)
-          const errorSnippet = stderr.length > 2000 ? stderr.substring(stderr.length - 2000) : stderr;
+          // Show more of the error (last 1000 chars for better debugging)
+          const errorSnippet = stderr.length > 1000 ? stderr.substring(stderr.length - 1000) : stderr;
           console.error(`[VideoSegmentCompositor] FFmpeg error output:\n${errorSnippet}`);
-          console.error(`[VideoSegmentCompositor] Full FFmpeg command: ${args.join(' ')}`);
-          // Extract the most relevant error message
-          const errorLines = stderr.split('\n').filter(line => 
-            line.includes('Error') || 
-            line.includes('error') || 
-            line.includes('failed') ||
-            line.includes('Invalid') ||
-            line.includes('not found')
-          );
-          const errorMessage = errorLines.length > 0 
-            ? errorLines.slice(-5).join('; ') 
-            : stderr.split('\n').slice(-3).join(' ');
-          reject(new Error(`FFmpeg failed with exit code ${code}: ${errorMessage}`));
+          reject(new Error(`FFmpeg failed with exit code ${code}: ${errorSnippet.split('\n').slice(-3).join(' ')}`));
         }
       });
 

@@ -806,21 +806,62 @@ textarea {
 @media (max-width: 640px) {
   body {
     font-size: 12px;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  main {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  
+  .control-stack {
+    padding: 0;
+    gap: 0.5rem;
+  }
+  
+  .collapsible-card {
+    margin: 0;
   }
   
   .collapsible-toggle {
     font-size: 0.85rem;
-    padding: 0.75rem 0.9rem;
+    padding: 0.75rem 0.5rem;
     text-align: center;
     grid-template-columns: 1fr auto;
   }
   
   .collapsible-body {
-    padding: 0.85rem 0.9rem 1rem;
+    padding: 0.5rem;
   }
   
   .step-block {
-    padding: 0.65rem;
+    padding: 0.5rem;
+  }
+  
+  /* Prevent overflow on mobile */
+  * {
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Fix archive manifest cards overflow */
+  .card-edittrax {
+    margin-left: 0;
+    margin-right: 0;
+    max-width: 100%;
+  }
+  
+  /* Fix table and grid overflow */
+  table, .table-container {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  
+  /* Fix button containers */
+  .action-row {
+    padding: 0;
   }
   
   .step-block .step-label {
