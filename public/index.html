@@ -122,11 +122,14 @@
 
         <div class="control-stack">
           <div class="collapsible-card">
-            <button class="collapsible-toggle" onclick="toggleCollapsible('generateSection')" aria-expanded="true">
-              <span>Generate video</span>
-              <span class="meta">Guided steps on tap</span>
+            <button class="collapsible-toggle" onclick="toggleCollapsible('generateSection')" aria-expanded="false">
+              <div>
+                <div style="font-family: var(--font-mathias);">Generate video</div>
+                <div class="meta">Guided steps on tap</div>
+              </div>
+              <span class="chevron">▸</span>
             </button>
-            <div id="generateSection" class="collapsible-body open">
+            <div id="generateSection" class="collapsible-body">
               <div class="stepper-card">
                 <div class="step-block">
                   <div class="step-label">1. Select audio source</div>
@@ -158,13 +161,16 @@
                     id="artistSelect"
                     style="width: 100%; max-width: 420px; margin: 0.35rem auto 0; display: block; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 8px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-body); cursor: pointer;"
                   >
-                    <option value="random">Random Artist</option>
+                    <option value="random">🎲 Random Artist</option>
                   </select>
                 </div>
 
                 <div id="folderSelectionContainer" class="step-block" style="display: none;">
                   <div class="step-label">3. Select video folders</div>
                   <div class="step-hint">Choose at least one folder to pull footage from.</div>
+                  <div class="body-text" style="color: #c4c7bd; margin-top: 0.35rem;">
+                    Skyline (32) · Artist (0) · Decks (20) · Equipment (3) · Family (2) · Neighborhood (16) · Chicago Skyline (6)
+                  </div>
                   <div id="folderCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; max-width: 800px; margin: 0 auto;">
                     <!-- Folders will be populated dynamically -->
                   </div>
@@ -210,8 +216,11 @@
 
           <div class="collapsible-card">
             <button class="collapsible-toggle" onclick="toggleCollapsible('uploadSection')" aria-expanded="false">
-              <span>Uploads</span>
-              <span class="meta">Mixes, videos, assets</span>
+              <div>
+                <div style="font-family: var(--font-mathias);">Uploads</div>
+                <div class="meta">Mixes, videos, assets</div>
+              </div>
+              <span class="chevron">▸</span>
             </button>
             <div id="uploadSection" class="collapsible-body">
               <div class="stepper-card">
@@ -243,8 +252,11 @@
 
           <div class="collapsible-card">
             <button class="collapsible-toggle" onclick="toggleCollapsible('toolsSection')" aria-expanded="false">
-              <span>Tools & deploy</span>
-              <span class="meta">Refresh, website, archive</span>
+              <div>
+                <div style="font-family: var(--font-mathias);">Tools & deploy</div>
+                <div class="meta">Refresh, website, archive</div>
+              </div>
+              <span class="chevron">▸</span>
             </button>
             <div id="toolsSection" class="collapsible-body">
               <div class="stepper-card">
@@ -604,94 +616,114 @@
 
     <!-- Results Container -->
     <div id="resultsContainer" style="padding-left: 1rem; padding-right: 1rem;">
-      
-      <!-- Videos Table -->
-      <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
-        <div class="table-container">
-          <table class="table-edittrax" style="border: none; margin: 0; border-collapse: collapse; width: 100%;">
-            <thead style="background-color: var(--color-yellow-75); border: none;">
-              <tr style="border: none;">
-                <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center; border: none;">ARTIST</th>
-                <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">DURATION</th>
-                <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">STATUS</th>
-                <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody id="videosTable">
-              <!-- Video rows will be populated dynamically -->
-              <tr>
-                <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-                  No videos generated yet. Click "GENERATE VIDEO" to create your first video!
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="videos-mobile-list" id="videosMobileList" style="padding: 1rem;"></div>
-        <div style="display: flex; gap: 0.75rem; padding: 0.5rem 1rem 1.25rem; flex-wrap: wrap; justify-content: center;">
-          <button 
-            id="loadMoreBtn" 
-            onclick="loadMoreVideos()" 
-            class="btn-base btn-secondary" 
-            style="display: none; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
-          >
-            Load More
-          </button>
-          <button 
-            id="resetDismissedBtn" 
-            onclick="resetDismissedVideos()" 
-            class="btn-base btn-secondary" 
-            style="display: none; background: rgba(239,68,68,0.15); color: #ef4444; border: 2px solid #ef4444; font-weight: bold; border-radius: 10px;"
-          >
-            Restore Hidden Rows
-          </button>
+      <div class="collapsible-card">
+        <button class="collapsible-toggle" onclick="toggleCollapsible('generatedVideosSection')" aria-expanded="false">
+          <div>
+            <div style="font-family: var(--font-mathias);">Generated videos</div>
+            <div class="meta">Status, actions, lazy loading</div>
+          </div>
+          <span class="chevron">▸</span>
+        </button>
+        <div id="generatedVideosSection" class="collapsible-body">
+          <!-- Videos Table -->
+          <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+            <div class="table-container">
+              <table class="table-edittrax" style="border: none; margin: 0; border-collapse: collapse; width: 100%;">
+                <thead style="background-color: var(--color-yellow-75); border: none;">
+                  <tr style="border: none;">
+                    <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center; border: none;">ARTIST</th>
+                    <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">DURATION</th>
+                    <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">STATUS</th>
+                    <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody id="videosTable">
+                  <!-- Video rows will be populated dynamically -->
+                  <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                      No videos generated yet. Click "GENERATE VIDEO" to create your first video!
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="videos-mobile-list" id="videosMobileList" style="padding: 1rem;"></div>
+            <div style="display: flex; gap: 0.75rem; padding: 0.5rem 1rem 1.25rem; flex-wrap: wrap; justify-content: center;">
+              <button 
+                id="loadMoreBtn" 
+                onclick="loadMoreVideos()" 
+                class="btn-base btn-secondary" 
+                style="display: none; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
+              >
+                Load More
+              </button>
+              <button 
+                id="resetDismissedBtn" 
+                onclick="resetDismissedVideos()" 
+                class="btn-base btn-secondary" 
+                style="display: none; background: rgba(239,68,68,0.15); color: #ef4444; border: 2px solid #ef4444; font-weight: bold; border-radius: 10px;"
+              >
+                Restore Hidden Rows
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Preview Container -->
     <div id="previewContainer" style="padding-left: 1rem; padding-right: 1rem; display: none;">
-      
-      <!-- Folder List View -->
-      <div id="folderListView" class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
-        <div style="background-color: var(--color-yellow-75); padding: 1rem;">
-          <h2 style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0; text-align: center;">
-            📂 Video Folders
-          </h2>
-        </div>
-        <div style="padding: 1.5rem;">
-          <div id="foldersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
-            <!-- Folders will be populated here -->
+      <div class="collapsible-card">
+        <button class="collapsible-toggle" onclick="toggleCollapsible('uploadedVideosSection')" aria-expanded="false">
+          <div>
+            <div style="font-family: var(--font-mathias);">Uploaded videos</div>
+            <div class="meta">Browse folders and delete assets</div>
           </div>
-          <div id="foldersLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-            Loading folders...
+          <span class="chevron">▸</span>
+        </button>
+        <div id="uploadedVideosSection" class="collapsible-body">
+          <!-- Folder List View -->
+          <div id="folderListView" class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+            <div style="background-color: var(--color-yellow-75); padding: 1rem;">
+              <h2 style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0; text-align: center;">
+                📂 Video Folders
+              </h2>
+            </div>
+            <div style="padding: 1.5rem;">
+              <div id="foldersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                <!-- Folders will be populated here -->
+              </div>
+              <div id="foldersLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                Loading folders...
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Folder Detail View -->
-      <div id="folderDetailView" style="display: none;">
-        <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
-          <div style="background-color: var(--color-yellow-75); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
-            <h2 id="folderDetailTitle" style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0;">
-              📂 Folder Name
-            </h2>
-            <button 
-              onclick="backToFolders()"
-              style="padding: 0.5rem 1rem; background: black; color: var(--color-yellow-75); border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
-            >
-              ← Back
-            </button>
-          </div>
-          <div style="padding: 1.5rem;">
-            <div id="videosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
-              <!-- Videos will be populated here -->
-            </div>
-            <div id="videosLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-              Loading videos...
-            </div>
-            <div id="videosEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
-              No videos found in this folder.
+          <!-- Folder Detail View -->
+          <div id="folderDetailView" style="display: none;">
+            <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+              <div style="background-color: var(--color-yellow-75); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <h2 id="folderDetailTitle" style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0;">
+                  📂 Folder Name
+                </h2>
+                <button 
+                  onclick="backToFolders()"
+                  style="padding: 0.5rem 1rem; background: black; color: var(--color-yellow-75); border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+                >
+                  ← Back
+                </button>
+              </div>
+              <div style="padding: 1.5rem;">
+                <div id="videosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+                  <!-- Videos will be populated here -->
+                </div>
+                <div id="videosLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                  Loading videos...
+                </div>
+                <div id="videosEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
+                  No videos found in this folder.
+                </div>
+              </div>
             </div>
           </div>
         </div>

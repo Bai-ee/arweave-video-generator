@@ -594,7 +594,7 @@ textarea {
 
 .collapsible-card {
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(230, 233, 224, 0.3);
+  border: 2px solid var(--color-yellow-75);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-5xl);
   overflow: hidden;
@@ -602,13 +602,14 @@ textarea {
 
 .collapsible-toggle {
   width: 100%;
-  background: rgba(230, 233, 224, 0.08);
-  color: var(--color-yellow-75);
+  background: var(--color-yellow-75);
+  color: black;
   border: none;
-  padding: 0.9rem 1.1rem;
-  display: flex;
+  padding: 1rem 1.1rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.75rem;
   font-family: var(--font-mathias);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -620,13 +621,24 @@ textarea {
   font-family: var(--font-body);
   font-size: 0.85rem;
   letter-spacing: 0.01em;
-  color: #c4c7bd;
+  color: #111;
+}
+
+.collapsible-toggle .chevron {
+  font-size: 1rem;
+  transition: transform 0.25s ease;
+  color: #111;
+}
+
+.collapsible-toggle[aria-expanded="true"] .chevron {
+  transform: rotate(90deg);
 }
 
 .collapsible-body {
   padding: 1rem 1.2rem 1.25rem;
   display: none;
   background: rgba(0, 0, 0, 0.5);
+  border-top: 2px solid var(--color-yellow-75);
 }
 
 .collapsible-body.open {
