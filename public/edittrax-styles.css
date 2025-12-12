@@ -823,15 +823,16 @@ textarea {
     padding-right: 0;
   }
 
-  /* Status indicators on mobile */
+  /* Status indicators on mobile - keep same as desktop */
   .status-indicator {
-    flex-direction: column !important;
-    gap: 0.2rem !important;
+    /* Maintain horizontal layout on mobile */
+    flex-direction: row !important;
+    gap: 0.4rem !important;
     align-items: center !important;
   }
   
   .status-indicator span:last-child {
-    font-size: 0.65rem !important;
+    font-size: 0.7rem !important;
   }
   
   .control-stack {
