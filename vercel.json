@@ -99,7 +99,7 @@
     },
     "api/deploy-website.js": {
       "maxDuration": 300,
-      "includeFiles": ["website/**", "website/scripts/**", "website/templates/**"]
+      "includeFiles": "website/**/*"
     }
   }
 }
