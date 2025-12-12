@@ -273,8 +273,8 @@ class ArweaveAudioClient {
                      .setStartTime(startTime)
                      .duration(duration)
                      .audioFilters([
-                       `afade=t=in:start_time=0:d=${fadeInDuration}`,
-                       `afade=t=out:start_time=${duration - fadeOutDuration}:d=${fadeOutDuration}`
+                       `afade=t=in:st=0:d=${fadeInDuration}`,
+                       `afade=t=out:st=${duration - fadeOutDuration}:d=${fadeOutDuration}`
                      ])
                      .audioCodec('aac')
                      .audioBitrate('128k')
