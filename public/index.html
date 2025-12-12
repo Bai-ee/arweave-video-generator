@@ -88,31 +88,7 @@
   <header class="header-edittrax">
     <div class="max-w-6xl mx-auto pt-3" style="position: relative;">
       
-      <!-- Navigation -->
-      <div style="position: absolute; top: 25px; left: 0; z-index: 50; font-family: var(--font-mathias); font-size: 0.75rem; display: flex; gap: 1rem;">
-        <a href="/archive.html" style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; text-decoration: none; font-weight: bold; letter-spacing: 0.08em;">
-          ARCHIVE
-        </a>
-        <a href="#" onclick="openWebsite(); return false;" style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; text-decoration: none; font-weight: bold; letter-spacing: 0.08em;">
-          WEBSITE
-        </a>
-      </div>
-      
-      <!-- Top Right Actions -->
-      <div style="position: absolute; top: 25px; right: 0; display: flex; flex-direction: column; gap: 17px; align-items: flex-end; z-index: 50; font-family: var(--font-mathias); font-size: 0.75rem;">
-        <!-- Refresh Videos -->
-        <button 
-          id="refreshBtn" 
-          onclick="loadVideos()"
-          style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--color-yellow-75); cursor: pointer; padding: 4px 8px; font-family: var(--font-mathias); font-size: 0.75rem;"
-          title="Refresh Videos"
-        >
-          <span style="font-weight: bold;">REFRESH</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-          </svg>
-        </button>
-      </div>
+      <!-- Navigation and top actions removed -->
       
       <div class="flex flex-col items-center gap-4 w-full px-4 sm:px-0">
         <div class="logo-container flex flex-col items-center gap-2">
@@ -134,20 +110,20 @@
                 <div class="step-block">
                   <div class="step-label">1. Select audio source</div>
                   <div class="step-hint">Choose whether to work from DJ mixes or original tracks.</div>
-                  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; margin-top: 0.5rem;">
+                  <div class="full-width-group" style="margin-top: 0.5rem;">
                     <button 
                       id="audioSourceMixes" 
                       onclick="selectAudioSource('mixes')"
-                      class="btn-base btn-primary"
-                      style="padding: 0.75rem 1.5rem; border-radius: 8px;"
+                      class="btn-base btn-primary full-btn"
+                      style="border-radius: 8px;"
                     >
                       DJ MIXES
                     </button>
                     <button 
                       id="audioSourceTracks" 
                       onclick="selectAudioSource('tracks')"
-                      class="btn-base btn-secondary"
-                      style="padding: 0.75rem 1.5rem; border-radius: 8px; background: #0a0a0a; color: var(--color-yellow-75);"
+                      class="btn-base btn-secondary full-btn"
+                      style="border-radius: 8px; background: #0a0a0a; color: var(--color-yellow-75);"
                     >
                       ORIGINAL TRACKS
                     </button>
@@ -159,7 +135,7 @@
                   <div class="step-hint">Pick an artist for mixes or choose random.</div>
                   <select 
                     id="artistSelect"
-                    style="width: 100%; max-width: 420px; margin: 0.35rem auto 0; display: block; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 8px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-body); cursor: pointer;"
+                    style="width: 100%; margin: 0.35rem auto 0; display: block; padding: 0.85rem; border: 2px solid var(--color-yellow-75); border-radius: 8px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-body); cursor: pointer;"
                   >
                     <option value="random">🎲 Random Artist</option>
                   </select>
@@ -171,7 +147,7 @@
                   <div class="body-text" style="color: #c4c7bd; margin-top: 0.35rem;">
                     Skyline (32) · Artist (0) · Decks (20) · Equipment (3) · Family (2) · Neighborhood (16) · Chicago Skyline (6)
                   </div>
-                  <div id="folderCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; max-width: 800px; margin: 0 auto;">
+                  <div id="folderCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; width: 100%; margin: 0 auto;">
                     <!-- Folders will be populated dynamically -->
                   </div>
                 </div>
@@ -231,7 +207,7 @@
                     <button 
                       id="uploadVideoBtn" 
                       onclick="showUploadModal()"
-                      class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
+                      class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
                       style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold;"
                     >
                       Upload Video
@@ -239,7 +215,7 @@
                     <button 
                       id="uploadMixBtn" 
                       onclick="showUploadMixModal()"
-                      class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
+                      class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
                       style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold;"
                     >
                       Upload Mix
@@ -265,25 +241,16 @@
                   <div class="step-hint">Deploy the site, refresh video list, or open the public site.</div>
                   <div class="action-row" style="margin-top: 0.35rem;">
                     <button 
-                      id="refreshBtn" 
-                      onclick="loadVideos()"
-                      class="btn-base btn-secondary"
-                      style="background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
-                      title="Refresh Videos"
-                    >
-                      Refresh Videos
-                    </button>
-                    <button 
                       id="deployWebsiteBtn" 
                       onclick="deployWebsite()"
-                      class="btn-base btn-secondary px-6 py-3 text-sm sm:text-base rounded text-center whitespace-nowrap"
+                      class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
                       style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold;"
                     >
                       Deploy Website
                     </button>
                     <button 
                       onclick="openWebsite(); return false;"
-                      class="btn-base btn-secondary"
+                      class="btn-base btn-secondary full-btn"
                       style="background: #0a0a0a; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px;"
                     >
                       View Site
@@ -652,7 +619,7 @@
               <button 
                 id="loadMoreBtn" 
                 onclick="loadMoreVideos()" 
-                class="btn-base btn-secondary" 
+                class="btn-base btn-secondary full-btn" 
                 style="display: none; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
               >
                 Load More
@@ -660,7 +627,7 @@
               <button 
                 id="resetDismissedBtn" 
                 onclick="resetDismissedVideos()" 
-                class="btn-base btn-secondary" 
+                class="btn-base btn-secondary full-btn" 
                 style="display: none; background: rgba(239,68,68,0.15); color: #ef4444; border: 2px solid #ef4444; font-weight: bold; border-radius: 10px;"
               >
                 Restore Hidden Rows
@@ -669,65 +636,72 @@
           </div>
         </div>
       </div>
+      
+      <div class="collapsible-card">
+        <button class="collapsible-toggle" onclick="toggleCollapsible('archiveSection')" aria-expanded="false">
+          <div>
+            <div style="font-family: var(--font-mathias);">Archive</div>
+            <div class="meta">View uploaded videos and manifest</div>
+          </div>
+          <span class="chevron">▸</span>
+        </button>
+        <div id="archiveSection" class="collapsible-body">
+          <div class="action-row" style="margin-bottom: 0.75rem;">
+            <a href="/archive.html" class="btn-base btn-secondary full-btn" style="text-decoration: none; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold;">
+              Open Archive Page
+            </a>
+          </div>
     </div>
 
     <!-- Preview Container -->
     <div id="previewContainer" style="padding-left: 1rem; padding-right: 1rem; display: none;">
-      <div class="collapsible-card">
-        <button class="collapsible-toggle" onclick="toggleCollapsible('uploadedVideosSection')" aria-expanded="false">
-          <div>
-            <div style="font-family: var(--font-mathias);">View uploaded videos</div>
-            <div class="meta">Browse folders and delete assets</div>
-          </div>
-          <span class="chevron">▸</span>
-        </button>
-        <div id="uploadedVideosSection" class="collapsible-body">
-          <!-- Folder List View -->
-          <div id="folderListView" class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
-            <div style="background-color: var(--color-yellow-75); padding: 1rem;">
-              <h2 style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0; text-align: center;">
-                📂 Video Folders
-              </h2>
-            </div>
-            <div style="padding: 1.5rem;">
-              <div id="foldersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
-                <!-- Folders will be populated here -->
-              </div>
-              <div id="foldersLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-                Loading folders...
-              </div>
-            </div>
-          </div>
-
-          <!-- Folder Detail View -->
-          <div id="folderDetailView" style="display: none;">
-            <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
-              <div style="background-color: var(--color-yellow-75); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                <h2 id="folderDetailTitle" style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0;">
-                  📂 Folder Name
+          <div id="uploadedVideosSection" class="collapsible-body" style="padding-top: 0;">
+            <!-- Folder List View -->
+            <div id="folderListView" class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+              <div style="background-color: var(--color-yellow-75); padding: 1rem;">
+                <h2 style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0; text-align: center;">
+                  📂 Video Folders
                 </h2>
-                <button 
-                  onclick="backToFolders()"
-                  style="padding: 0.5rem 1rem; background: black; color: var(--color-yellow-75); border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
-                >
-                  ← Back
-                </button>
               </div>
               <div style="padding: 1.5rem;">
-                <div id="videosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
-                  <!-- Videos will be populated here -->
+                <div id="foldersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; width: 100%;">
+                  <!-- Folders will be populated here -->
                 </div>
-                <div id="videosLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-                  Loading videos...
+                <div id="foldersLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                  Loading folders...
                 </div>
-                <div id="videosEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
-                  No videos found in this folder.
+              </div>
+            </div>
+
+            <!-- Folder Detail View -->
+            <div id="folderDetailView" style="display: none;">
+              <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+                <div style="background-color: var(--color-yellow-75); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                  <h2 id="folderDetailTitle" style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0;">
+                    📂 Folder Name
+                  </h2>
+                  <button 
+                    onclick="backToFolders()"
+                    class="btn-base btn-secondary"
+                    style="padding: 0.5rem 1rem; background: black; color: var(--color-yellow-75); border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem; width: auto; min-width: 120px;"
+                  >
+                    ← Back
+                  </button>
+                </div>
+                <div style="padding: 1.5rem;">
+                  <div id="videosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; width: 100%;">
+                    <!-- Videos will be populated here -->
+                  </div>
+                  <div id="videosLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                    Loading videos...
+                  </div>
+                  <div id="videosEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
+                    No videos found in this folder.
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
     </div>
   </main>
 
@@ -827,18 +801,10 @@
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', () => {
-      // Filter initialization commented out - always using Hard B&W Street Doc @ 80%
-      // initializeFilterButtons();
       loadArtists();
       loadVideos();
       loadAvailableFolders();
       populateUploadFolderSelect();
-      
-      // Auto-refresh video list every 30 seconds to catch completed videos
-      setInterval(() => {
-        console.log('🔄 Auto-refreshing video list...');
-        loadVideos();
-      }, 30000); // Refresh every 30 seconds
     });
 
     /**
@@ -1536,13 +1502,6 @@
         <td class="px-2" style="padding: 1rem; text-align: center;">
           <div class="video-actions-inline" style="justify-content: center;">
             ${actions}
-            <button 
-              class="btn-base btn-secondary px-3 py-1 text-xs rounded"
-              style="background: transparent; color: #ef4444; border: 2px solid #ef4444; cursor: pointer; font-family: var(--font-body);"
-              onclick="dismissVideo('${videoId}')"
-            >
-              × Hide
-            </button>
           </div>
         </td>
       `;

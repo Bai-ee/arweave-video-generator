@@ -685,7 +685,9 @@ textarea {
 }
 
 .action-row button {
-  flex: 1 1 180px;
+  flex: 1 1 220px;
+  min-height: 48px;
+  width: 100%;
 }
 
 /* ========================================
@@ -729,13 +731,13 @@ textarea {
 
 .dismiss-chip {
   position: absolute;
-  top: 0.4rem;
-  right: 0.4rem;
+  top: 0.3rem;
+  right: 0.3rem;
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid #ef4444;
   color: #ef4444;
-  width: 32px;
-  height: 32px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -777,6 +779,19 @@ textarea {
 
 .shadow-2xl {
   box-shadow: var(--shadow-2xl);
+}
+
+.full-width-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.full-btn {
+  width: 100%;
+  min-height: 48px;
+  justify-content: center;
 }
 
 /* ========================================
