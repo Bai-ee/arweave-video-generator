@@ -854,7 +854,9 @@ textarea {
     font-size: 0.85rem;
     padding: 0.75rem 0.5rem;
     text-align: center;
-    grid-template-columns: 1fr auto;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
   }
   
   .collapsible-body {
