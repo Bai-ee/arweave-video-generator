@@ -10,6 +10,7 @@ import { deployWebsiteToArweave } from '../lib/WebsiteDeployer.js';
 import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
 import { syncFirebaseToWebsiteJSON } from '../lib/WebsiteSync.js';
 import path from 'path';
+import fs from 'fs-extra';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -168,49 +169,58 @@ export default async function handler(req, res) {
 
     // Full deployment: sync, regenerate, then deploy
     const isVercelProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-    const websiteRoot = path.join(process.cwd(), websitePath);
+    const sourceWebsiteRoot = path.join(process.cwd(), websitePath);
     
-    // In Vercel, we can't write files to /var/task (read-only)
-    // So we skip sync and regeneration - just deploy existing committed files
+    // In Vercel, /var/task is read-only but /tmp is writable
+    // Copy website to /tmp, sync Firebase, regenerate HTML, then deploy from there
+    let workingWebsiteRoot = sourceWebsiteRoot;
+    let workingWebsitePath = websitePath;
+    
     if (isVercelProduction) {
-      console.log('[Deploy Website] Vercel production detected - deploying existing committed files');
-      console.log('[Deploy Website] Note: To update website content, run sync/generate locally and commit changes');
-    } else {
-      // Local development: do full sync and regeneration
-      const websiteArtistsJsonPath = path.join(websiteRoot, 'artists.json');
+      console.log('[Deploy Website] Vercel production detected - using /tmp for sync/regeneration');
       
-      // Step 1: Sync Firebase to website/artists.json
-      const syncResult = await syncFirebaseToWebsiteJSON(db, websitePath);
-      if (!syncResult.success) {
-        throw new Error(`Failed to sync Firebase: ${syncResult.error}`);
-      }
-      console.log('[Deploy Website] ✅ Synced Firebase to website/artists.json');
+      // Copy website folder to /tmp
+      const tempWebsiteRoot = '/tmp/website';
+      await fs.copy(sourceWebsiteRoot, tempWebsiteRoot, { overwrite: true });
+      console.log(`[Deploy Website] Copied website to ${tempWebsiteRoot}`);
+      
+      workingWebsiteRoot = tempWebsiteRoot;
+      workingWebsitePath = tempWebsiteRoot;
+    }
+    
+    const websiteArtistsJsonPath = path.join(workingWebsiteRoot, 'artists.json');
+    
+    // Step 1: Sync Firebase to artists.json (works in both /tmp and local)
+    const syncResult = await syncFirebaseToWebsiteJSON(db, workingWebsitePath);
+    if (!syncResult.success) {
+      throw new Error(`Failed to sync Firebase: ${syncResult.error}`);
+    }
+    console.log('[Deploy Website] ✅ Synced Firebase to artists.json');
 
-      // Step 2: Generate HTML pages
-      try {
-        const generateScript = require(path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js'));
-        
-        if (!generateScript || typeof generateScript.generatePages !== 'function') {
-          throw new Error('generatePages function not found in generate_artist_pages.js module');
-        }
-        
-        // generatePages can take optional params, but defaults work if paths are correct
-        const generateResult = generateScript.generatePages(websiteArtistsJsonPath, websiteRoot);
-        
-        if (!generateResult || !generateResult.success) {
-          const errorMsg = generateResult?.error || 'Unknown error';
-          console.error('[Deploy Website] Generate pages error:', errorMsg);
-          throw new Error(`Failed to generate HTML pages: ${errorMsg}`);
-        }
-        console.log('[Deploy Website] ✅ Generated HTML pages');
-      } catch (genError) {
-        console.error('[Deploy Website] Error requiring or calling generatePages:', genError.message);
-        throw new Error(`Failed to generate HTML pages: ${genError.message}`);
+    // Step 2: Generate HTML pages
+    try {
+      const generateScript = require(path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js'));
+      
+      if (!generateScript || typeof generateScript.generatePages !== 'function') {
+        throw new Error('generatePages function not found in generate_artist_pages.js module');
       }
+      
+      // Generate pages in the working directory (either /tmp or local)
+      const generateResult = generateScript.generatePages(websiteArtistsJsonPath, workingWebsiteRoot);
+      
+      if (!generateResult || !generateResult.success) {
+        const errorMsg = generateResult?.error || 'Unknown error';
+        console.error('[Deploy Website] Generate pages error:', errorMsg);
+        throw new Error(`Failed to generate HTML pages: ${errorMsg}`);
+      }
+      console.log('[Deploy Website] ✅ Generated HTML pages');
+    } catch (genError) {
+      console.error('[Deploy Website] Error requiring or calling generatePages:', genError.message);
+      throw new Error(`Failed to generate HTML pages: ${genError.message}`);
     }
 
-    // Step 3: Deploy to Arweave (with database for incremental uploads)
-    const deployResult = await deployWebsiteToArweave(websitePath, db);
+    // Step 3: Deploy to Arweave from the working directory
+    const deployResult = await deployWebsiteToArweave(workingWebsitePath, db);
 
     if (!deployResult.success) {
       return res.status(500).json({
