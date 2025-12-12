@@ -838,7 +838,7 @@
     /**
      * Toggle collapsible sections for the guided controls
      */
-    function toggleCollapsible(sectionId) {
+    window.toggleCollapsible = function(sectionId) {
       const panel = document.getElementById(sectionId);
       if (!panel) {
         console.error(`[toggleCollapsible] Panel not found: ${sectionId}`);
@@ -864,11 +864,11 @@
       // Load archive data when archive section is opened
       if (sectionId === 'archiveSection' && isNowOpen && !wasOpen) {
         setTimeout(() => {
-          loadArchiveFolders();
-          loadArchiveManifest();
+          if (typeof loadArchiveFolders === 'function') loadArchiveFolders();
+          if (typeof loadArchiveManifest === 'function') loadArchiveManifest();
         }, 100);
       }
-    }
+    };
 
     const getVideoId = (video) => video?.jobId || video?.videoId || video?.id || '';
 
@@ -1029,7 +1029,7 @@
     /**
      * Select audio source (MIXES or TRACKS)
      */
-    function selectAudioSource(source) {
+    window.selectAudioSource = function(source) {
       selectedAudioSource = source;
       
       const mixesBtn = document.getElementById('audioSourceMixes');
@@ -1064,7 +1064,7 @@
       populateAllFolderCheckboxes();
       
       console.log(`✅ Selected audio source: ${source}`);
-    }
+    };
 
     /**
      * Populate folder checkboxes with ALL available folders
