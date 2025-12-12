@@ -128,16 +128,16 @@ export default async function handler(req, res) {
         throw new Error(`Failed to sync Firebase: ${syncResult.error}`);
       }
 
-      // Regenerate HTML pages
+      // Regenerate HTML pages - use lib/WebsitePageGenerator.cjs (NOT website/scripts/)
       try {
-        const scriptPath = path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js');
+        const scriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.cjs');
         console.log('[Deploy Website] Loading script from:', scriptPath);
         
         const generateScript = require(scriptPath);
         console.log('[Deploy Website] Script loaded, keys:', Object.keys(generateScript));
         
         if (!generateScript) {
-          throw new Error('Failed to load generate_artist_pages.js module');
+          throw new Error('Failed to load WebsitePageGenerator.cjs module');
         }
         
         if (typeof generateScript.generatePages !== 'function') {
@@ -199,13 +199,19 @@ export default async function handler(req, res) {
 
     // Step 2: Generate HTML pages
     try {
-      const generateScript = require(path.join(process.cwd(), 'website', 'scripts', 'generate_artist_pages.js'));
+      // Use lib/WebsitePageGenerator.cjs (NOT website/scripts/) to avoid .vercelignore issues
+      const generateScriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.cjs');
+      console.log('[Deploy Website] Loading generate script from:', generateScriptPath);
+      
+      const generateScript = require(generateScriptPath);
       
       if (!generateScript || typeof generateScript.generatePages !== 'function') {
-        throw new Error('generatePages function not found in generate_artist_pages.js module');
+        console.error('[Deploy Website] Available functions:', Object.keys(generateScript || {}));
+        throw new Error('generatePages function not found in WebsitePageGenerator.cjs module');
       }
       
       // Generate pages in the working directory (either /tmp or local)
+      console.log('[Deploy Website] Calling generatePages with:', { artistsJson: websiteArtistsJsonPath, outputDir: workingWebsiteRoot });
       const generateResult = generateScript.generatePages(websiteArtistsJsonPath, workingWebsiteRoot);
       
       if (!generateResult || !generateResult.success) {
