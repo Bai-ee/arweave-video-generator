@@ -99,6 +99,8 @@ export default async function handler(req, res) {
       // Check if request is JSON (new Firebase-based flow) or multipart (old direct upload)
       const contentType = req.headers['content-type'] || '';
       let type, artistName, mixTitle, mixUrl, mixDateYear, mixDuration, isTrack, firebasePath, artistImagePath;
+      let imageAction, targetFolder, artistGenre, isNewArtist;
+      let files = null; // For multipart uploads
       
       if (contentType.includes('application/json')) {
         // New flow: JSON with Firebase path (like archive upload)
@@ -129,7 +131,9 @@ export default async function handler(req, res) {
           keepExtensions: true,
         });
 
-        const { fields, files } = await form.parse(req);
+        const parsed = await form.parse(req);
+        const fields = parsed.fields;
+        files = parsed.files;
         console.log('[Upload] Form parsed successfully');
       
         // Extract fields (formidable v3 returns arrays)
@@ -140,6 +144,12 @@ export default async function handler(req, res) {
         mixDateYear = Array.isArray(fields.mixDateYear) ? fields.mixDateYear[0] : fields.mixDateYear;
         mixDuration = Array.isArray(fields.mixDuration) ? fields.mixDuration[0] : fields.mixDuration;
         isTrack = Array.isArray(fields.isTrack) ? fields.isTrack[0] === 'true' : fields.isTrack === 'true';
+        
+        // New image upload fields
+        imageAction = Array.isArray(fields.imageAction) ? fields.imageAction[0] : fields.imageAction;
+        targetFolder = Array.isArray(fields.targetFolder) ? fields.targetFolder[0] : fields.targetFolder;
+        artistGenre = Array.isArray(fields.artistGenre) ? fields.artistGenre[0] : fields.artistGenre;
+        isNewArtist = Array.isArray(fields.isNewArtist) ? fields.isNewArtist[0] === 'true' : fields.isNewArtist === 'true';
       }
 
     if (!type || !['audio', 'image'].includes(type)) {
@@ -149,7 +159,8 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!artistName) {
+    // artistName is required for audio, and for image unless it's a folder upload
+    if (!artistName && !(type === 'image' && imageAction === 'folder')) {
       return res.status(400).json({
         success: false,
         error: 'artistName is required'
@@ -328,7 +339,7 @@ export default async function handler(req, res) {
 
     } else if (type === 'image') {
       // Handle image upload
-      const file = Array.isArray(files.file) ? files.file[0] : files.file;
+      const file = files && (Array.isArray(files.file) ? files.file[0] : files.file);
       
       if (!file) {
         return res.status(400).json({
@@ -338,7 +349,7 @@ export default async function handler(req, res) {
       }
 
       const fileBuffer = await fs.readFile(file.filepath);
-      const fileName = file.originalFilename || `artist_${Date.now()}.jpg`;
+      const fileName = file.originalFilename || `image_${Date.now()}.jpg`;
       
       // Validate file extension
       const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
@@ -351,8 +362,6 @@ export default async function handler(req, res) {
         });
       }
 
-      console.log(`[Upload] Uploading ${fileName} to Arweave for artist: ${artistName}`);
-      
       // Determine content type
       const contentTypes = {
         '.jpg': 'image/jpeg',
@@ -363,11 +372,32 @@ export default async function handler(req, res) {
       };
       const contentType = contentTypes[fileExt] || 'image/jpeg';
 
+      // Determine upload path based on imageAction
+      let uploadPath = 'artist-images';
+      let metadataType = 'artist-image';
+      
+      if (imageAction === 'folder' && targetFolder) {
+        uploadPath = targetFolder;
+        metadataType = `folder-${targetFolder}`;
+        console.log(`[Upload] Uploading ${fileName} to folder: ${targetFolder}`);
+      } else if (imageAction === 'new-artist') {
+        uploadPath = `artists/${artistName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+        metadataType = 'new-artist-image';
+        console.log(`[Upload] Creating new artist ${artistName} with image: ${fileName}`);
+      } else if (imageAction === 'add-to-folder') {
+        uploadPath = `artist-media/${artistName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+        metadataType = 'artist-media';
+        console.log(`[Upload] Adding ${fileName} to ${artistName}'s folder (not replacing thumbnail)`);
+      } else {
+        console.log(`[Upload] Uploading ${fileName} as thumbnail for artist: ${artistName}`);
+      }
+
       const uploadResult = await uploadToArweave(fileBuffer, fileName, {
         contentType: contentType,
         metadata: {
-          artist: artistName,
-          type: 'artist-image'
+          artist: artistName || 'system',
+          type: metadataType,
+          folder: uploadPath
         }
       });
 
@@ -391,28 +421,38 @@ export default async function handler(req, res) {
       // Calculate upload cost
       const uploadCost = await calculateCost(uploadResult.fileSize);
       
-      // Update artist image in Firebase artists JSON
-      await updateArtistImage(db, artistName, arweaveUrl);
-
-      // Update website (non-blocking - don't fail upload if website update fails)
-      let websiteUpdateResult = null;
-      try {
-        websiteUpdateResult = await updateWebsite(db);
-      } catch (websiteError) {
-        console.warn('[Upload] Website update failed (non-blocking):', websiteError.message);
+      // Handle different image actions
+      let actionMessage = 'Image uploaded';
+      
+      if (imageAction === 'folder') {
+        // Just upload to folder, no artist database update needed
+        actionMessage = `Image uploaded to ${targetFolder} folder`;
+      } else if (imageAction === 'new-artist') {
+        // Create new artist with this image
+        await createNewArtist(db, artistName, artistGenre || 'electronic', arweaveUrl);
+        actionMessage = `Created new artist "${artistName}" with image`;
+      } else if (imageAction === 'add-to-folder') {
+        // Add to artist's folder without updating thumbnail
+        // Just store the URL - no thumbnail update
+        actionMessage = `Added image to ${artistName}'s folder`;
+      } else {
+        // Default: replace artist thumbnail (includes 'replace-thumbnail' action)
+        await updateArtistImage(db, artistName, arweaveUrl);
+        actionMessage = `Updated thumbnail for artist "${artistName}"`;
       }
 
       return res.status(200).json({
         success: true,
         type: 'image',
+        imageAction: imageAction || 'replace-thumbnail',
         arweaveUrl: arweaveUrl,
         fileName: fileName,
         fileSize: uploadResult.fileSize,
-        artistName: artistName,
+        artistName: artistName || null,
+        targetFolder: targetFolder || null,
         cost: uploadCost,
         formattedCost: formatCost(uploadCost),
-        message: 'Artist image uploaded and updated in database',
-        websiteUpdate: websiteUpdateResult
+        message: actionMessage
       });
     }
 
@@ -614,6 +654,51 @@ async function updateArtistImage(db, artistName, imageUrl) {
     
   } catch (error) {
     console.error('[Upload] Error updating artists JSON:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Create a new artist in Firebase artists JSON
+ */
+async function createNewArtist(db, artistName, genre, imageUrl) {
+  try {
+    const artistsRef = db.collection('system').doc('artists');
+    const artistsDoc = await artistsRef.get();
+    
+    let artistsData = [];
+    if (artistsDoc.exists) {
+      artistsData = artistsDoc.data().artists || [];
+    }
+
+    // Check if artist already exists
+    const existingArtist = artistsData.find(a => a.artistName.toLowerCase() === artistName.toLowerCase());
+    if (existingArtist) {
+      // Just update the image
+      existingArtist.artistImageFilename = imageUrl;
+      if (genre) existingArtist.artistGenre = genre;
+      console.log(`[Upload] Artist "${artistName}" already exists, updated image and genre`);
+    } else {
+      // Create new artist
+      const newArtist = {
+        artistName: artistName,
+        artistFilename: artistName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.html',
+        artistImageFilename: imageUrl,
+        artistGenre: genre || 'electronic',
+        artistFolder: artistName.toLowerCase().replace(/[^a-z0-9]/g, ''),
+        mixes: [],
+        trax: []
+      };
+      artistsData.push(newArtist);
+      console.log(`[Upload] ✅ Created new artist: ${artistName} (${genre})`);
+    }
+
+    // Save back to Firebase
+    await artistsRef.set({ artists: artistsData }, { merge: false });
+    console.log(`[Upload] ✅ Saved artists JSON to Firebase`);
+    
+  } catch (error) {
+    console.error('[Upload] Error creating new artist:', error.message);
     throw error;
   }
 }
