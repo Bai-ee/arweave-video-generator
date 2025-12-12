@@ -199,9 +199,11 @@ export class VideoCompositor {
         const fontSize = layer.fontSize || Math.round(layer.size.height * 0.7); // 70% of layer height or stored value
 
         // Escape text for FFmpeg drawtext filter
-        // Need to escape: single quotes, colons, brackets, parentheses, backslashes, and other special chars
+        // Need to escape: single quotes, colons, brackets, parentheses, backslashes, newlines, and other special chars
         let escapedText = layer.source
           .replace(/\\/g, '\\\\')  // Escape backslashes first
+          .replace(/\n/g, '\\n')    // Escape newlines (CRITICAL for multi-line text)
+          .replace(/\r/g, '')       // Remove carriage returns
           .replace(/'/g, "\\'")     // Escape single quotes
           .replace(/"/g, '\\"')     // Escape double quotes
           .replace(/:/g, "\\:")     // Escape colons
@@ -500,6 +502,8 @@ export class VideoCompositor {
           // Escape text for FFmpeg drawtext filter (same as above)
           let escapedText = layer.source
             .replace(/\\/g, '\\\\')  // Escape backslashes first
+            .replace(/\n/g, '\\n')    // Escape newlines (CRITICAL for multi-line text)
+            .replace(/\r/g, '')       // Remove carriage returns
             .replace(/'/g, "\\'")     // Escape single quotes
             .replace(/"/g, '\\"')     // Escape double quotes
             .replace(/:/g, "\\:")     // Escape colons
