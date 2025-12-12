@@ -1455,20 +1455,41 @@
         if (data.success) {
           console.log('✅ Video generation job created:', data.jobId);
           
+          // Add video to the list immediately with pending status
+          const newVideo = {
+            jobId: data.jobId,
+            videoId: data.jobId,
+            artist: requestBody.artist || 'Random',
+            mixTitle: 'Processing...',
+            duration: 30,
+            status: 'pending',
+            videoUrl: null,
+            createdAt: new Date().toISOString()
+          };
+          
+          // Add to videos array at the top
+          videos.unshift(newVideo);
+          
+          // Display the updated list
+          displayVideos(true);
+          
+          // Scroll to the videos table to show the processing video
+          setTimeout(() => {
+            const videosTable = document.getElementById('videosTable');
+            if (videosTable) {
+              // Scroll to the first row (the new video)
+              const firstRow = videosTable.querySelector('tr');
+              if (firstRow) {
+                firstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }
+          }, 300);
+          
           // Add to active jobs and start polling
           startPollingJob(data.jobId);
           
           // Show success message
           showToast('Video generation started! Processing...', 'success');
-          
-          // Add placeholder row to table
-          addVideoRowToTable({
-            jobId: data.jobId,
-            artist: 'Random',
-            duration: 30,
-            status: 'pending',
-            videoUrl: null
-          });
         } else {
           throw new Error(data.error || 'Failed to create video job');
         }
@@ -1805,9 +1826,10 @@
     }
 
     /**
-     * Add video row to table (for new jobs)
+     * Add video row to table (for new jobs) - DEPRECATED, now handled inline in generateVideo
      */
     function addVideoRowToTable(video) {
+      console.warn('addVideoRowToTable is deprecated - video should be added directly in generateVideo');
       const id = getVideoId(video);
       if (id) {
         const existingIndex = videos.findIndex(v => getVideoId(v) === id);
