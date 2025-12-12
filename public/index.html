@@ -129,10 +129,10 @@
   <header class="header-edittrax">
     <div class="max-w-6xl mx-auto pt-3" style="position: relative;">
       
-      <!-- System Status and Actions - Fixed Position -->
-      <div style="position: fixed; top: 1rem; left: 0; right: 0; z-index: 1000; display: flex; justify-content: space-between; align-items: flex-start; padding: 0 1rem; pointer-events: none;">
+      <!-- System Status and Actions -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem; margin-bottom: 1rem;">
         <!-- System Health Status -->
-        <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; pointer-events: auto;">
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start;">
           <div id="statusVideoGen" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
             <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
             <span style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">VIDEO GEN</span>
@@ -154,7 +154,7 @@
         <!-- Refresh Button -->
         <button 
           onclick="window.location.reload()"
-          style="padding: 0.5rem 1rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; cursor: pointer; font-family: var(--font-mathias); font-size: 0.7rem; font-weight: bold; transition: all 0.3s ease; white-space: nowrap; pointer-events: auto;"
+          style="padding: 0.5rem 1rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; cursor: pointer; font-family: var(--font-mathias); font-size: 0.7rem; font-weight: bold; transition: all 0.3s ease; white-space: nowrap;"
           onmouseover="this.style.background='var(--color-yellow-75)'; this.style.color='black';"
           onmouseout="this.style.background='transparent'; this.style.color='var(--color-yellow-75)';"
         >
