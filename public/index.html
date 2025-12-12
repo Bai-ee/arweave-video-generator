@@ -139,10 +139,97 @@
 
         <div class="control-stack">
           <div class="collapsible-card">
+            <button class="collapsible-toggle" onclick="toggleCollapsible('uploadSection')" aria-expanded="false">
+              <div>
+                <div style="font-family: var(--font-mathias); font-weight: bold; line-height: 1.2;">UPLOAD</div>
+                <div style="font-family: var(--font-body); font-size: 0.9rem; margin-top: 0.15rem;">Content</div>
+              </div>
+              <span class="chevron">▸</span>
+            </button>
+            <div id="uploadSection" class="collapsible-body">
+              <div class="stepper-card">
+                <div class="step-block">
+                  <div class="step-label">Quick actions</div>
+                  <div class="step-hint">Upload new source files or mixes. Keep filenames clean.</div>
+                  <div class="action-row" style="margin-top: 0.35rem;">
+                    <button 
+                      id="uploadVideoBtn" 
+                      onclick="showUploadModal()"
+                      class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
+                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
+                    >
+                      Upload Video
+                    </button>
+                    <button 
+                      id="uploadMixBtn" 
+                      onclick="showUploadMixModal()"
+                      class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
+                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
+                    >
+                      Upload Mix
+                    </button>
+                  </div>
+                </div>
+                <div class="step-block">
+                  <div class="step-label">View uploaded videos</div>
+                  <div class="step-hint">Browse folders and delete assets.</div>
+                  <div id="uploadedVideosSection" style="margin-top: 0.75rem;">
+                    <!-- Folder List View -->
+                    <div id="folderListView" class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+                      <div style="background-color: var(--color-yellow-75); padding: 1rem;">
+                        <h2 style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0; text-align: center;">
+                          Video Folders
+                        </h2>
+                      </div>
+                      <div style="padding: 1.5rem;">
+                        <div id="foldersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; width: 100%;">
+                          <!-- Folders will be populated here -->
+                        </div>
+                        <div id="foldersLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                          Loading folders...
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Folder Detail View -->
+                    <div id="folderDetailView" style="display: none;">
+                      <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
+                        <div style="background-color: var(--color-yellow-75); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                          <h2 id="folderDetailTitle" style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0;">
+                            Folder Name
+                          </h2>
+                          <button 
+                            onclick="backToFolders()"
+                            class="btn-base btn-secondary"
+                            style="padding: 0.5rem 1rem; background: black; color: var(--color-yellow-75); border: none; border-radius: 10px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem; width: auto; min-width: 120px;"
+                          >
+                            ← Back
+                          </button>
+                        </div>
+                        <div style="padding: 1.5rem;">
+                          <div id="videosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; width: 100%;">
+                            <!-- Videos will be populated here -->
+                          </div>
+                          <div id="videosLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
+                            Loading videos...
+                          </div>
+                          <div id="videosEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
+                            No videos found in this folder.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="collapsible-card">
             <button class="collapsible-toggle" onclick="toggleCollapsible('generateSection')" aria-expanded="false">
               <div>
-                <div style="font-family: var(--font-mathias);">GENERATE Videos</div>
-                <div class="meta">Guided steps on tap</div>
+                <div style="font-family: var(--font-mathias); font-weight: bold; line-height: 1.2;">GENERATE</div>
+                <div style="font-family: var(--font-body); font-size: 0.9rem; margin-top: 0.15rem;">Videos</div>
               </div>
               <span class="chevron">▸</span>
             </button>
@@ -278,97 +365,10 @@
           </div>
 
           <div class="collapsible-card">
-            <button class="collapsible-toggle" onclick="toggleCollapsible('uploadSection')" aria-expanded="false">
-              <div>
-                <div style="font-family: var(--font-mathias);">UPLOAD Content</div>
-                <div class="meta">Mixes, videos, assets</div>
-              </div>
-              <span class="chevron">▸</span>
-            </button>
-            <div id="uploadSection" class="collapsible-body">
-              <div class="stepper-card">
-                <div class="step-block">
-                  <div class="step-label">Quick actions</div>
-                  <div class="step-hint">Upload new source files or mixes. Keep filenames clean.</div>
-                  <div class="action-row" style="margin-top: 0.35rem;">
-                    <button 
-                      id="uploadVideoBtn" 
-                      onclick="showUploadModal()"
-                      class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
-                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
-                    >
-                      Upload Video
-                    </button>
-                    <button 
-                      id="uploadMixBtn" 
-                      onclick="showUploadMixModal()"
-                      class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
-                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
-                    >
-                      Upload Mix
-                    </button>
-                  </div>
-                </div>
-                <div class="step-block">
-                  <div class="step-label">View uploaded videos</div>
-                  <div class="step-hint">Browse folders and delete assets.</div>
-                  <div id="uploadedVideosSection" style="margin-top: 0.75rem;">
-                    <!-- Folder List View -->
-                    <div id="folderListView" class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
-                      <div style="background-color: var(--color-yellow-75); padding: 1rem;">
-                        <h2 style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0; text-align: center;">
-                          Video Folders
-                        </h2>
-                      </div>
-                      <div style="padding: 1.5rem;">
-                        <div id="foldersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; width: 100%;">
-                          <!-- Folders will be populated here -->
-                        </div>
-                        <div id="foldersLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-                          Loading folders...
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Folder Detail View -->
-                    <div id="folderDetailView" style="display: none;">
-                      <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
-                        <div style="background-color: var(--color-yellow-75); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                          <h2 id="folderDetailTitle" style="color: black; font-family: var(--font-mathias); font-size: 1.25rem; margin: 0;">
-                            Folder Name
-                          </h2>
-                          <button 
-                            onclick="backToFolders()"
-                            class="btn-base btn-secondary"
-                            style="padding: 0.5rem 1rem; background: black; color: var(--color-yellow-75); border: none; border-radius: 10px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem; width: auto; min-width: 120px;"
-                          >
-                            ← Back
-                          </button>
-                        </div>
-                        <div style="padding: 1.5rem;">
-                          <div id="videosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; width: 100%;">
-                            <!-- Videos will be populated here -->
-                          </div>
-                          <div id="videosLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-                            Loading videos...
-                          </div>
-                          <div id="videosEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
-                            No videos found in this folder.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="collapsible-card">
             <button class="collapsible-toggle" onclick="toggleCollapsible('toolsSection')" aria-expanded="false">
               <div>
-                <div style="font-family: var(--font-mathias);">DEPLOY Website</div>
-                <div class="meta">Refresh, website, archive</div>
+                <div style="font-family: var(--font-mathias); font-weight: bold; line-height: 1.2;">DEPLOY</div>
+                <div style="font-family: var(--font-body); font-size: 0.9rem; margin-top: 0.15rem;">Website</div>
               </div>
               <span class="chevron">▸</span>
             </button>
@@ -402,8 +402,8 @@
           <div class="collapsible-card">
             <button class="collapsible-toggle" onclick="toggleCollapsible('archiveSection')" aria-expanded="false">
               <div>
-                <div style="font-family: var(--font-mathias);">MANAGE Archive</div>
-                <div class="meta">Upload to Arweave and view manifest</div>
+                <div style="font-family: var(--font-mathias); font-weight: bold; line-height: 1.2;">MANAGE</div>
+                <div style="font-family: var(--font-body); font-size: 0.9rem; margin-top: 0.15rem;">Archive</div>
               </div>
               <span class="chevron">▸</span>
             </button>
