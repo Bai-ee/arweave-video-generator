@@ -293,7 +293,7 @@
               <div class="stepper-card">
                 <div class="step-block">
                   <div class="step-label">1. Select audio source</div>
-                  <div class="step-hint"></div>
+                  <!-- <div class="step-hint"></div> -->
                   <div class="full-width-group" style="margin-top: 0.5rem;">
                     <button 
                       id="audioSourceMixes" 
@@ -3163,9 +3163,13 @@
           // Show success with manifest URL
           const manifestUrl = data.manifestUrl || `https://arweave.net/${data.manifestId}`;
           const websiteUrl = data.websiteUrl || `https://arweave.net/${data.manifestId}/index.html`;
+          const arnsUrl = data.arnsUrl || null;
           
           // Store the latest website URL for "View Site" button
           localStorage.setItem('latestArweaveWebsiteUrl', websiteUrl);
+          if (arnsUrl) {
+            localStorage.setItem('latestArNSUrl', arnsUrl);
+          }
           
           showToast('Website deployed successfully!', 'success');
           
@@ -3175,6 +3179,28 @@
             costInfoHtml = `
               <div style="margin-top: 0.75rem; font-size: 0.875rem;">
                 💰 <strong>Cost:</strong> ${data.costEstimate.costAR.toFixed(6)} AR (~$${data.costEstimate.costUSD.toFixed(4)} USD)
+              </div>
+            `;
+          }
+          
+          // Build ArNS URL display
+          let arnsHtml = '';
+          if (arnsUrl) {
+            arnsHtml = `
+              <div style="margin-top: 1rem; font-size: 0.875rem;">
+                <div style="margin-bottom: 0.5rem;">🌐 <strong>ArNS Domain:</strong></div>
+                <a href="${arnsUrl}" target="_blank" rel="noopener noreferrer" style="color: #10b981; text-decoration: underline; word-break: break-all; display: block; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 3px; font-weight: bold;">
+                  ${arnsUrl}
+                </a>
+                <div style="margin-top: 0.25rem; font-size: 0.7rem; color: #888;">
+                  ⏱️ ArNS updates may take a few minutes to propagate
+                </div>
+              </div>
+            `;
+          } else {
+            arnsHtml = `
+              <div style="margin-top: 1rem; font-size: 0.875rem; color: #fbbf24;">
+                ⚠️ ArNS update was not successful. Check logs for details.
               </div>
             `;
           }
@@ -3190,11 +3216,13 @@
               </div>
               
               <div style="margin-top: 1rem; font-size: 0.875rem;">
-                <div style="margin-bottom: 0.5rem;"><strong>Website URL:</strong></div>
+                <div style="margin-bottom: 0.5rem;"><strong>Direct Arweave URL:</strong></div>
                 <a href="${websiteUrl}" target="_blank" rel="noopener noreferrer" style="color: #10b981; text-decoration: underline; word-break: break-all; display: block; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 3px;">
                   ${websiteUrl}
                 </a>
               </div>
+              
+              ${arnsHtml}
               
               <div style="margin-top: 0.75rem; font-size: 0.875rem;">
                 <strong>Files:</strong> ${data.filesUploaded} uploaded, ${data.filesUnchanged || 0} unchanged
@@ -3203,17 +3231,26 @@
               ${costInfoHtml}
             </div>
             
-            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem; flex-wrap: wrap;">
+              ${arnsUrl ? `
+                <button 
+                  onclick="window.open('${arnsUrl}', '_blank'); hideDeployModal();"
+                  class="btn-green-gradient"
+                  style="flex: 1; min-width: 120px; padding: 0.75rem; cursor: pointer; font-size: 1rem;"
+                >
+                  View ArNS Site
+                </button>
+              ` : ''}
               <button 
                 onclick="window.open('${websiteUrl}', '_blank'); hideDeployModal();"
                 class="btn-green-gradient"
-                style="flex: 1; padding: 0.75rem; cursor: pointer; font-size: 1rem;"
+                style="flex: 1; min-width: 120px; padding: 0.75rem; cursor: pointer; font-size: 1rem;"
               >
-                View Website
+                View Arweave Site
               </button>
               <button 
                 onclick="hideDeployModal();"
-                style="flex: 1; padding: 0.75rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
+                style="flex: 1; min-width: 120px; padding: 0.75rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
               >
                 Close
               </button>
