@@ -9,6 +9,7 @@
 import { deployWebsiteToArweave } from '../lib/WebsiteDeployer.js';
 import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
 import { syncFirebaseToWebsiteJSON } from '../lib/WebsiteSync.js';
+import { updateArNSRecord } from '../lib/ArNSUpdater.js';
 import path from 'path';
 import fs from 'fs-extra';
 import { createRequire } from 'module';
@@ -236,11 +237,27 @@ export default async function handler(req, res) {
       });
     }
 
+    // Step 4: Update ArNS record (non-blocking - deployment succeeds even if ArNS update fails)
+    let arnsResult = null;
+    try {
+      console.log('[Deploy Website] Updating ArNS record...');
+      arnsResult = await updateArNSRecord(deployResult.manifestId);
+      if (arnsResult.success) {
+        console.log('[Deploy Website] ✅ ArNS record updated:', arnsResult.arnsUrl);
+      } else {
+        console.warn('[Deploy Website] ⚠️ ArNS update failed (non-blocking):', arnsResult.error);
+      }
+    } catch (arnsError) {
+      console.warn('[Deploy Website] ⚠️ ArNS update error (non-blocking):', arnsError.message);
+      // Continue with deployment success response even if ArNS fails
+    }
+
     return res.status(200).json({
       success: true,
       manifestId: deployResult.manifestId,
       manifestUrl: deployResult.manifestUrl,
       websiteUrl: deployResult.websiteUrl,
+      arnsUrl: arnsResult?.success ? arnsResult.arnsUrl : null,
       filesUploaded: deployResult.filesUploaded,
       filesUnchanged: deployResult.filesUnchanged || 0,
       totalFiles: deployResult.totalFiles || deployResult.filesUploaded,
