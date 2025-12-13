@@ -877,6 +877,10 @@ textarea {
   
   .collapsible-card {
     margin: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   
   .collapsible-toggle {
@@ -894,20 +898,31 @@ textarea {
   
   .collapsible-body {
     padding: 0.5rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
   
   .step-block {
     padding: 0.5rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   .stepper-card {
     padding: 0;
     gap: 1rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   /* Prevent overflow on mobile */
-  * {
+  *, *::before, *::after {
     max-width: 100%;
+    box-sizing: border-box;
     word-wrap: break-word;
     overflow-wrap: break-word;
   }
@@ -919,6 +934,8 @@ textarea {
     max-width: 100%;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   
   /* Fix table and grid overflow */
@@ -927,10 +944,18 @@ textarea {
     overflow-x: auto;
   }
   
-  /* Fix button containers */
+  /* Fix button containers - stack on mobile */
   .action-row {
     padding: 0;
     margin: 0;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .action-row button {
+    flex: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
   }
   
   /* Minimize folder checkboxes padding */
@@ -946,11 +971,49 @@ textarea {
     margin-right: 0;
   }
   
-  /* Minimize uploaded videos section padding */
-  #uploadedVideosSection,
+  /* Upload section - fix grids and containers */
+  #uploadedVideosSection {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
   #foldersGrid,
   #videosGrid {
     padding: 0.5rem !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Fix folder/video cards internal padding */
+  #folderListView,
+  #folderDetailView {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+  
+  #folderListView > div,
+  #folderDetailView .card-edittrax > div {
+    padding: 0.75rem !important;
+  }
+  
+  /* Folder header on mobile */
+  #folderDetailView .card-edittrax > div:first-child {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    text-align: center !important;
+  }
+  
+  #folderDetailView .card-edittrax > div:first-child button {
+    width: 100% !important;
+    min-width: 0 !important;
   }
   
   .step-block .step-label {
