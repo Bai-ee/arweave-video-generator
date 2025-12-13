@@ -374,8 +374,7 @@
                     <button 
                       id="generateVideoBtn" 
                       onclick="generateVideo()"
-                      class="btn-base btn-primary full-btn rounded text-center whitespace-nowrap"
-                      style="transition: all 0.3s ease; background: #10b981; color: white; font-weight: bold; border-radius: 10px; font-family: var(--font-mathias);"
+                      class="btn-base btn-green-gradient full-btn rounded text-center whitespace-nowrap"
                     >
                       <span id="generateBtnText">GENERATE VIDEO</span>
                       <span id="generateBtnLoading" style="display: none;">Generating...</span>
@@ -452,8 +451,7 @@
                     <button 
                       id="deployWebsiteBtn" 
                       onclick="deployWebsite()"
-                      class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
-                      style="transition: all 0.3s ease; background: #10b981; color: white; border: none; border-radius: 10px; font-weight: bold; font-family: var(--font-mathias);"
+                      class="btn-base btn-green-gradient full-btn rounded text-center whitespace-nowrap"
                     >
                       Deploy Website
                     </button>
@@ -2320,7 +2318,7 @@
               ${!isNewArtist && !isMainThumbnail ? `Added image to ${artistName}'s folder<br/>` : ''}
               <span style="opacity: 0.8; word-break: break-all;">Arweave URL: ${result.arweaveUrl}</span>
             </div>
-            <button onclick="hideArtistImageModal()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #10b981; border: none; border-radius: 5px; color: white; cursor: pointer;">
+            <button onclick="hideArtistImageModal()" class="btn-green-gradient" style="margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer;">
               Done
             </button>
           `;
@@ -2688,13 +2686,14 @@
               <div style="display: flex; gap: 0.5rem;">
                 <button 
                   onclick="deployArtistToWebsite('${artistName}')"
-                  style="flex: 1; padding: 0.5rem; background: #10b981; color: white; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+                  class="btn-green-gradient"
+                  style="flex: 1; padding: 0.5rem; cursor: pointer; font-size: 0.875rem;"
                 >
                   Yes, Deploy
                 </button>
                 <button 
                   onclick="document.getElementById('mixUploadStatusMsg').innerHTML = '';"
-                  style="flex: 1; padding: 0.5rem; background: transparent; color: #10b981; border: 2px solid #10b981; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+                  style="flex: 1; padding: 0.5rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
                 >
                   Skip
                 </button>
@@ -3121,7 +3120,8 @@
         <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
           <button 
             id="confirmDeployBtn"
-            style="flex: 1; padding: 0.75rem; background: #10b981; color: white; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
+            class="btn-green-gradient"
+            style="flex: 1; padding: 0.75rem; cursor: pointer; font-size: 1rem;"
           >
             Yes, Deploy
           </button>
@@ -3211,7 +3211,8 @@
             <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
               <button 
                 onclick="window.open('${websiteUrl}', '_blank'); hideDeployModal();"
-                style="flex: 1; padding: 0.75rem; background: #10b981; color: white; border: none; border-radius: 5px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
+                class="btn-green-gradient"
+                style="flex: 1; padding: 0.75rem; cursor: pointer; font-size: 1rem;"
               >
                 View Website
               </button>

@@ -174,6 +174,35 @@ textarea {
   box-shadow: var(--shadow-xl);
 }
 
+/* Green gradient button - matches section header vignette style */
+.btn-green-gradient {
+  background: 
+    radial-gradient(ellipse at center, rgba(16, 185, 129, 1) 0%, rgba(16, 185, 129, 0.95) 40%, rgba(12, 140, 97, 0.9) 80%, rgba(8, 100, 70, 0.85) 100%),
+    #10b981;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  font-family: var(--font-mathias);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.3), 
+    inset 0 0 20px rgba(0, 0, 0, 0.15),
+    0 4px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-green-gradient:hover {
+  background: 
+    radial-gradient(ellipse at center, rgba(20, 205, 145, 1) 0%, rgba(20, 205, 145, 0.95) 40%, rgba(16, 165, 115, 0.9) 80%, rgba(12, 125, 85, 0.85) 100%),
+    #14d391;
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.25), 
+    inset 0 0 25px rgba(0, 0, 0, 0.12),
+    0 6px 12px rgba(0, 0, 0, 0.35);
+}
+
 
 /* ========================================
  * CARDS
