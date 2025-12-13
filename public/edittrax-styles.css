@@ -1074,6 +1074,7 @@ textarea {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   
   .stepper-card {
@@ -1111,16 +1112,31 @@ textarea {
   
   /* Fix button containers - stack on mobile */
   .action-row {
-    padding: 0;
-    margin: 0;
+    padding: 0 !important;
+    margin: 0 !important;
     flex-direction: column !important;
     gap: 0.5rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   
-  .action-row button {
+  .action-row button,
+  .action-row .btn-base,
+  .action-row .btn-secondary {
     flex: none !important;
     width: 100% !important;
+    max-width: 100% !important;
     min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Fix all buttons on mobile */
+  .btn-base,
+  .btn-secondary,
+  .full-btn {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   /* Minimize folder checkboxes padding */
@@ -1128,6 +1144,9 @@ textarea {
   #archiveFilesContainer {
     padding: 0;
     margin: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   /* Minimize video cards padding */
@@ -1152,6 +1171,7 @@ textarea {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   
   #videosGrid {
@@ -1178,12 +1198,18 @@ textarea {
     aspect-ratio: 1 / 1 !important;
     padding: 0.75rem !important;
     gap: 0.25rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   
   .folder-select-item label {
     flex-direction: column !important;
     align-items: center !important;
     gap: 0.5rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   
   .folder-select-item .folder-name {
@@ -1202,6 +1228,10 @@ textarea {
     justify-content: center !important;
     align-items: center !important;
     padding: 0.75rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   
   /* Fix folder/video cards internal padding */
@@ -1215,7 +1245,19 @@ textarea {
   
   #folderListView > div,
   #folderDetailView .card-edittrax > div {
-    padding: 0.75rem !important;
+    padding: 0.5rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Video Folders header section */
+  #folderListView .card-edittrax,
+  #folderDetailView .card-edittrax {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   
   /* Folder header on mobile */

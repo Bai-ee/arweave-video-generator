@@ -168,7 +168,7 @@
         <!-- Refresh Button -->
         <button 
           onclick="window.location.reload()"
-          style="padding: 0.5rem 1rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; cursor: pointer; font-family: var(--font-mathias); font-size: 0.7rem; font-weight: bold; transition: all 0.3s ease; white-space: nowrap;"
+          style="padding: 0.5rem 1rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; cursor: pointer; font-family: var(--font-mathias); font-size: 0.7rem; font-weight: bold; transition: all 0.3s ease; white-space: nowrap; padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;"
           onmouseover="this.style.background='var(--color-yellow-75)'; this.style.color='black';"
           onmouseout="this.style.background='transparent'; this.style.color='var(--color-yellow-75)';"
         >
@@ -198,7 +198,7 @@
               <div class="stepper-card">
                 <div class="step-block">
                   <div class="step-label">Quick actions</div>
-                  <div class="step-hint">Upload new source files, mixes, or artist images. Keep filenames clean.</div>
+                  <div class="step-hint">Upload source files</div>
                   <div class="action-row" style="margin-top: 0.35rem;">
                     <button 
                       id="uploadVideoBtn" 
@@ -228,7 +228,7 @@
                 </div>
                 <div class="step-block">
                   <div class="step-label">View uploaded videos</div>
-                  <div class="step-hint">Browse folders and delete assets.</div>
+                  <div class="step-hint">Browse and delete</div>
                   <div id="uploadedVideosSection" style="margin-top: 0.75rem;">
                     <!-- Folder List View -->
                     <div id="folderListView" class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
@@ -270,7 +270,7 @@
                             Loading videos...
                           </div>
                           <div id="videosEmpty" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
-                            No videos found in this folder.
+                            No videos in this folder.
                           </div>
                         </div>
                       </div>
@@ -293,7 +293,7 @@
               <div class="stepper-card">
                 <div class="step-block">
                   <div class="step-label">1. Select audio source</div>
-                  <div class="step-hint">Choose whether to work from DJ mixes or original tracks.</div>
+                  <div class="step-hint"></div>
                   <div class="full-width-group" style="margin-top: 0.5rem;">
                     <button 
                       id="audioSourceMixes" 
@@ -316,7 +316,7 @@
 
                 <div id="artistSelectionContainer" class="step-block" style="display: none;">
                   <div class="step-label">2. Select artist</div>
-                  <div class="step-hint">Pick an artist for mixes or choose random.</div>
+                  <div class="step-hint"></div>
                   <select 
                     id="artistSelect"
                     class="select-styled"
@@ -327,16 +327,16 @@
                 </div>
 
                 <div id="folderSelectionContainer" class="step-block" style="display: none;">
-                  <div class="step-label">3. Select video folders</div>
-                  <div class="step-hint">Choose at least one folder to pull footage from.</div>
+                  <div class="step-label">3. Select folders</div>
+                  <div class="step-hint"></div>
                   <div id="folderCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; width: 100%; margin: 0 auto;">
                     <!-- Folders will be populated dynamically -->
                   </div>
                 </div>
 
                 <div id="filterSelectionContainer" class="step-block" style="display: none;">
-                  <div class="step-label">4. Video filter</div>
-                  <div class="step-hint">Choose a visual style for your video.</div>
+                  <div class="step-label">4. Add filter</div>
+                  <div class="step-hint"></div>
                   <select 
                     id="filterSelect"
                     class="select-styled"
@@ -353,7 +353,7 @@
 
                 <div id="overlayToggleContainer" class="step-block" style="display: none;">
                   <div class="step-label">5. Overlay effect</div>
-                  <div class="step-hint">Add a texture/grit overlay. Turn off for fastest renders.</div>
+                  <div class="step-hint"></div>
                   <div id="overlayCheckboxContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; width: 100%; margin: 0 auto;">
                     <label class="folder-select-item unselected" style="gap: 0.75rem; cursor: pointer;">
                       <input 
@@ -371,7 +371,7 @@
 
                 <div class="step-block">
                   <div class="step-label">6. Generate</div>
-                  <div class="step-hint">Review selections then start rendering.</div>
+                  <div class="step-hint"></div>
                   <div class="action-row" style="margin-top: 0.25rem;">
                     <button 
                       id="generateVideoBtn" 
@@ -386,7 +386,7 @@
 
                 <div class="step-block">
                   <div class="step-label">6. View Generated Videos</div>
-                  <div class="step-hint">Status, actions, lazy loading</div>
+                  <div class="step-hint"></div>
                   <div style="margin-top: 0.75rem;">
                     <!-- Videos Table -->
                     <div class="card-edittrax rounded-lg mb-4" style="overflow: hidden; border: 2px solid var(--color-yellow-75);">
@@ -396,7 +396,7 @@
                             <tr style="border: none;">
                               <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center; border: none;">ARTIST</th>
                               <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">DURATION</th>
-                              <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">STATUS</th>
+                              <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;"></th>
                               <th class="px-2" style="padding-top: 0.9rem; padding-bottom: 0.9rem; color: black; text-align: center;">ACTIONS</th>
                             </tr>
                           </thead>
@@ -404,7 +404,7 @@
                             <!-- Video rows will be populated dynamically -->
                             <tr>
                               <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
-                                No videos generated yet. Click "GENERATE VIDEO" to create your first video!
+                                Click "GENERATE VIDEO" to create your first video!
                               </td>
                             </tr>
                           </tbody>
@@ -448,7 +448,7 @@
               <div class="stepper-card">
                 <div class="step-block">
                   <div class="step-label">Management</div>
-                  <div class="step-hint">Deploy the site, refresh video list, or open the public site.</div>
+                  <div class="step-hint">Deploy site with new content</div>
                   <div class="action-row" style="margin-top: 0.35rem;">
                     <button 
                       id="deployWebsiteBtn" 
@@ -480,7 +480,7 @@
             </button>
             <div id="archiveSection" class="collapsible-body">
               <!-- Folder Selection Section -->
-              <div style="background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
+              <div style="background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: .5rem; margin-bottom: .5rem;">
                 <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin-bottom: 1rem; text-align: center;">
                   Select Folder
                 </h2>
@@ -493,7 +493,7 @@
               </div>
 
               <!-- File Selection Section -->
-              <div id="archiveFileSelectionSection" style="display: none; background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
+              <div id="archiveFileSelectionSection" style="display: none; background: rgba(0, 0, 0, 0.6); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: .5rem; margin-bottom: .5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                   <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.125rem; margin: 0;">
                     Files in <span id="archiveSelectedFolderName"></span>
