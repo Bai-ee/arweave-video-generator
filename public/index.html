@@ -1652,43 +1652,44 @@
         const count = folderInfo.count || 0;
         const actualFolderName = folderInfo.name; // Use the actual folder name from API
         
-        // Create folder item without checkbox - styled like other folder selection UI
+        // Create folder item - styled exactly like folder-card-item (VIDEO FOLDERS section)
         const folderItem = document.createElement('div');
-        folderItem.className = 'folder-select-item selected';
-        folderItem.style.cssText = `
-          cursor: pointer;
-          width: 100%;
-        `;
+        folderItem.className = 'folder-card-item'; // Use same class as VIDEO FOLDERS
         selectedFolders.add(actualFolderName);
         
         folderItem.addEventListener('click', () => {
           if (selectedFolders.has(actualFolderName)) {
             selectedFolders.delete(actualFolderName);
-            folderItem.classList.remove('selected');
-            folderItem.classList.add('unselected');
+            // Unselected: keep same styling but add visual indicator
+            folderItem.style.opacity = '0.6';
+            folderItem.style.borderColor = '#333';
           } else {
             selectedFolders.add(actualFolderName);
-            folderItem.classList.remove('unselected');
-            folderItem.classList.add('selected');
+            // Selected: restore full styling
+            folderItem.style.opacity = '1';
+            folderItem.style.borderColor = '#555';
           }
           console.log(`✅ Selected folders:`, Array.from(selectedFolders));
         });
         
+        // Match exact styling from VIDEO FOLDERS section
         const folderNameDiv = document.createElement('div');
         folderNameDiv.className = 'folder-name';
         folderNameDiv.style.cssText = `
-          font-family: var(--font-mathias);
           color: var(--color-yellow-75);
+          font-family: var(--font-mathias);
           font-weight: bold;
-          margin-bottom: 0.25rem;
+          font-size: 1rem;
+          margin-bottom: 0.5rem;
         `;
         folderNameDiv.textContent = displayName;
         
         const folderCountDiv = document.createElement('div');
         folderCountDiv.className = 'folder-count';
         folderCountDiv.style.cssText = `
-          font-size: 0.75rem;
           color: #888;
+          font-family: var(--font-mathias);
+          font-size: 0.875rem;
         `;
         folderCountDiv.textContent = `${count} video${count !== 1 ? 's' : ''}`;
         
