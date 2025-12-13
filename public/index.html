@@ -530,7 +530,7 @@
                     class="btn-base btn-primary full-btn"
                     style="border-radius: 10px; background: var(--color-yellow-75); color: black; border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
                   >
-                    📤 Archive <span id="archiveSelectedCount">0</span> File(s) to Arweave
+                    Archive <span id="archiveSelectedCount">0</span> File(s) to Arweave
                   </button>
                 </div>
                 
@@ -593,7 +593,7 @@
     <div id="uploadMixModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
       <div style="background: radial-gradient(ellipse at center, rgba(20, 20, 30, 0.7) 0%, rgba(0, 0, 0, 0.6) 100%); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">🎵 Upload Mix/Track</h2>
+          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">UPLOAD MIX/TRACK</h2>
           <button onclick="hideUploadMixModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
         </div>
         
@@ -774,7 +774,7 @@
     <div id="artistImageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
       <div style="background: radial-gradient(ellipse at center, rgba(20, 20, 30, 0.7) 0%, rgba(0, 0, 0, 0.6) 100%); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">🖼️ UPLOAD ARTIST IMAGE</h2>
+          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">UPLOAD ARTIST IMAGE</h2>
           <button onclick="hideArtistImageModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
         </div>
         
@@ -892,7 +892,7 @@
     <div id="deployModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
       <div style="background: radial-gradient(ellipse at center, rgba(20, 20, 30, 0.7) 0%, rgba(0, 0, 0, 0.6) 100%); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h2 id="deployModalTitle" style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">🚀 Deploy Website</h2>
+          <h2 id="deployModalTitle" style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">DEPLOY WEBSITE</h2>
           <button onclick="hideDeployModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
         </div>
         <div id="deployModalContent" style="color: var(--color-yellow-75);">
@@ -905,7 +905,7 @@
     <div id="uploadModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
       <div style="background: radial-gradient(ellipse at center, rgba(20, 20, 30, 0.7) 0%, rgba(0, 0, 0, 0.6) 100%); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">📤 Upload Video</h2>
+          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">UPLOAD VIDEO</h2>
           <button onclick="hideUploadModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
         </div>
         
@@ -1903,10 +1903,10 @@
      */
     function getStatusDisplay(status) {
       const statusMap = {
-        'pending': '<span style="color: #fbbf24;">⏳ Pending</span>',
-        'processing': '<span style="color: #3b82f6;">🔄 Processing</span>',
-        'completed': '<span style="color: #10b981;">✅ Ready</span>',
-        'failed': '<span style="color: #ef4444;">❌ Failed</span>'
+        'pending': '<span style="color: #fbbf24;">Pending</span>',
+        'processing': '<span style="color: #3b82f6;">Processing</span>',
+        'completed': '<span style="color: #10b981;">Ready</span>',
+        'failed': '<span style="color: #ef4444;">Failed</span>'
       };
       return statusMap[status] || '<span style="color: #6b7280;">Unknown</span>';
     }
@@ -2187,17 +2187,21 @@
       try {
         const response = await fetch('/api/artists');
         const data = await response.json();
-        if (data.success && data.artists) {
+        if (data.success && data.artists && data.artists.length > 0) {
           const select = document.getElementById('imageArtistSelect');
           // Keep the first two options (placeholder and New Artist)
           select.innerHTML = '<option value="">Select an artist...</option><option value="__NEW__">+ New Artist</option>';
-          // Add existing artists
+          // Add existing artists - API returns 'name' not 'artistName'
           data.artists.forEach(artist => {
             const option = document.createElement('option');
-            option.value = artist.artistName;
-            option.textContent = artist.artistName;
+            const artistName = artist.name || artist.artistName;
+            option.value = artistName;
+            option.textContent = artistName;
             select.appendChild(option);
           });
+          console.log(`[Image Upload] Loaded ${data.artists.length} artists`);
+        } else {
+          console.warn('[Image Upload] No artists returned from API');
         }
       } catch (error) {
         console.error('Failed to load artists:', error);
@@ -2302,7 +2306,7 @@
           statusDiv.style.background = 'rgba(16, 185, 129, 0.2)';
           statusDiv.style.border = '1px solid #10b981';
           statusDiv.innerHTML = `
-            <div style="color: #10b981; font-weight: bold; margin-bottom: 0.5rem;">✅ Upload Successful!</div>
+            <div style="color: #10b981; font-weight: bold; margin-bottom: 0.5rem;">Upload Successful!</div>
             <div style="color: white; font-size: 0.875rem;">
               ${isNewArtist ? `Created new artist: <strong>${artistName}</strong><br/>` : ''}
               ${!isNewArtist && isMainThumbnail ? `Updated thumbnail for: <strong>${artistName}</strong><br/>` : ''}
@@ -2317,7 +2321,7 @@
           statusDiv.style.background = 'rgba(239, 68, 68, 0.2)';
           statusDiv.style.border = '1px solid #ef4444';
           statusDiv.innerHTML = `
-            <div style="color: #ef4444; font-weight: bold; margin-bottom: 0.5rem;">❌ Upload Failed</div>
+            <div style="color: #ef4444; font-weight: bold; margin-bottom: 0.5rem;">Upload Failed</div>
             <div style="color: white; font-size: 0.875rem;">${result.error || 'Unknown error'}</div>
             <button onclick="resetArtistImageModal(); document.getElementById('imageUploadBtn').textContent = 'Upload to Arweave';" style="margin-top: 1rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer;">
               Try Again
@@ -2332,7 +2336,7 @@
         statusDiv.style.background = 'rgba(239, 68, 68, 0.2)';
         statusDiv.style.border = '1px solid #ef4444';
         statusDiv.innerHTML = `
-          <div style="color: #ef4444; font-weight: bold; margin-bottom: 0.5rem;">❌ Upload Failed</div>
+          <div style="color: #ef4444; font-weight: bold; margin-bottom: 0.5rem;">Upload Failed</div>
           <div style="color: white; font-size: 0.875rem;">${error.message}</div>
           <button onclick="resetArtistImageModal(); document.getElementById('imageUploadBtn').textContent = 'Upload to Arweave';" style="margin-top: 1rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer;">
             Try Again
@@ -2639,7 +2643,7 @@
         
         progressBar.style.width = '100%';
         progressPercent.textContent = '100%';
-        progressStatus.textContent = '✅ Complete!';
+        progressStatus.textContent = 'Complete!';
         
         // Show success message with cost
         let costInfo = '';
@@ -2666,7 +2670,7 @@
         
         statusMsg.innerHTML = `
           <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1rem; color: #10b981;">
-            <strong>✅ Upload successful!</strong><br/>
+            <strong>Upload successful!</strong><br/>
             <div style="margin-top: 0.5rem; font-size: 0.875rem;">
               ${uploadType === 'file' ? `File: ${data.fileName || 'N/A'}` : `Using Arweave URL: ${mixUrl}`}<br/>
               ${arweaveUrlDisplay}
@@ -2702,13 +2706,13 @@
         
       } catch (error) {
         console.error('Error uploading mix:', error);
-        progressStatus.textContent = '❌ Failed';
+        progressStatus.textContent = 'Failed';
         progressBar.style.background = '#ef4444';
         
         statusMsg.style.display = 'block';
         statusMsg.innerHTML = `
           <div style="background: #5d0a0a; border: 2px solid #ef4444; border-radius: 5px; padding: 1rem; color: #ef4444;">
-            <strong>❌ Upload failed</strong><br/>
+            <strong>Upload failed</strong><br/>
             <div style="margin-top: 0.5rem; font-size: 0.875rem;">${error.message}</div>
           </div>
         `;
@@ -2890,7 +2894,7 @@
               },
               (error) => {
                 console.error(`Upload error for ${file.name}:`, error);
-                progress.status.textContent = `❌ Failed: ${error.message}`;
+                progress.status.textContent = `Failed: ${error.message}`;
                 progress.status.style.color = '#ef4444';
                 progress.progressBar.style.background = '#ef4444';
                 reject(error);
@@ -2899,7 +2903,7 @@
                 try {
                   // Get download URL
                   const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                  progress.status.textContent = '✅ Uploaded';
+                  progress.status.textContent = 'Uploaded';
                   progress.status.style.color = '#10b981';
                   progress.progressBar.style.background = '#10b981';
                   uploadResults.push({ file: file.name, success: true, url: downloadURL });
@@ -2907,7 +2911,7 @@
                   resolve();
                 } catch (error) {
                   console.error(`Error getting download URL for ${file.name}:`, error);
-                  progress.status.textContent = '⚠️ Uploaded but URL failed';
+                  progress.status.textContent = 'Uploaded (URL issue)';
                   progress.status.style.color = '#fbbf24';
                   uploadResults.push({ file: file.name, success: false, error: error.message });
                   failCount++;
@@ -2918,7 +2922,7 @@
           });
         } catch (error) {
           console.error(`Upload error for ${file.name}:`, error);
-          progress.status.textContent = `❌ Failed: ${error.message}`;
+          progress.status.textContent = `Failed: ${error.message}`;
           progress.status.style.color = '#ef4444';
           progress.progressBar.style.background = '#ef4444';
           uploadResults.push({ file: file.name, success: false, error: error.message });
@@ -2934,21 +2938,21 @@
       if (successCount === files.length) {
         uploadStatus.innerHTML = `
           <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1rem; color: #10b981;">
-            <strong>✅ All ${successCount} file(s) uploaded successfully!</strong>
+            <strong>All ${successCount} file(s) uploaded successfully!</strong>
           </div>
         `;
         showToast(`Successfully uploaded ${successCount} file(s)!`, 'success');
       } else if (successCount > 0) {
         uploadStatus.innerHTML = `
           <div style="background: #5d4a0a; border: 2px solid #fbbf24; border-radius: 5px; padding: 1rem; color: #fbbf24;">
-            <strong>⚠️ Partial success: ${successCount} succeeded, ${failCount} failed</strong>
+            <strong>Partial success: ${successCount} succeeded, ${failCount} failed</strong>
           </div>
         `;
         showToast(`Uploaded ${successCount} file(s), ${failCount} failed`, 'error');
       } else {
         uploadStatus.innerHTML = `
           <div style="background: #5d0a0a; border: 2px solid #ef4444; border-radius: 5px; padding: 1rem; color: #ef4444;">
-            <strong>❌ All uploads failed</strong>
+            <strong>All uploads failed</strong>
           </div>
         `;
         showToast('All uploads failed', 'error');
@@ -3027,7 +3031,7 @@
         
         statusMsg.innerHTML = `
           <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1rem; color: #10b981;">
-            <strong>✅ Website deployed!</strong><br/>
+            <strong>Website deployed!</strong><br/>
             <div style="margin-top: 0.5rem; font-size: 0.875rem;">
               <a href="${websiteUrl}" target="_blank" rel="noopener noreferrer" style="color: #10b981; text-decoration: underline; word-break: break-all;">
                 ${websiteUrl}
@@ -3036,19 +3040,19 @@
           </div>
         `;
         
-        showToast('✅ Website deployed successfully!', 'success');
+        showToast('Website deployed successfully!', 'success');
         
       } catch (error) {
         console.error('Error deploying website:', error);
         statusMsg.innerHTML = `
           <div style="background: #5d0a0a; border: 2px solid #ef4444; border-radius: 5px; padding: 1rem; color: #ef4444;">
-            <strong>❌ Deployment failed</strong><br/>
+            <strong>Deployment failed</strong><br/>
             <div style="margin-top: 0.5rem; font-size: 0.875rem;">
               ${error.message}
             </div>
           </div>
         `;
-        showToast(`❌ Deployment failed: ${error.message}`, 'error');
+        showToast(`Deployment failed: ${error.message}`, 'error');
       }
     }
 
@@ -3095,7 +3099,7 @@
             <div style="font-size: 1.25rem; font-family: var(--font-mathias);">${cost.costAR.toFixed(6)} AR (~$${cost.costUSD.toFixed(4)} USD)</div>
             ${estimateData.filesChanged !== undefined ? `
               <div style="font-size: 0.75rem; margin-top: 0.5rem; color: #888;">
-                📊 ${estimateData.filesChanged} files to upload (${estimateData.filesUnchanged || 0} unchanged will be reused)
+                ${estimateData.filesChanged} files to upload (${estimateData.filesUnchanged || 0} unchanged will be reused)
               </div>
             ` : ''}
           </div>
@@ -3125,12 +3129,12 @@
         </div>
       `;
       
-      showDeployModal('🚀 Deploy Website to Arweave', confirmContent);
+      showDeployModal('Deploy Website to Arweave', confirmContent);
       
       // Add click handler for confirm button
       document.getElementById('confirmDeployBtn').onclick = async function() {
         hideDeployModal();
-        deployBtn.innerHTML = '⏳ Deploying...';
+        deployBtn.innerHTML = 'Deploying...';
         
         try {
           showToast('Starting website deployment to Arweave...', 'info');
@@ -3163,7 +3167,7 @@
           // Store the latest website URL for "View Site" button
           localStorage.setItem('latestArweaveWebsiteUrl', websiteUrl);
           
-          showToast('✅ Website deployed successfully!', 'success');
+          showToast('Website deployed successfully!', 'success');
           
           // Build cost info
           let costInfoHtml = '';
@@ -3178,7 +3182,7 @@
           // Show styled success modal
           const successContent = `
             <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1.25rem; color: #10b981;">
-              <strong style="font-size: 1.1rem;">✅ Website Deployed Successfully!</strong>
+              <strong style="font-size: 1.1rem;">Website Deployed Successfully!</strong>
               
               <div style="margin-top: 1rem; font-size: 0.875rem;">
                 <div style="margin-bottom: 0.5rem;">📋 <strong>Manifest ID:</strong></div>
@@ -3186,14 +3190,14 @@
               </div>
               
               <div style="margin-top: 1rem; font-size: 0.875rem;">
-                <div style="margin-bottom: 0.5rem;">🌐 <strong>Website URL:</strong></div>
+                <div style="margin-bottom: 0.5rem;"><strong>Website URL:</strong></div>
                 <a href="${websiteUrl}" target="_blank" rel="noopener noreferrer" style="color: #10b981; text-decoration: underline; word-break: break-all; display: block; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 3px;">
                   ${websiteUrl}
                 </a>
               </div>
               
               <div style="margin-top: 0.75rem; font-size: 0.875rem;">
-                📊 <strong>Files:</strong> ${data.filesUploaded} uploaded, ${data.filesUnchanged || 0} unchanged
+                <strong>Files:</strong> ${data.filesUploaded} uploaded, ${data.filesUnchanged || 0} unchanged
               </div>
               
               ${costInfoHtml}
@@ -3227,12 +3231,12 @@
           
         } catch (error) {
           console.error('Error deploying website:', error);
-          showToast(`❌ Deployment failed: ${error.message}`, 'error');
+          showToast(`Deployment failed: ${error.message}`, 'error');
           
           // Show styled error modal
           const errorContent = `
             <div style="background: #5d0a0a; border: 2px solid #ef4444; border-radius: 5px; padding: 1.25rem; color: #ef4444;">
-              <strong style="font-size: 1.1rem;">❌ Deployment Failed</strong>
+              <strong style="font-size: 1.1rem;">Deployment Failed</strong>
               <div style="margin-top: 1rem; font-size: 0.875rem;">
                 ${error.message}
               </div>
@@ -3247,7 +3251,7 @@
             </div>
           `;
           
-          showDeployModal('⚠️ Deployment Error', errorContent);
+          showDeployModal('Deployment Error', errorContent);
         } finally {
           deployBtn.disabled = false;
           deployBtn.innerHTML = originalText;
@@ -3380,7 +3384,7 @@
                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
                     controls
                     preload="metadata"
-                    onerror="this.parentElement.innerHTML='<div style=\\'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--color-yellow-75); text-align: center;\\'><div style=\\'font-size: 2rem; margin-bottom: 0.5rem;\\'>⚠️</div><div style=\\'font-size: 0.75rem;\\'>Video preview unavailable</div></div>'"
+                    onerror="this.parentElement.innerHTML='<div style=\\'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--color-yellow-75); text-align: center;\\'><div style=\\'font-size: 0.75rem;\\'>Video preview unavailable</div></div>'"
                   ></video>
                 </div>
                 <div style="padding: 1rem;">
@@ -3454,7 +3458,6 @@
       const container = videoElement.parentElement;
       container.innerHTML = `
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--color-yellow-75); text-align: center; width: 90%;">
-          <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
           <div style="font-size: 0.75rem; font-family: var(--font-mathias);">Video preview unavailable</div>
           <div style="font-size: 0.65rem; margin-top: 0.5rem; opacity: 0.7;">Click View to open in new tab</div>
         </div>
@@ -3687,7 +3690,7 @@
       const btn = document.getElementById('archiveBtn');
       if (btn) {
         btn.disabled = true;
-        btn.textContent = '⏳ Archiving...';
+        btn.textContent = 'Archiving...';
       }
 
       const progressSection = document.getElementById('archiveProgressSection');
@@ -3771,7 +3774,7 @@
 
       if (btn) {
         btn.disabled = false;
-        btn.textContent = `📤 Archive ${archiveSelectedFiles.size} File(s) to Arweave`;
+        btn.textContent = `Archive ${archiveSelectedFiles.size} File(s) to Arweave`;
       }
 
       setTimeout(() => {
@@ -3914,7 +3917,7 @@
         console.error('[Archive] Error loading manifest:', error);
         container.innerHTML = `
           <div style="color: #ef4444; text-align: center; padding: 1rem;">
-            <p style="margin-bottom: 0.5rem;">❌ Error loading manifest</p>
+            <p style="margin-bottom: 0.5rem;">Error loading manifest</p>
             <p style="font-size: 0.875rem; color: #888;">${error.message}</p>
             <button onclick="loadArchiveManifest()" class="btn-base btn-secondary" style="margin-top: 1rem; padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: #ef4444; border: 2px solid #ef4444; cursor: pointer;">
               Retry
