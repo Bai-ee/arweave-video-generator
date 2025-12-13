@@ -131,12 +131,13 @@ export default async function handler(req, res) {
           keepExtensions: true,
         });
 
-        const parsed = await form.parse(req);
-        const fields = parsed.fields;
-        files = parsed.files;
+        // formidable v3 returns [fields, files] array
+        const [fields, parsedFiles] = await form.parse(req);
+        files = parsedFiles;
         console.log('[Upload] Form parsed successfully');
+        console.log('[Upload] Fields:', JSON.stringify(fields, null, 2));
       
-        // Extract fields (formidable v3 returns arrays)
+        // Extract fields (formidable v3 returns arrays for each field)
         type = Array.isArray(fields.type) ? fields.type[0] : fields.type;
         artistName = Array.isArray(fields.artistName) ? fields.artistName[0] : fields.artistName;
         mixTitle = Array.isArray(fields.mixTitle) ? fields.mixTitle[0] : fields.mixTitle;
