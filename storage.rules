@@ -57,8 +57,20 @@ service firebase.storage {
                        || request.resource.contentType.matches('image/.*'));
     }
     
-    // Deny all other writes
-    match /{allPaths=**} {
+    // Allow writes to any new folder (for dynamic folder creation)
+    // This allows users to create new folders on the fly
+    // Exclude known restricted folders
+    match /{folderName}/{fileName} {
+      allow write: if request.resource.size < 500 * 1024 * 1024  // 500MB limit
+                   && (request.resource.contentType.matches('video/.*') 
+                       || request.resource.contentType.matches('image/.*'))
+                   && !(folderName.matches('logos') 
+                        || folderName.matches('paper_backgrounds')
+                        || folderName.matches('assets'));
+    }
+    
+    // Deny writes to assets folder directly (must use specific subfolders)
+    match /assets/{allPaths=**} {
       allow write: if false;
     }
   }

@@ -1241,6 +1241,24 @@
       // Pre-select mixes as default audio source for one-click generation
       setTimeout(() => {
         selectAudioSource('mixes');
+        
+        // Apply bright green hover state styling to DJ MIXES button (auto-selected)
+        const mixesBtn = document.getElementById('audioSourceMixes');
+        if (mixesBtn) {
+          mixesBtn.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
+          mixesBtn.style.borderColor = '#10b981';
+          mixesBtn.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(16, 185, 129, 0.08), 0 0 15px rgba(16, 185, 129, 0.2)';
+          mixesBtn.style.color = 'var(--color-yellow-75)';
+        }
+        
+        // Apply bright green hover state styling to DEPLOY WEBSITE button
+        const deployBtn = document.getElementById('deployWebsiteBtn');
+        if (deployBtn) {
+          deployBtn.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
+          deployBtn.style.borderColor = '#10b981';
+          deployBtn.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(16, 185, 129, 0.08), 0 0 15px rgba(16, 185, 129, 0.2)';
+          deployBtn.style.color = 'var(--color-yellow-75)';
+        }
       }, 500);
       
       // Refresh usage every 30 seconds
@@ -1584,17 +1602,27 @@
       const overlayContainer = document.getElementById('overlayToggleContainer');
       
       if (source === 'mixes') {
-        mixesBtn.style.background = 'var(--color-yellow-75)';
-        mixesBtn.style.color = 'black';
+        // Apply bright green hover state styling to selected DJ MIXES button
+        mixesBtn.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
+        mixesBtn.style.borderColor = '#10b981';
+        mixesBtn.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(16, 185, 129, 0.08), 0 0 15px rgba(16, 185, 129, 0.2)';
+        mixesBtn.style.color = 'var(--color-yellow-75)';
         tracksBtn.style.background = '#0a0a0a';
         tracksBtn.style.color = 'var(--color-yellow-75)';
+        tracksBtn.style.borderColor = '';
+        tracksBtn.style.boxShadow = '';
         artistContainer.style.display = 'block';
         folderContainer.style.display = 'block';
       } else {
-        tracksBtn.style.background = 'var(--color-yellow-75)';
-        tracksBtn.style.color = 'black';
+        // Apply bright green hover state styling to selected TRACKS button
+        tracksBtn.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
+        tracksBtn.style.borderColor = '#10b981';
+        tracksBtn.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(16, 185, 129, 0.08), 0 0 15px rgba(16, 185, 129, 0.2)';
+        tracksBtn.style.color = 'var(--color-yellow-75)';
         mixesBtn.style.background = '#0a0a0a';
         mixesBtn.style.color = 'var(--color-yellow-75)';
+        mixesBtn.style.borderColor = '';
+        mixesBtn.style.boxShadow = '';
         artistContainer.style.display = 'none';
         folderContainer.style.display = 'block';
         selectedArtist = 'random'; // Reset to random for tracks
@@ -1696,13 +1724,12 @@
             selectedFolders.add(actualFolderName);
             isSelected = true;
             folderItem.setAttribute('data-selected', 'true');
-            // Selected: restore full styling
+            // Selected: apply bright green hover state style
             folderItem.style.opacity = '1';
-            folderItem.style.borderColor = '#555';
-            // Clear any hover styles
-            folderItem.style.background = '';
+            folderItem.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
+            folderItem.style.borderColor = '#10b981';
+            folderItem.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(16, 185, 129, 0.08), 0 0 15px rgba(16, 185, 129, 0.2)';
             folderItem.style.transform = '';
-            folderItem.style.boxShadow = '';
           }
           console.log(`✅ Selected folders:`, Array.from(selectedFolders));
         });
@@ -1727,15 +1754,18 @@
         
         folderItem.addEventListener('mouseleave', () => {
           if (isSelected) {
-            // Restore selected state (remove inline styles to let CSS take over)
-            folderItem.style.background = '';
-            folderItem.style.borderColor = '';
+            // Keep selected state with bright green styling (hover effect stays)
+            folderItem.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
+            folderItem.style.borderColor = '#10b981';
+            folderItem.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(16, 185, 129, 0.08), 0 0 15px rgba(16, 185, 129, 0.2)';
             folderItem.style.transform = '';
-            folderItem.style.boxShadow = '';
           } else {
             // Restore unselected state
             folderItem.style.opacity = '0.6';
             folderItem.style.borderColor = '#333';
+            folderItem.style.background = '';
+            folderItem.style.transform = '';
+            folderItem.style.boxShadow = '';
           }
         });
         
@@ -1764,7 +1794,12 @@
         folderItem.appendChild(folderCountDiv);
         
         // Set initial visual state based on selection
-        if (!isSelected) {
+        // Selected folders should have the bright green hover state by default
+        if (isSelected) {
+          folderItem.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
+          folderItem.style.borderColor = '#10b981';
+          folderItem.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(16, 185, 129, 0.08), 0 0 15px rgba(16, 185, 129, 0.2)';
+        } else {
           folderItem.style.opacity = '0.6';
           folderItem.style.borderColor = '#333';
         }
