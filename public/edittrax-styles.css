@@ -168,10 +168,27 @@ textarea {
 
 
 .btn-secondary {
-  background-color: var(--color-black);
-  color: var(--color-yellow-75);
-  border-color: var(--color-yellow-75);
-  box-shadow: var(--shadow-xl);
+  background: 
+    radial-gradient(ellipse at center, rgba(45, 45, 50, 1) 0%, rgba(45, 45, 50, 0.95) 40%, rgba(35, 35, 40, 0.9) 80%, rgba(26, 26, 30, 0.85) 100%),
+    #1a1a1a !important;
+  color: var(--color-yellow-75) !important;
+  border-color: #555 !important;
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.3), 
+    inset 0 0 15px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: 
+    radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%),
+    rgba(16, 185, 129, 0.1) !important;
+  border-color: #10b981 !important;
+  color: var(--color-yellow-75) !important;
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.2), 
+    inset 0 0 20px rgba(16, 185, 129, 0.08),
+    0 0 15px rgba(16, 185, 129, 0.2) !important;
 }
 
 /* ========================================
@@ -295,9 +312,11 @@ textarea {
 
 /* Black bordered buttons - consistent max border radius */
 .btn-bordered {
-  background: transparent;
+  background: 
+    radial-gradient(ellipse at center, rgba(45, 45, 50, 1) 0%, rgba(45, 45, 50, 0.95) 40%, rgba(35, 35, 40, 0.9) 80%, rgba(26, 26, 30, 0.85) 100%),
+    #1a1a1a;
   color: var(--color-yellow-75);
-  border: 2px solid var(--color-yellow-75);
+  border: 2px solid #555;
   border-radius: 12px;
   font-family: var(--font-mathias);
   font-weight: bold;
@@ -305,16 +324,19 @@ textarea {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 
-    inset 0 1px 2px rgba(0, 0, 0, 0.2), 
-    inset 0 0 10px rgba(0, 0, 0, 0.1);
+    inset 0 1px 3px rgba(0, 0, 0, 0.3), 
+    inset 0 0 15px rgba(0, 0, 0, 0.15);
 }
 
 .btn-bordered:hover {
-  background: rgba(230, 233, 224, 0.1);
+  background: 
+    radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%),
+    rgba(16, 185, 129, 0.1);
+  border-color: #10b981;
   box-shadow: 
-    inset 0 1px 2px rgba(0, 0, 0, 0.15), 
-    inset 0 0 15px rgba(0, 0, 0, 0.08),
-    0 0 10px rgba(230, 233, 224, 0.1);
+    inset 0 1px 3px rgba(0, 0, 0, 0.2), 
+    inset 0 0 20px rgba(16, 185, 129, 0.08),
+    0 0 15px rgba(16, 185, 129, 0.2);
 }
 
 /* Green gradient button - matches section header vignette style */
