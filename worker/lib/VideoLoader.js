@@ -164,18 +164,6 @@ export class VideoLoader {
             // Support multiple video formats
             const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
             
-            // Define folder mapping: normalized name -> Firebase Storage path
-            // Frontend sends normalized names (without assets/ prefix), backend maps to correct paths
-            const folderMap = {
-                'equipment': 'equipment',
-                'decks': 'decks',
-                'skyline': 'skyline',
-                'neighborhood': 'neighborhood',
-                'artist': 'artist',
-                'family': 'family',
-                'chicago-skyline-videos': 'assets/chicago-skyline-videos' // Special case: nested under assets/
-            };
-            
             // Normalize folder names for comparison (case-insensitive, trim whitespace, remove assets/ prefix)
             const normalize = (name) => {
                 if (!name) return '';
@@ -185,64 +173,136 @@ export class VideoLoader {
             // Normalize selected folders from frontend (they come without assets/ prefix)
             const normalizedSelectedFolders = selectedFolders.map(normalize);
             
+            // Dynamically discover folders from Firebase Storage (like video-folders API does)
+            // This allows new folders created by users to be automatically included
+            async function discoverFolders() {
+                const [allFiles] = await bucket.getFiles();
+                const folderSet = new Set();
+                
+                // Extract unique folder names from file paths
+                allFiles.forEach(file => {
+                    const pathParts = file.name.split('/');
+                    if (pathParts.length > 1) {
+                        const folderName = pathParts[0];
+                        // Skip hidden files and .keep files
+                        if (!folderName.startsWith('.') && !file.name.endsWith('.keep')) {
+                            folderSet.add(folderName);
+                        }
+                    }
+                });
+                
+                // Also check for nested folders (like assets/chicago-skyline-videos)
+                allFiles.forEach(file => {
+                    const pathParts = file.name.split('/');
+                    if (pathParts.length > 2) {
+                        const nestedFolder = `${pathParts[0]}/${pathParts[1]}`;
+                        if (!nestedFolder.includes('.') && !file.name.endsWith('.keep')) {
+                            folderSet.add(nestedFolder);
+                        }
+                    }
+                });
+                
+                return Array.from(folderSet);
+            }
+            
+            // Discover all folders dynamically
+            const discoveredFolders = await discoverFolders();
+            console.log(`[VideoLoader] 🔍 Discovered ${discoveredFolders.length} folders: [${discoveredFolders.join(', ')}]`);
+            console.log(`[VideoLoader] 📋 Selected folders (raw): [${selectedFolders.join(', ')}]`);
+            console.log(`[VideoLoader] 📋 Selected folders (normalized): [${normalizedSelectedFolders.join(', ')}]`);
+            
             // Helper function to check if a folder should be included
-            const shouldIncludeFolder = (normalizedFolderName) => {
+            const shouldIncludeFolder = (folderName) => {
                 if (normalizedSelectedFolders.length === 0) return true; // No filter = include all
                 
-                // Simple exact match after normalization
-                const matches = normalizedSelectedFolders.includes(normalizedFolderName);
+                const normalizedFolderName = normalize(folderName);
                 
-                if (matches) {
-                    console.log(`[VideoLoader] ✅ Folder "${normalizedFolderName}" matches selected folders: [${normalizedSelectedFolders.join(', ')}]`);
+                // Check normalized match first
+                const normalizedMatch = normalizedSelectedFolders.includes(normalizedFolderName);
+                
+                // Also check if any selected folder (raw or normalized) matches
+                const rawMatch = selectedFolders.some(selected => {
+                    const normalizedSelected = normalize(selected);
+                    // Match if normalized names match, or if raw names match exactly
+                    return normalizedSelected === normalizedFolderName || 
+                           selected === folderName ||
+                           selected === normalizedFolderName ||
+                           normalizedSelected === folderName;
+                });
+                
+                const finalMatch = normalizedMatch || rawMatch;
+                
+                if (finalMatch) {
+                    console.log(`[VideoLoader] ✅ Folder "${folderName}" (normalized: "${normalizedFolderName}") matches selected folders: [${normalizedSelectedFolders.join(', ')}]`);
                 } else {
-                    console.log(`[VideoLoader] ⏭️  Folder "${normalizedFolderName}" does NOT match selected folders: [${normalizedSelectedFolders.join(', ')}]`);
+                    console.log(`[VideoLoader] ⏭️  Folder "${folderName}" (normalized: "${normalizedFolderName}") does NOT match selected folders: [${normalizedSelectedFolders.join(', ')}]`);
+                    console.log(`[VideoLoader]    Raw selected folders: [${selectedFolders.join(', ')}]`);
                 }
                 
-                return matches;
+                return finalMatch;
             };
             
-            // Initialize grouped structure for all folders
-            const groupedFiles = {
-                equipment: [],
-                decks: [],
-                skyline: [],
-                chicago: [],
-                neighborhood: [],
-                artist: [],
-                family: []
-            };
+            // Initialize grouped structure dynamically (will add folders as we discover them)
+            const groupedFiles = {};
             
-            // Process each folder from the map
-            for (const [normalizedName, firebasePath] of Object.entries(folderMap)) {
-                if (!shouldIncludeFolder(normalizedName)) {
-                    console.log(`[VideoLoader] ⏭️  Skipping ${normalizedName} (not selected)`);
+            // Process each discovered folder
+            for (const folderName of discoveredFolders) {
+                // Skip excluded folders
+                const normalizedFolderName = normalize(folderName);
+                if (normalizedFolderName === 'logos' || 
+                    normalizedFolderName === 'paper_backgrounds' || 
+                    normalizedFolderName === 'mixes' ||
+                    (normalizedFolderName.includes('baiee') && !normalizedFolderName.includes('retro') && !normalizedFolderName.includes('noise') && !normalizedFolderName.includes('grit'))) {
+                    continue;
+                }
+                
+                if (!shouldIncludeFolder(folderName)) {
+                    console.log(`[VideoLoader] ⏭️  Skipping ${folderName} (not selected)`);
                     continue;
                 }
                 
                 // Get the Firebase Storage prefix path
-                const prefix = firebasePath + '/';
+                const prefix = folderName + '/';
                 
-                console.log(`[VideoLoader] 📋 Getting video file references from ${normalizedName} folder (Firebase path: ${firebasePath})...`);
+                console.log(`[VideoLoader] 📋 Getting video file references from ${folderName} folder (prefix: "${prefix}")...`);
                 const [fileList] = await bucket.getFiles({ prefix: prefix });
+                console.log(`[VideoLoader] 📁 Found ${fileList.length} total files in ${folderName} folder (before filtering)`);
+                
                 const filtered = fileList.filter(file => {
                     const fileName = file.name.toLowerCase();
-                    return videoExtensions.some(ext => fileName.endsWith(ext)) && !fileName.endsWith('.keep');
+                    const isVideo = videoExtensions.some(ext => fileName.endsWith(ext));
+                    const isKeep = fileName.endsWith('.keep');
+                    if (!isVideo && !isKeep) {
+                        console.log(`[VideoLoader] ⚠️  Skipping non-video file: ${file.name}`);
+                    }
+                    return isVideo && !isKeep;
                 });
                 
-                // Map to appropriate group based on normalized name
-                if (normalizedName === 'equipment') groupedFiles.equipment = filtered;
-                else if (normalizedName === 'decks') groupedFiles.decks = filtered;
-                else if (normalizedName === 'skyline') groupedFiles.skyline = filtered;
-                else if (normalizedName === 'chicago-skyline-videos') groupedFiles.chicago = filtered;
-                else if (normalizedName === 'neighborhood') groupedFiles.neighborhood = filtered;
-                else if (normalizedName === 'artist') groupedFiles.artist = filtered;
-                else if (normalizedName === 'family') groupedFiles.family = filtered;
+                console.log(`[VideoLoader] ✅ Found ${filtered.length} videos in ${folderName} folder`);
+                if (filtered.length > 0) {
+                    console.log(`[VideoLoader] 📹 Video files: ${filtered.slice(0, 5).map(f => f.name).join(', ')}${filtered.length > 5 ? '...' : ''}`);
+                }
                 
-                console.log(`[VideoLoader] Found ${filtered.length} videos in ${normalizedName} folder`);
+                // Add to grouped structure using normalized folder name as key
+                // Map chicago-skyline-videos to 'chicago' for backward compatibility
+                const groupKey = normalizedFolderName === 'chicago-skyline-videos' ? 'chicago' : normalizedFolderName;
+                groupedFiles[groupKey] = filtered;
             }
             
+            // Ensure backward compatibility: initialize known folder keys if they don't exist
+            const knownFolders = ['equipment', 'decks', 'skyline', 'chicago', 'neighborhood', 'artist', 'family'];
+            knownFolders.forEach(key => {
+                if (!groupedFiles[key]) {
+                    groupedFiles[key] = [];
+                }
+            });
+            
             const total = Object.values(groupedFiles).reduce((sum, arr) => sum + arr.length, 0);
-            console.log(`[VideoLoader] ✅ Found ${groupedFiles.equipment.length} equipment + ${groupedFiles.decks.length} decks + ${groupedFiles.skyline.length} skyline + ${groupedFiles.chicago.length} chicago + ${groupedFiles.neighborhood.length} neighborhood + ${groupedFiles.artist.length} artist + ${groupedFiles.family.length} family = ${total} total video references`);
+            const folderSummary = Object.entries(groupedFiles)
+                .filter(([_, arr]) => arr.length > 0)
+                .map(([name, arr]) => `${arr.length} ${name}`)
+                .join(' + ');
+            console.log(`[VideoLoader] ✅ Found ${folderSummary} = ${total} total video references`);
 
             if (total === 0) {
                 console.warn(`[VideoLoader] ⚠️ No videos found in selected folders: [${selectedFolders.join(', ')}]`);
