@@ -1269,6 +1269,7 @@ textarea {
     gap: 0.75rem;
     padding-left: 0 !important;
     padding-right: 0 !important;
+    margin-top: 10px;
   }
 
   .videos-mobile {
