@@ -53,15 +53,37 @@ export default async function handler(req, res) {
       });
     }
 
-    // Validate folder names (normalized names without assets/ prefix)
-    const validFolders = ['equipment', 'decks', 'skyline', 'neighborhood', 'artist', 'family', 'chicago-skyline-videos'];
-    const normalizedFolders = selectedFolders.map(f => f.toString().toLowerCase().trim().replace(/^assets\//, ''));
-    const invalidFolders = normalizedFolders.filter(f => !validFolders.includes(f));
+    // Normalize folder names (remove assets/ prefix, lowercase, trim)
+    const normalizedFolders = selectedFolders.map(f => {
+      const normalized = f.toString().toLowerCase().trim().replace(/^assets\//, '');
+      return normalized;
+    });
+
+    // Exclude folders that should never be used for video generation
+    const excludedFolders = ['logos', 'paper_backgrounds', 'mixes/baiee', 'mixes', 'baiee'];
+    const invalidFolders = normalizedFolders.filter(f => {
+      // Check if folder is in excluded list or contains excluded terms
+      return excludedFolders.some(excluded => 
+        f === excluded || f.includes(excluded) || excluded.includes(f)
+      );
+    });
     
     if (invalidFolders.length > 0) {
       return res.status(400).json({
         success: false,
-        error: `Invalid folder names: ${invalidFolders.join(', ')}. Valid folders: ${validFolders.join(', ')}`
+        error: `Invalid folder names: ${invalidFolders.join(', ')}. These folders are reserved for internal use only.`
+      });
+    }
+
+    // Validate folder names are not empty and contain valid characters
+    const emptyOrInvalid = normalizedFolders.filter(f => {
+      return !f || f.length === 0 || /[^a-z0-9_\-/]/.test(f);
+    });
+    
+    if (emptyOrInvalid.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid folder name format: ${emptyOrInvalid.join(', ')}. Folder names can only contain lowercase letters, numbers, hyphens, underscores, and forward slashes.`
       });
     }
 
