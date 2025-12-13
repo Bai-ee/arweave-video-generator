@@ -319,7 +319,8 @@
                   <div class="step-hint">Pick an artist for mixes or choose random.</div>
                   <select 
                     id="artistSelect"
-                    style="width: 100%; margin: 0.35rem auto 0; display: block; padding: 0.85rem; border: 2px solid var(--color-yellow-75); border-radius: 8px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-body); cursor: pointer;"
+                    class="select-styled"
+                    style="margin: 0.35rem auto 0;"
                   >
                     <option value="random">Random Artist</option>
                   </select>
@@ -338,7 +339,8 @@
                   <div class="step-hint">Choose a visual style for your video.</div>
                   <select 
                     id="filterSelect"
-                    style="width: 100%; margin: 0.35rem auto 0; display: block; padding: 0.85rem; border: 2px solid var(--color-yellow-75); border-radius: 8px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-body); cursor: pointer;"
+                    class="select-styled"
+                    style="margin: 0.35rem auto 0;"
                     onchange="updateFilterSelection(this.value)"
                   >
                     <option value="look_hard_bw_street_doc">Hard B&W Street Doc (Default)</option>
@@ -352,13 +354,13 @@
                 <div id="overlayToggleContainer" class="step-block" style="display: none;">
                   <div class="step-label">5. Overlay effect</div>
                   <div class="step-hint">Add a texture/grit overlay. Turn off for fastest renders.</div>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; width: 100%; margin: 0 auto;">
-                    <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem 1.25rem; background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 10px; transition: all 0.3s ease; width: 100%;">
+                  <div id="overlayCheckboxContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; width: 100%; margin: 0 auto;">
+                    <label class="folder-select-item unselected" style="gap: 0.75rem; cursor: pointer;">
                       <input 
                         type="checkbox" 
                         id="enableOverlay"
-                        style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-yellow-75);"
-                        onchange="updateOverlayToggle(this.checked)"
+                        style="width: 20px; height: 20px; cursor: pointer; accent-color: #10b981;"
+                        onchange="updateOverlayToggle(this.checked); this.parentElement.classList.toggle('selected', this.checked); this.parentElement.classList.toggle('unselected', !this.checked);"
                       />
                       <span style="color: var(--color-yellow-75); font-family: var(--font-body); font-weight: 700; font-size: 0.95rem;">
                         Enable Overlay Effect
@@ -1331,14 +1333,7 @@
         const actualFolderName = folderInfo.name; // Use the actual folder name from API
         
         const checkboxContainer = document.createElement('div');
-        checkboxContainer.style.cssText = `
-          background: #1a1a1a;
-          border: 2px solid var(--color-yellow-75);
-          border-radius: 10px;
-          padding: 0.75rem;
-          transition: all 0.3s ease;
-          width: 100%;
-        `;
+        checkboxContainer.className = 'folder-select-item selected';
         
         const label = document.createElement('label');
         label.style.cssText = `
@@ -1358,29 +1353,28 @@
           width: 20px;
           height: 20px;
           cursor: pointer;
-          accent-color: var(--color-yellow-75);
+          accent-color: #10b981;
         `;
         selectedFolders.add(actualFolderName);
         
         checkbox.addEventListener('change', (e) => {
           if (e.target.checked) {
             selectedFolders.add(actualFolderName);
-            checkboxContainer.style.background = '#2a2a2a';
-            checkboxContainer.style.borderColor = 'var(--color-yellow-75)';
+            checkboxContainer.classList.remove('unselected');
+            checkboxContainer.classList.add('selected');
           } else {
             selectedFolders.delete(actualFolderName);
-            checkboxContainer.style.background = '#1a1a1a';
-            checkboxContainer.style.borderColor = '#666';
+            checkboxContainer.classList.remove('selected');
+            checkboxContainer.classList.add('unselected');
           }
           console.log(`✅ Selected folders:`, Array.from(selectedFolders));
         });
         
         const labelText = document.createElement('div');
-        labelText.style.cssText = `
-          flex: 1;
-        `;
+        labelText.style.cssText = `flex: 1;`;
         
         const folderNameDiv = document.createElement('div');
+        folderNameDiv.className = 'folder-name';
         folderNameDiv.style.cssText = `
           font-family: var(--font-mathias);
           color: var(--color-yellow-75);
@@ -1390,6 +1384,7 @@
         folderNameDiv.textContent = displayName;
         
         const folderCountDiv = document.createElement('div');
+        folderCountDiv.className = 'folder-count';
         folderCountDiv.style.cssText = `
           font-size: 0.75rem;
           color: #888;
@@ -1401,10 +1396,6 @@
         label.appendChild(checkbox);
         label.appendChild(labelText);
         checkboxContainer.appendChild(label);
-        
-        // Set initial style
-        checkboxContainer.style.background = '#2a2a2a';
-        checkboxContainer.style.borderColor = 'var(--color-yellow-75)';
         
         container.appendChild(checkboxContainer);
       });
@@ -3298,31 +3289,14 @@
           
           data.folders.forEach(folder => {
             const folderCard = document.createElement('div');
-            folderCard.style.cssText = `
-              background: #1a1a1a;
-              border: 2px solid var(--color-yellow-75);
-              border-radius: 10px;
-              width: 100%;
-              padding: 1.5rem;
-              cursor: pointer;
-              transition: all 0.3s ease;
-              text-align: center;
-            `;
-            folderCard.onmouseover = () => {
-              folderCard.style.background = '#2a2a2a';
-              folderCard.style.transform = 'scale(1.02)';
-            };
-            folderCard.onmouseout = () => {
-              folderCard.style.background = '#1a1a1a';
-              folderCard.style.transform = 'scale(1)';
-            };
+            folderCard.className = 'folder-card-item';
             folderCard.onclick = () => openFolder(folder.name);
             
             folderCard.innerHTML = `
-              <div style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; font-size: 1rem; margin-bottom: 0.5rem;">
+              <div class="folder-name" style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; font-size: 1rem; margin-bottom: 0.5rem;">
                 ${folder.displayName}
               </div>
-              <div style="color: #888; font-family: var(--font-mathias); font-size: 0.875rem;">
+              <div class="folder-count" style="color: #888; font-family: var(--font-mathias); font-size: 0.875rem;">
                 ${folder.count} video${folder.count !== 1 ? 's' : ''}
               </div>
             `;
@@ -3573,31 +3547,14 @@
 
           archiveAvailableFolders.forEach(folder => {
             const folderCard = document.createElement('div');
-            folderCard.style.cssText = `
-              background: #1a1a1a;
-              border: 2px solid var(--color-yellow-75);
-              border-radius: 10px;
-              padding: 1rem;
-              cursor: pointer;
-              transition: all 0.3s ease;
-              text-align: center;
-              width: 100%;
-            `;
-            folderCard.onmouseover = () => {
-              folderCard.style.transform = 'scale(1.02)';
-              folderCard.style.borderColor = '#fff';
-            };
-            folderCard.onmouseout = () => {
-              folderCard.style.transform = 'scale(1)';
-              folderCard.style.borderColor = 'var(--color-yellow-75)';
-            };
+            folderCard.className = 'folder-card-item';
             folderCard.onclick = () => archiveSelectFolder(folder.name);
 
             folderCard.innerHTML = `
-              <div style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-weight: bold; margin-bottom: 0.5rem;">
+              <div class="folder-name" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-weight: bold; margin-bottom: 0.5rem;">
                 ${folder.displayName || folder.name}
               </div>
-              <div style="font-size: 0.75rem; color: #888;">
+              <div class="folder-count" style="font-size: 0.75rem; color: #888;">
                 ${folder.count} ${folder.type === 'image' ? 'image' : 'video'}(s)
               </div>
             `;
@@ -3656,31 +3613,25 @@
       container.innerHTML = '';
 
       archiveFolderFiles.forEach(file => {
-        const fileCard = document.createElement('div');
-        fileCard.style.cssText = `
-          background: #1a1a1a;
-          border: 2px solid var(--color-yellow-75);
-          border-radius: 10px;
-          padding: 1rem;
-          width: 100%;
-        `;
-
         const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
         const isSelected = archiveSelectedFiles.has(file.name);
 
+        const fileCard = document.createElement('div');
+        fileCard.className = `folder-select-item ${isSelected ? 'selected' : 'unselected'}`;
+
         fileCard.innerHTML = `
-          <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+          <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; width: 100%;">
             <input 
               type="checkbox" 
               ${isSelected ? 'checked' : ''}
               onchange="archiveToggleFileSelection('${file.name.replace(/'/g, "\\'")}')"
-              style="width: 20px; height: 20px; cursor: pointer;"
+              style="width: 20px; height: 20px; cursor: pointer; accent-color: #10b981;"
             />
             <div style="flex: 1;">
-              <div style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-weight: bold; margin-bottom: 0.25rem;">
+              <div class="folder-name" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-weight: bold; margin-bottom: 0.25rem;">
                 ${file.name}
               </div>
-              <div style="font-size: 0.75rem; color: #888;">
+              <div class="folder-count" style="font-size: 0.75rem; color: #888;">
                 ${fileSizeMB} MB • ${file.contentType || file.type || 'file'}
               </div>
             </div>
