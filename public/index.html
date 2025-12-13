@@ -165,15 +165,44 @@
           </div>
         </div>
         
-        <!-- Refresh Button -->
-        <button 
-          onclick="window.location.reload()"
-          style="padding: 0.5rem 1rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; cursor: pointer; font-family: var(--font-mathias); font-size: 0.7rem; font-weight: bold; transition: all 0.3s ease; white-space: nowrap; padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;"
-          onmouseover="this.style.background='var(--color-yellow-75)'; this.style.color='black';"
-          onmouseout="this.style.background='transparent'; this.style.color='var(--color-yellow-75)';"
-        >
-          REFRESH
-        </button>
+        <!-- Right Side: Refresh Button and Usage Indicators -->
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
+          <button 
+            onclick="window.location.reload()"
+            style="padding: 0.5rem 1rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; cursor: pointer; font-family: var(--font-mathias); font-size: 0.7rem; font-weight: bold; transition: all 0.3s ease; white-space: nowrap; padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;"
+            onmouseover="this.style.background='var(--color-yellow-75)'; this.style.color='black';"
+            onmouseout="this.style.background='transparent'; this.style.color='var(--color-yellow-75)';"
+          >
+            REFRESH
+          </button>
+          
+          <!-- Storage Usage Indicator -->
+          <div id="storageUsage" style="display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-end;">
+            <div style="display: flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
+              <span id="storageUsageDot" class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #888888; flex-shrink: 0; transition: background-color 0.3s ease;"></span>
+              <span id="storageUsageText" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">Loading...</span>
+            </div>
+            <div id="storageCost" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.65rem; white-space: nowrap; opacity: 0.8;">
+              <span id="storageCostText">-</span>
+            </div>
+          </div>
+          
+          <!-- Firestore Usage Indicator -->
+          <div id="firestoreUsage" style="display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-end;">
+            <div style="display: flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
+              <span id="firestoreUsageDot" class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #888888; flex-shrink: 0; transition: background-color 0.3s ease;"></span>
+              <span id="firestoreUsageText" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">Loading...</span>
+            </div>
+            <div id="firestoreCost" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.65rem; white-space: nowrap; opacity: 0.8;">
+              <span id="firestoreCostText">-</span>
+            </div>
+          </div>
+          
+          <!-- Total Cost Indicator -->
+          <div id="totalCost" style="display: flex; align-items: center; gap: 0.4rem; justify-content: flex-end; margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px solid rgba(230, 233, 224, 0.2);">
+            <span id="totalCostText" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap; font-weight: bold;">Total: -</span>
+          </div>
+        </div>
       </div>
       
       <div class="flex flex-col items-center gap-4 w-full px-4 sm:px-0">
@@ -954,14 +983,61 @@
             <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
               Upload Folder
             </label>
-            <select 
-              id="folderSelect"
-              style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); cursor: pointer;"
-            >
-              <!-- Options will be populated dynamically from API -->
-              <option value="">Loading folders...</option>
-            </select>
-            <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
+            
+            <!-- Folder selection type: existing or new -->
+            <div style="display: flex; gap: 1rem; margin-bottom: 0.75rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">
+                <input 
+                  type="radio" 
+                  name="folderType" 
+                  id="folderTypeExisting" 
+                  value="existing" 
+                  checked
+                  onchange="toggleFolderInput()"
+                  style="accent-color: var(--color-yellow-75); cursor: pointer;"
+                />
+                <span>Existing Folder</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">
+                <input 
+                  type="radio" 
+                  name="folderType" 
+                  id="folderTypeNew" 
+                  value="new"
+                  onchange="toggleFolderInput()"
+                  style="accent-color: var(--color-yellow-75); cursor: pointer;"
+                />
+                <span>New Folder</span>
+              </label>
+            </div>
+            
+            <!-- Existing folder select -->
+            <div id="existingFolderContainer">
+              <select 
+                id="folderSelect"
+                style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); cursor: pointer;"
+              >
+                <!-- Options will be populated dynamically from API -->
+                <option value="">Loading folders...</option>
+              </select>
+            </div>
+            
+            <!-- New folder input -->
+            <div id="newFolderContainer" style="display: none;">
+              <input 
+                type="text" 
+                id="newFolderName"
+                placeholder="Enter folder name (e.g., my-videos)"
+                style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
+                pattern="[a-z0-9-_]+"
+                title="Folder name can only contain lowercase letters, numbers, hyphens, and underscores"
+              />
+              <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
+                Folder name will be converted to lowercase. Use hyphens or underscores for spaces.
+              </p>
+            </div>
+            
+            <p id="folderHelpText" style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
               Select the folder where your video will be stored
             </p>
           </div>
@@ -1061,6 +1137,13 @@
     document.addEventListener('DOMContentLoaded', () => {
       checkSystemHealth();
       setInterval(checkSystemHealth, 30000);
+      // Also load usage indicators
+      if (typeof loadStorageUsage === 'function') {
+        loadStorageUsage();
+      }
+      if (typeof loadFirestoreUsage === 'function') {
+        loadFirestoreUsage();
+      }
     });
 
     /**
@@ -1152,12 +1235,20 @@
       loadVideos();
       loadAvailableFolders();
       populateUploadFolderSelect();
+      loadStorageUsage(); // Load storage usage on page load
+      loadFirestoreUsage(); // Load Firestore usage on page load
       // loadFolders is now lazy-loaded when upload section is opened
       
       // Pre-select mixes as default audio source for one-click generation
       setTimeout(() => {
         selectAudioSource('mixes');
       }, 500);
+      
+      // Refresh usage every 30 seconds
+      setInterval(() => {
+        loadStorageUsage();
+        loadFirestoreUsage();
+      }, 30000);
     });
 
     /**
@@ -1217,6 +1308,231 @@
         }
       } catch (error) {
         console.error('❌ Error loading folders:', error);
+      }
+    }
+
+    // Store usage data for total cost calculation
+    let storageCost = 0;
+    let firestoreCost = 0;
+
+    /**
+     * Load and display Firebase Storage usage and cost
+     */
+    async function loadStorageUsage() {
+      try {
+        const response = await fetch('/api/storage-usage');
+        const data = await response.json();
+        
+        if (data.success) {
+          const usageElement = document.getElementById('storageUsageText');
+          const costElement = document.getElementById('storageCostText');
+          const dotElement = document.getElementById('storageUsageDot');
+          
+          if (usageElement && dotElement) {
+            // Format: "1232/1024MB" (used/free tier limit)
+            usageElement.textContent = data.formatted.display;
+            
+            // Store cost for total calculation
+            storageCost = data.estimatedStorageCost || 0;
+            
+            // Display cost (storage only, monthly estimate)
+            if (costElement) {
+              if (storageCost > 0) {
+                costElement.textContent = `~${data.formatted.cost}/mo`;
+                costElement.style.color = storageCost > 1 ? '#ef4444' : '#fbbf24';
+              } else {
+                costElement.textContent = 'Free';
+                costElement.style.color = '#10b981';
+              }
+            }
+            
+            // Color code based on usage percentage
+            const percentage = data.percentage;
+            let dotColor = '#888888'; // Default gray
+            let textColor = 'var(--color-yellow-75)'; // Default yellow
+            
+            if (percentage >= 90) {
+              // Red: Close to limit (>90%)
+              dotColor = '#ef4444';
+              textColor = '#ef4444';
+            } else if (percentage >= 75) {
+              // Orange: Approaching limit (>75%)
+              dotColor = '#f97316'; // Orange
+              textColor = '#f97316';
+            } else {
+              // Green: Well under limit (<75%)
+              dotColor = '#10b981'; // Green
+              textColor = 'var(--color-yellow-75)'; // Keep text yellow for consistency
+            }
+            
+            // Update dot color
+            dotElement.style.background = dotColor;
+            // Update text color
+            usageElement.style.color = textColor;
+            
+            // Update total cost
+            updateTotalCost();
+          }
+        } else {
+          const usageElement = document.getElementById('storageUsageText');
+          const costElement = document.getElementById('storageCostText');
+          const dotElement = document.getElementById('storageUsageDot');
+          if (usageElement) {
+            usageElement.textContent = 'N/A';
+            usageElement.style.color = '#888';
+          }
+          if (costElement) {
+            costElement.textContent = '-';
+            costElement.style.color = '#888';
+          }
+          if (dotElement) {
+            dotElement.style.background = '#888888';
+          }
+          storageCost = 0;
+          updateTotalCost();
+        }
+      } catch (error) {
+        console.error('❌ Error loading storage usage:', error);
+        const usageElement = document.getElementById('storageUsageText');
+        const costElement = document.getElementById('storageCostText');
+        const dotElement = document.getElementById('storageUsageDot');
+        if (usageElement) {
+          usageElement.textContent = 'Error';
+          usageElement.style.color = '#888';
+        }
+        if (costElement) {
+          costElement.textContent = '-';
+          costElement.style.color = '#888';
+        }
+        if (dotElement) {
+          dotElement.style.background = '#888888';
+        }
+        storageCost = 0;
+        updateTotalCost();
+      }
+    }
+
+    /**
+     * Load and display Firestore usage and cost
+     */
+    async function loadFirestoreUsage() {
+      try {
+        const response = await fetch('/api/firestore-usage');
+        const data = await response.json();
+        
+        if (data.success) {
+          const usageElement = document.getElementById('firestoreUsageText');
+          const costElement = document.getElementById('firestoreCostText');
+          const dotElement = document.getElementById('firestoreUsageDot');
+          
+          if (usageElement && dotElement) {
+            // Format: "328K/50K/day" (reads/limit)
+            usageElement.textContent = `Reads: ${data.formatted.readsDisplay}`;
+            
+            // Store cost for total calculation
+            firestoreCost = data.estimatedTotalCost || 0;
+            
+            // Display cost (monthly estimate)
+            if (costElement) {
+              if (firestoreCost > 0) {
+                costElement.textContent = `~${data.formatted.cost}/mo`;
+                costElement.style.color = firestoreCost > 3 ? '#ef4444' : firestoreCost > 1 ? '#fbbf24' : '#10b981';
+              } else {
+                costElement.textContent = 'Free';
+                costElement.style.color = '#10b981';
+              }
+            }
+            
+            // Color code based on reads percentage (reads are usually the main cost driver)
+            const percentage = data.readsPercentage;
+            let dotColor = '#888888'; // Default gray
+            let textColor = 'var(--color-yellow-75)'; // Default yellow
+            
+            if (percentage >= 90) {
+              // Red: Close to limit (>90%)
+              dotColor = '#ef4444';
+              textColor = '#ef4444';
+            } else if (percentage >= 75) {
+              // Orange: Approaching limit (>75%)
+              dotColor = '#f97316'; // Orange
+              textColor = '#f97316';
+            } else {
+              // Green: Well under limit (<75%)
+              dotColor = '#10b981'; // Green
+              textColor = 'var(--color-yellow-75)'; // Keep text yellow for consistency
+            }
+            
+            // Update dot color
+            dotElement.style.background = dotColor;
+            // Update text color
+            usageElement.style.color = textColor;
+            
+            // Update total cost
+            updateTotalCost();
+          }
+        } else {
+          const usageElement = document.getElementById('firestoreUsageText');
+          const costElement = document.getElementById('firestoreCostText');
+          const dotElement = document.getElementById('firestoreUsageDot');
+          if (usageElement) {
+            usageElement.textContent = 'N/A';
+            usageElement.style.color = '#888';
+          }
+          if (costElement) {
+            costElement.textContent = '-';
+            costElement.style.color = '#888';
+          }
+          if (dotElement) {
+            dotElement.style.background = '#888888';
+          }
+          firestoreCost = 0;
+          updateTotalCost();
+        }
+      } catch (error) {
+        console.error('❌ Error loading Firestore usage:', error);
+        const usageElement = document.getElementById('firestoreUsageText');
+        const costElement = document.getElementById('firestoreCostText');
+        const dotElement = document.getElementById('firestoreUsageDot');
+        if (usageElement) {
+          usageElement.textContent = 'Error';
+          usageElement.style.color = '#888';
+        }
+        if (costElement) {
+          costElement.textContent = '-';
+          costElement.style.color = '#888';
+        }
+        if (dotElement) {
+          dotElement.style.background = '#888888';
+        }
+        firestoreCost = 0;
+        updateTotalCost();
+      }
+    }
+
+    /**
+     * Update total cost indicator
+     */
+    function updateTotalCost() {
+      const totalCostElement = document.getElementById('totalCostText');
+      if (!totalCostElement) return;
+      
+      const totalCost = storageCost + firestoreCost;
+      
+      if (totalCost > 0) {
+        const formattedCost = totalCost < 0.01 ? '$0.00' : `$${totalCost.toFixed(2)}`;
+        totalCostElement.textContent = `Total: ${formattedCost}/mo`;
+        
+        // Color code based on total cost
+        if (totalCost > 10) {
+          totalCostElement.style.color = '#ef4444'; // Red for high cost
+        } else if (totalCost > 5) {
+          totalCostElement.style.color = '#fbbf24'; // Yellow for moderate cost
+        } else {
+          totalCostElement.style.color = 'var(--color-yellow-75)'; // Default yellow
+        }
+      } else {
+        totalCostElement.textContent = 'Total: Free';
+        totalCostElement.style.color = '#10b981';
       }
     }
 
@@ -2038,6 +2354,27 @@
     }
 
     /**
+     * Toggle between existing folder select and new folder input
+     */
+    window.toggleFolderInput = function() {
+      const folderTypeExisting = document.getElementById('folderTypeExisting');
+      const folderTypeNew = document.getElementById('folderTypeNew');
+      const existingFolderContainer = document.getElementById('existingFolderContainer');
+      const newFolderContainer = document.getElementById('newFolderContainer');
+      const folderHelpText = document.getElementById('folderHelpText');
+      
+      if (folderTypeNew.checked) {
+        existingFolderContainer.style.display = 'none';
+        newFolderContainer.style.display = 'block';
+        folderHelpText.textContent = 'Enter a name for the new folder. Videos will be uploaded to this folder.';
+      } else {
+        existingFolderContainer.style.display = 'block';
+        newFolderContainer.style.display = 'none';
+        folderHelpText.textContent = 'Select the folder where your video will be stored';
+      }
+    }
+
+    /**
      * Show upload modal
      */
     window.showUploadModal = function() {
@@ -2048,6 +2385,9 @@
       document.getElementById('uploadStatus').style.display = 'none';
       document.getElementById('selectedFilesList').style.display = 'none';
       document.getElementById('selectedFilesContainer').innerHTML = '';
+      // Reset folder type to existing
+      document.getElementById('folderTypeExisting').checked = true;
+      toggleFolderInput();
     }
 
     /**
@@ -2702,6 +3042,10 @@
         // Reload artists list
         loadArtists();
         
+        // Refresh usage indicators after successful upload
+        loadStorageUsage();
+        loadFirestoreUsage();
+        
         // Don't auto-close modal - let user decide on deployment
         
       } catch (error) {
@@ -2776,12 +3120,42 @@
       
       const fileInput = document.getElementById('videoFileInput');
       const orientation = document.getElementById('orientationSelect').value;
-      const folder = document.getElementById('folderSelect').value;
+      const folderTypeExisting = document.getElementById('folderTypeExisting');
+      const folderTypeNew = document.getElementById('folderTypeNew');
       const files = Array.from(fileInput.files);
       
       if (files.length === 0) {
         showToast('Please select at least one video file', 'error');
         return;
+      }
+      
+      // Determine folder name
+      let folder;
+      let isNewFolder = false;
+      
+      if (folderTypeNew.checked) {
+        const newFolderName = document.getElementById('newFolderName').value.trim();
+        if (!newFolderName) {
+          showToast('Please enter a folder name', 'error');
+          return;
+        }
+        // Sanitize folder name: lowercase, replace spaces with hyphens, remove invalid chars
+        folder = newFolderName.toLowerCase()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9-_]/g, '')
+          .replace(/^-+|-+$/g, '');
+        
+        if (!folder) {
+          showToast('Please enter a valid folder name', 'error');
+          return;
+        }
+        isNewFolder = true;
+      } else {
+        folder = document.getElementById('folderSelect').value;
+        if (!folder) {
+          showToast('Please select a folder', 'error');
+          return;
+        }
       }
 
       // Validate files based on folder type
@@ -2933,15 +3307,50 @@
         document.getElementById('uploadSummary').textContent = `${successCount + failCount} / ${files.length}`;
       }
 
+      // If new folder was created and uploads succeeded, refresh folder list
+      if (isNewFolder && successCount > 0) {
+        // Add new folder to availableFolders array
+        const newFolderEntry = {
+          name: folder,
+          count: successCount,
+          displayName: folder.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          type: 'video'
+        };
+        
+        // Check if folder already exists in the list
+        const existingIndex = availableFolders.findIndex(f => f.name === folder);
+        if (existingIndex >= 0) {
+          availableFolders[existingIndex] = newFolderEntry;
+        } else {
+          availableFolders.push(newFolderEntry);
+        }
+        
+        // Refresh folder select dropdown
+        populateUploadFolderSelect();
+        
+        // Also refresh the folder selection for video generation
+        await loadAvailableFolders();
+        
+        console.log(`✅ New folder "${folder}" created and added to folder list`);
+      }
+      
       // Show final status
       uploadStatus.style.display = 'block';
       if (successCount === files.length) {
+        const folderMessage = isNewFolder 
+          ? `All ${successCount} file(s) uploaded successfully to new folder "${folder}"!`
+          : `All ${successCount} file(s) uploaded successfully!`;
+        
         uploadStatus.innerHTML = `
           <div style="background: #0a5d0a; border: 2px solid #10b981; border-radius: 5px; padding: 1rem; color: #10b981;">
-            <strong>All ${successCount} file(s) uploaded successfully!</strong>
+            <strong>${folderMessage}</strong>
+            ${isNewFolder ? `<div style="margin-top: 0.5rem; font-size: 0.875rem;">The folder "${folder}" is now available for video generation.</div>` : ''}
           </div>
         `;
         showToast(`Successfully uploaded ${successCount} file(s)!`, 'success');
+        // Refresh usage indicators after successful upload
+        loadStorageUsage();
+        loadFirestoreUsage();
       } else if (successCount > 0) {
         uploadStatus.innerHTML = `
           <div style="background: #5d4a0a; border: 2px solid #fbbf24; border-radius: 5px; padding: 1rem; color: #fbbf24;">

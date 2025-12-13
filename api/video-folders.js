@@ -27,8 +27,47 @@ export default async function handler(req, res) {
 
     const { folder } = req.query;
 
-    // Define available folders (videos only - logos and paper_backgrounds are for internal use, not user selection)
-    const availableFolders = ['skyline', 'artist', 'decks', 'equipment', 'family', 'neighborhood', 'assets/chicago-skyline-videos'];
+    // Dynamically discover folders by listing all files in the bucket
+    // This allows new folders created by users to be automatically included
+    async function discoverFolders() {
+      const [allFiles] = await bucket.getFiles();
+      
+      // Extract unique folder names from file paths
+      const folderSet = new Set();
+      const imageFolders = new Set(['logos', 'paper_backgrounds']); // Known image folders
+      
+      allFiles.forEach(file => {
+        const pathParts = file.name.split('/');
+        if (pathParts.length > 1) {
+          const folderName = pathParts[0];
+          // Skip hidden files and .keep files
+          if (!folderName.startsWith('.') && !file.name.endsWith('.keep')) {
+            folderSet.add(folderName);
+          }
+        }
+      });
+      
+      // Also check for nested folders (like assets/chicago-skyline-videos)
+      allFiles.forEach(file => {
+        const pathParts = file.name.split('/');
+        if (pathParts.length > 2) {
+          const nestedFolder = `${pathParts[0]}/${pathParts[1]}`;
+          if (!nestedFolder.includes('.') && !file.name.endsWith('.keep')) {
+            folderSet.add(nestedFolder);
+          }
+        }
+      });
+      
+      // Convert to array and filter out image-only folders from video selection
+      // (but keep them for internal use)
+      return Array.from(folderSet).filter(folderName => {
+        // Include all folders for discovery, but mark image folders
+        return true;
+      });
+    }
+
+    // Get list of available folders (dynamically discovered)
+    const discoveredFolders = await discoverFolders();
 
     if (folder) {
       // Get files from a specific folder (videos or images)
@@ -86,9 +125,9 @@ export default async function handler(req, res) {
         count: videos.length
       });
     } else {
-      // Get folder counts for all folders
+      // Get folder counts for all discovered folders
       const folderStats = await Promise.all(
-        availableFolders.map(async (folderName) => {
+        discoveredFolders.map(async (folderName) => {
           const folderPath = folderName.endsWith('/') ? folderName : `${folderName}/`;
           const [files] = await bucket.getFiles({ prefix: folderPath });
           
