@@ -60,12 +60,29 @@ export default async function handler(req, res) {
     });
 
     // Exclude folders that should never be used for video generation
-    const excludedFolders = ['logos', 'paper_backgrounds', 'mixes/baiee', 'mixes', 'baiee'];
+    // Only exclude exact matches (not partial matches) to allow retro_dust, noise, grit, etc.
+    const excludedExactMatches = [
+      'logos',
+      'paper_backgrounds',
+      'mixes',  // Exclude top-level mixes folder
+      'mixes/baiee',  // Exact match only
+      'mixes/bai-ee',  // Exact match only (case variations)
+    ];
     const invalidFolders = normalizedFolders.filter(f => {
-      // Check if folder is in excluded list or contains excluded terms
-      return excludedFolders.some(excluded => 
-        f === excluded || f.includes(excluded) || excluded.includes(f)
-      );
+      const folderLower = f.toLowerCase().trim();
+      // Check for exact matches only (case-insensitive)
+      return excludedExactMatches.some(excluded => {
+        const excludedLower = excluded.toLowerCase();
+        // Exact match only - don't exclude partial matches
+        if (folderLower === excludedLower) {
+          return true;
+        }
+        // Exclude mixes/baiee or mixes/bai-ee but allow other mixes/ folders like retro_dust, noise, grit
+        if (folderLower === 'mixes/baiee' || folderLower === 'mixes/bai-ee') {
+          return true;
+        }
+        return false;
+      });
     });
     
     if (invalidFolders.length > 0) {

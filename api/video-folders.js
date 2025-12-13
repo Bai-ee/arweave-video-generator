@@ -58,16 +58,29 @@ export default async function handler(req, res) {
         }
       });
       
-      // Convert to array and filter out image-only folders and mixes/Baiee from video selection
+      // Convert to array and filter out image-only folders and exact matches for mixes/Baiee
       // (but keep them for internal use)
+      // Allow retro_dust, noise, grit folders even if they're in mixes/
       return Array.from(folderSet).filter(folderName => {
-        // Exclude image folders and mixes/Baiee folder
+        const folderNameLower = folderName.toLowerCase();
+        // Exclude image folders
         if (folderName === 'logos' || folderName === 'paper_backgrounds') {
           return false;
         }
-        // Exclude mixes/Baiee folder and any folder containing Baiee
-        if (folderName === 'mixes/Baiee' || folderName.includes('Baiee') || folderName === 'mixes') {
+        // Exclude top-level mixes folder
+        if (folderName === 'mixes') {
           return false;
+        }
+        // Exclude exact matches for mixes/Baiee (but allow retro_dust, noise, grit, etc.)
+        if (folderNameLower === 'mixes/baiee' || folderNameLower === 'mixes/bai-ee') {
+          return false;
+        }
+        // Exclude any folder path that contains /baiee but not retro/noise/grit
+        if (folderNameLower.includes('/baiee') || folderNameLower.includes('/bai-ee')) {
+          // Allow if it also contains retro, noise, or grit (these are valid folders)
+          if (!folderNameLower.includes('retro') && !folderNameLower.includes('noise') && !folderNameLower.includes('grit')) {
+            return false;
+          }
         }
         return true;
       });

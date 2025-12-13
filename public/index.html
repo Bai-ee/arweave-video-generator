@@ -1640,9 +1640,23 @@
         return;
       }
       
+      // Default folders to auto-select: chicago-skyline-videos, skyline, neighborhood
+      const defaultFolders = ['chicago-skyline-videos', 'skyline', 'neighborhood'];
+      const defaultFolderNames = new Set(defaultFolders.map(f => {
+        // Handle both with and without assets/ prefix
+        return f.startsWith('assets/') ? f : `assets/${f}`;
+      }));
+      
       availableFolders.forEach(folderInfo => {
-        // Skip logos, paper_backgrounds, and mixes/Baiee folders (internal use only, not for user selection)
-        if (folderInfo.name === 'logos' || folderInfo.name === 'paper_backgrounds' || folderInfo.name === 'mixes/Baiee' || folderInfo.name === 'mixes' || folderInfo.name.includes('Baiee')) {
+        // Skip logos, paper_backgrounds, and exact matches for mixes/Baiee folders (internal use only)
+        // Allow retro_dust, noise, grit folders even if they're in mixes/
+        const folderNameLower = folderInfo.name.toLowerCase();
+        if (folderInfo.name === 'logos' || 
+            folderInfo.name === 'paper_backgrounds' || 
+            folderInfo.name === 'mixes' ||
+            folderNameLower === 'mixes/baiee' ||
+            folderNameLower === 'mixes/bai-ee' ||
+            (folderNameLower.includes('baiee') && !folderNameLower.includes('retro') && !folderNameLower.includes('noise') && !folderNameLower.includes('grit'))) {
           return;
         }
         
@@ -1655,21 +1669,59 @@
         // Create folder item - styled exactly like folder-card-item (VIDEO FOLDERS section)
         const folderItem = document.createElement('div');
         folderItem.className = 'folder-card-item'; // Use same class as VIDEO FOLDERS
-        selectedFolders.add(actualFolderName);
+        
+        // Auto-select default folders (chicago-skyline-videos, skyline, neighborhood)
+        const shouldBeSelected = defaultFolderNames.has(actualFolderName) || 
+                                 defaultFolders.some(df => actualFolderName.includes(df));
+        if (shouldBeSelected) {
+          selectedFolders.add(actualFolderName);
+        }
+        
+        // Track selected state
+        let isSelected = shouldBeSelected;
         
         folderItem.addEventListener('click', () => {
           if (selectedFolders.has(actualFolderName)) {
             selectedFolders.delete(actualFolderName);
+            isSelected = false;
             // Unselected: keep same styling but add visual indicator
             folderItem.style.opacity = '0.6';
             folderItem.style.borderColor = '#333';
           } else {
             selectedFolders.add(actualFolderName);
+            isSelected = true;
             // Selected: restore full styling
             folderItem.style.opacity = '1';
             folderItem.style.borderColor = '#555';
           }
           console.log(`✅ Selected folders:`, Array.from(selectedFolders));
+        });
+        
+        // Add hover effect that works for both selected and unselected states
+        folderItem.addEventListener('mouseenter', () => {
+          if (isSelected) {
+            // Selected state hover - use CSS hover effect
+            folderItem.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
+            folderItem.style.borderColor = '#10b981';
+            folderItem.style.transform = 'scale(1.02)';
+          } else {
+            // Unselected state hover - lighter effect
+            folderItem.style.opacity = '0.8';
+            folderItem.style.borderColor = '#666';
+          }
+        });
+        
+        folderItem.addEventListener('mouseleave', () => {
+          if (isSelected) {
+            // Restore selected state
+            folderItem.style.background = '';
+            folderItem.style.borderColor = '#555';
+            folderItem.style.transform = '';
+          } else {
+            // Restore unselected state
+            folderItem.style.opacity = '0.6';
+            folderItem.style.borderColor = '#333';
+          }
         });
         
         // Match exact styling from VIDEO FOLDERS section
@@ -1696,10 +1748,19 @@
         folderItem.appendChild(folderNameDiv);
         folderItem.appendChild(folderCountDiv);
         
+        // Set initial visual state based on selection
+        if (!isSelected) {
+          folderItem.style.opacity = '0.6';
+          folderItem.style.borderColor = '#333';
+        }
+        
         container.appendChild(folderItem);
       });
       
       console.log(`✅ Populated ${availableFolders.length} folder checkboxes (all folders)`);
+      console.log(`✅ Default folders auto-selected:`, Array.from(selectedFolders).filter(f => 
+        defaultFolders.some(df => f.includes(df))
+      ));
     }
 
     /**
