@@ -182,22 +182,16 @@
           <!-- Storage Usage Indicator -->
           <div id="storageUsage" style="display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-end;">
             <div style="display: flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
-              <span id="storageUsageDot" class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #888888; flex-shrink: 0; transition: background-color 0.3s ease;"></span>
               <span id="storageUsageText" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">Loading...</span>
-            </div>
-            <div id="storageCost" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.65rem; white-space: nowrap; opacity: 0.8;">
-              <span id="storageCostText">-</span>
+              <span id="storageUsageDot" class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #888888; flex-shrink: 0; transition: background-color 0.3s ease;"></span>
             </div>
           </div>
           
           <!-- Firestore Usage Indicator -->
           <div id="firestoreUsage" style="display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-end;">
             <div style="display: flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
-              <span id="firestoreUsageDot" class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #888888; flex-shrink: 0; transition: background-color 0.3s ease;"></span>
               <span id="firestoreUsageText" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">Loading...</span>
-            </div>
-            <div id="firestoreCost" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.65rem; white-space: nowrap; opacity: 0.8;">
-              <span id="firestoreCostText">-</span>
+              <span id="firestoreUsageDot" class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #888888; flex-shrink: 0; transition: background-color 0.3s ease;"></span>
             </div>
           </div>
           
@@ -1365,19 +1359,8 @@
             };
             usageElement.textContent = `${formatSize(usedMB)}/${formatSize(limitMB)}`;
             
-            // Store cost for total calculation
+            // Store cost for total calculation (hidden from UI)
             storageCost = storageCostValue;
-            
-            // Display cost (storage only, monthly estimate)
-            if (costElement) {
-              if (storageCost > 0) {
-                costElement.textContent = `~${storageInfo.cost}/mo`;
-                costElement.style.color = storageCost > 1 ? '#ef4444' : '#fbbf24';
-              } else {
-                costElement.textContent = 'Free';
-                costElement.style.color = '#10b981';
-              }
-            }
             
             // Color code based on usage percentage
             const percentage = storagePercentage;
@@ -1467,22 +1450,11 @@
           const firestorePercentage = firestoreData?.readsPercentage ?? data.readsPercentage;
           
           if (usageElement && dotElement && firestoreInfo) {
-            // Format: "328K/50K/day" (reads/limit)
-            usageElement.textContent = `Reads: ${firestoreInfo.readsDisplay}`;
+            // Format: "328K/50K" (reads/limit) - removed "Reads:" label
+            usageElement.textContent = firestoreInfo.readsDisplay;
             
-            // Store cost for total calculation
+            // Store cost for total calculation (hidden from UI)
             firestoreCost = firestoreCostValue;
-            
-            // Display cost (monthly estimate)
-            if (costElement) {
-              if (firestoreCost > 0) {
-                costElement.textContent = `~${firestoreInfo.cost}/mo`;
-                costElement.style.color = firestoreCost > 3 ? '#ef4444' : firestoreCost > 1 ? '#fbbf24' : '#10b981';
-              } else {
-                costElement.textContent = '';
-                costElement.style.color = '#10b981';
-              }
-            }
             
             // Color code based on reads percentage (reads are usually the main cost driver)
             const percentage = firestorePercentage;
