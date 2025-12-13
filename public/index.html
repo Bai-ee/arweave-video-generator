@@ -1320,25 +1320,33 @@
      */
     async function loadStorageUsage() {
       try {
-        const response = await fetch('/api/storage-usage');
+        const response = await fetch('/api/usage?type=storage');
         const data = await response.json();
         
-        if (data.success) {
+        // Handle new combined API response format
+        const storageData = data.storage || data;
+        
+        if (data.success || storageData) {
           const usageElement = document.getElementById('storageUsageText');
           const costElement = document.getElementById('storageCostText');
           const dotElement = document.getElementById('storageUsageDot');
           
-          if (usageElement && dotElement) {
+          // Use storageData if available (new format), otherwise use data (old format)
+          const storageInfo = storageData.formatted || data.formatted;
+          const storageCostValue = storageData?.estimatedStorageCost ?? data.estimatedStorageCost ?? 0;
+          const storagePercentage = storageData?.percentage ?? data.percentage;
+          
+          if (usageElement && dotElement && storageInfo) {
             // Format: "1232/1024MB" (used/free tier limit)
-            usageElement.textContent = data.formatted.display;
+            usageElement.textContent = storageInfo.display;
             
             // Store cost for total calculation
-            storageCost = data.estimatedStorageCost || 0;
+            storageCost = storageCostValue;
             
             // Display cost (storage only, monthly estimate)
             if (costElement) {
               if (storageCost > 0) {
-                costElement.textContent = `~${data.formatted.cost}/mo`;
+                costElement.textContent = `~${storageInfo.cost}/mo`;
                 costElement.style.color = storageCost > 1 ? '#ef4444' : '#fbbf24';
               } else {
                 costElement.textContent = 'Free';
@@ -1347,7 +1355,7 @@
             }
             
             // Color code based on usage percentage
-            const percentage = data.percentage;
+            const percentage = storagePercentage;
             let dotColor = '#888888'; // Default gray
             let textColor = 'var(--color-yellow-75)'; // Default yellow
             
@@ -1417,25 +1425,33 @@
      */
     async function loadFirestoreUsage() {
       try {
-        const response = await fetch('/api/firestore-usage');
+        const response = await fetch('/api/usage?type=firestore');
         const data = await response.json();
         
-        if (data.success) {
+        // Handle new combined API response format
+        const firestoreData = data.firestore || data;
+        
+        if (data.success || firestoreData) {
           const usageElement = document.getElementById('firestoreUsageText');
           const costElement = document.getElementById('firestoreCostText');
           const dotElement = document.getElementById('firestoreUsageDot');
           
-          if (usageElement && dotElement) {
+          // Use firestoreData if available (new format), otherwise use data (old format)
+          const firestoreInfo = firestoreData.formatted || data.formatted;
+          const firestoreCostValue = firestoreData?.estimatedTotalCost ?? data.estimatedTotalCost ?? 0;
+          const firestorePercentage = firestoreData?.readsPercentage ?? data.readsPercentage;
+          
+          if (usageElement && dotElement && firestoreInfo) {
             // Format: "328K/50K/day" (reads/limit)
-            usageElement.textContent = `Reads: ${data.formatted.readsDisplay}`;
+            usageElement.textContent = `Reads: ${firestoreInfo.readsDisplay}`;
             
             // Store cost for total calculation
-            firestoreCost = data.estimatedTotalCost || 0;
+            firestoreCost = firestoreCostValue;
             
             // Display cost (monthly estimate)
             if (costElement) {
               if (firestoreCost > 0) {
-                costElement.textContent = `~${data.formatted.cost}/mo`;
+                costElement.textContent = `~${firestoreInfo.cost}/mo`;
                 costElement.style.color = firestoreCost > 3 ? '#ef4444' : firestoreCost > 1 ? '#fbbf24' : '#10b981';
               } else {
                 costElement.textContent = 'Free';
@@ -1444,7 +1460,7 @@
             }
             
             // Color code based on reads percentage (reads are usually the main cost driver)
-            const percentage = data.readsPercentage;
+            const percentage = firestorePercentage;
             let dotColor = '#888888'; // Default gray
             let textColor = 'var(--color-yellow-75)'; // Default yellow
             

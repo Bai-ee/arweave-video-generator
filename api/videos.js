@@ -1,8 +1,9 @@
 /**
- * Vercel Serverless Function: Videos List Endpoint
- * GET /api/videos
+ * Vercel Serverless Function: Videos Endpoint
+ * GET /api/videos - Returns list of all completed videos
+ * GET /api/video-status/:jobId - Returns status of a specific video job
  * 
- * Returns list of all completed videos
+ * Handles both video listing and individual video status
  */
 
 import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
@@ -32,6 +33,15 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Check if this is a status request (has jobId in query or path)
+    const jobId = req.query.jobId || (req.url.includes('/video-status/') ? req.url.split('/video-status/')[1]?.split('?')[0] : null);
+    
+    // If jobId is provided, return status for that specific job
+    if (jobId) {
+      return await handleVideoStatus(req, res, jobId);
+    }
+
+    // Otherwise, return list of videos
     // Parse query parameters
     const limit = parseInt(req.query.limit) || 50;
 
@@ -198,6 +208,81 @@ export default async function handler(req, res) {
     return res.status(500).json({ 
       success: false,
       error: 'Failed to get videos list',
+      message: error.message 
+    });
+  } catch (error) {
+    console.error('[Videos] Error:', error.message);
+    console.error('[Videos] Stack:', error.stack);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Failed to get videos list',
+      message: error.message 
+    });
+  }
+}
+
+/**
+ * Handle video status request for a specific job
+ */
+async function handleVideoStatus(req, res, jobId) {
+  try {
+    // Initialize Firebase Admin and Firestore
+    initializeFirebaseAdmin();
+    const db = getFirestore();
+
+    // Try to get job document by jobId first
+    let jobDoc = await db.collection('videoJobs').doc(jobId).get();
+    
+    // If not found, try querying by jobId field (in case document ID is different)
+    if (!jobDoc.exists) {
+      console.log(`[Video Status] Document ${jobId} not found, querying by jobId field...`);
+      const querySnapshot = await db.collection('videoJobs')
+        .where('jobId', '==', jobId)
+        .limit(1)
+        .get();
+      
+      if (!querySnapshot.empty) {
+        jobDoc = querySnapshot.docs[0];
+        console.log(`[Video Status] Found job by jobId field, document ID: ${jobDoc.id}`);
+      }
+    }
+
+    if (!jobDoc.exists) {
+      return res.status(404).json({ 
+        error: 'Job not found',
+        message: `No job found with ID: ${jobId}`
+      });
+    }
+
+    const jobData = jobDoc.data();
+    
+    // Handle both old structure (status in metadata) and new structure (status at root)
+    const status = jobData.status || jobData.metadata?.status || 'pending';
+    
+    // Handle videoUrl in both root and metadata (for backwards compatibility)
+    const videoUrl = jobData.videoUrl || jobData.metadata?.videoUrl || null;
+    
+    console.log(`[Video Status] Job ${jobId} status: ${status}, videoUrl: ${videoUrl ? 'exists' : 'null'}`);
+
+    // Return job status
+    return res.status(200).json({
+      success: true,
+      jobId,
+      status: status,
+      artist: jobData.artist,
+      duration: jobData.duration,
+      videoUrl: videoUrl,
+      error: jobData.error || null,
+      createdAt: jobData.createdAt?.toDate?.()?.toISOString() || jobData.createdAt,
+      completedAt: jobData.completedAt?.toDate?.()?.toISOString() || jobData.completedAt,
+      metadata: jobData.metadata || {}
+    });
+
+  } catch (error) {
+    console.error('[Video Status] Error:', error.message);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Failed to get job status',
       message: error.message 
     });
   }

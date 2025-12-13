@@ -7,7 +7,11 @@
     },
     {
       "src": "/api/video-status",
-      "dest": "/api/video-status.js"
+      "dest": "/api/videos.js"
+    },
+    {
+      "src": "/api/video-status/(.*)",
+      "dest": "/api/videos.js"
     },
     {
       "src": "/api/videos",
@@ -58,6 +62,18 @@
       "dest": "/api/deploy-website.js"
     },
     {
+      "src": "/api/storage-usage",
+      "dest": "/api/usage.js"
+    },
+    {
+      "src": "/api/firestore-usage",
+      "dest": "/api/usage.js"
+    },
+    {
+      "src": "/api/usage",
+      "dest": "/api/usage.js"
+    },
+    {
       "src": "/website/(.*)",
       "dest": "/website/$1"
     },
@@ -69,9 +85,6 @@
   "functions": {
     "api/generate-video.js": {
       "maxDuration": 10
-    },
-    "api/video-status.js": {
-      "maxDuration": 5
     },
     "api/videos.js": {
       "maxDuration": 5
@@ -100,6 +113,9 @@
     "api/deploy-website.js": {
       "maxDuration": 300,
       "includeFiles": "website/**/*"
+    },
+    "api/usage.js": {
+      "maxDuration": 10
     }
   }
 }
