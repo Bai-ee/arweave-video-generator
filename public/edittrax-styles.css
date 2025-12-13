@@ -1267,6 +1267,8 @@ textarea {
   .videos-mobile-list {
     display: grid;
     gap: 0.75rem;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
 
   .videos-mobile {
