@@ -210,14 +210,6 @@ export default async function handler(req, res) {
       error: 'Failed to get videos list',
       message: error.message 
     });
-  } catch (error) {
-    console.error('[Videos] Error:', error.message);
-    console.error('[Videos] Stack:', error.stack);
-    return res.status(500).json({ 
-      success: false,
-      error: 'Failed to get videos list',
-      message: error.message 
-    });
   }
 }
 
