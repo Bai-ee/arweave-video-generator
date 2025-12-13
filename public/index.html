@@ -148,19 +148,19 @@
         <!-- System Health Status -->
         <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start;">
           <div id="statusArweave" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
-            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #888888;"></span>
             <span style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">ARWEAVE</span>
           </div>
           <div id="statusVideoGen" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
-            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #888888;"></span>
             <span style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">VIDEO GEN</span>
           </div>
           <div id="statusWebsite" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
-            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #888888;"></span>
             <span style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">WEBSITE</span>
           </div>
           <div id="statusStorage" class="status-indicator" style="display: flex; align-items: center; gap: 0.4rem;">
-            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #888888;"></span>
             <span style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap;">STORAGE</span>
           </div>
         </div>
@@ -1010,7 +1010,7 @@
     let videos = []; // Cached video list
 
     /**
-     * System Health Check
+     * System Health Check - checks actual API endpoints
      */
     async function checkSystemHealth() {
       const statuses = {
@@ -1020,37 +1020,24 @@
         storage: false
       };
 
-      try {
-        // Check Video Generation API
-        const videoGenResponse = await fetch('/api/videos', { method: 'HEAD' });
-        statuses.videoGen = videoGenResponse.ok;
-      } catch (e) {
-        console.warn('Video Gen check failed:', e);
-      }
+      // Check all endpoints in parallel for speed
+      const checks = await Promise.allSettled([
+        // Check Video Generation API (/api/videos)
+        fetch('/api/videos').then(r => r.ok),
+        // Check Arweave/Upload API (/api/upload with GET for cost estimation)
+        fetch('/api/upload?fileSize=1000').then(r => r.ok),
+        // Check Website deployment API (/api/deploy-website with OPTIONS)
+        fetch('/api/deploy-website', { method: 'OPTIONS' }).then(r => r.ok || r.status === 200),
+        // Check Artists/Storage API (/api/artists)
+        fetch('/api/artists').then(r => r.ok)
+      ]);
 
-      try {
-        // Check Arweave API
-        const arweaveResponse = await fetch('/api/archive-manifest', { method: 'HEAD' });
-        statuses.arweave = arweaveResponse.ok;
-      } catch (e) {
-        console.warn('Arweave check failed:', e);
-      }
+      statuses.videoGen = checks[0].status === 'fulfilled' && checks[0].value;
+      statuses.arweave = checks[1].status === 'fulfilled' && checks[1].value;
+      statuses.website = checks[2].status === 'fulfilled' && checks[2].value;
+      statuses.storage = checks[3].status === 'fulfilled' && checks[3].value;
 
-      try {
-        // Check Website deployment
-        const websiteResponse = await fetch('/api/website-sync', { method: 'HEAD' });
-        statuses.website = websiteResponse.ok;
-      } catch (e) {
-        console.warn('Website check failed:', e);
-      }
-
-      try {
-        // Check Storage (folders endpoint)
-        const storageResponse = await fetch('/api/folders', { method: 'HEAD' });
-        statuses.storage = storageResponse.ok;
-      } catch (e) {
-        console.warn('Storage check failed:', e);
-      }
+      console.log('[Health Check]', statuses);
 
       // Update UI
       updateStatusIndicator('statusVideoGen', statuses.videoGen);
@@ -1065,12 +1052,8 @@
       
       const dot = element.querySelector('.status-dot');
       if (dot) {
-        // Arweave indicator: RED when healthy (recording/live), others: GREEN when healthy
-        if (elementId === 'statusArweave') {
-          dot.style.background = isHealthy ? '#ef4444' : '#888888'; // Red when active, gray when down
-        } else {
-          dot.style.background = isHealthy ? '#10b981' : '#ef4444'; // Green when healthy, red when down
-        }
+        // All indicators: GREEN when healthy, RED when down
+        dot.style.background = isHealthy ? '#10b981' : '#ef4444';
       }
     }
 
