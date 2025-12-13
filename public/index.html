@@ -169,9 +169,12 @@
         <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
           <button 
             onclick="window.location.reload()"
-            style="padding: 0.5rem 1rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; cursor: pointer; font-family: var(--font-mathias); font-size: 0.7rem; font-weight: bold; transition: all 0.3s ease; white-space: nowrap; padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;"
-            onmouseover="this.style.background='var(--color-yellow-75)'; this.style.color='black';"
-            onmouseout="this.style.background='transparent'; this.style.color='var(--color-yellow-75)';"
+            class="btn-base btn-secondary"
+            style="padding: 0.5rem 1rem; font-size: 0.75rem; white-space: nowrap;"
+            onmouseover="this.style.opacity='0.9';"
+            onmouseout="this.style.opacity='1';"
+            onmousedown="this.style.opacity='0.8';"
+            onmouseup="this.style.opacity='1';"
           >
             REFRESH
           </button>
@@ -198,10 +201,6 @@
             </div>
           </div>
           
-          <!-- Total Cost Indicator -->
-          <div id="totalCost" style="display: flex; align-items: center; gap: 0.4rem; justify-content: flex-end; margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px solid rgba(230, 233, 224, 0.2);">
-            <span id="totalCostText" style="font-family: var(--font-mathias); color: var(--color-yellow-75); font-size: 0.7rem; white-space: nowrap; font-weight: bold;">Total: -</span>
-          </div>
         </div>
       </div>
       
@@ -1335,10 +1334,18 @@
           const storageInfo = storageData.formatted || data.formatted;
           const storageCostValue = storageData?.estimatedStorageCost ?? data.estimatedStorageCost ?? 0;
           const storagePercentage = storageData?.percentage ?? data.percentage;
+          const usedMB = storageData?.usedMB ?? data.usedMB ?? 0;
+          const limitMB = storageData?.limitMB ?? data.limitMB ?? 1024;
           
           if (usageElement && dotElement && storageInfo) {
-            // Format: "1232/1024MB" (used/free tier limit)
-            usageElement.textContent = storageInfo.display;
+            // Format storage display properly (e.g., "6.3GB/1GB" instead of "6469/1024MB")
+            const formatSize = (mb) => {
+              if (mb >= 1024) {
+                return `${(mb / 1024).toFixed(1)}GB`;
+              }
+              return `${Math.round(mb)}MB`;
+            };
+            usageElement.textContent = `${formatSize(usedMB)}/${formatSize(limitMB)}`;
             
             // Store cost for total calculation
             storageCost = storageCostValue;
@@ -1454,7 +1461,7 @@
                 costElement.textContent = `~${firestoreInfo.cost}/mo`;
                 costElement.style.color = firestoreCost > 3 ? '#ef4444' : firestoreCost > 1 ? '#fbbf24' : '#10b981';
               } else {
-                costElement.textContent = 'Free';
+                costElement.textContent = '';
                 costElement.style.color = '#10b981';
               }
             }
@@ -1526,30 +1533,11 @@
     }
 
     /**
-     * Update total cost indicator
+     * Update total cost indicator (removed - no longer displayed)
      */
     function updateTotalCost() {
-      const totalCostElement = document.getElementById('totalCostText');
-      if (!totalCostElement) return;
-      
-      const totalCost = storageCost + firestoreCost;
-      
-      if (totalCost > 0) {
-        const formattedCost = totalCost < 0.01 ? '$0.00' : `$${totalCost.toFixed(2)}`;
-        totalCostElement.textContent = `Total: ${formattedCost}/mo`;
-        
-        // Color code based on total cost
-        if (totalCost > 10) {
-          totalCostElement.style.color = '#ef4444'; // Red for high cost
-        } else if (totalCost > 5) {
-          totalCostElement.style.color = '#fbbf24'; // Yellow for moderate cost
-        } else {
-          totalCostElement.style.color = 'var(--color-yellow-75)'; // Default yellow
-        }
-      } else {
-        totalCostElement.textContent = 'Total: Free';
-        totalCostElement.style.color = '#10b981';
-      }
+      // Total cost display removed per user request
+      return;
     }
 
     /**
@@ -1653,8 +1641,8 @@
       }
       
       availableFolders.forEach(folderInfo => {
-        // Skip logos and paper_backgrounds folders (internal use only, not for user selection)
-        if (folderInfo.name === 'logos' || folderInfo.name === 'paper_backgrounds') {
+        // Skip logos, paper_backgrounds, and mixes/Baiee folders (internal use only, not for user selection)
+        if (folderInfo.name === 'logos' || folderInfo.name === 'paper_backgrounds' || folderInfo.name === 'mixes/Baiee' || folderInfo.name === 'mixes' || folderInfo.name.includes('Baiee')) {
           return;
         }
         
@@ -1664,46 +1652,27 @@
         const count = folderInfo.count || 0;
         const actualFolderName = folderInfo.name; // Use the actual folder name from API
         
-        const checkboxContainer = document.createElement('div');
-        checkboxContainer.className = 'folder-select-item selected';
-        
-        const label = document.createElement('label');
-        label.style.cssText = `
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
+        // Create folder item without checkbox - styled like other folder selection UI
+        const folderItem = document.createElement('div');
+        folderItem.className = 'folder-select-item selected';
+        folderItem.style.cssText = `
           cursor: pointer;
           width: 100%;
         `;
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.id = `folder-${folderName}`;
-        checkbox.value = actualFolderName;
-        checkbox.checked = true; // Default to all selected
-        checkbox.style.cssText = `
-          width: 20px;
-          height: 20px;
-          cursor: pointer;
-          accent-color: #10b981;
-        `;
         selectedFolders.add(actualFolderName);
         
-        checkbox.addEventListener('change', (e) => {
-          if (e.target.checked) {
-            selectedFolders.add(actualFolderName);
-            checkboxContainer.classList.remove('unselected');
-            checkboxContainer.classList.add('selected');
-          } else {
+        folderItem.addEventListener('click', () => {
+          if (selectedFolders.has(actualFolderName)) {
             selectedFolders.delete(actualFolderName);
-            checkboxContainer.classList.remove('selected');
-            checkboxContainer.classList.add('unselected');
+            folderItem.classList.remove('selected');
+            folderItem.classList.add('unselected');
+          } else {
+            selectedFolders.add(actualFolderName);
+            folderItem.classList.remove('unselected');
+            folderItem.classList.add('selected');
           }
           console.log(`✅ Selected folders:`, Array.from(selectedFolders));
         });
-        
-        const labelText = document.createElement('div');
-        labelText.style.cssText = `flex: 1;`;
         
         const folderNameDiv = document.createElement('div');
         folderNameDiv.className = 'folder-name';
@@ -1723,13 +1692,10 @@
         `;
         folderCountDiv.textContent = `${count} video${count !== 1 ? 's' : ''}`;
         
-        labelText.appendChild(folderNameDiv);
-        labelText.appendChild(folderCountDiv);
-        label.appendChild(checkbox);
-        label.appendChild(labelText);
-        checkboxContainer.appendChild(label);
+        folderItem.appendChild(folderNameDiv);
+        folderItem.appendChild(folderCountDiv);
         
-        container.appendChild(checkboxContainer);
+        container.appendChild(folderItem);
       });
       
       console.log(`✅ Populated ${availableFolders.length} folder checkboxes (all folders)`);

@@ -58,10 +58,17 @@ export default async function handler(req, res) {
         }
       });
       
-      // Convert to array and filter out image-only folders from video selection
+      // Convert to array and filter out image-only folders and mixes/Baiee from video selection
       // (but keep them for internal use)
       return Array.from(folderSet).filter(folderName => {
-        // Include all folders for discovery, but mark image folders
+        // Exclude image folders and mixes/Baiee folder
+        if (folderName === 'logos' || folderName === 'paper_backgrounds') {
+          return false;
+        }
+        // Exclude mixes/Baiee folder and any folder containing Baiee
+        if (folderName === 'mixes/Baiee' || folderName.includes('Baiee') || folderName === 'mixes') {
+          return false;
+        }
         return true;
       });
     }
