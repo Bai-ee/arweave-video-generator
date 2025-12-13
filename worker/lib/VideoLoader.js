@@ -365,21 +365,27 @@ export class VideoLoader {
                 if (normalizedSelectedFolders.length === 0) return true; // No filter = include all
                 
                 const normalizedFolderName = normalize(folderName);
-                // Simple exact match after normalization
-                const matches = normalizedSelectedFolders.includes(normalizedFolderName);
                 
-                // Also check if any selected folder matches the raw folder name (for exact matches)
+                // Check normalized match first
+                const normalizedMatch = normalizedSelectedFolders.includes(normalizedFolderName);
+                
+                // Also check if any selected folder (raw or normalized) matches
                 const rawMatch = selectedFolders.some(selected => {
                     const normalizedSelected = normalize(selected);
-                    return normalizedSelected === normalizedFolderName || selected === folderName;
+                    // Match if normalized names match, or if raw names match exactly
+                    return normalizedSelected === normalizedFolderName || 
+                           selected === folderName ||
+                           selected === normalizedFolderName ||
+                           normalizedSelected === folderName;
                 });
                 
-                const finalMatch = matches || rawMatch;
+                const finalMatch = normalizedMatch || rawMatch;
                 
                 if (finalMatch) {
                     console.log(`[VideoLoader] ✅ Folder "${folderName}" (normalized: "${normalizedFolderName}") matches selected folders: [${normalizedSelectedFolders.join(', ')}]`);
                 } else {
                     console.log(`[VideoLoader] ⏭️  Folder "${folderName}" (normalized: "${normalizedFolderName}") does NOT match selected folders: [${normalizedSelectedFolders.join(', ')}]`);
+                    console.log(`[VideoLoader]    Raw selected folders: [${selectedFolders.join(', ')}]`);
                 }
                 
                 return finalMatch;
