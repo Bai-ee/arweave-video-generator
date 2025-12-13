@@ -1684,26 +1684,40 @@
           if (selectedFolders.has(actualFolderName)) {
             selectedFolders.delete(actualFolderName);
             isSelected = false;
+            folderItem.setAttribute('data-selected', 'false');
             // Unselected: keep same styling but add visual indicator
             folderItem.style.opacity = '0.6';
             folderItem.style.borderColor = '#333';
+            // Clear any hover styles
+            folderItem.style.background = '';
+            folderItem.style.transform = '';
+            folderItem.style.boxShadow = '';
           } else {
             selectedFolders.add(actualFolderName);
             isSelected = true;
+            folderItem.setAttribute('data-selected', 'true');
             // Selected: restore full styling
             folderItem.style.opacity = '1';
             folderItem.style.borderColor = '#555';
+            // Clear any hover styles
+            folderItem.style.background = '';
+            folderItem.style.transform = '';
+            folderItem.style.boxShadow = '';
           }
           console.log(`✅ Selected folders:`, Array.from(selectedFolders));
         });
         
         // Add hover effect that works for both selected and unselected states
+        // Use data attribute to track state for CSS
+        folderItem.setAttribute('data-selected', isSelected ? 'true' : 'false');
+        
         folderItem.addEventListener('mouseenter', () => {
           if (isSelected) {
-            // Selected state hover - use CSS hover effect
+            // Selected state hover - apply hover styles
             folderItem.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
             folderItem.style.borderColor = '#10b981';
             folderItem.style.transform = 'scale(1.02)';
+            folderItem.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(16, 185, 129, 0.08), 0 0 15px rgba(16, 185, 129, 0.2)';
           } else {
             // Unselected state hover - lighter effect
             folderItem.style.opacity = '0.8';
@@ -1713,10 +1727,11 @@
         
         folderItem.addEventListener('mouseleave', () => {
           if (isSelected) {
-            // Restore selected state
+            // Restore selected state (remove inline styles to let CSS take over)
             folderItem.style.background = '';
-            folderItem.style.borderColor = '#555';
+            folderItem.style.borderColor = '';
             folderItem.style.transform = '';
+            folderItem.style.boxShadow = '';
           } else {
             // Restore unselected state
             folderItem.style.opacity = '0.6';
