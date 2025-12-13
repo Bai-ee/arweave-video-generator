@@ -344,11 +344,20 @@ export class VideoSegmentCompositor {
       isGrouped = true;
       
       // Build dynamic folder map from whatever folders are present
+      // Support both known folders and dynamically discovered folders (like 'rositas')
       folderMap = {};
-      const allFolderKeys = ['equipment', 'decks', 'skyline', 'chicago', 'neighborhood', 'artist', 'family'];
       
-      for (const key of allFolderKeys) {
-        if (videoPaths[key] !== undefined && Array.isArray(videoPaths[key])) {
+      // First, check known folder keys for backward compatibility
+      const knownFolderKeys = ['equipment', 'decks', 'skyline', 'chicago', 'neighborhood', 'artist', 'family'];
+      for (const key of knownFolderKeys) {
+        if (videoPaths[key] !== undefined && Array.isArray(videoPaths[key]) && videoPaths[key].length > 0) {
+          folderMap[key] = videoPaths[key];
+        }
+      }
+      
+      // Then, add any other folders that aren't in the known list (dynamic folders like 'rositas')
+      for (const key of Object.keys(videoPaths)) {
+        if (!knownFolderKeys.includes(key) && Array.isArray(videoPaths[key]) && videoPaths[key].length > 0) {
           folderMap[key] = videoPaths[key];
         }
       }
@@ -356,7 +365,9 @@ export class VideoSegmentCompositor {
       // Determine mode based on available folders
       // If we have more than just skyline/chicago, treat as track mode (equal distribution)
       const hasTrackFolders = folderMap.equipment || folderMap.decks || folderMap.neighborhood || folderMap.artist || folderMap.family;
-      isTrackMode = hasTrackFolders || Object.keys(folderMap).length > 2;
+      // Also treat as track mode if we have any dynamic folders (new user-created folders)
+      const hasDynamicFolders = Object.keys(folderMap).some(key => !knownFolderKeys.includes(key));
+      isTrackMode = hasTrackFolders || hasDynamicFolders || Object.keys(folderMap).length > 2;
       
       const total = Object.values(folderMap).reduce((sum, arr) => sum + arr.length, 0);
       if (total === 0) {
