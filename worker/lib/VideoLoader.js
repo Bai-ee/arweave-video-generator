@@ -357,6 +357,8 @@ export class VideoLoader {
             // Discover all folders dynamically
             const discoveredFolders = await discoverFolders();
             console.log(`[VideoLoader] 🔍 Discovered ${discoveredFolders.length} folders: [${discoveredFolders.join(', ')}]`);
+            console.log(`[VideoLoader] 📋 Selected folders (raw): [${selectedFolders.join(', ')}]`);
+            console.log(`[VideoLoader] 📋 Selected folders (normalized): [${normalizedSelectedFolders.join(', ')}]`);
             
             // Helper function to check if a folder should be included
             const shouldIncludeFolder = (folderName) => {
@@ -366,13 +368,21 @@ export class VideoLoader {
                 // Simple exact match after normalization
                 const matches = normalizedSelectedFolders.includes(normalizedFolderName);
                 
-                if (matches) {
+                // Also check if any selected folder matches the raw folder name (for exact matches)
+                const rawMatch = selectedFolders.some(selected => {
+                    const normalizedSelected = normalize(selected);
+                    return normalizedSelected === normalizedFolderName || selected === folderName;
+                });
+                
+                const finalMatch = matches || rawMatch;
+                
+                if (finalMatch) {
                     console.log(`[VideoLoader] ✅ Folder "${folderName}" (normalized: "${normalizedFolderName}") matches selected folders: [${normalizedSelectedFolders.join(', ')}]`);
                 } else {
                     console.log(`[VideoLoader] ⏭️  Folder "${folderName}" (normalized: "${normalizedFolderName}") does NOT match selected folders: [${normalizedSelectedFolders.join(', ')}]`);
                 }
                 
-                return matches;
+                return finalMatch;
             };
             
             // Initialize grouped structure dynamically (will add folders as we discover them)
@@ -397,14 +407,24 @@ export class VideoLoader {
                 // Get the Firebase Storage prefix path
                 const prefix = folderName + '/';
                 
-                console.log(`[VideoLoader] 📥 Loading videos from ${folderName} folder...`);
+                console.log(`[VideoLoader] 📥 Loading videos from ${folderName} folder (prefix: "${prefix}")...`);
                 const [fileList] = await bucket.getFiles({ prefix: prefix });
+                console.log(`[VideoLoader] 📁 Found ${fileList.length} total files in ${folderName} folder (before filtering)`);
+                
                 const filtered = fileList.filter(file => {
                     const fileName = file.name.toLowerCase();
-                    return videoExtensions.some(ext => fileName.endsWith(ext)) && !fileName.endsWith('.keep');
+                    const isVideo = videoExtensions.some(ext => fileName.endsWith(ext));
+                    const isKeep = fileName.endsWith('.keep');
+                    if (!isVideo && !isKeep) {
+                        console.log(`[VideoLoader] ⚠️  Skipping non-video file: ${file.name}`);
+                    }
+                    return isVideo && !isKeep;
                 });
                 
-                console.log(`[VideoLoader] Found ${filtered.length} videos in ${folderName} folder`);
+                console.log(`[VideoLoader] ✅ Found ${filtered.length} videos in ${folderName} folder`);
+                if (filtered.length > 0) {
+                    console.log(`[VideoLoader] 📹 Video files: ${filtered.slice(0, 5).map(f => f.name).join(', ')}${filtered.length > 5 ? '...' : ''}`);
+                }
                 
                 // Download and cache videos from this folder
                 const folderVideos = [];
