@@ -578,9 +578,12 @@ class ArweaveVideoGenerator {
                 console.log(`[ArweaveVideoGenerator] Step 3: Skipping serial_logo.png (custom top logo "${topLogo}" will be used instead)`);
             }
 
-            // Step 4: Add second logo at 40% down from top, appearing at 22 seconds (after fade starts, won't fade out)
-            console.log('[ArweaveVideoGenerator] Step 4: Loading second logo for 22s overlay from Firebase...');
-            const secondLogoStartTime = 22; // 22 seconds into video (same time fade starts, but logo won't fade)
+            // Step 4: Add top logo (custom selected or random)
+            // If custom top logo is selected, it replaces serial logo and appears from start
+            // If no top logo is selected (random), it appears at 22 seconds as an overlay
+            const hasCustomTopLogo = topLogo && topLogo.trim() !== '';
+            const topLogoStartTime = hasCustomTopLogo ? null : 22; // null = from start, 22 = at 22 seconds
+            console.log(`[ArweaveVideoGenerator] Step 4: Loading top logo from Firebase... (${hasCustomTopLogo ? 'custom selected, appears from start' : 'random, appears at 22s'})`);
             let secondLogoCachePath = null; // Declare outside try block for cleanup
             
             try {
@@ -607,7 +610,7 @@ class ArweaveVideoGenerator {
                 if (validLogos.length > 0) {
                     // Use selected logo or pick random
                     let selectedLogo;
-                    if (topLogo && topLogo.trim() !== '') {
+                    if (hasCustomTopLogo) {
                         // Find the selected logo by filename (case-insensitive comparison)
                         const topLogoLower = topLogo.toLowerCase().trim();
                         selectedLogo = validLogos.find(logo => {
@@ -629,12 +632,12 @@ class ArweaveVideoGenerator {
                     
                     const logoFileName = path.basename(selectedLogo.name);
                     
-                    console.log(`[ArweaveVideoGenerator] Selected second logo: ${logoFileName}${topLogo ? ' (user selected: ' + topLogo + ')' : ' (random)'}`);
+                    console.log(`[ArweaveVideoGenerator] Selected top logo: ${logoFileName}${hasCustomTopLogo ? ' (user selected: ' + topLogo + ')' : ' (random)'}`);
                     
                     // Download and cache logo using Firebase Admin SDK (works with private files)
                     await selectedLogo.download({ destination: secondLogoCachePath });
                     
-                    // Second logo: 30% width, maintain aspect ratio, centered horizontally
+                    // Top logo: 30% width, maintain aspect ratio, centered horizontally
                     const logoWidth = Math.round(width * 0.30); // 30% width
                     const logoHeight = Math.round(logoWidth * 1.0); // Will be adjusted by aspect ratio
                     // Center horizontally
@@ -642,27 +645,31 @@ class ArweaveVideoGenerator {
                     // Position at 40% down from top
                     const logoY = Math.round(height * 0.4); // 40% down from top
                     
-                    console.log(`[ArweaveVideoGenerator] ✅ Second logo downloaded: ${logoFileName}`);
-                    console.log(`[ArweaveVideoGenerator] Second logo size: ${logoWidth}x${logoHeight}, position: (${logoX}, ${logoY})`);
-                    console.log(`[ArweaveVideoGenerator] Second logo appears at: ${secondLogoStartTime}s (after fade starts, won't fade out)`);
-                    console.log(`[ArweaveVideoGenerator] Second logo z-index: 20 (above serial logo at 10)`);
+                    console.log(`[ArweaveVideoGenerator] ✅ Top logo downloaded: ${logoFileName}`);
+                    console.log(`[ArweaveVideoGenerator] Top logo size: ${logoWidth}x${logoHeight}, position: (${logoX}, ${logoY})`);
+                    console.log(`[ArweaveVideoGenerator] Top logo appears at: ${topLogoStartTime === null ? 'start (replaces serial logo)' : topLogoStartTime + 's (overlay)'}`);
+                    console.log(`[ArweaveVideoGenerator] Top logo z-index: 20`);
                     
-                    // Add second logo as timed overlay layer (appears at 22s, stays until end, won't fade)
-                    // Mark this layer to be added AFTER the fade filter so it doesn't fade out
-                    const secondLogoLayer = new LayerConfig(
+                    // Add top logo layer
+                    // If custom logo: appears from start (replaces serial logo), no timing
+                    // If random: appears at 22s as overlay, marked to add after fade
+                    const topLogoLayer = new LayerConfig(
                         'image',
                         secondLogoCachePath,
                         { x: logoX, y: logoY },
                         { width: logoWidth, height: logoHeight },
                         1.0, // Full opacity
-                        20, // z-index (above serial logo at 10, below text)
+                        20, // z-index
                         1.0, // scale
                         null, // no font path
-                        secondLogoStartTime, // start at 22 seconds
-                        duration - secondLogoStartTime // duration until end (8 seconds)
+                        topLogoStartTime, // null = from start, number = start time
+                        topLogoStartTime === null ? null : duration - topLogoStartTime // duration (null = full duration)
                     );
-                    secondLogoLayer.addAfterFade = true; // Mark to add after fade filter
-                    layers.push(secondLogoLayer);
+                    if (topLogoStartTime !== null) {
+                        // Only mark as "after fade" if it appears at 22s (random overlay)
+                        topLogoLayer.addAfterFade = true;
+                    }
+                    layers.push(topLogoLayer);
                 } else {
                     console.warn(`[ArweaveVideoGenerator] ⚠️ No valid logos found for second logo overlay`);
                 }
