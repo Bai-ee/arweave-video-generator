@@ -71,6 +71,10 @@ export default async function handler(req, res) {
         if (folderName === 'mixes') {
           return false;
         }
+        // Exclude Videos folder
+        if (folderNameLower === 'videos') {
+          return false;
+        }
         // Exclude exact matches for mixes/Baiee (but allow retro_dust, noise, grit, etc.)
         if (folderNameLower === 'mixes/baiee' || folderNameLower === 'mixes/bai-ee') {
           return false;

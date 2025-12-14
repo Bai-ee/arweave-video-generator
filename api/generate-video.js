@@ -70,6 +70,7 @@ export default async function handler(req, res) {
       'mixes',  // Exclude top-level mixes folder
       'mixes/baiee',  // Exact match only
       'mixes/bai-ee',  // Exact match only (case variations)
+      'videos',  // Exclude Videos folder
     ];
     const invalidFolders = normalizedFolders.filter(f => {
       const folderLower = f.toLowerCase().trim();
