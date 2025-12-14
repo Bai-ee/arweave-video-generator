@@ -527,48 +527,55 @@ class ArweaveVideoGenerator {
             }
 
             // Step 3: Load serial_logo.png from Firebase Storage and add to center
-            console.log('[ArweaveVideoGenerator] Step 3: Loading serial_logo.png from Firebase...');
+            // Only load serial logo if no custom top logo is selected (serial logo is the default)
             const layers = [];
             let serialLogoCachePath = null; // Declare outside try block for cleanup
             
-            try {
-                // Load serial_logo.png from Firebase Storage
-                const { getStorage } = await import('../firebase-admin.js');
-                const storage = getStorage();
-                const bucket = storage.bucket();
-                const logoStoragePath = 'logos/serial_logo.png';
+            if (!topLogo) {
+                // No custom top logo selected, use serial logo as default
+                console.log('[ArweaveVideoGenerator] Step 3: Loading serial_logo.png from Firebase (default logo, no custom top logo selected)...');
                 
-                console.log(`[ArweaveVideoGenerator] Downloading serial_logo.png from Firebase...`);
-                
-                // Download and cache logo using Firebase Admin SDK (works with private files)
-                serialLogoCachePath = path.join(this.cacheDir, `serial_logo_${Date.now()}.png`);
-                const serialLogoFile = bucket.file(logoStoragePath);
-                await serialLogoFile.download({ destination: serialLogoCachePath });
-                
-                console.log(`[ArweaveVideoGenerator] ✅ Serial logo cached`);
-                
-                // Add serial logo at 100% width, centered vertically and horizontally
-                // The logo will be scaled to 100% width, maintaining aspect ratio
-                const logoWidth = width; // 100% width
-                const logoHeight = height; // Full height (will maintain aspect ratio via FFmpeg scale filter)
-                const logoX = 0; // Start at left edge (100% width fills entire canvas)
-                const logoY = Math.round((height - logoHeight) / 2); // Center vertically (will be adjusted by aspect ratio)
-                
-                layers.push(new LayerConfig(
-                    'image',
-                    serialLogoCachePath,
-                    { x: logoX, y: logoY },
-                    { width: logoWidth, height: logoHeight },
-                    1.0, // Full opacity
-                    10, // z-index (above video background)
-                    1.0 // scale
-                ));
-                
-                console.log(`[ArweaveVideoGenerator] Serial logo: ${logoWidth}x${logoHeight} (100% width), centered`);
-            } catch (error) {
-                console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load serial_logo.png:`, error.message);
-                serialLogoCachePath = null; // Clear if failed
-                // Continue without logo if it fails
+                try {
+                    // Load serial_logo.png from Firebase Storage
+                    const { getStorage } = await import('../firebase-admin.js');
+                    const storage = getStorage();
+                    const bucket = storage.bucket();
+                    const logoStoragePath = 'logos/serial_logo.png';
+                    
+                    console.log(`[ArweaveVideoGenerator] Downloading serial_logo.png from Firebase...`);
+                    
+                    // Download and cache logo using Firebase Admin SDK (works with private files)
+                    serialLogoCachePath = path.join(this.cacheDir, `serial_logo_${Date.now()}.png`);
+                    const serialLogoFile = bucket.file(logoStoragePath);
+                    await serialLogoFile.download({ destination: serialLogoCachePath });
+                    
+                    console.log(`[ArweaveVideoGenerator] ✅ Serial logo cached`);
+                    
+                    // Add serial logo at 100% width, centered vertically and horizontally
+                    // The logo will be scaled to 100% width, maintaining aspect ratio
+                    const logoWidth = width; // 100% width
+                    const logoHeight = height; // Full height (will maintain aspect ratio via FFmpeg scale filter)
+                    const logoX = 0; // Start at left edge (100% width fills entire canvas)
+                    const logoY = Math.round((height - logoHeight) / 2); // Center vertically (will be adjusted by aspect ratio)
+                    
+                    layers.push(new LayerConfig(
+                        'image',
+                        serialLogoCachePath,
+                        { x: logoX, y: logoY },
+                        { width: logoWidth, height: logoHeight },
+                        1.0, // Full opacity
+                        10, // z-index (above video background)
+                        1.0 // scale
+                    ));
+                    
+                    console.log(`[ArweaveVideoGenerator] Serial logo: ${logoWidth}x${logoHeight} (100% width), centered`);
+                } catch (error) {
+                    console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load serial_logo.png:`, error.message);
+                    serialLogoCachePath = null; // Clear if failed
+                    // Continue without logo if it fails
+                }
+            } else {
+                console.log(`[ArweaveVideoGenerator] Step 3: Skipping serial_logo.png (custom top logo "${topLogo}" will be used instead)`);
             }
 
             // Step 4: Add second logo at 40% down from top, appearing at 22 seconds (after fade starts, won't fade out)
@@ -920,7 +927,13 @@ class ArweaveVideoGenerator {
 
             // Create composition config with filter
             console.log(`[ArweaveVideoGenerator] 🎨 Video filter received: ${videoFilter ? `"${videoFilter.substring(0, 100)}..."` : 'null (will use default B&W)'}`);
-            console.log(`[ArweaveVideoGenerator] 📊 Layers count: ${layers.length} (serial_logo + second_logo + artist_text${logoCachePath ? ' + end_logo' : ''})`);
+            const layerDescription = [
+                serialLogoCachePath ? 'serial_logo' : null,
+                secondLogoCachePath ? 'top_logo' : null,
+                'artist_text',
+                logoCachePath ? 'end_logo' : null
+            ].filter(Boolean).join(' + ');
+            console.log(`[ArweaveVideoGenerator] 📊 Layers count: ${layers.length} (${layerDescription})`);
             
             const compositionConfig = new CompositionConfig(
                 backgroundPath,
