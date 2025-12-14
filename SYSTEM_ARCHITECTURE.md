@@ -115,9 +115,11 @@ The Arweave Video Generator is a production-ready system that creates branded mu
 - Aggregates data from `videoJobs` and `videos` collections
 
 #### `video-folders.js`
-- Lists available folders in Firebase Storage
+- **Dynamically discovers** all folders in Firebase Storage (no hardcoded list)
 - Returns folder counts and file lists
 - Generates signed URLs for video access (CORS-compliant)
+- Supports any user-created folders (e.g., 'rositas', 'retro_dust', 'noise')
+- Excludes only: `logos`, `paper_backgrounds`, `mixes/Baiee` (exact matches)
 
 #### `upload-video.js`
 - Optimizes videos uploaded to Firebase Storage
@@ -155,20 +157,25 @@ The Arweave Video Generator is a production-ready system that creates branded mu
 - Uses `VideoCompositor` to add overlays
 
 #### `lib/VideoLoader.js`
-**Video Loading and Caching**:
-- `loadAllSkylineVideos(returnGrouped, selectedFolders)` - For MIXES
-- `loadTrackVideoReferences(returnGrouped, selectedFolders)` - For TRACKS
-- Downloads videos from Firebase Storage
+**Video Loading and Dynamic Discovery**:
+- `loadAllSkylineVideos(returnGrouped, selectedFolders)` - For MIXES (downloads and caches)
+- `loadTrackVideoReferences(returnGrouped, selectedFolders)` - For TRACKS/MIXES (returns file references)
+- **Dynamically discovers folders** from Firebase Storage (no hardcoded folderMap)
+- Supports any user-created folders automatically
+- Downloads videos from Firebase Storage (for MIXES mode)
 - Caches videos locally for reuse
 - Returns grouped structure: `{ folder1: [...], folder2: [...] }`
+- **Key Feature**: Works with new folders like 'rositas' without code changes
 
 #### `lib/VideoSegmentCompositor.js`
 **Segment Extraction and Concatenation**:
 - Extracts 5-second segments from videos
+- **Supports dynamic folder keys** (not just hardcoded folders like 'equipment', 'decks')
 - Distributes segments across selected folders
 - Concatenates segments into final background video
 - Uses FFmpeg `filter_complex` for robust concatenation
 - Validates segments (skips corrupted/empty files)
+- **Key Feature**: Processes any folder in `videoPaths` object, not just known folders
 
 #### `lib/VideoCompositor.js`
 **Final Video Composition**:
@@ -184,6 +191,14 @@ The Arweave Video Generator is a production-ready system that creates branded mu
 - Supports both MIXES and TRACKS
 - Extracts segments of specified duration
 - Returns audio file path and metadata
+
+#### `lib/ArNSUpdater.js`
+**ArNS (Arweave Name System) Integration**:
+- Updates ArNS records to point to deployment manifest IDs
+- Uses `@ar.io/sdk` ANT (Arweave Name Token) SDK
+- Parses wallet JWK from environment variables
+- Returns ArNS URL (e.g., `https://undergroundexistence.ar.io`)
+- Non-blocking: deployment succeeds even if ArNS update fails
 
 #### `lib/ArweaveUploader.js`
 **Arweave Integration**:
@@ -273,21 +288,35 @@ arweave-video-generator/
 
 ## Firebase Storage Structure
 
+**Important**: Folder structure is **dynamically discovered**. The system supports **any folder** created by users.
+
 ```
 Firebase Storage:
 ├── videos/                 # Generated videos
 │   └── {jobId}.mp4
-├── skyline/                # Skyline video clips
-├── decks/                  # DJ decks video clips
-├── equipment/              # Equipment video clips
-├── neighborhood/           # Neighborhood video clips
-├── artist/                 # Artist video clips
-├── family/                 # Family video clips
+├── skyline/                # Skyline video clips (user uploads)
+├── decks/                  # DJ decks video clips (user uploads)
+├── equipment/              # Equipment video clips (user uploads)
+├── neighborhood/           # Neighborhood video clips (user uploads)
+├── artist/                 # Artist video clips (user uploads)
+├── family/                 # Family video clips (user uploads)
 ├── assets/
-│   └── chicago-skyline-videos/  # Chicago skyline videos
-├── logos/                  # Logo images
-└── paper_backgrounds/       # Paper texture images
+│   ├── chicago-skyline-videos/  # Chicago skyline videos (pre-generated)
+│   ├── analog_film/        # Overlay videos
+│   ├── gritt/              # Overlay videos
+│   ├── noise/              # Overlay videos
+│   └── retro_dust/         # Overlay videos
+├── logos/                  # Logo images (excluded from video selection)
+├── paper_backgrounds/      # Paper texture images (excluded from video selection)
+└── {any-new-folder}/       # User-created folders (dynamically discovered)
+    └── user_upload_*.mov   # User-uploaded videos
 ```
+
+**Dynamic Discovery**:
+- System automatically finds all folders by listing files
+- No hardcoded folder lists in code
+- New folders appear automatically in selection UI
+- Only excludes: `logos`, `paper_backgrounds`, `mixes/Baiee` (exact matches)
 
 ## Firestore Collections
 
@@ -338,14 +367,13 @@ Firebase Storage:
 ## Environment Variables
 
 ### Vercel
-- `FIREBASE_SERVICE_ACCOUNT_KEY`: Firebase service account JSON (stringified)
-- `FIREBASE_STORAGE_BUCKET`: Firebase Storage bucket name
-- `GITHUB_TOKEN`: GitHub personal access token (for webhook triggers)
-- `GITHUB_REPO`: GitHub repository (owner/repo format)
-- `ARWEAVE_WALLET_JWK`: Arweave wallet JSON (stringified)
-- `ARWEAVE_WALLET_ADDRESS`: Arweave wallet address
-- `ARWEAVE_DRIVE_ID`: ArDrive drive ID (optional)
-- `ARWEAVE_FOLDER_ID`: ArDrive folder ID (optional)
+- `FIREBASE_SERVICE_ACCOUNT_KEY`: Firebase service account JSON (stringified, required)
+- `FIREBASE_STORAGE_BUCKET`: Firebase Storage bucket name (required)
+- `GITHUB_TOKEN`: GitHub personal access token (for webhook triggers, optional)
+- `GITHUB_REPO`: GitHub repository (owner/repo format, optional)
+- `ARWEAVE_WALLET_JWK`: Arweave wallet JSON (stringified, required for ArNS and archive)
+- `ARNS_ANT_PROCESS_ID`: ArNS ANT process ID (required for ArNS updates)
+- `ARNS_NAME`: ArNS domain name (default: 'undergroundexistence', optional)
 - `OPENAI_API_KEY`: OpenAI API key (for DALL-E fallback, optional)
 
 ### GitHub Actions
@@ -391,5 +419,61 @@ Firebase Storage:
 - **GitHub Actions**: Workflow logs available in Actions tab
 - **Firebase**: Firestore and Storage operations logged in Firebase Console
 - **Error Handling**: Errors logged to console, job status updated in Firestore
+- **Usage Indicators**: Real-time Firebase Storage and Firestore usage displayed in UI
+
+## Key Architectural Decisions
+
+### 1. Dynamic Folder Discovery
+**Decision**: System discovers folders dynamically instead of hardcoding folder lists.
+
+**Why**: 
+- Users can create new folders on-the-fly
+- No code changes needed for new folders
+- Future-proof and scalable
+
+**Implementation**:
+- `api/video-folders.js`: Lists all files, extracts unique folder names
+- `worker/lib/VideoLoader.js`: Uses dynamic discovery in both `loadTrackVideoReferences()` and `loadAllSkylineVideos()`
+- `worker/lib/VideoSegmentCompositor.js`: Processes any folder key in `videoPaths` object
+
+**⚠️ CRITICAL**: Never add hardcoded folder lists. Always use dynamic discovery.
+
+### 2. Combined API Endpoints
+**Decision**: Combined related endpoints to fit Vercel Hobby plan (12 function limit).
+
+**Why**:
+- Vercel Hobby plan allows only 12 serverless functions
+- We're at the limit, so new endpoints must be combined
+
+**Examples**:
+- `usage.js` handles `/api/usage`, `/api/storage-usage`, `/api/firestore-usage`
+- `videos.js` handles `/api/videos` and `/api/video-status`
+- `deploy-website.js` handles `/api/deploy-website` and `/api/update-website`
+
+**⚠️ CRITICAL**: Before adding new API endpoint, check function count and combine if possible.
+
+### 3. Non-Blocking ArNS Updates
+**Decision**: ArNS updates are non-blocking - deployment succeeds even if ArNS update fails.
+
+**Why**:
+- ArNS updates may take time to propagate
+- Should not block website deployment
+- User can manually update if needed
+
+**Implementation**:
+- `lib/ArNSUpdater.js` catches errors and returns success/failure
+- `api/deploy-website.js` logs warning but doesn't throw error
+
+### 4. System FFmpeg in GitHub Actions
+**Decision**: Use system FFmpeg (apt-get install) instead of ffmpeg-static package.
+
+**Why**:
+- `ffmpeg-static` has limited filters (missing `drawtext`)
+- System FFmpeg has all filters
+- More reliable for production
+
+**Implementation**:
+- GitHub Actions workflow installs FFmpeg via `apt-get`
+- Code detects `GITHUB_ACTIONS` environment and uses system FFmpeg
 
 

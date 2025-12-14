@@ -111,13 +111,18 @@ arweave-video-generator/
 **Caching**: Images cached in `outputs/image-cache/` to avoid re-downloads
 
 ### 5. VideoLoader (`worker/lib/VideoLoader.js`)
-**Role**: Downloads and caches videos from Firebase Storage
+**Role**: Downloads and caches videos from Firebase Storage with **dynamic folder discovery**
 
 **Key Methods**:
-- `loadFromURL(url)` - Downloads from Firebase Storage URL
-- `loadRandomFromFolder(folderPath)` - Random selection from local folder
+- `loadTrackVideoReferences(returnGrouped, selectedFolders)` - Returns file references (for TRACKS/MIXES)
+- `loadAllSkylineVideos(returnGrouped, selectedFolders)` - Downloads and caches videos (for MIXES)
+- **Dynamic folder discovery**: Discovers all folders from Firebase Storage (no hardcoded folderMap)
+
+**⚠️ CRITICAL**: Both methods use dynamic folder discovery. Never add hardcoded folder lists.
 
 **Caching**: Videos cached in `outputs/video-cache/` to avoid re-downloads
+
+**Returns**: Grouped structure `{ folder1: [...], folder2: [...] }` or flat array
 
 ### 6. VideoCompositor (`worker/lib/VideoCompositor.js`)
 **Role**: Composes final video using FFmpeg filter_complex
@@ -564,65 +569,92 @@ buildFilterComplex(config) {
 
 **Common Mistake**: Adding debug logging and accidentally redeclaring variables. Always check if a variable already exists before declaring it.
 
-### 12. **Video Segment Composition from Multiple Sources**
+### 12. **Dynamic Folder Discovery**
 
-#### Problem: Creating 30-second videos from 5-second segments fails
+#### Problem: New folders created by users don't work
 ```javascript
-// ❌ BAD: Not handling video loading from multiple Firebase folders
-const videos = await loadVideosFromFolder('skyline');  // Only one folder
+// ❌ BAD: Hardcoded folder list
+const folderMap = {
+  'equipment': 'equipment',
+  'decks': 'decks',
+  'skyline': 'skyline',
+  // Missing new folders like 'rositas'!
+};
 ```
 
-#### Solution: Load from Multiple Folders and Combine
+#### Solution: Use Dynamic Folder Discovery
 ```javascript
-// ✅ GOOD: Load from multiple Firebase Storage folders
-async loadAllSkylineVideos() {
-    const videos = [];
-    
-    // Load from skyline folder (user uploads)
-    const skylineVideos = await this.getAllVideosInFolder('skyline');
-    videos.push(...skylineVideos);
-    
-    // Load from chicago-skyline-videos folder (existing assets)
-    const chicagoVideos = await this.getAllVideosInFolder('assets/chicago-skyline-videos');
-    videos.push(...chicagoVideos);
-    
-    // Download and cache all videos
-    const cachedPaths = await Promise.all(
-        videos.map(v => this.loadFromURL(v.publicUrl))
-    );
-    
-    return cachedPaths.filter(Boolean);
+// ✅ GOOD: Discover folders dynamically
+async discoverFolders() {
+  const [files] = await bucket.getFiles();
+  const folderSet = new Set();
+  
+  files.forEach(file => {
+    const parts = file.name.split('/');
+    if (parts.length > 1) {
+      const folderName = parts[0];
+      if (folderName && !this.isExcluded(folderName)) {
+        folderSet.add(folderName);
+      }
+    }
+  });
+  
+  return Array.from(folderSet);
 }
 ```
 
-**Best Practice**: When combining videos from multiple sources, always:
-1. Load from all relevant folders
-2. Cache downloads locally
-3. Handle missing videos gracefully
-4. Use random selection for variety
+**Best Practice**: Always use dynamic folder discovery:
+1. List all files in Firebase Storage
+2. Extract unique folder names
+3. Filter excluded folders (exact matches only)
+4. Return discovered folders
 
-### 13. **Firebase Storage Folder Structure**
+**⚠️ CRITICAL**: Never add hardcoded folder lists. System must support any user-created folder.
 
-#### Problem: Videos uploaded but not accessible or organized
+### 13. **VideoSegmentCompositor Dynamic Folder Support**
+
+#### Problem: New folders not processed during video generation
 ```javascript
-// ❌ BAD: No folder structure, everything in root
-await bucket.upload(file, { destination: fileName });
+// ❌ BAD: Only check known folders
+const knownFolders = ['equipment', 'decks', 'skyline'];
+for (const key of knownFolders) {
+  if (videoPaths[key]) {
+    folderMap[key] = videoPaths[key];
+  }
+}
+// Missing 'rositas' and other new folders!
 ```
 
-#### Solution: Use Organized Folder Structure
+#### Solution: Check All Keys in videoPaths Object
 ```javascript
-// ✅ GOOD: Organize by folder type
-const folders = ['skyline', 'artist', 'decks', 'equipment', 'family', 'neighborhood'];
-const folderPath = `${selectedFolder}/${fileName}`;
-
-await bucket.upload(file, {
-    destination: folderPath,
-    metadata: { contentType: 'video/mp4' },
-    public: true
-});
+// ✅ GOOD: Process all folder keys
+if (videoPaths && typeof videoPaths === 'object' && !Array.isArray(videoPaths)) {
+  folderMap = {};
+  const knownFolderKeys = ['equipment', 'decks', 'skyline', ...];
+  
+  // First, populate known folders (for backward compatibility)
+  for (const key of knownFolderKeys) {
+    if (videoPaths[key]) {
+      folderMap[key] = videoPaths[key];
+    }
+  }
+  
+  // Then, add any other dynamic folders
+  for (const key of Object.keys(videoPaths)) {
+    if (!knownFolderKeys.includes(key) && Array.isArray(videoPaths[key]) && videoPaths[key].length > 0) {
+      folderMap[key] = videoPaths[key]; // Add dynamic folders
+    }
+  }
+}
 ```
 
-**Folder Organization**:
+**Best Practice**: Always check all keys in `videoPaths` object, not just known folders.
+
+### 14. **Firebase Storage Folder Structure**
+
+**Important**: Folder structure is **dynamically discovered**. System supports **any folder** created by users.
+
+**Common Folders** (automatically discovered):
 - `skyline/` - User-uploaded skyline videos
 - `artist/` - Artist-related videos
 - `decks/` - DJ equipment videos
@@ -630,12 +662,20 @@ await bucket.upload(file, {
 - `family/` - Personal/family videos
 - `neighborhood/` - Neighborhood/community videos
 - `assets/chicago-skyline-videos/` - Pre-generated Chicago skyline videos
+- `{any-new-folder}/` - User-created folders (e.g., 'rositas', 'retro_dust', 'noise')
 
-**Security**: Update Firebase Storage rules to allow writes to specific folders only.
+**Security**: Firebase Storage rules allow dynamic folder creation (excluding `logos`, `paper_backgrounds`, `assets`).
 
 ---
 
 ## 🚀 Adding New Features
+
+### ⚠️ CRITICAL: Before Adding Features
+
+1. **Check API Function Count**: Must be ≤ 12 (Vercel Hobby plan limit)
+2. **Verify Dynamic Folder Discovery**: New features must support dynamic folders
+3. **Test Locally**: Always test before pushing
+4. **Read FUTURE_PROOFING.md**: Follow guidelines to avoid breaking existing features
 
 ### How to Add a New Image Source
 
@@ -712,34 +752,36 @@ generateTextLayers(artist, mixTitle, width, height) {
 
 ### How to Add a New Background Type
 
-1. **Add Detection Logic**
+**✅ No Code Changes Needed for New Folders!**
+
+1. **Upload Videos to Firebase Storage**
+   - Create new folder (e.g., 'ocean-videos')
+   - Upload videos to that folder
+   - Folder automatically appears in selection UI
+
+2. **Use Dynamic Folder Discovery**
+   - System automatically discovers new folder
+   - No code changes needed
+   - Works with any folder name
+
+**If You Need Custom Detection Logic**:
 ```javascript
 // worker/lib/ArweaveVideoGenerator.js
 // In generateVideoWithAudio(), Step 2:
 if (prompt && prompt.toLowerCase().includes('ocean')) {
-    // Try to load ocean video background
-    const oceanVideo = await this.videoLoader.loadRandomVideoFromFolder(
-        path.join(process.cwd(), 'assets', 'ocean-videos')
+    // Try to load ocean video background from Firebase
+    // VideoLoader automatically discovers 'ocean-videos' folder
+    const oceanVideos = await this.videoLoader.loadAllSkylineVideos(
+        true, // returnGrouped
+        ['ocean-videos'] // selectedFolders
     );
-    if (oceanVideo) {
-        backgroundPath = oceanVideo.path;
+    if (oceanVideos && oceanVideos['ocean-videos'] && oceanVideos['ocean-videos'].length > 0) {
+        // Use ocean videos
     }
 }
 ```
 
-2. **Upload Videos to Firebase**
-```bash
-# Create upload script
-node scripts/upload-ocean-videos.js
-```
-
-3. **Update VideoLoader**
-```javascript
-// worker/lib/VideoLoader.js
-async loadRandomVideoFromFolder(folderPath) {
-    // Works for any folder - no changes needed!
-}
-```
+**⚠️ Important**: Don't add hardcoded folder paths. Use dynamic folder discovery instead.
 
 ### How to Modify FFmpeg Filters
 

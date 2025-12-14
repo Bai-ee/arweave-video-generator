@@ -85,16 +85,12 @@ This document describes all features of the Arweave Video Generator system, thei
 - **Frontend**: `selectedFolders` Set tracks selected folder names
 - **Validation**: Frontend checks `selectedFolders.size > 0` before submission
 
-**Available Folders**:
-- `skyline` - Skyline video clips
-- `artist` - Artist video clips
-- `decks` - DJ decks video clips
-- `equipment` - Equipment video clips
-- `family` - Family video clips
-- `neighborhood` - Neighborhood video clips
-- `assets/chicago-skyline-videos` - Chicago skyline videos
-- `logos` - Logo images (for overlays)
-- `paper_backgrounds` - Paper texture images (for overlays)
+**Available Folders** (Dynamically Discovered):
+- System automatically discovers **all folders** in Firebase Storage
+- Supports **any user-created folder** (e.g., 'rositas', 'retro_dust', 'noise', 'grit')
+- Common folders: `skyline`, `artist`, `decks`, `equipment`, `family`, `neighborhood`, `assets/chicago-skyline-videos`
+- Excluded folders: `logos`, `paper_backgrounds`, `mixes/Baiee` (exact matches only)
+- **Default auto-selected**: `chicago-skyline-videos`, `skyline`, `neighborhood`
 
 **Verification**:
 - ✅ Folders load from API endpoint
@@ -249,7 +245,122 @@ This document describes all features of the Arweave Video Generator system, thei
 
 ## Additional Features
 
-### Video Filter Application ✅
+### 7. Dynamic Folder Discovery ✅
+
+**Status**: ✅ Production Ready
+
+**Description**: System automatically discovers all folders in Firebase Storage - no hardcoded folder lists.
+
+**How It Works**:
+- Lists all files in Firebase Storage bucket
+- Extracts unique folder names from file paths
+- Supports nested folders (e.g., `assets/chicago-skyline-videos`)
+- Excludes only specific folders (exact matches): `logos`, `paper_backgrounds`, `mixes/Baiee`
+
+**Key Benefit**: Users can create new folders (e.g., 'rositas', 'retro_dust') and they automatically work without code changes.
+
+**Technical Details**:
+- **API**: `api/video-folders.js` - `discoverFolders()` function
+- **Worker**: `worker/lib/VideoLoader.js` - Both methods use dynamic discovery
+- **Compositor**: `worker/lib/VideoSegmentCompositor.js` - Supports any folder key
+
+### 8. New Folder Creation During Upload ✅
+
+**Status**: ✅ Production Ready
+
+**Description**: Users can create new folders when uploading videos/images.
+
+**How It Works**:
+- Radio buttons: "Existing Folder" or "New Folder"
+- New folder name is sanitized (lowercase, hyphens for spaces)
+- Folder automatically appears in selection UI after creation
+- Firebase Storage rules allow dynamic folder creation
+
+**Usage**:
+1. Click "UPLOAD VIDEO" button
+2. Select "New Folder" radio button
+3. Enter folder name (e.g., "my-videos")
+4. Select files and upload
+5. New folder appears in folder selection UI automatically
+
+**Technical Details**:
+- **Storage Rules**: Allow writes to any new folder (excluding `logos`, `paper_backgrounds`, `assets`)
+- **Frontend**: `handleVideoUpload()` handles new folder creation
+- **API**: No API call needed - direct Firebase Storage upload
+
+### 9. ArNS Integration ✅
+
+**Status**: ✅ Production Ready
+
+**Description**: Automatic ArNS (Arweave Name System) domain updates after website deployment.
+
+**How It Works**:
+- After successful website deployment, automatically updates ArNS record
+- Points `undergroundexistence.ar.io` to new manifest ID
+- Uses `@ar.io/sdk` ANT (Arweave Name Token) SDK
+- Non-blocking: deployment succeeds even if ArNS update fails
+
+**Usage**:
+- Automatic after website deployment
+- ArNS URL displayed in deployment success modal
+- Propagation time: 5-60 minutes
+
+**Technical Details**:
+- **Module**: `lib/ArNSUpdater.js`
+- **API Integration**: `api/deploy-website.js` calls `updateArNSRecord()`
+- **Environment Variables**: `ARNS_ANT_PROCESS_ID`, `ARNS_NAME`, `ARWEAVE_WALLET_JWK`
+- **Response**: Returns ArNS URL (`https://undergroundexistence.ar.io`)
+
+### 10. Firebase Usage Indicators ✅
+
+**Status**: ✅ Production Ready
+
+**Description**: Real-time Firebase Storage and Firestore usage tracking with cost estimates.
+
+**Features**:
+- **Storage Usage**: Shows `6.4GB/1.0GB` format (auto-converts to GB when >1GB)
+- **Firestore Usage**: Shows `1.0K/50.0K` format (reads per day)
+- **Status Dots**: Color-coded (red ≥90%, orange ≥75%, green <75%)
+- **Cost Estimates**: Monthly cost estimates for Blaze plan
+- **Auto-refresh**: Updates every 30 seconds
+
+**Usage**:
+- Displayed in header (right side, below refresh button)
+- Updates automatically
+- Shows usage and estimated monthly costs
+
+**Technical Details**:
+- **API Endpoint**: `GET /api/usage?type=storage|firestore|both`
+- **Storage Limit**: 1GB (Blaze plan free tier)
+- **Firestore Limit**: 50K reads/day (free tier)
+- **Cost Calculation**: Based on usage patterns and free tier limits
+
+### 11. Website Deployment to Arweave ✅
+
+**Status**: ✅ Production Ready
+
+**Description**: Deploys generated website to Arweave and updates ArNS automatically.
+
+**How It Works**:
+- Syncs Firebase artists to `website/artists.json`
+- Generates HTML pages for each artist
+- Uploads website files to Arweave (via ArDrive Turbo SDK)
+- Creates manifest and uploads manifest
+- Updates ArNS record automatically
+- Returns ArNS URL and direct Arweave URL
+
+**Usage**:
+1. Click "Deploy Website" button
+2. Wait for deployment (1-2 minutes)
+3. View ArNS URL in success modal
+4. Access website at `https://undergroundexistence.ar.io`
+
+**Technical Details**:
+- **API Endpoint**: `POST /api/deploy-website`
+- **Modules**: `lib/WebsiteSync.js`, `lib/WebsiteDeployer.js`, `lib/ArNSUpdater.js`
+- **Output**: ArNS URL and direct Arweave URL
+
+### 12. Video Filter Application ✅
 
 **Status**: Verified and working (hardcoded to Hard B&W Street Doc @ 80%)
 
@@ -261,7 +372,7 @@ This document describes all features of the Arweave Video Generator system, thei
 - Intensity: 0.8 (80%)
 - Applied via FFmpeg filter_complex
 
-### Folder Preview ✅
+### 13. Folder Preview ✅
 
 **Status**: Verified and working
 
