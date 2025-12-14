@@ -396,8 +396,34 @@
                   </select>
                 </div>
 
+                <div id="topLogoContainer" class="step-block" style="display: none;">
+                  <div class="step-label">6. Top logo</div>
+                  <div class="step-hint">Logo appears at 22 seconds (40% from top)</div>
+                  <select 
+                    id="topLogoSelect"
+                    class="select-styled"
+                    style="margin: 0.35rem auto 0;"
+                    onchange="updateTopLogoSelection(this.value)"
+                  >
+                    <option value="random">Random (Default)</option>
+                  </select>
+                </div>
+
+                <div id="endLogoContainer" class="step-block" style="display: none;">
+                  <div class="step-label">7. End logo</div>
+                  <div class="step-hint">Logo appears at 25 seconds (centered)</div>
+                  <select 
+                    id="endLogoSelect"
+                    class="select-styled"
+                    style="margin: 0.35rem auto 0;"
+                    onchange="updateEndLogoSelection(this.value)"
+                  >
+                    <option value="random">Random (Default)</option>
+                  </select>
+                </div>
+
                 <div class="step-block">
-                  <div class="step-label">6. Generate</div>
+                  <div class="step-label">8. Generate</div>
                   <div class="step-hint"></div>
                   <div class="action-row" style="margin-top: 0.25rem;">
                     <button 
@@ -1194,6 +1220,9 @@
     let selectedFolders = new Set(); // Set of selected folder names
     let availableFolders = []; // List of available folders for current mode
     let selectedOverlay = ''; // Overlay effect selection (empty = none, 'random' = random, or specific effect name)
+    let selectedTopLogo = 'random'; // Top logo selection (default: random)
+    let selectedEndLogo = 'random'; // End logo selection (default: random)
+    let availableLogos = []; // List of available logos
     const VIDEOS_PAGE_SIZE = 8;
     let visibleVideoCount = 0;
     let dismissedVideos = new Set();
@@ -1635,6 +1664,24 @@
         overlayContainer.style.display = 'block';
       }
       
+      // Show logo selection containers when folders are shown (step 6 & 7)
+      const topLogoContainer = document.getElementById('topLogoContainer');
+      const endLogoContainer = document.getElementById('endLogoContainer');
+      if (topLogoContainer) {
+        topLogoContainer.style.display = 'block';
+        // Load logos if not already loaded
+        if (availableLogos.length === 0) {
+          loadAvailableLogos();
+        }
+      }
+      if (endLogoContainer) {
+        endLogoContainer.style.display = 'block';
+        // Load logos if not already loaded
+        if (availableLogos.length === 0) {
+          loadAvailableLogos();
+        }
+      }
+      
       // Show ALL available folders for both modes
       populateAllFolderCheckboxes();
       
@@ -1850,6 +1897,87 @@
     }
 
     /**
+     * Load available logos from API
+     */
+    async function loadAvailableLogos() {
+      try {
+        const response = await fetch('/api/video-folders?folder=logos');
+        const data = await response.json();
+        
+        if (data.success && data.videos) {
+          // Filter out serial_logo.png and SVG files (same as backend)
+          availableLogos = data.videos.filter(logo => {
+            const fileName = logo.name.toLowerCase();
+            return (fileName.endsWith('.png') || fileName.endsWith('.jpg')) &&
+                   fileName !== 'serial_logo.png' &&
+                   !fileName.endsWith('.keep');
+          });
+          
+          populateLogoDropdowns();
+          console.log(`✅ Loaded ${availableLogos.length} logos`);
+        } else {
+          console.warn('⚠️ No logos data available');
+        }
+      } catch (error) {
+        console.error('❌ Error loading logos:', error);
+      }
+    }
+
+    /**
+     * Populate logo dropdowns with available logos
+     */
+    function populateLogoDropdowns() {
+      const topLogoSelect = document.getElementById('topLogoSelect');
+      const endLogoSelect = document.getElementById('endLogoSelect');
+      
+      if (topLogoSelect) {
+        // Keep "Random" option and add logos
+        topLogoSelect.innerHTML = '<option value="random">Random (Default)</option>';
+        availableLogos.forEach(logo => {
+          const option = document.createElement('option');
+          option.value = logo.name;
+          option.textContent = logo.name.replace(/\.(png|jpg)$/i, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          topLogoSelect.appendChild(option);
+        });
+      }
+      
+      if (endLogoSelect) {
+        // Keep "Random" option and add logos
+        endLogoSelect.innerHTML = '<option value="random">Random (Default)</option>';
+        availableLogos.forEach(logo => {
+          const option = document.createElement('option');
+          option.value = logo.name;
+          option.textContent = logo.name.replace(/\.(png|jpg)$/i, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          endLogoSelect.appendChild(option);
+        });
+      }
+    }
+
+    /**
+     * Update top logo selection
+     */
+    window.updateTopLogoSelection = function(logoValue) {
+      selectedTopLogo = logoValue;
+      if (logoValue === 'random') {
+        console.log(`✅ Top logo: Random`);
+      } else {
+        console.log(`✅ Top logo: ${logoValue}`);
+      }
+    }
+
+    /**
+     * Update end logo selection
+     */
+    window.updateEndLogoSelection = function(logoValue) {
+      selectedEndLogo = logoValue;
+      if (logoValue === 'random') {
+        console.log(`✅ End logo: Random`);
+      } else {
+        console.log(`✅ End logo: ${logoValue}`);
+      }
+    }
+
+    /**
      * Initialize filter selection buttons
      * COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity
      */
@@ -1966,6 +2094,27 @@
           console.log(`🎲 Random overlay selected: ${overlayToUse}`);
         }
         
+        // Handle random logo selection
+        let topLogoToUse = selectedTopLogo;
+        if (selectedTopLogo === 'random') {
+          if (availableLogos.length > 0) {
+            topLogoToUse = availableLogos[Math.floor(Math.random() * availableLogos.length)].name;
+            console.log(`🎲 Random top logo selected: ${topLogoToUse}`);
+          } else {
+            topLogoToUse = 'random'; // Keep as random if no logos available
+          }
+        }
+        
+        let endLogoToUse = selectedEndLogo;
+        if (selectedEndLogo === 'random') {
+          if (availableLogos.length > 0) {
+            endLogoToUse = availableLogos[Math.floor(Math.random() * availableLogos.length)].name;
+            console.log(`🎲 Random end logo selected: ${endLogoToUse}`);
+          } else {
+            endLogoToUse = 'random'; // Keep as random if no logos available
+          }
+        }
+        
         // Prepare request body
         const requestBody = {
           duration: 30,
@@ -1974,7 +2123,9 @@
           useTrax: selectedAudioSource === 'tracks', // true for tracks, false for mixes
           selectedFolders: Array.from(selectedFolders), // Array of selected folder names
           enableOverlay: overlayToUse !== '', // Overlay enabled if an effect is selected
-          overlayEffect: overlayToUse || null // Specific overlay effect name or null
+          overlayEffect: overlayToUse || null, // Specific overlay effect name or null
+          topLogo: topLogoToUse === 'random' ? null : topLogoToUse, // Top logo filename or null for random
+          endLogo: endLogoToUse === 'random' ? null : endLogoToUse // End logo filename or null for random
         };
         
         // Add artist selection only for mixes

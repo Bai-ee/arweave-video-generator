@@ -82,7 +82,10 @@ async function processVideoJob(jobId, jobData, documentId = null) {
       videoFilter: videoFilter,
       useTrax: jobData.useTrax === true, // Pass useTrax flag to video generator
       selectedFolders: jobData.selectedFolders || [], // Pass selected folders array
-      enableOverlay: jobData.enableOverlay !== undefined ? jobData.enableOverlay : true // Pass overlay toggle (default: true)
+      enableOverlay: jobData.enableOverlay !== undefined ? jobData.enableOverlay : true, // Pass overlay toggle (default: true)
+      overlayEffect: jobData.overlayEffect || null, // Pass specific overlay effect or null for random
+      topLogo: jobData.topLogo || null, // Pass top logo filename or null for random
+      endLogo: jobData.endLogo || null // Pass end logo filename or null for random
     });
 
     if (!videoResult.success) {

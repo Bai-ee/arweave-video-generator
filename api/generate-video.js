@@ -36,6 +36,9 @@ export default async function handler(req, res) {
     const filterIntensity = req.body.filterIntensity !== undefined ? parseFloat(req.body.filterIntensity) : 0.4; // Filter intensity 0.0-1.0 (default 0.4 = 40%)
     const selectedFolders = req.body.selectedFolders || []; // Array of selected folder names (normalized, without assets/ prefix)
     const enableOverlay = req.body.enableOverlay !== undefined ? req.body.enableOverlay : true; // Overlay feature toggle (default: true)
+    const overlayEffect = req.body.overlayEffect || null; // Specific overlay effect name or null for random
+    const topLogo = req.body.topLogo || null; // Top logo filename or null for random
+    const endLogo = req.body.endLogo || null; // End logo filename or null for random
 
     // Validate selectedFolders
     if (!Array.isArray(selectedFolders)) {
@@ -126,6 +129,9 @@ export default async function handler(req, res) {
       useTrax: useTrax, // Flag to use tracks instead of mixes
       selectedFolders: selectedFolders, // Array of selected folder names
       enableOverlay: enableOverlay, // Overlay feature toggle
+      overlayEffect: overlayEffect, // Specific overlay effect name or null
+      topLogo: topLogo, // Top logo filename or null for random
+      endLogo: endLogo, // End logo filename or null for random
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       completedAt: null,
       videoUrl: null,

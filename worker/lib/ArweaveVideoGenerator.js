@@ -331,7 +331,10 @@ class ArweaveVideoGenerator {
             videoFilter = null,
             useTrax = false, // Flag to use tracks instead of mixes
             selectedFolders = [], // Array of selected folder names
-            enableOverlay = true // Overlay feature toggle (default: true)
+            enableOverlay = true, // Overlay feature toggle (default: true)
+            overlayEffect = null, // Specific overlay effect name or null for random
+            topLogo = null, // Top logo filename or null for random
+            endLogo = null // End logo filename or null for random
         } = options;
 
         console.log(`[ArweaveVideoGenerator] Starting video generation - ${duration}s for ${artist || 'random artist'}`);
@@ -604,11 +607,24 @@ class ArweaveVideoGenerator {
                 });
                 
                 if (validLogos.length > 0) {
-                    const randomLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
-                    const logoFileName = path.basename(randomLogo.name);
-                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${randomLogo.name}`;
+                    // Use selected logo or pick random
+                    let selectedLogo;
+                    if (topLogo) {
+                        // Find the selected logo by filename
+                        selectedLogo = validLogos.find(logo => path.basename(logo.name) === topLogo);
+                        if (!selectedLogo) {
+                            console.warn(`[ArweaveVideoGenerator] ⚠️ Selected top logo "${topLogo}" not found, using random`);
+                            selectedLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
+                        }
+                    } else {
+                        // Random selection (default)
+                        selectedLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
+                    }
                     
-                    console.log(`[ArweaveVideoGenerator] Selected second logo: ${logoFileName}`);
+                    const logoFileName = path.basename(selectedLogo.name);
+                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${selectedLogo.name}`;
+                    
+                    console.log(`[ArweaveVideoGenerator] Selected second logo: ${logoFileName}${topLogo ? ' (user selected)' : ' (random)'}`);
                     
                     // Download and cache logo
                     const response = await axios({
@@ -850,11 +866,24 @@ class ArweaveVideoGenerator {
                 });
                 
                 if (validLogos.length > 0) {
-                    const randomLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
-                    const logoFileName = path.basename(randomLogo.name);
-                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${randomLogo.name}`;
+                    // Use selected logo or pick random
+                    let selectedLogo;
+                    if (endLogo) {
+                        // Find the selected logo by filename
+                        selectedLogo = validLogos.find(logo => path.basename(logo.name) === endLogo);
+                        if (!selectedLogo) {
+                            console.warn(`[ArweaveVideoGenerator] ⚠️ Selected end logo "${endLogo}" not found, using random`);
+                            selectedLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
+                        }
+                    } else {
+                        // Random selection (default)
+                        selectedLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
+                    }
                     
-                    console.log(`[ArweaveVideoGenerator] Selected logo: ${logoFileName}`);
+                    const logoFileName = path.basename(selectedLogo.name);
+                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${selectedLogo.name}`;
+                    
+                    console.log(`[ArweaveVideoGenerator] Selected logo: ${logoFileName}${endLogo ? ' (user selected)' : ' (random)'}`);
                     
                     // Download and cache logo
                     const response = await axios({
