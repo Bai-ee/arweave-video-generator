@@ -405,7 +405,8 @@
                     style="margin: 0.35rem auto 0;"
                     onchange="updateTopLogoSelection(this.value)"
                   >
-                    <option value="random">Random (Default)</option>
+                    <option value="loge_horiz.png">Loge Horiz (Default)</option>
+                    <option value="random">Random</option>
                   </select>
                 </div>
 
@@ -418,7 +419,8 @@
                     style="margin: 0.35rem auto 0;"
                     onchange="updateEndLogoSelection(this.value)"
                   >
-                    <option value="random">Random (Default)</option>
+                    <option value="ue_logo_horiz.png">UE Logo Horiz (Default)</option>
+                    <option value="random">Random</option>
                   </select>
                 </div>
 
@@ -1220,8 +1222,8 @@
     let selectedFolders = new Set(); // Set of selected folder names
     let availableFolders = []; // List of available folders for current mode
     let selectedOverlay = ''; // Overlay effect selection (empty = none, 'random' = random, or specific effect name)
-    let selectedTopLogo = 'random'; // Top logo selection (default: random)
-    let selectedEndLogo = 'random'; // End logo selection (default: random)
+    let selectedTopLogo = 'loge_horiz.png'; // Top logo selection (default: loge_horiz.png)
+    let selectedEndLogo = 'ue_logo_horiz.png'; // End logo selection (default: ue_logo_horiz.png)
     let availableLogos = []; // List of available logos
     const VIDEOS_PAGE_SIZE = 8;
     let visibleVideoCount = 0;
@@ -1931,25 +1933,65 @@
       const endLogoSelect = document.getElementById('endLogoSelect');
       
       if (topLogoSelect) {
-        // Keep "Random" option and add logos
-        topLogoSelect.innerHTML = '<option value="random">Random (Default)</option>';
+        // Clear and rebuild with default first
+        topLogoSelect.innerHTML = '';
+        
+        // Add default logo first
+        const defaultOption = document.createElement('option');
+        defaultOption.value = 'loge_horiz.png';
+        defaultOption.textContent = 'Loge Horiz (Default)';
+        defaultOption.selected = true;
+        topLogoSelect.appendChild(defaultOption);
+        
+        // Add all other logos
         availableLogos.forEach(logo => {
-          const option = document.createElement('option');
-          option.value = logo.name;
-          option.textContent = logo.name.replace(/\.(png|jpg)$/i, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-          topLogoSelect.appendChild(option);
+          if (logo.name !== 'loge_horiz.png') {
+            const option = document.createElement('option');
+            option.value = logo.name;
+            option.textContent = logo.name.replace(/\.(png|jpg)$/i, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            topLogoSelect.appendChild(option);
+          }
         });
+        
+        // Add Random option
+        const randomOption = document.createElement('option');
+        randomOption.value = 'random';
+        randomOption.textContent = 'Random';
+        topLogoSelect.appendChild(randomOption);
+        
+        // Set selected value
+        topLogoSelect.value = selectedTopLogo;
       }
       
       if (endLogoSelect) {
-        // Keep "Random" option and add logos
-        endLogoSelect.innerHTML = '<option value="random">Random (Default)</option>';
+        // Clear and rebuild with default first
+        endLogoSelect.innerHTML = '';
+        
+        // Add default logo first
+        const defaultOption = document.createElement('option');
+        defaultOption.value = 'ue_logo_horiz.png';
+        defaultOption.textContent = 'UE Logo Horiz (Default)';
+        defaultOption.selected = true;
+        endLogoSelect.appendChild(defaultOption);
+        
+        // Add all other logos
         availableLogos.forEach(logo => {
-          const option = document.createElement('option');
-          option.value = logo.name;
-          option.textContent = logo.name.replace(/\.(png|jpg)$/i, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-          endLogoSelect.appendChild(option);
+          if (logo.name !== 'ue_logo_horiz.png') {
+            const option = document.createElement('option');
+            option.value = logo.name;
+            option.textContent = logo.name.replace(/\.(png|jpg)$/i, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            endLogoSelect.appendChild(option);
+          }
         });
+        
+        // Add Random option
+        const randomOption = document.createElement('option');
+        randomOption.value = 'random';
+        randomOption.textContent = 'Random';
+        endLogoSelect.appendChild(randomOption);
+        
+        // Set selected value
+        endLogoSelect.value = selectedEndLogo;
       }
     }
 
@@ -2094,28 +2136,8 @@
           console.log(`🎲 Random overlay selected: ${overlayToUse}`);
         }
         
-        // Handle random logo selection
-        let topLogoToUse = selectedTopLogo;
-        if (selectedTopLogo === 'random') {
-          if (availableLogos.length > 0) {
-            topLogoToUse = availableLogos[Math.floor(Math.random() * availableLogos.length)].name;
-            console.log(`🎲 Random top logo selected: ${topLogoToUse}`);
-          } else {
-            topLogoToUse = 'random'; // Keep as random if no logos available
-          }
-        }
-        
-        let endLogoToUse = selectedEndLogo;
-        if (selectedEndLogo === 'random') {
-          if (availableLogos.length > 0) {
-            endLogoToUse = availableLogos[Math.floor(Math.random() * availableLogos.length)].name;
-            console.log(`🎲 Random end logo selected: ${endLogoToUse}`);
-          } else {
-            endLogoToUse = 'random'; // Keep as random if no logos available
-          }
-        }
-        
         // Prepare request body
+        // Pass null for logos when "random" is selected - backend will handle random selection (original behavior)
         const requestBody = {
           duration: 30,
           videoFilter: filterToUse,
@@ -2123,9 +2145,9 @@
           useTrax: selectedAudioSource === 'tracks', // true for tracks, false for mixes
           selectedFolders: Array.from(selectedFolders), // Array of selected folder names
           enableOverlay: overlayToUse !== '', // Overlay enabled if an effect is selected
-          overlayEffect: overlayToUse || null, // Specific overlay effect name or null
-          topLogo: topLogoToUse === 'random' ? null : topLogoToUse, // Top logo filename or null for random
-          endLogo: endLogoToUse === 'random' ? null : endLogoToUse // End logo filename or null for random
+          overlayEffect: overlayToUse || null, // Specific overlay effect name or null for random
+          topLogo: selectedTopLogo === 'random' ? null : selectedTopLogo, // Top logo filename (default: loge_horiz.png) or null for random
+          endLogo: selectedEndLogo === 'random' ? null : selectedEndLogo // End logo filename (default: ue_logo_horiz.png) or null for random
         };
         
         // Add artist selection only for mixes
