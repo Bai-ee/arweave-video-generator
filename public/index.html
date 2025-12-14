@@ -2971,37 +2971,78 @@
     }
 
     /**
-     * Populate image folder select dropdown
+     * Populate image folder select dropdown (includes logos and paper_backgrounds)
      */
     async function populateImageFolderSelect() {
       const folderSelect = document.getElementById('imageFolderSelect');
       if (!folderSelect) return;
       
       try {
+        // Get regular folders
         const response = await fetch('/api/video-folders');
         const data = await response.json();
         
+        folderSelect.innerHTML = '';
+        const allFolders = [];
+        
         if (data.success && data.folders) {
-          folderSelect.innerHTML = '';
-          
-          // Add all folders as options
-          data.folders.forEach(folder => {
-            const option = document.createElement('option');
-            option.value = folder.name;
-            const displayName = folder.displayName || folder.name.replace('assets/', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            option.textContent = `${displayName} (${folder.count || 0} files)`;
-            folderSelect.appendChild(option);
-          });
-          
-          // Set default to first folder
-          if (folderSelect.options.length > 0) {
-            folderSelect.value = data.folders[0].name;
-          }
-          
-          console.log(`✅ Populated image folder select with ${data.folders.length} folders`);
-        } else {
-          folderSelect.innerHTML = '<option value="">No folders available</option>';
+          // Add regular folders
+          allFolders.push(...data.folders);
         }
+        
+        // Add logos and paper_backgrounds folders (excluded from regular list but needed for image uploads)
+        const imageFolders = ['logos', 'paper_backgrounds'];
+        for (const folderName of imageFolders) {
+          try {
+            // Get folder info by querying the folder directly
+            const folderResponse = await fetch(`/api/video-folders?folder=${folderName}`);
+            const folderData = await folderResponse.json();
+            
+            if (folderData.success) {
+              allFolders.push({
+                name: folderName,
+                count: folderData.count || 0,
+                displayName: folderName === 'logos' ? 'Logos' : 'Paper Backgrounds',
+                type: 'image'
+              });
+            } else {
+              // Folder might not exist yet, add it anyway
+              allFolders.push({
+                name: folderName,
+                count: 0,
+                displayName: folderName === 'logos' ? 'Logos' : 'Paper Backgrounds',
+                type: 'image'
+              });
+            }
+          } catch (err) {
+            // If folder query fails, add it anyway (might be new)
+            allFolders.push({
+              name: folderName,
+              count: 0,
+              displayName: folderName === 'logos' ? 'Logos' : 'Paper Backgrounds',
+              type: 'image'
+            });
+          }
+        }
+        
+        // Add all folders as options
+        allFolders.forEach(folder => {
+          const option = document.createElement('option');
+          option.value = folder.name;
+          const displayName = folder.displayName || folder.name.replace('assets/', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          option.textContent = `${displayName} (${folder.count || 0} files)`;
+          folderSelect.appendChild(option);
+        });
+        
+        // Set default to logos folder if available, otherwise first folder
+        const logosOption = Array.from(folderSelect.options).find(opt => opt.value === 'logos');
+        if (logosOption) {
+          folderSelect.value = 'logos';
+        } else if (folderSelect.options.length > 0) {
+          folderSelect.value = allFolders[0].name;
+        }
+        
+        console.log(`✅ Populated image folder select with ${allFolders.length} folders (including logos and paper_backgrounds)`);
       } catch (error) {
         console.error('❌ Error loading folders for image upload:', error);
         folderSelect.innerHTML = '<option value="">Error loading folders</option>';
