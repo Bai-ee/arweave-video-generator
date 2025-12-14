@@ -825,90 +825,177 @@
       </div>
     </div>
 
-    <!-- Upload Artist Image Modal -->
+    <!-- Upload Image Modal -->
     <div id="artistImageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
       <div style="background: radial-gradient(ellipse at center, rgba(20, 20, 30, 0.7) 0%, rgba(0, 0, 0, 0.6) 100%); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">UPLOAD ARTIST IMAGE</h2>
+          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">UPLOAD IMAGE</h2>
           <button onclick="hideArtistImageModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
         </div>
         
         <form id="artistImageForm" onsubmit="handleArtistImageUpload(event)" style="display: flex; flex-direction: column; gap: 1rem;">
-          <!-- Artist Selection -->
-          <div>
-            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Artist <span style="color: #ef4444;">*</span>
-            </label>
-            <select 
-              id="imageArtistSelect"
-              onchange="handleImageArtistChange()"
-              required
-              style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white; font-family: var(--font-body);"
-            >
-              <option value="">Select an artist...</option>
-              <option value="__NEW__">+ New Artist</option>
-            </select>
-          </div>
-
-          <!-- New Artist Fields (hidden by default) -->
-          <div id="newArtistFields" style="display: none;">
-            <div style="margin-bottom: 1rem;">
-              <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-                New Artist Name <span style="color: #ef4444;">*</span>
-              </label>
-              <input 
-                type="text" 
-                id="newArtistNameInput"
-                placeholder="e.g. DJ EXAMPLE"
-                style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white; font-family: var(--font-body);"
-              />
-            </div>
-            <div>
-              <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-                Genre <span style="color: #ef4444;">*</span>
-              </label>
-              <select 
-                id="newArtistGenreSelect"
-                style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white; font-family: var(--font-body);"
-              >
-                <option value="house">House</option>
-                <option value="techno">Techno</option>
-                <option value="acid">Acid</option>
-                <option value="electronic">Electronic</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-          </div>
-
           <!-- Image File -->
           <div>
             <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Image File (.jpg, .png, .gif, .webp) <span style="color: #ef4444;">*</span>
+              Image File (.jpg, .png, .gif, .webp) - Multiple files supported <span style="color: #ef4444;">*</span>
             </label>
             <input 
               type="file" 
               id="artistImageFileInput" 
               accept=".jpg,.jpeg,.png,.gif,.webp"
+              multiple
               required
-              style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; color: white;"
+              style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
             />
-            <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">Max file size: 50MB. File will be uploaded to Arweave.</p>
+            <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">Max file size: 50MB per file. You can select multiple files at once.</p>
           </div>
 
-          <!-- Main Thumbnail Checkbox -->
-          <div style="padding: 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px;">
-            <label style="display: flex; align-items: center; gap: 0.75rem; color: white; cursor: pointer;">
-              <input 
-                type="checkbox" 
-                id="isMainThumbnail" 
-                checked
-                style="width: 20px; height: 20px; accent-color: var(--color-yellow-75);"
-              />
-              <span style="font-family: var(--font-body);">This is the main artist thumbnail</span>
+          <!-- Upload Type Selection -->
+          <div>
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
+              Upload To
             </label>
-            <p style="color: #888; font-size: 0.75rem; margin-top: 0.5rem; margin-left: 2rem;">
-              If checked, this image will be shown on the homepage and artist page. If unchecked, it will just be added to the artist's folder.
-            </p>
+            
+            <!-- Upload type: folder or artist -->
+            <div style="display: flex; gap: 1rem; margin-bottom: 0.75rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">
+                <input 
+                  type="radio" 
+                  name="imageUploadType" 
+                  id="imageUploadTypeFolder" 
+                  value="folder" 
+                  checked
+                  onchange="toggleImageUploadType()"
+                  style="accent-color: var(--color-yellow-75); cursor: pointer;"
+                />
+                <span>Folder</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">
+                <input 
+                  type="radio" 
+                  name="imageUploadType" 
+                  id="imageUploadTypeArtist" 
+                  value="artist"
+                  onchange="toggleImageUploadType()"
+                  style="accent-color: var(--color-yellow-75); cursor: pointer;"
+                />
+                <span>Artist Thumbnail</span>
+              </label>
+            </div>
+
+            <!-- Folder Selection (shown by default) -->
+            <div id="imageFolderContainer">
+              <!-- Folder selection type: existing or new -->
+              <div style="display: flex; gap: 1rem; margin-bottom: 0.75rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">
+                  <input 
+                    type="radio" 
+                    name="imageFolderType" 
+                    id="imageFolderTypeExisting" 
+                    value="existing" 
+                    checked
+                    onchange="toggleImageFolderInput()"
+                    style="accent-color: var(--color-yellow-75); cursor: pointer;"
+                  />
+                  <span>Existing Folder</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">
+                  <input 
+                    type="radio" 
+                    name="imageFolderType" 
+                    id="imageFolderTypeNew" 
+                    value="new"
+                    onchange="toggleImageFolderInput()"
+                    style="accent-color: var(--color-yellow-75); cursor: pointer;"
+                  />
+                  <span>New Folder</span>
+                </label>
+              </div>
+              
+              <!-- Existing folder select -->
+              <div id="imageExistingFolderContainer">
+                <select 
+                  id="imageFolderSelect"
+                  style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); cursor: pointer;"
+                >
+                  <!-- Options will be populated dynamically from API -->
+                  <option value="">Loading folders...</option>
+                </select>
+              </div>
+              
+              <!-- New folder input -->
+              <div id="imageNewFolderContainer" style="display: none;">
+                <input 
+                  type="text" 
+                  id="imageNewFolderName"
+                  placeholder="Enter folder name (e.g., my-images)"
+                  style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
+                  pattern="[a-z0-9-_]+"
+                  title="Folder name can only contain lowercase letters, numbers, hyphens, and underscores"
+                />
+                <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
+                  Folder name will be converted to lowercase. Use hyphens or underscores for spaces.
+                </p>
+              </div>
+            </div>
+
+            <!-- Artist Selection (hidden by default) -->
+            <div id="imageArtistContainer" style="display: none;">
+              <select 
+                id="imageArtistSelect"
+                onchange="handleImageArtistChange()"
+                style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); cursor: pointer;"
+              >
+                <option value="">Select an artist...</option>
+                <option value="__NEW__">+ New Artist</option>
+              </select>
+
+              <!-- New Artist Fields (hidden by default) -->
+              <div id="newArtistFields" style="display: none; margin-top: 1rem;">
+                <div style="margin-bottom: 1rem;">
+                  <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
+                    New Artist Name <span style="color: #ef4444;">*</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    id="newArtistNameInput"
+                    placeholder="e.g. DJ EXAMPLE"
+                    style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
+                  />
+                </div>
+                <div>
+                  <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
+                    Genre <span style="color: #ef4444;">*</span>
+                  </label>
+                  <select 
+                    id="newArtistGenreSelect"
+                    style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
+                  >
+                    <option value="house">House</option>
+                    <option value="techno">Techno</option>
+                    <option value="acid">Acid</option>
+                    <option value="electronic">Electronic</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Main Thumbnail Checkbox -->
+              <div style="padding: 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--color-yellow-75); border-radius: 5px; margin-top: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.75rem; color: white; cursor: pointer;">
+                  <input 
+                    type="checkbox" 
+                    id="isMainThumbnail" 
+                    checked
+                    style="width: 20px; height: 20px; accent-color: var(--color-yellow-75);"
+                  />
+                  <span style="font-family: var(--font-body);">This is the main artist thumbnail</span>
+                </label>
+                <p style="color: #888; font-size: 0.75rem; margin-top: 0.5rem; margin-left: 2rem;">
+                  If checked, this image will be shown on the homepage and artist page. If unchecked, it will just be added to the artist's folder.
+                </p>
+              </div>
+            </div>
           </div>
 
           <!-- Progress -->
@@ -929,7 +1016,7 @@
               id="imageUploadBtn"
               style="flex: 1; padding: 1rem; background: rgba(0,0,0,0.5); border: 2px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 1rem;"
             >
-              Upload to Arweave
+              Upload
             </button>
             <button 
               type="button" 
@@ -2804,12 +2891,58 @@
     // =====================================================
 
     /**
+     * Toggle image upload type (folder vs artist)
+     */
+    window.toggleImageUploadType = function() {
+      const folderType = document.getElementById('imageUploadTypeFolder');
+      const artistType = document.getElementById('imageUploadTypeArtist');
+      const folderContainer = document.getElementById('imageFolderContainer');
+      const artistContainer = document.getElementById('imageArtistContainer');
+      
+      if (folderType.checked) {
+        folderContainer.style.display = 'block';
+        artistContainer.style.display = 'none';
+        // Reset artist fields
+        document.getElementById('imageArtistSelect').value = '';
+        document.getElementById('newArtistFields').style.display = 'none';
+      } else {
+        folderContainer.style.display = 'none';
+        artistContainer.style.display = 'block';
+        // Reset folder fields
+        document.getElementById('imageFolderTypeExisting').checked = true;
+        toggleImageFolderInput();
+      }
+    }
+
+    /**
+     * Toggle image folder input (existing vs new)
+     */
+    window.toggleImageFolderInput = function() {
+      const folderTypeExisting = document.getElementById('imageFolderTypeExisting');
+      const folderTypeNew = document.getElementById('imageFolderTypeNew');
+      const existingFolderContainer = document.getElementById('imageExistingFolderContainer');
+      const newFolderContainer = document.getElementById('imageNewFolderContainer');
+      
+      if (folderTypeNew.checked) {
+        existingFolderContainer.style.display = 'none';
+        newFolderContainer.style.display = 'block';
+      } else {
+        existingFolderContainer.style.display = 'block';
+        newFolderContainer.style.display = 'none';
+      }
+    }
+
+    /**
      * Show artist image upload modal
      */
     window.showArtistImageModal = async function() {
       document.getElementById('artistImageModal').style.display = 'flex';
       resetArtistImageModal();
       await loadArtistsForImageModal();
+      await populateImageFolderSelect();
+      // Reset to folder upload type
+      document.getElementById('imageUploadTypeFolder').checked = true;
+      toggleImageUploadType();
     };
 
     /**
@@ -2829,6 +2962,50 @@
       document.getElementById('imageUploadProgress').style.display = 'none';
       document.getElementById('imageUploadStatus').style.display = 'none';
       document.getElementById('imageUploadBtn').disabled = false;
+      // Reset folder type to existing
+      document.getElementById('imageFolderTypeExisting').checked = true;
+      toggleImageFolderInput();
+      // Reset upload type to folder
+      document.getElementById('imageUploadTypeFolder').checked = true;
+      toggleImageUploadType();
+    }
+
+    /**
+     * Populate image folder select dropdown
+     */
+    async function populateImageFolderSelect() {
+      const folderSelect = document.getElementById('imageFolderSelect');
+      if (!folderSelect) return;
+      
+      try {
+        const response = await fetch('/api/video-folders');
+        const data = await response.json();
+        
+        if (data.success && data.folders) {
+          folderSelect.innerHTML = '';
+          
+          // Add all folders as options
+          data.folders.forEach(folder => {
+            const option = document.createElement('option');
+            option.value = folder.name;
+            const displayName = folder.displayName || folder.name.replace('assets/', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            option.textContent = `${displayName} (${folder.count || 0} files)`;
+            folderSelect.appendChild(option);
+          });
+          
+          // Set default to first folder
+          if (folderSelect.options.length > 0) {
+            folderSelect.value = data.folders[0].name;
+          }
+          
+          console.log(`✅ Populated image folder select with ${data.folders.length} folders`);
+        } else {
+          folderSelect.innerHTML = '<option value="">No folders available</option>';
+        }
+      } catch (error) {
+        console.error('❌ Error loading folders for image upload:', error);
+        folderSelect.innerHTML = '<option value="">Error loading folders</option>';
+      }
     }
 
     /**
@@ -2877,15 +3054,169 @@
     };
 
     /**
-     * Handle artist image upload form submission
+     * Handle image upload form submission (supports both folder and artist uploads)
      */
     window.handleArtistImageUpload = async function(event) {
       event.preventDefault();
       
-      const select = document.getElementById('imageArtistSelect');
+      const uploadTypeFolder = document.getElementById('imageUploadTypeFolder');
+      const uploadTypeArtist = document.getElementById('imageUploadTypeArtist');
       const fileInput = document.getElementById('artistImageFileInput');
-      const isMainThumbnail = document.getElementById('isMainThumbnail').checked;
       const uploadBtn = document.getElementById('imageUploadBtn');
+      
+      const files = Array.from(fileInput.files);
+      if (files.length === 0) {
+        showToast('Please select at least one image file', 'error');
+        return;
+      }
+      
+      // Disable button and show progress
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'Uploading...';
+      document.getElementById('imageUploadProgress').style.display = 'block';
+      document.getElementById('imageProgressBar').style.width = '10%';
+      document.getElementById('imageProgressText').textContent = 'Preparing upload...';
+      
+      try {
+        if (uploadTypeFolder.checked) {
+          // Folder upload mode
+          await handleImageFolderUpload(files);
+        } else {
+          // Artist thumbnail upload mode
+          await handleImageArtistUpload(files);
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        document.getElementById('imageUploadProgress').style.display = 'none';
+        const statusDiv = document.getElementById('imageUploadStatus');
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'rgba(239, 68, 68, 0.2)';
+        statusDiv.style.border = '1px solid #ef4444';
+        statusDiv.innerHTML = `
+          <div style="color: #ef4444; font-weight: bold; margin-bottom: 0.5rem;">Upload Failed</div>
+          <div style="color: white; font-size: 0.875rem;">${error.message}</div>
+          <button onclick="resetArtistImageModal(); document.getElementById('imageUploadBtn').textContent = 'Upload';" style="margin-top: 1rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer;">
+            Try Again
+          </button>
+        `;
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload';
+      }
+    };
+
+    /**
+     * Handle image upload to folder
+     */
+    async function handleImageFolderUpload(files) {
+      const folderTypeExisting = document.getElementById('imageFolderTypeExisting');
+      const folderTypeNew = document.getElementById('imageFolderTypeNew');
+      
+      // Determine folder name
+      let folder;
+      let isNewFolder = false;
+      
+      if (folderTypeNew.checked) {
+        const newFolderName = document.getElementById('imageNewFolderName').value.trim();
+        if (!newFolderName) {
+          showToast('Please enter a folder name', 'error');
+          document.getElementById('imageUploadBtn').disabled = false;
+          document.getElementById('imageUploadBtn').textContent = 'Upload';
+          return;
+        }
+        // Sanitize folder name: lowercase, replace spaces with hyphens, remove invalid chars
+        folder = newFolderName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+        isNewFolder = true;
+      } else {
+        folder = document.getElementById('imageFolderSelect').value;
+        if (!folder) {
+          showToast('Please select a folder', 'error');
+          document.getElementById('imageUploadBtn').disabled = false;
+          document.getElementById('imageUploadBtn').textContent = 'Upload';
+          return;
+        }
+      }
+      
+      // Upload files similar to video upload
+      let successCount = 0;
+      let failCount = 0;
+      const totalFiles = files.length;
+      
+      document.getElementById('imageProgressText').textContent = `Uploading ${totalFiles} file(s)...`;
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const progress = Math.round(((i + 1) / totalFiles) * 100);
+        document.getElementById('imageProgressBar').style.width = `${progress}%`;
+        document.getElementById('imageProgressText').textContent = `Uploading ${i + 1} of ${totalFiles}: ${file.name}`;
+        
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('type', 'image');
+          formData.append('folder', folder);
+          formData.append('isNewFolder', isNewFolder.toString());
+          
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            successCount++;
+          } else {
+            failCount++;
+            console.error(`Failed to upload ${file.name}:`, result.error);
+          }
+        } catch (error) {
+          failCount++;
+          console.error(`Error uploading ${file.name}:`, error);
+        }
+      }
+      
+      document.getElementById('imageProgressBar').style.width = '100%';
+      document.getElementById('imageUploadProgress').style.display = 'none';
+      
+      const statusDiv = document.getElementById('imageUploadStatus');
+      statusDiv.style.display = 'block';
+      
+      if (successCount === totalFiles) {
+        statusDiv.style.background = 'rgba(16, 185, 129, 0.2)';
+        statusDiv.style.border = '1px solid #10b981';
+        statusDiv.innerHTML = `
+          <div style="color: #10b981; font-weight: bold; margin-bottom: 0.5rem;">Upload Successful!</div>
+          <div style="color: white; font-size: 0.875rem;">
+            Uploaded ${successCount} file(s) to folder: <strong>${folder}</strong>
+          </div>
+          <button onclick="hideArtistImageModal()" class="btn-green-gradient" style="margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer;">
+            Done
+          </button>
+        `;
+      } else {
+        statusDiv.style.background = 'rgba(239, 68, 68, 0.2)';
+        statusDiv.style.border = '1px solid #ef4444';
+        statusDiv.innerHTML = `
+          <div style="color: #ef4444; font-weight: bold; margin-bottom: 0.5rem;">Upload Partially Failed</div>
+          <div style="color: white; font-size: 0.875rem;">
+            Success: ${successCount} / Failed: ${failCount}
+          </div>
+          <button onclick="resetArtistImageModal(); document.getElementById('imageUploadBtn').textContent = 'Upload';" style="margin-top: 1rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer;">
+            Try Again
+          </button>
+        `;
+      }
+      
+      document.getElementById('imageUploadBtn').disabled = false;
+      document.getElementById('imageUploadBtn').textContent = 'Upload';
+    }
+
+    /**
+     * Handle image upload as artist thumbnail
+     */
+    async function handleImageArtistUpload(files) {
+      const select = document.getElementById('imageArtistSelect');
+      const isMainThumbnail = document.getElementById('isMainThumbnail').checked;
       
       // Determine artist name
       let artistName = '';
@@ -2899,104 +3230,83 @@
         
         if (!artistName) {
           showToast('Please enter a new artist name', 'error');
+          document.getElementById('imageUploadBtn').disabled = false;
+          document.getElementById('imageUploadBtn').textContent = 'Upload';
           return;
         }
       } else if (select.value) {
         artistName = select.value;
       } else {
         showToast('Please select an artist', 'error');
+        document.getElementById('imageUploadBtn').disabled = false;
+        document.getElementById('imageUploadBtn').textContent = 'Upload';
         return;
       }
       
-      if (!fileInput.files || fileInput.files.length === 0) {
-        showToast('Please select an image file', 'error');
-        return;
+      // For artist uploads, only handle first file (existing behavior)
+      const file = files[0];
+      
+      document.getElementById('imageProgressBar').style.width = '30%';
+      document.getElementById('imageProgressText').textContent = 'Uploading to Arweave...';
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'image');
+      formData.append('artistName', artistName);
+      
+      if (isNewArtist) {
+        formData.append('imageAction', 'new-artist');
+        formData.append('artistGenre', genre);
+        formData.append('isNewArtist', 'true');
+      } else if (isMainThumbnail) {
+        formData.append('imageAction', 'replace-thumbnail');
+      } else {
+        formData.append('imageAction', 'add-to-folder');
       }
       
-      // Disable button and show progress
-      uploadBtn.disabled = true;
-      uploadBtn.textContent = 'Uploading...';
-      document.getElementById('imageUploadProgress').style.display = 'block';
-      document.getElementById('imageProgressBar').style.width = '10%';
-      document.getElementById('imageProgressText').textContent = 'Preparing upload...';
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
       
-      try {
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        formData.append('type', 'image');
-        formData.append('artistName', artistName);
-        
-        if (isNewArtist) {
-          formData.append('imageAction', 'new-artist');
-          formData.append('artistGenre', genre);
-          formData.append('isNewArtist', 'true');
-        } else if (isMainThumbnail) {
-          formData.append('imageAction', 'replace-thumbnail');
-        } else {
-          formData.append('imageAction', 'add-to-folder');
-        }
-        
-        document.getElementById('imageProgressBar').style.width = '30%';
-        document.getElementById('imageProgressText').textContent = 'Uploading to Arweave...';
-        
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        });
-        
-        document.getElementById('imageProgressBar').style.width = '80%';
-        const result = await response.json();
-        
-        document.getElementById('imageProgressBar').style.width = '100%';
-        document.getElementById('imageUploadProgress').style.display = 'none';
-        
-        const statusDiv = document.getElementById('imageUploadStatus');
-        statusDiv.style.display = 'block';
-        
-        if (result.success) {
-          statusDiv.style.background = 'rgba(16, 185, 129, 0.2)';
-          statusDiv.style.border = '1px solid #10b981';
-          statusDiv.innerHTML = `
-            <div style="color: #10b981; font-weight: bold; margin-bottom: 0.5rem;">Upload Successful!</div>
-            <div style="color: white; font-size: 0.875rem;">
-              ${isNewArtist ? `Created new artist: <strong>${artistName}</strong><br/>` : ''}
-              ${!isNewArtist && isMainThumbnail ? `Updated thumbnail for: <strong>${artistName}</strong><br/>` : ''}
-              ${!isNewArtist && !isMainThumbnail ? `Added image to ${artistName}'s folder<br/>` : ''}
-              <span style="opacity: 0.8; word-break: break-all;">Arweave URL: ${result.arweaveUrl}</span>
-            </div>
-            <button onclick="hideArtistImageModal()" class="btn-green-gradient" style="margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer;">
-              Done
-            </button>
-          `;
-        } else {
-          statusDiv.style.background = 'rgba(239, 68, 68, 0.2)';
-          statusDiv.style.border = '1px solid #ef4444';
-          statusDiv.innerHTML = `
-            <div style="color: #ef4444; font-weight: bold; margin-bottom: 0.5rem;">Upload Failed</div>
-            <div style="color: white; font-size: 0.875rem;">${result.error || 'Unknown error'}</div>
-            <button onclick="resetArtistImageModal(); document.getElementById('imageUploadBtn').textContent = 'Upload to Arweave';" style="margin-top: 1rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer;">
-              Try Again
-            </button>
-          `;
-        }
-      } catch (error) {
-        console.error('Upload error:', error);
-        document.getElementById('imageUploadProgress').style.display = 'none';
-        const statusDiv = document.getElementById('imageUploadStatus');
-        statusDiv.style.display = 'block';
+      document.getElementById('imageProgressBar').style.width = '80%';
+      const result = await response.json();
+      
+      document.getElementById('imageProgressBar').style.width = '100%';
+      document.getElementById('imageUploadProgress').style.display = 'none';
+      
+      const statusDiv = document.getElementById('imageUploadStatus');
+      statusDiv.style.display = 'block';
+      
+      if (result.success) {
+        statusDiv.style.background = 'rgba(16, 185, 129, 0.2)';
+        statusDiv.style.border = '1px solid #10b981';
+        statusDiv.innerHTML = `
+          <div style="color: #10b981; font-weight: bold; margin-bottom: 0.5rem;">Upload Successful!</div>
+          <div style="color: white; font-size: 0.875rem;">
+            ${isNewArtist ? `Created new artist: <strong>${artistName}</strong><br/>` : ''}
+            ${!isNewArtist && isMainThumbnail ? `Updated thumbnail for: <strong>${artistName}</strong><br/>` : ''}
+            ${!isNewArtist && !isMainThumbnail ? `Added image to ${artistName}'s folder<br/>` : ''}
+            <span style="opacity: 0.8; word-break: break-all;">Arweave URL: ${result.arweaveUrl}</span>
+          </div>
+          <button onclick="hideArtistImageModal()" class="btn-green-gradient" style="margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer;">
+            Done
+          </button>
+        `;
+      } else {
         statusDiv.style.background = 'rgba(239, 68, 68, 0.2)';
         statusDiv.style.border = '1px solid #ef4444';
         statusDiv.innerHTML = `
           <div style="color: #ef4444; font-weight: bold; margin-bottom: 0.5rem;">Upload Failed</div>
-          <div style="color: white; font-size: 0.875rem;">${error.message}</div>
-          <button onclick="resetArtistImageModal(); document.getElementById('imageUploadBtn').textContent = 'Upload to Arweave';" style="margin-top: 1rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer;">
+          <div style="color: white; font-size: 0.875rem;">${result.error || 'Unknown error'}</div>
+          <button onclick="resetArtistImageModal(); document.getElementById('imageUploadBtn').textContent = 'Upload';" style="margin-top: 1rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer;">
             Try Again
           </button>
         `;
       }
       
-      uploadBtn.disabled = false;
-      uploadBtn.textContent = 'Upload to Arweave';
+      document.getElementById('imageUploadBtn').disabled = false;
+      document.getElementById('imageUploadBtn').textContent = 'Upload';
     };
 
     // Close artist image modal when clicking outside
