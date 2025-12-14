@@ -585,6 +585,7 @@ class ArweaveVideoGenerator {
                 const bucket = storage.bucket();
                 
                 console.log(`[ArweaveVideoGenerator] 📥 Loading logos from Firebase Storage (logos/ folder)...`);
+                console.log(`[ArweaveVideoGenerator] Top logo parameter received: "${topLogo}" (type: ${typeof topLogo})`);
                 const [logoFiles] = await bucket.getFiles({ prefix: 'logos/' });
                 const validLogos = logoFiles.filter(file => {
                     const fileName = path.basename(file.name);
@@ -594,24 +595,34 @@ class ArweaveVideoGenerator {
                            !fileName.endsWith('.keep');
                 });
                 
+                console.log(`[ArweaveVideoGenerator] Found ${validLogos.length} valid logos: ${validLogos.map(f => path.basename(f.name)).join(', ')}`);
+                
                 if (validLogos.length > 0) {
                     // Use selected logo or pick random
                     let selectedLogo;
-                    if (topLogo) {
-                        // Find the selected logo by filename
-                        selectedLogo = validLogos.find(logo => path.basename(logo.name) === topLogo);
+                    if (topLogo && topLogo.trim() !== '') {
+                        // Find the selected logo by filename (case-insensitive comparison)
+                        const topLogoLower = topLogo.toLowerCase().trim();
+                        selectedLogo = validLogos.find(logo => {
+                            const logoName = path.basename(logo.name).toLowerCase();
+                            return logoName === topLogoLower;
+                        });
                         if (!selectedLogo) {
-                            console.warn(`[ArweaveVideoGenerator] ⚠️ Selected top logo "${topLogo}" not found, using random`);
+                            console.warn(`[ArweaveVideoGenerator] ⚠️ Selected top logo "${topLogo}" not found in available logos, using random`);
+                            console.warn(`[ArweaveVideoGenerator] Available logos: ${validLogos.map(f => path.basename(f.name)).join(', ')}`);
                             selectedLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
+                        } else {
+                            console.log(`[ArweaveVideoGenerator] ✅ Found matching top logo: ${path.basename(selectedLogo.name)}`);
                         }
                     } else {
                         // Random selection (default)
+                        console.log(`[ArweaveVideoGenerator] No top logo specified, using random selection`);
                         selectedLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
                     }
                     
                     const logoFileName = path.basename(selectedLogo.name);
                     
-                    console.log(`[ArweaveVideoGenerator] Selected second logo: ${logoFileName}${topLogo ? ' (user selected)' : ' (random)'}`);
+                    console.log(`[ArweaveVideoGenerator] Selected second logo: ${logoFileName}${topLogo ? ' (user selected: ' + topLogo + ')' : ' (random)'}`);
                     
                     // Download and cache logo using Firebase Admin SDK (works with private files)
                     await selectedLogo.download({ destination: secondLogoCachePath });

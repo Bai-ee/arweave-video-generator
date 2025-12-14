@@ -2237,6 +2237,9 @@
           endLogo: selectedEndLogo === 'random' ? null : selectedEndLogo // End logo filename (default: ue_logo_horiz.png) or null for random
         };
         
+        console.log(`[Frontend] Sending logo parameters - topLogo: "${requestBody.topLogo}" (from selectedTopLogo: "${selectedTopLogo}"), endLogo: "${requestBody.endLogo}" (from selectedEndLogo: "${selectedEndLogo}")`);
+        };
+        
         // Add artist selection only for mixes
         if (selectedAudioSource === 'mixes') {
           requestBody.artist = selectedArtist || 'random';

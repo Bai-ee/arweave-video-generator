@@ -39,6 +39,8 @@ export default async function handler(req, res) {
     const overlayEffect = req.body.overlayEffect || null; // Specific overlay effect name or null for random
     const topLogo = req.body.topLogo || null; // Top logo filename or null for random
     const endLogo = req.body.endLogo || null; // End logo filename or null for random
+    
+    console.log(`[GenerateVideo] Received logo parameters - topLogo: "${topLogo}" (type: ${typeof topLogo}), endLogo: "${endLogo}" (type: ${typeof endLogo})`);
 
     // Validate selectedFolders
     if (!Array.isArray(selectedFolders)) {
