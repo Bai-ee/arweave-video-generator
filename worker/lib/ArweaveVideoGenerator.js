@@ -526,155 +526,79 @@ class ArweaveVideoGenerator {
                 backgroundPath = await this.generateBackgroundImage(audioArtist, prompt, width, height);
             }
 
-            // Step 3: Load serial_logo.png from Firebase Storage and add to center
-            // Only load serial logo if no custom top logo is selected (serial logo is the default)
+            // Step 3: Load top logo (serial_logo.png as default, or custom selected logo)
+            // Custom top logo replaces serial logo but uses SAME settings (full width, from start, same position)
+            console.log('[ArweaveVideoGenerator] Step 3: Loading top logo from Firebase...');
             const layers = [];
             let serialLogoCachePath = null; // Declare outside try block for cleanup
             
-            if (!topLogo) {
-                // No custom top logo selected, use serial logo as default
-                console.log('[ArweaveVideoGenerator] Step 3: Loading serial_logo.png from Firebase (default logo, no custom top logo selected)...');
-                
-                try {
-                    // Load serial_logo.png from Firebase Storage
-                    const { getStorage } = await import('../firebase-admin.js');
-                    const storage = getStorage();
-                    const bucket = storage.bucket();
-                    const logoStoragePath = 'logos/serial_logo.png';
-                    
-                    console.log(`[ArweaveVideoGenerator] Downloading serial_logo.png from Firebase...`);
-                    
-                    // Download and cache logo using Firebase Admin SDK (works with private files)
-                    serialLogoCachePath = path.join(this.cacheDir, `serial_logo_${Date.now()}.png`);
-                    const serialLogoFile = bucket.file(logoStoragePath);
-                    await serialLogoFile.download({ destination: serialLogoCachePath });
-                    
-                    console.log(`[ArweaveVideoGenerator] ✅ Serial logo cached`);
-                    
-                    // Add serial logo at 100% width, centered vertically and horizontally
-                    // The logo will be scaled to 100% width, maintaining aspect ratio
-                    const logoWidth = width; // 100% width
-                    const logoHeight = height; // Full height (will maintain aspect ratio via FFmpeg scale filter)
-                    const logoX = 0; // Start at left edge (100% width fills entire canvas)
-                    const logoY = Math.round((height - logoHeight) / 2); // Center vertically (will be adjusted by aspect ratio)
-                    
-                    layers.push(new LayerConfig(
-                        'image',
-                        serialLogoCachePath,
-                        { x: logoX, y: logoY },
-                        { width: logoWidth, height: logoHeight },
-                        1.0, // Full opacity
-                        10, // z-index (above video background)
-                        1.0 // scale
-                    ));
-                    
-                    console.log(`[ArweaveVideoGenerator] Serial logo: ${logoWidth}x${logoHeight} (100% width), centered`);
-                } catch (error) {
-                    console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load serial_logo.png:`, error.message);
-                    serialLogoCachePath = null; // Clear if failed
-                    // Continue without logo if it fails
-                }
-            } else {
-                console.log(`[ArweaveVideoGenerator] Step 3: Skipping serial_logo.png (custom top logo "${topLogo}" will be used instead)`);
-            }
-
-            // Step 4: Add top logo (custom selected or random)
-            // If custom top logo is selected, it replaces serial logo and appears from start
-            // If no top logo is selected (random), it appears at 22 seconds as an overlay
-            const hasCustomTopLogo = topLogo && topLogo.trim() !== '';
-            const topLogoStartTime = hasCustomTopLogo ? null : 22; // null = from start, 22 = at 22 seconds
-            console.log(`[ArweaveVideoGenerator] Step 4: Loading top logo from Firebase... (${hasCustomTopLogo ? 'custom selected, appears from start' : 'random, appears at 22s'})`);
-            let secondLogoCachePath = null; // Declare outside try block for cleanup
-            
             try {
-                secondLogoCachePath = path.join(this.cacheDir, `second_logo_${Date.now()}.png`);
-                
-                // Load logos from Firebase Storage (excluding serial_logo.png)
                 const { getStorage } = await import('../firebase-admin.js');
                 const storage = getStorage();
                 const bucket = storage.bucket();
                 
-                console.log(`[ArweaveVideoGenerator] 📥 Loading logos from Firebase Storage (logos/ folder)...`);
-                console.log(`[ArweaveVideoGenerator] Top logo parameter received: "${topLogo}" (type: ${typeof topLogo})`);
-                const [logoFiles] = await bucket.getFiles({ prefix: 'logos/' });
-                const validLogos = logoFiles.filter(file => {
-                    const fileName = path.basename(file.name);
-                    // Exclude SVG files - FFmpeg cannot handle them directly
-                    return (fileName.endsWith('.png') || fileName.endsWith('.jpg')) &&
-                           fileName !== 'serial_logo.png' &&
-                           !fileName.endsWith('.keep');
-                });
+                let logoToLoad = null;
+                let logoFileName = 'serial_logo.png';
                 
-                console.log(`[ArweaveVideoGenerator] Found ${validLogos.length} valid logos: ${validLogos.map(f => path.basename(f.name)).join(', ')}`);
-                
-                if (validLogos.length > 0) {
-                    // Use selected logo or pick random
-                    let selectedLogo;
-                    if (hasCustomTopLogo) {
-                        // Find the selected logo by filename (case-insensitive comparison)
-                        const topLogoLower = topLogo.toLowerCase().trim();
-                        selectedLogo = validLogos.find(logo => {
-                            const logoName = path.basename(logo.name).toLowerCase();
-                            return logoName === topLogoLower;
-                        });
-                        if (!selectedLogo) {
-                            console.warn(`[ArweaveVideoGenerator] ⚠️ Selected top logo "${topLogo}" not found in available logos, using random`);
-                            console.warn(`[ArweaveVideoGenerator] Available logos: ${validLogos.map(f => path.basename(f.name)).join(', ')}`);
-                            selectedLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
-                        } else {
-                            console.log(`[ArweaveVideoGenerator] ✅ Found matching top logo: ${path.basename(selectedLogo.name)}`);
-                        }
+                if (topLogo && topLogo.trim() !== '') {
+                    // Custom top logo selected - load it instead of serial logo
+                    console.log(`[ArweaveVideoGenerator] Custom top logo selected: "${topLogo}"`);
+                    
+                    // Get all logos from Firebase Storage
+                    const [logoFiles] = await bucket.getFiles({ prefix: 'logos/' });
+                    const validLogos = logoFiles.filter(file => {
+                        const fileName = path.basename(file.name);
+                        return (fileName.endsWith('.png') || fileName.endsWith('.jpg')) &&
+                               !fileName.endsWith('.keep');
+                    });
+                    
+                    // Find the selected logo
+                    const topLogoLower = topLogo.toLowerCase().trim();
+                    logoToLoad = validLogos.find(logo => {
+                        const logoName = path.basename(logo.name).toLowerCase();
+                        return logoName === topLogoLower;
+                    });
+                    
+                    if (logoToLoad) {
+                        logoFileName = path.basename(logoToLoad.name);
+                        console.log(`[ArweaveVideoGenerator] ✅ Found custom top logo: ${logoFileName}`);
                     } else {
-                        // Random selection (default)
-                        console.log(`[ArweaveVideoGenerator] No top logo specified, using random selection`);
-                        selectedLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
+                        console.warn(`[ArweaveVideoGenerator] ⚠️ Custom top logo "${topLogo}" not found, falling back to serial_logo.png`);
+                        logoToLoad = bucket.file('logos/serial_logo.png');
                     }
-                    
-                    const logoFileName = path.basename(selectedLogo.name);
-                    
-                    console.log(`[ArweaveVideoGenerator] Selected top logo: ${logoFileName}${hasCustomTopLogo ? ' (user selected: ' + topLogo + ')' : ' (random)'}`);
-                    
-                    // Download and cache logo using Firebase Admin SDK (works with private files)
-                    await selectedLogo.download({ destination: secondLogoCachePath });
-                    
-                    // Top logo: 30% width, maintain aspect ratio, centered horizontally
-                    const logoWidth = Math.round(width * 0.30); // 30% width
-                    const logoHeight = Math.round(logoWidth * 1.0); // Will be adjusted by aspect ratio
-                    // Center horizontally
-                    const logoX = Math.round((width - logoWidth) / 2); // Center horizontally
-                    // Position at 40% down from top
-                    const logoY = Math.round(height * 0.4); // 40% down from top
-                    
-                    console.log(`[ArweaveVideoGenerator] ✅ Top logo downloaded: ${logoFileName}`);
-                    console.log(`[ArweaveVideoGenerator] Top logo size: ${logoWidth}x${logoHeight}, position: (${logoX}, ${logoY})`);
-                    console.log(`[ArweaveVideoGenerator] Top logo appears at: ${topLogoStartTime === null ? 'start (replaces serial logo)' : topLogoStartTime + 's (overlay)'}`);
-                    console.log(`[ArweaveVideoGenerator] Top logo z-index: 20`);
-                    
-                    // Add top logo layer
-                    // If custom logo: appears from start (replaces serial logo), no timing
-                    // If random: appears at 22s as overlay, marked to add after fade
-                    const topLogoLayer = new LayerConfig(
-                        'image',
-                        secondLogoCachePath,
-                        { x: logoX, y: logoY },
-                        { width: logoWidth, height: logoHeight },
-                        1.0, // Full opacity
-                        20, // z-index
-                        1.0, // scale
-                        null, // no font path
-                        topLogoStartTime, // null = from start, number = start time
-                        topLogoStartTime === null ? null : duration - topLogoStartTime // duration (null = full duration)
-                    );
-                    if (topLogoStartTime !== null) {
-                        // Only mark as "after fade" if it appears at 22s (random overlay)
-                        topLogoLayer.addAfterFade = true;
-                    }
-                    layers.push(topLogoLayer);
                 } else {
-                    console.warn(`[ArweaveVideoGenerator] ⚠️ No valid logos found for second logo overlay`);
+                    // No custom top logo - use serial logo as default
+                    console.log(`[ArweaveVideoGenerator] No custom top logo selected, using serial_logo.png (default)`);
+                    logoToLoad = bucket.file('logos/serial_logo.png');
                 }
+                
+                // Download and cache logo using Firebase Admin SDK
+                serialLogoCachePath = path.join(this.cacheDir, `serial_logo_${Date.now()}.png`);
+                await logoToLoad.download({ destination: serialLogoCachePath });
+                
+                console.log(`[ArweaveVideoGenerator] ✅ Top logo cached: ${logoFileName}`);
+                
+                // Add logo at 100% width, centered vertically and horizontally (ORIGINAL serial logo settings)
+                // The logo will be scaled to 100% width, maintaining aspect ratio
+                const logoWidth = width; // 100% width
+                const logoHeight = height; // Full height (will maintain aspect ratio via FFmpeg scale filter)
+                const logoX = 0; // Start at left edge (100% width fills entire canvas)
+                const logoY = Math.round((height - logoHeight) / 2); // Center vertically (will be adjusted by aspect ratio)
+                
+                layers.push(new LayerConfig(
+                    'image',
+                    serialLogoCachePath,
+                    { x: logoX, y: logoY },
+                    { width: logoWidth, height: logoHeight },
+                    1.0, // Full opacity
+                    10, // z-index (above video background) - ORIGINAL z-index
+                    1.0 // scale
+                ));
+                
+                console.log(`[ArweaveVideoGenerator] Top logo: ${logoWidth}x${logoHeight} (100% width), centered, appears from start`);
             } catch (error) {
-                console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load second logo from Firebase:`, error.message);
+                console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load top logo:`, error.message);
+                serialLogoCachePath = null; // Clear if failed
                 // Continue without logo if it fails
             }
 
@@ -935,8 +859,7 @@ class ArweaveVideoGenerator {
             // Create composition config with filter
             console.log(`[ArweaveVideoGenerator] 🎨 Video filter received: ${videoFilter ? `"${videoFilter.substring(0, 100)}..."` : 'null (will use default B&W)'}`);
             const layerDescription = [
-                serialLogoCachePath ? 'serial_logo' : null,
-                secondLogoCachePath ? 'top_logo' : null,
+                serialLogoCachePath ? 'top_logo' : null,
                 'artist_text',
                 logoCachePath ? 'end_logo' : null
             ].filter(Boolean).join(' + ');
@@ -982,10 +905,6 @@ class ArweaveVideoGenerator {
                 // Cleanup end logo cache
                 if (logoCachePath && await fs.pathExists(logoCachePath)) {
                     await fs.remove(logoCachePath);
-                }
-                // Cleanup second logo cache
-                if (secondLogoCachePath && await fs.pathExists(secondLogoCachePath)) {
-                    await fs.remove(secondLogoCachePath);
                 }
             } catch (cleanupError) {
                 console.warn('[ArweaveVideoGenerator] Cleanup warning:', cleanupError.message);
