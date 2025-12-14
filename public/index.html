@@ -1600,8 +1600,12 @@
         selectedArtist = 'random'; // Reset to random for tracks
       }
       
-      // overlayContainer is already defined above, no need to redeclare
-      // Show overlay toggle when folders are shown
+      // Show filter selection container (step 4)
+      if (filterContainer) {
+        filterContainer.style.display = 'block';
+      }
+      
+      // Show overlay toggle when folders are shown (step 5)
       if (overlayContainer) {
         overlayContainer.style.display = 'block';
       }
