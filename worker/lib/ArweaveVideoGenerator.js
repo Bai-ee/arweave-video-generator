@@ -537,25 +537,13 @@ class ArweaveVideoGenerator {
                 const storage = getStorage();
                 const bucket = storage.bucket();
                 const logoStoragePath = 'logos/serial_logo.png';
-                const publicUrl = `https://storage.googleapis.com/${bucket.name}/${logoStoragePath}`;
                 
                 console.log(`[ArweaveVideoGenerator] Downloading serial_logo.png from Firebase...`);
                 
-                // Download and cache logo
+                // Download and cache logo using Firebase Admin SDK (works with private files)
                 serialLogoCachePath = path.join(this.cacheDir, `serial_logo_${Date.now()}.png`);
-                const response = await axios({
-                    url: publicUrl,
-                    method: 'GET',
-                    responseType: 'stream'
-                });
-                
-                const writer = fs.createWriteStream(serialLogoCachePath);
-                response.data.pipe(writer);
-                
-                await new Promise((resolve, reject) => {
-                    writer.on('finish', resolve);
-                    writer.on('error', reject);
-                });
+                const serialLogoFile = bucket.file(logoStoragePath);
+                await serialLogoFile.download({ destination: serialLogoCachePath });
                 
                 console.log(`[ArweaveVideoGenerator] ✅ Serial logo cached`);
                 
@@ -622,24 +610,11 @@ class ArweaveVideoGenerator {
                     }
                     
                     const logoFileName = path.basename(selectedLogo.name);
-                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${selectedLogo.name}`;
                     
                     console.log(`[ArweaveVideoGenerator] Selected second logo: ${logoFileName}${topLogo ? ' (user selected)' : ' (random)'}`);
                     
-                    // Download and cache logo
-                    const response = await axios({
-                        url: publicUrl,
-                        method: 'GET',
-                        responseType: 'stream'
-                    });
-                    
-                    const writer = fs.createWriteStream(secondLogoCachePath);
-                    response.data.pipe(writer);
-                    
-                    await new Promise((resolve, reject) => {
-                        writer.on('finish', resolve);
-                        writer.on('error', reject);
-                    });
+                    // Download and cache logo using Firebase Admin SDK (works with private files)
+                    await selectedLogo.download({ destination: secondLogoCachePath });
                     
                     // Second logo: 30% width, maintain aspect ratio, centered horizontally
                     const logoWidth = Math.round(width * 0.30); // 30% width
@@ -881,24 +856,11 @@ class ArweaveVideoGenerator {
                     }
                     
                     const logoFileName = path.basename(selectedLogo.name);
-                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${selectedLogo.name}`;
                     
                     console.log(`[ArweaveVideoGenerator] Selected logo: ${logoFileName}${endLogo ? ' (user selected)' : ' (random)'}`);
                     
-                    // Download and cache logo
-                    const response = await axios({
-                        url: publicUrl,
-                        method: 'GET',
-                        responseType: 'stream'
-                    });
-                    
-                    const writer = fs.createWriteStream(logoCachePath);
-                    response.data.pipe(writer);
-                    
-                    await new Promise((resolve, reject) => {
-                        writer.on('finish', resolve);
-                        writer.on('error', reject);
-                    });
+                    // Download and cache logo using Firebase Admin SDK (works with private files)
+                    await selectedLogo.download({ destination: logoCachePath });
                     
                     // Calculate logo size: 35% of width, maintain aspect ratio
                     const logoWidth = Math.round(width * 0.35);
