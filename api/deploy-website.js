@@ -7,7 +7,7 @@
  */
 
 import { deployWebsiteToArweave } from '../lib/WebsiteDeployer.js';
-import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
+import { initializeFirebaseAdmin, getFirestore, getStorage } from '../lib/firebase-admin.js';
 import { syncFirebaseToWebsiteJSON } from '../lib/WebsiteSync.js';
 import { updateArNSRecord } from '../lib/ArNSUpdater.js';
 import path from 'path';
@@ -231,6 +231,7 @@ export default async function handler(req, res) {
       
       // Verify critical files were copied
       console.log(`[Deploy Website] Verifying files copied to /tmp...`);
+      const missingFiles = [];
       for (const criticalFile of criticalFiles) {
         const copiedPath = path.join(tempWebsiteRoot, criticalFile);
         const exists = await fs.pathExists(copiedPath);
@@ -238,7 +239,67 @@ export default async function handler(req, res) {
           const stats = await fs.stat(copiedPath);
           console.log(`[Deploy Website] ✅ Verified ${criticalFile} copied to /tmp (${(stats.size / 1024).toFixed(1)} KB)`);
         } else {
-          console.error(`[Deploy Website] ❌ CRITICAL: ${criticalFile} NOT copied to /tmp at ${copiedPath}!`);
+          console.warn(`[Deploy Website] ⚠️ ${criticalFile} NOT copied to /tmp - will download from Firebase Storage`);
+          missingFiles.push(criticalFile);
+        }
+      }
+      
+      // Download missing critical files from Firebase Storage
+      if (missingFiles.length > 0) {
+        console.log(`[Deploy Website] Downloading ${missingFiles.length} missing file(s) from Firebase Storage...`);
+        try {
+          const storage = getStorage();
+          const bucket = storage.bucket();
+          
+          // Map critical files to their Firebase Storage paths
+          const fileMappings = {
+            'img/covers/ue_banner.jpg': [
+              'logos/ue_banner.jpg',  // Most likely location
+              'img/covers/ue_banner.jpg',
+              'website/img/covers/ue_banner.jpg'
+            ],
+            'img/loge_horiz.png': [
+              'logos/loge_horiz.png',  // Most likely location
+              'img/loge_horiz.png',
+              'website/img/loge_horiz.png'
+            ],
+            'fonts/IBM_Plex_Mono,Rationale,Shantell_Sans/Rationale/Rationale-Regular.ttf': [
+              'fonts/IBM_Plex_Mono,Rationale,Shantell_Sans/Rationale/Rationale-Regular.ttf',
+              'website/fonts/IBM_Plex_Mono,Rationale,Shantell_Sans/Rationale/Rationale-Regular.ttf'
+            ]
+          };
+          
+          for (const criticalFile of missingFiles) {
+            const destPath = path.join(tempWebsiteRoot, criticalFile);
+            await fs.ensureDir(path.dirname(destPath));
+            
+            const possiblePaths = fileMappings[criticalFile] || [criticalFile];
+            let downloaded = false;
+            
+            for (const tryPath of possiblePaths) {
+              try {
+                const file = bucket.file(tryPath);
+                const [exists] = await file.exists();
+                if (exists) {
+                  await file.download({ destination: destPath });
+                  const stats = await fs.stat(destPath);
+                  console.log(`[Deploy Website] ✅ Downloaded ${criticalFile} from Firebase: ${tryPath} (${(stats.size / 1024).toFixed(1)} KB)`);
+                  downloaded = true;
+                  break;
+                }
+              } catch (err) {
+                // Try next path
+                continue;
+              }
+            }
+            
+            if (!downloaded) {
+              console.error(`[Deploy Website] ❌ Could not find ${criticalFile} in Firebase Storage`);
+              console.error(`[Deploy Website] Tried paths: ${possiblePaths.join(', ')}`);
+            }
+          }
+        } catch (storageError) {
+          console.error(`[Deploy Website] ❌ Firebase Storage error:`, storageError.message);
         }
       }
       
