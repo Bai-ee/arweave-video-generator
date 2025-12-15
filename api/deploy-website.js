@@ -46,20 +46,61 @@ export default async function handler(req, res) {
 
       const { websiteDir } = req.query || {};
       const websitePath = websiteDir || 'website';
-      // Normalize path to avoid double /var/task issues
-      let fullWebsitePath;
+      
+      // Use same path resolution logic as POST endpoint
+      let sourceWebsiteRoot;
       if (path.isAbsolute(websitePath)) {
-        fullWebsitePath = websitePath;
+        sourceWebsiteRoot = websitePath;
       } else {
-        fullWebsitePath = path.join(process.cwd(), websitePath);
+        sourceWebsiteRoot = path.join(process.cwd(), websitePath);
       }
-      fullWebsitePath = path.normalize(fullWebsitePath);
+      sourceWebsiteRoot = path.normalize(sourceWebsiteRoot);
+      
+      // Check if we're in Vercel production
+      const isVercelProduction = process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'production';
+      
+      let workingWebsiteRoot = sourceWebsiteRoot;
+      
+      // In Vercel, we need to work in /tmp (same as actual deployment)
+      if (isVercelProduction) {
+        const tempWebsiteRoot = '/tmp/website-estimate';
+        console.log(`[Deploy Website Estimate] Copying from ${sourceWebsiteRoot} to ${tempWebsiteRoot}...`);
+        await fs.copy(sourceWebsiteRoot, tempWebsiteRoot, { overwrite: true });
+        workingWebsiteRoot = tempWebsiteRoot;
+      }
+      
+      const websiteArtistsJsonPath = path.join(workingWebsiteRoot, 'artists.json');
+      
+      // Step 1: Sync Firebase to artists.json (same as actual deployment)
+      const syncResult = await syncFirebaseToWebsiteJSON(db, workingWebsiteRoot);
+      if (!syncResult.success) {
+        console.warn('[Deploy Website Estimate] Failed to sync Firebase, using existing files:', syncResult.error);
+      } else {
+        console.log('[Deploy Website Estimate] ✅ Synced Firebase to artists.json');
+      }
 
-      // Get changed files
+      // Step 2: Generate HTML pages (same as actual deployment)
+      try {
+        const generateScriptPath = path.join(process.cwd(), 'lib', 'WebsitePageGenerator.cjs');
+        const generateScript = require(generateScriptPath);
+        
+        if (generateScript && typeof generateScript.generatePages === 'function') {
+          const generateResult = generateScript.generatePages(websiteArtistsJsonPath, workingWebsiteRoot);
+          if (generateResult && generateResult.success) {
+            console.log('[Deploy Website Estimate] ✅ Generated HTML pages');
+          } else {
+            console.warn('[Deploy Website Estimate] Failed to generate pages, using existing files');
+          }
+        }
+      } catch (genError) {
+        console.warn('[Deploy Website Estimate] Could not generate pages, using existing files:', genError.message);
+      }
+
+      // Step 3: Get changed files AFTER sync and generation (same as actual deployment)
       const { getChangedFiles } = await import('../lib/DeploymentTracker.js');
       const { calculateTotalCost, formatCost } = await import('../lib/ArweaveCostCalculator.js');
       
-      const { changedFiles, unchangedFiles, totalFiles } = await getChangedFiles(fullWebsitePath, db);
+      const { changedFiles, unchangedFiles, totalFiles } = await getChangedFiles(workingWebsiteRoot, db);
 
       // Calculate cost for changed files only
       let costEstimate = null;
@@ -75,6 +116,15 @@ export default async function handler(req, res) {
           costUSDApprox: 0,
           arPriceUSD: 0
         };
+      }
+
+      // Cleanup temp directory if created
+      if (isVercelProduction && workingWebsiteRoot !== sourceWebsiteRoot) {
+        try {
+          await fs.remove(workingWebsiteRoot);
+        } catch (cleanupError) {
+          // Ignore cleanup errors
+        }
       }
 
       return res.status(200).json({
