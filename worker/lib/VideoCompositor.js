@@ -541,8 +541,12 @@ export class VideoCompositor {
     }
 
     // Process layers that should appear AFTER fade (these won't fade out)
+    console.log(`[VideoCompositor] Checking for after-fade layers: ${allLayersAfterFade.length} found`);
     if (allLayersAfterFade.length > 0) {
       console.log(`[VideoCompositor] Processing ${allLayersAfterFade.length} layer(s) after fade (won't fade out)`);
+      allLayersAfterFade.forEach((layer, idx) => {
+        console.log(`[VideoCompositor] After-fade layer ${idx}: type=${layer.type}, startTime=${layer.startTime}, addAfterFade=${layer.addAfterFade}`);
+      });
       for (const layer of allLayersAfterFade) {
         if (layer.type === 'text') {
           // Process text layer (same as before, but on faded video)

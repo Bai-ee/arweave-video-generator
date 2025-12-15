@@ -854,9 +854,10 @@ class ArweaveVideoGenerator {
                     console.log(`[ArweaveVideoGenerator] Logo appears at: ${logoStartTime}s (5 seconds before end)`);
                     console.log(`[ArweaveVideoGenerator] Logo z-index: 300 (HIGHEST - above text and serial logo)`);
                     
-                    // Add logo as timed overlay layer (appears at 25s, stays until end)
+                    // Add logo as timed overlay layer (appears at 25s after fade, fades in, stays until end)
+                    // Mark to add AFTER fade so it doesn't get affected by the fade-to-black
                     // Use z-index 300 to ensure it's processed LAST and appears on top of everything
-                    layers.push(new LayerConfig(
+                    const endLogoLayer = new LayerConfig(
                         'image',
                         logoCachePath,
                         { x: logoX, y: logoY },
@@ -865,9 +866,12 @@ class ArweaveVideoGenerator {
                         300, // HIGHEST z-index (above everything including text at 100)
                         1.0, // scale
                         null, // no font path
-                        logoStartTime, // start at 25 seconds
+                        logoStartTime, // start at 25 seconds (after fade ends)
                         duration - logoStartTime // duration until end (5 seconds)
-                    ));
+                    );
+                    endLogoLayer.addAfterFade = true; // Mark to add after fade filter so it appears after fade-out
+                    console.log(`[ArweaveVideoGenerator] End logo layer addAfterFade flag: ${endLogoLayer.addAfterFade}`);
+                    layers.push(endLogoLayer);
                 } else {
                     console.warn(`[ArweaveVideoGenerator] ⚠️ No valid logos found in Firebase Storage (excluding serial_logo.png)`);
                 }
