@@ -82,7 +82,7 @@ Primary use:	Volna HTML Template
 
 @font-face {
   font-family: 'Rationale-Regular';
-  src: url('/fonts/Rationale-Regular.ttf') format('truetype');
+  src: url('../fonts/IBM_Plex_Mono,Rationale,Shantell_Sans/Rationale/Rationale-Regular.ttf') format('truetype');
   font-style: normal;
 }
 
