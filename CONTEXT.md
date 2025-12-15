@@ -139,7 +139,7 @@
 
 ---
 
-## ✅ MVP Features (13 Features)
+## ✅ MVP Features (15 Features)
 
 1. **Video Generation** - 30s videos from 5s segments, dynamic folder selection
 2. **Dynamic Folder Discovery** - Automatically finds all folders (no hardcoded lists)
@@ -154,6 +154,8 @@
 11. **Video Filter Application** - Hard B&W Street Doc @ 80% (hardcoded)
 12. **Folder Preview** - Preview videos in folders before generation
 13. **Artist Management** - Create/update artists in Firestore
+14. **Logo Selection** - Custom top and end logos (defaults: ue_barcode_black.png, ue_square.png)
+15. **Overlay Effects** - Selectable overlay effects (Analog Film, Gritt, Noise, Retro Dust)
 
 **📖 See [FEATURES.md](./FEATURES.md) for complete feature documentation.**
 

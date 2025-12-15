@@ -48,6 +48,10 @@ This document describes all features of the Arweave Video Generator system, thei
   - `duration`: Number (default: 30 seconds)
   - `videoFilter`: String (filter key, default: 'look_hard_bw_street_doc')
   - `filterIntensity`: Number (0.0-1.0, default: 0.8)
+  - `topLogo`: String (logo filename or null for default)
+  - `endLogo`: String (logo filename or null for default)
+  - `overlayEffect`: String (overlay effect name or null for random)
+  - `enableOverlay`: Boolean (enable/disable overlay effects)
 - **Processing**: GitHub Actions workflow runs every minute
 - **Output**: Video stored in `videos/` folder in Firebase Storage
 - **URL Format**: Signed URL (1 year expiry, CORS-compliant)
@@ -362,15 +366,29 @@ This document describes all features of the Arweave Video Generator system, thei
 
 ### 12. Video Filter Application ✅
 
-**Status**: Verified and working (hardcoded to Hard B&W Street Doc @ 80%)
+**Status**: Verified and working
 
-**Description**: Videos are automatically filtered with "Hard B&W Street Doc" filter at 80% intensity.
+**Description**: Users can select video filters from a dropdown menu. Default filter is "Hard B&W Street Doc" at 80% intensity.
+
+**Usage**:
+1. After selecting audio source, filter dropdown appears
+2. Select filter from dropdown (default: Hard B&W Street Doc)
+3. Options include all available filters plus "Random"
+4. Filter intensity is fixed at 80%
+
+**Available Filters**:
+- Hard B&W Street Doc (default)
+- Pixel Grit Vertical
+- Faded 90s Tape
+- Gritty Neon Club
+- And more (dynamically loaded)
 
 **Technical Details**:
 - Filter is applied in `VideoCompositor`
-- Filter key: `look_hard_bw_street_doc`
-- Intensity: 0.8 (80%)
+- Filter key: Selected from `VIDEO_FILTERS` object
+- Intensity: 0.8 (80% - fixed)
 - Applied via FFmpeg filter_complex
+- Random option selects a random filter from available options
 
 ### 13. Folder Preview ✅
 
@@ -388,6 +406,66 @@ This document describes all features of the Arweave Video Generator system, thei
 - Uses `/api/video-folders?folder={folderName}` endpoint
 - Returns signed URLs for video access
 - Videos displayed in grid layout
+
+### 14. Logo Selection (Top and End Logos) ✅
+
+**Status**: Verified and working
+
+**Description**: Users can select custom logos for the top and end of generated videos. Logos are loaded from the `logos/` folder in Firebase Storage.
+
+**How It Works**:
+1. **Top Logo**: 
+   - Always appears at the top of the composition
+   - Runs the entire length of the video
+   - Fades out at the end with everything else
+   - Default: `ue_barcode_black.png`
+   - Full width (100% canvas width), centered vertically
+   - Z-index: 10 (above video background)
+
+2. **End Logo**:
+   - Appears at the end only (25 seconds for 30s video)
+   - Fades in after other elements have faded out
+   - Default: `ue_square.png`
+   - 35% width, centered horizontally and vertically
+   - Z-index: 300 (highest, above everything)
+   - Processed after fade-to-black (22-25s) so it appears clearly
+
+**Usage**:
+1. After selecting audio source, logo selection dropdowns appear
+2. **Top Logo**: Select from dropdown (default: UE Barcode Black)
+3. **End Logo**: Select from dropdown (default: UE Square)
+4. Options include:
+   - Default logo (top: `ue_barcode_black.png`, end: `ue_square.png`)
+   - Any logo from the `logos/` folder
+   - "Random" option for both
+5. Logos are dynamically loaded from Firebase Storage
+
+**Technical Details**:
+- **Logo Source**: `logos/` folder in Firebase Storage
+- **Download Method**: Firebase Admin SDK `file.download()` (works with private files)
+- **Top Logo Default**: `ue_barcode_black.png`
+- **End Logo Default**: `ue_square.png`
+- **Frontend Variables**: `selectedTopLogo`, `selectedEndLogo`
+- **API Parameters**: `topLogo`, `endLogo` (filename or null for default/random)
+- **Backend Processing**: `worker/lib/ArweaveVideoGenerator.js`
+  - Step 3: Loads top logo (custom or default)
+  - Step 6: Loads end logo (custom or default, appears at 25s)
+- **End Logo Timing**: Appears at `duration - 5` seconds (25s for 30s video)
+- **End Logo Processing**: Marked with `addAfterFade = true` to appear after fade-to-black
+
+**Logo Behavior**:
+- **Top Logo**: Replaces default if custom selected, otherwise uses `ue_barcode_black.png`
+- **End Logo**: Uses custom selection or defaults to `ue_square.png`, appears after fade
+- Both logos support case-insensitive filename matching
+- Logos are cached locally during video generation
+
+**Verification**:
+- ✅ Logo dropdowns populate from Firebase Storage
+- ✅ Default logos load correctly when no selection made
+- ✅ Custom logo selection works
+- ✅ Top logo appears from start, full width
+- ✅ End logo appears at 25s, after fade
+- ✅ Logos download using Firebase Admin SDK (no 403 errors)
 
 ## Feature Dependencies
 
@@ -423,6 +501,41 @@ This document describes all features of the Arweave Video Generator system, thei
    - Blockchain confirmation takes 2-10 minutes
    - Costs money (typically < $0.01 per file)
    - Requires Arweave wallet with funds
+
+### 15. Overlay Effects Selection ✅
+
+**Status**: Verified and working
+
+**Description**: Users can select overlay effects to apply to generated videos. Overlays switch every 10 seconds during the video.
+
+**Usage**:
+1. After selecting audio source, overlay dropdown appears
+2. Select overlay effect from dropdown
+3. Options: "None (Default)", "Analog Film", "Gritt", "Noise", "Retro Dust", "Random"
+4. Overlay videos are loaded from `assets/{effect_name}/` folder
+
+**Available Overlays**:
+- None (Default) - No overlay effect
+- Analog Film - Film grain overlay
+- Gritt - Gritty texture overlay
+- Noise - Noise texture overlay
+- Retro Dust - Retro dust particles overlay
+- Random - Randomly selects an overlay effect
+
+**Technical Details**:
+- Overlay videos switch every 10 seconds
+- Overlay opacity: 50% (configurable)
+- Overlay blend mode: overlay
+- Z-index: 250 (above images, below text and end logo)
+- Overlay videos loaded from `assets/{effect_name}/` folder in Firebase Storage
+- Overlay feature can be disabled (default: enabled)
+
+**Verification**:
+- ✅ Overlay dropdown populates correctly
+- ✅ Overlay effects load from Firebase Storage
+- ✅ Overlays switch every 10 seconds
+- ✅ Overlay opacity and blend mode work correctly
+- ✅ Random overlay selection works
 
 ## Future Enhancements
 
