@@ -767,9 +767,9 @@ class ArweaveVideoGenerator {
                 console.log('[ArweaveVideoGenerator] Step 5.5: Overlay feature disabled - skipping overlay videos');
             }
 
-            // Step 6: Add random logo overlay at 25 seconds (5 seconds before end)
+            // Step 6: Add random logo overlay at 24 seconds (6 seconds before end, overlaps fade by 1 second)
             console.log('[ArweaveVideoGenerator] Step 6: Loading random logo for end overlay from Firebase...');
-            const logoStartTime = duration - 5; // 25 seconds for 30s video
+            const logoStartTime = duration - 6; // 24 seconds for 30s video (1 second earlier to overlap fade)
             let logoCachePath = null; // Declare outside try block for cleanup
             
             try {
@@ -851,10 +851,10 @@ class ArweaveVideoGenerator {
                     
                     console.log(`[ArweaveVideoGenerator] ✅ Logo downloaded: ${logoFileName}`);
                     console.log(`[ArweaveVideoGenerator] Logo size: ${logoWidth}x${logoHeight}, position: (${logoX}, ${logoY})`);
-                    console.log(`[ArweaveVideoGenerator] Logo appears at: ${logoStartTime}s (5 seconds before end)`);
+                    console.log(`[ArweaveVideoGenerator] Logo appears at: ${logoStartTime}s (6 seconds before end, overlaps fade by 1 second)`);
                     console.log(`[ArweaveVideoGenerator] Logo z-index: 300 (HIGHEST - above text and serial logo)`);
                     
-                    // Add logo as timed overlay layer (appears at 25s after fade, fades in, stays until end)
+                    // Add logo as timed overlay layer (appears at 24s, overlaps fade by 1 second, fades in, stays until end)
                     // Mark to add AFTER fade so it doesn't get affected by the fade-to-black
                     // Use z-index 300 to ensure it's processed LAST and appears on top of everything
                     const endLogoLayer = new LayerConfig(
@@ -866,8 +866,8 @@ class ArweaveVideoGenerator {
                         300, // HIGHEST z-index (above everything including text at 100)
                         1.0, // scale
                         null, // no font path
-                        logoStartTime, // start at 25 seconds (after fade ends)
-                        duration - logoStartTime // duration until end (5 seconds)
+                        logoStartTime, // start at 24 seconds (overlaps fade by 1 second)
+                        duration - logoStartTime // duration until end (6 seconds)
                     );
                     endLogoLayer.addAfterFade = true; // Mark to add after fade filter so it appears after fade-out
                     console.log(`[ArweaveVideoGenerator] End logo layer addAfterFade flag: ${endLogoLayer.addAfterFade}`);
