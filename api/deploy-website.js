@@ -180,24 +180,40 @@ export default async function handler(req, res) {
     if (isVercelProduction) {
       console.log('[Deploy Website] Vercel production detected - using /tmp for sync/regeneration');
       
-      // Copy website folder to /tmp
-      const tempWebsiteRoot = '/tmp/website';
-      await fs.copy(sourceWebsiteRoot, tempWebsiteRoot, { overwrite: true });
-      console.log(`[Deploy Website] Copied website to ${tempWebsiteRoot}`);
-      
-      // Verify critical files were copied
+      // Verify source files exist before copying
       const criticalFiles = [
         'img/covers/ue_banner.jpg',
         'img/loge_horiz.png',
         'fonts/IBM_Plex_Mono,Rationale,Shantell_Sans/Rationale/Rationale-Regular.ttf'
       ];
+      console.log(`[Deploy Website] Checking source files in ${sourceWebsiteRoot}...`);
+      for (const criticalFile of criticalFiles) {
+        const sourcePath = path.join(sourceWebsiteRoot, criticalFile);
+        const exists = await fs.pathExists(sourcePath);
+        if (exists) {
+          const stats = await fs.stat(sourcePath);
+          console.log(`[Deploy Website] ✅ Source file exists: ${criticalFile} (${(stats.size / 1024).toFixed(1)} KB)`);
+        } else {
+          console.error(`[Deploy Website] ❌ Source file MISSING: ${criticalFile} at ${sourcePath}`);
+        }
+      }
+      
+      // Copy website folder to /tmp
+      const tempWebsiteRoot = '/tmp/website';
+      console.log(`[Deploy Website] Copying from ${sourceWebsiteRoot} to ${tempWebsiteRoot}...`);
+      await fs.copy(sourceWebsiteRoot, tempWebsiteRoot, { overwrite: true });
+      console.log(`[Deploy Website] Copy operation completed`);
+      
+      // Verify critical files were copied
+      console.log(`[Deploy Website] Verifying files copied to /tmp...`);
       for (const criticalFile of criticalFiles) {
         const copiedPath = path.join(tempWebsiteRoot, criticalFile);
         const exists = await fs.pathExists(copiedPath);
         if (exists) {
-          console.log(`[Deploy Website] ✅ Verified ${criticalFile} copied to /tmp`);
+          const stats = await fs.stat(copiedPath);
+          console.log(`[Deploy Website] ✅ Verified ${criticalFile} copied to /tmp (${(stats.size / 1024).toFixed(1)} KB)`);
         } else {
-          console.error(`[Deploy Website] ❌ CRITICAL: ${criticalFile} NOT copied to /tmp!`);
+          console.error(`[Deploy Website] ❌ CRITICAL: ${criticalFile} NOT copied to /tmp at ${copiedPath}!`);
         }
       }
       
