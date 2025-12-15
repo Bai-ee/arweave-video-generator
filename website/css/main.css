@@ -88,21 +88,21 @@ Primary use:	Volna HTML Template
 
 @font-face {
   font-family: 'Hiragino Kaku Gothic 0';
-  src: url('/fonts/ヒラギノ角ゴシック W0.ttc') format('truetype-collection');
+  src: url('../fonts/ヒラギノ角ゴシック W0.ttc') format('truetype-collection');
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Hiragino Kaku Gothic 4';
-  src: url('/fonts/ヒラギノ角ゴシック W4.ttc') format('truetype-collection');
+  src: url('../fonts/ヒラギノ角ゴシック W4.ttc') format('truetype-collection');
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Hiragino Kaku Gothic 9';
-  src: url('/fonts/ヒラギノ角ゴシック W9.ttc') format('truetype-collection');
+  src: url('../fonts/ヒラギノ角ゴシック W9.ttc') format('truetype-collection');
   font-weight: 400;
   font-style: normal;
 }
