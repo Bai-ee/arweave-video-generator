@@ -170,7 +170,32 @@ export default async function handler(req, res) {
 
     // Full deployment: sync, regenerate, then deploy
     const isVercelProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-    const sourceWebsiteRoot = path.join(process.cwd(), websitePath);
+    
+    // In Vercel, process.cwd() is /var/task, but website files might be in a different location
+    // Try multiple possible locations
+    let sourceWebsiteRoot = path.join(process.cwd(), websitePath);
+    if (isVercelProduction) {
+      // Check if website exists at process.cwd()/website
+      const testPath = path.join(process.cwd(), websitePath);
+      if (!await fs.pathExists(testPath)) {
+        // Try alternative locations
+        const altPaths = [
+          path.join('/var/task', websitePath),
+          path.join(process.cwd(), '..', websitePath),
+          websitePath // If it's already absolute
+        ];
+        for (const altPath of altPaths) {
+          if (await fs.pathExists(altPath)) {
+            sourceWebsiteRoot = altPath;
+            console.log(`[Deploy Website] Found website at alternative path: ${altPath}`);
+            break;
+          }
+        }
+      }
+      console.log(`[Deploy Website] Using source website path: ${sourceWebsiteRoot}`);
+    } else {
+      sourceWebsiteRoot = path.join(process.cwd(), websitePath);
+    }
     
     // In Vercel, /var/task is read-only but /tmp is writable
     // Copy website to /tmp, sync Firebase, regenerate HTML, then deploy from there
