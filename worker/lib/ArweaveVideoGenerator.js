@@ -527,7 +527,7 @@ class ArweaveVideoGenerator {
             }
 
             // Step 3: Load top logo (serial_logo.png as default, or custom selected logo)
-            // Custom top logo replaces serial logo but uses SAME settings (full width, from start, same position)
+            // Top logo: Always appears at top, runs entire length, fades out at end with everything else
             console.log('[ArweaveVideoGenerator] Step 3: Loading top logo from Firebase...');
             const layers = [];
             let serialLogoCachePath = null; // Declare outside try block for cleanup
@@ -552,7 +552,7 @@ class ArweaveVideoGenerator {
                                !fileName.endsWith('.keep');
                     });
                     
-                    // Find the selected logo
+                    // Find the selected logo (case-insensitive)
                     const topLogoLower = topLogo.toLowerCase().trim();
                     logoToLoad = validLogos.find(logo => {
                         const logoName = path.basename(logo.name).toLowerCase();
@@ -572,14 +572,15 @@ class ArweaveVideoGenerator {
                     logoToLoad = bucket.file('logos/serial_logo.png');
                 }
                 
-                // Download and cache logo using Firebase Admin SDK
+                // Download and cache logo using Firebase Admin SDK (works with private files)
                 serialLogoCachePath = path.join(this.cacheDir, `serial_logo_${Date.now()}.png`);
                 await logoToLoad.download({ destination: serialLogoCachePath });
                 
                 console.log(`[ArweaveVideoGenerator] ✅ Top logo cached: ${logoFileName}`);
                 
-                // Add logo at 100% width, centered vertically and horizontally (ORIGINAL serial logo settings)
+                // Add top logo at 100% width, centered vertically and horizontally
                 // The logo will be scaled to 100% width, maintaining aspect ratio
+                // Appears from start, runs entire length, fades out at end with everything else
                 const logoWidth = width; // 100% width
                 const logoHeight = height; // Full height (will maintain aspect ratio via FFmpeg scale filter)
                 const logoX = 0; // Start at left edge (100% width fills entire canvas)
@@ -591,11 +592,12 @@ class ArweaveVideoGenerator {
                     { x: logoX, y: logoY },
                     { width: logoWidth, height: logoHeight },
                     1.0, // Full opacity
-                    10, // z-index (above video background) - ORIGINAL z-index
+                    10, // z-index (above video background)
                     1.0 // scale
+                    // No startTime or duration - appears from start, runs entire length, fades out at end
                 ));
                 
-                console.log(`[ArweaveVideoGenerator] Top logo: ${logoWidth}x${logoHeight} (100% width), centered, appears from start`);
+                console.log(`[ArweaveVideoGenerator] Top logo: ${logoWidth}x${logoHeight} (100% width), centered, appears from start, fades out at end`);
             } catch (error) {
                 console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load top logo:`, error.message);
                 serialLogoCachePath = null; // Clear if failed
@@ -858,12 +860,7 @@ class ArweaveVideoGenerator {
 
             // Create composition config with filter
             console.log(`[ArweaveVideoGenerator] 🎨 Video filter received: ${videoFilter ? `"${videoFilter.substring(0, 100)}..."` : 'null (will use default B&W)'}`);
-            const layerDescription = [
-                serialLogoCachePath ? 'top_logo' : null,
-                'artist_text',
-                logoCachePath ? 'end_logo' : null
-            ].filter(Boolean).join(' + ');
-            console.log(`[ArweaveVideoGenerator] 📊 Layers count: ${layers.length} (${layerDescription})`);
+            console.log(`[ArweaveVideoGenerator] 📊 Layers count: ${layers.length} (top_logo + artist_text${logoCachePath ? ' + end_logo' : ''})`);
             
             const compositionConfig = new CompositionConfig(
                 backgroundPath,
