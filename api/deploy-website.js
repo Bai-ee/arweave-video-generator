@@ -206,10 +206,10 @@ export default async function handler(req, res) {
       console.log('[Deploy Website] Vercel production detected - using /tmp for sync/regeneration');
       
       // Verify source files exist before copying
+      // Note: Font file is excluded - it's handled separately if needed
       const criticalFiles = [
         'img/covers/ue_banner.jpg',
-        'img/loge_horiz.png',
-        'fonts/IBM_Plex_Mono,Rationale,Shantell_Sans/Rationale/Rationale-Regular.ttf'
+        'img/loge_horiz.png'
       ];
       console.log(`[Deploy Website] Checking source files in ${sourceWebsiteRoot}...`);
       for (const criticalFile of criticalFiles) {
@@ -252,20 +252,13 @@ export default async function handler(req, res) {
           const bucket = storage.bucket();
           
           // Map critical files to their Firebase Storage paths
+          // Both images are stored in the logos/ folder in Firebase Storage
           const fileMappings = {
             'img/covers/ue_banner.jpg': [
-              'logos/ue_banner.jpg',  // Most likely location
-              'img/covers/ue_banner.jpg',
-              'website/img/covers/ue_banner.jpg'
+              'logos/ue_banner.jpg'  // Stored in logos/ folder
             ],
             'img/loge_horiz.png': [
-              'logos/loge_horiz.png',  // Most likely location
-              'img/loge_horiz.png',
-              'website/img/loge_horiz.png'
-            ],
-            'fonts/IBM_Plex_Mono,Rationale,Shantell_Sans/Rationale/Rationale-Regular.ttf': [
-              'fonts/IBM_Plex_Mono,Rationale,Shantell_Sans/Rationale/Rationale-Regular.ttf',
-              'website/fonts/IBM_Plex_Mono,Rationale,Shantell_Sans/Rationale/Rationale-Regular.ttf'
+              'logos/loge_horiz.png'  // Stored in logos/ folder
             ]
           };
           
