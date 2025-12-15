@@ -28,7 +28,10 @@ Creates a video generation job in Firestore. Processing happens asynchronously v
   "useTrax": false,
   "videoFilter": "look_hard_bw_street_doc",
   "filterIntensity": 0.8,
-  "enableOverlay": false
+  "enableOverlay": false,
+  "overlayEffect": null,
+  "topLogo": null,
+  "endLogo": null
 }
 ```
 
@@ -36,6 +39,13 @@ Creates a video generation job in Firestore. Processing happens asynchronously v
 - `duration` (number, optional): Video duration in seconds. Default: 30
 - `artist` (string, optional): Artist name or 'random'. Default: 'random'
 - `selectedFolders` (array, required): Array of folder names. Must have at least one folder.
+- `useTrax` (boolean, optional): true for ORIGINAL TRACKS, false for DJ MIXES. Default: false
+- `videoFilter` (string, optional): Filter key from VIDEO_FILTERS. Default: 'look_hard_bw_street_doc'
+- `filterIntensity` (number, optional): Filter intensity 0.0-1.0. Default: 0.8
+- `enableOverlay` (boolean, optional): Enable overlay effects. Default: false
+- `overlayEffect` (string, optional): Overlay effect name ('analog_film', 'gritt', 'noise', 'retro_dust') or null for random. Default: null
+- `topLogo` (string, optional): Top logo filename from logos/ folder or null for default (ue_barcode_black.png). Default: null
+- `endLogo` (string, optional): End logo filename from logos/ folder or null for default (ue_square.png). Default: null
 - `useTrax` (boolean, optional): `true` for tracks, `false` for mixes. Default: `false`
 - `videoFilter` (string, optional): Filter key. Default: 'look_hard_bw_street_doc'
 - `filterIntensity` (number, optional): Filter intensity 0.0-1.0. Default: 0.4
