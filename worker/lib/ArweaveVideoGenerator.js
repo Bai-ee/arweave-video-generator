@@ -815,12 +815,21 @@ class ArweaveVideoGenerator {
                             }
                         }
                     } else {
-                        // Random selection (default) - exclude top logo defaults
-                        if (validLogosForRandom.length > 0) {
-                            selectedLogo = validLogosForRandom[Math.floor(Math.random() * validLogosForRandom.length)];
+                        // No end logo selected - use ue_square.png as default
+                        console.log(`[ArweaveVideoGenerator] No end logo selected, using ue_square.png (default)`);
+                        const defaultEndLogo = allLogos.find(logo => {
+                            const logoName = path.basename(logo.name).toLowerCase();
+                            return logoName === 'ue_square.png';
+                        });
+                        if (defaultEndLogo) {
+                            selectedLogo = defaultEndLogo;
                         } else {
-                            // Fallback if no valid logos (shouldn't happen)
-                            selectedLogo = allLogos[Math.floor(Math.random() * allLogos.length)];
+                            console.warn(`[ArweaveVideoGenerator] ⚠️ Default end logo ue_square.png not found, using random`);
+                            if (validLogosForRandom.length > 0) {
+                                selectedLogo = validLogosForRandom[Math.floor(Math.random() * validLogosForRandom.length)];
+                            } else {
+                                selectedLogo = allLogos[Math.floor(Math.random() * allLogos.length)];
+                            }
                         }
                     }
                     

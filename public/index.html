@@ -419,7 +419,7 @@
                     style="margin: 0.35rem auto 0;"
                     onchange="updateEndLogoSelection(this.value)"
                   >
-                    <option value="ue_logo_horiz.png">UE Logo Horiz (Default)</option>
+                    <option value="ue_square.png">UE Square (Default)</option>
                     <option value="random">Random</option>
                   </select>
                 </div>
@@ -1310,7 +1310,7 @@
     let availableFolders = []; // List of available folders for current mode
     let selectedOverlay = ''; // Overlay effect selection (empty = none, 'random' = random, or specific effect name)
     let selectedTopLogo = 'loge_horiz.png'; // Top logo selection (default: loge_horiz.png)
-    let selectedEndLogo = 'ue_logo_horiz.png'; // End logo selection (default: ue_logo_horiz.png)
+    let selectedEndLogo = 'ue_square.png'; // End logo selection (default: ue_square.png)
     let availableLogos = []; // List of available logos
     const VIDEOS_PAGE_SIZE = 8;
     let visibleVideoCount = 0;
@@ -2056,14 +2056,14 @@
         
         // Add default logo first
         const defaultOption = document.createElement('option');
-        defaultOption.value = 'ue_logo_horiz.png';
-        defaultOption.textContent = 'UE Logo Horiz (Default)';
+        defaultOption.value = 'ue_square.png';
+        defaultOption.textContent = 'UE Square (Default)';
         defaultOption.selected = true;
         endLogoSelect.appendChild(defaultOption);
         
         // Add all other logos
         availableLogos.forEach(logo => {
-          if (logo.name !== 'ue_logo_horiz.png') {
+          if (logo.name !== 'ue_square.png') {
             const option = document.createElement('option');
             option.value = logo.name;
             option.textContent = logo.name.replace(/\.(png|jpg)$/i, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
