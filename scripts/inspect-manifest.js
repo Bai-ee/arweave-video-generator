@@ -24,16 +24,71 @@ async function inspectManifest() {
     console.log(`Manifest ID: ${MANIFEST_ID}`);
     console.log(`Manifest URL: https://arweave.net/${MANIFEST_ID}\n`);
     
-    // Fetch manifest
-    const manifestUrl = `https://arweave.net/${MANIFEST_ID}`;
-    console.log(`📥 Fetching manifest from ${manifestUrl}...`);
+    // Fetch manifest - try multiple methods
+    let manifest = null;
+    let manifestUrl = null;
     
-    const response = await fetch(manifestUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch manifest: ${response.status} ${response.statusText}`);
+    // Method 1: Direct manifest access
+    manifestUrl = `https://arweave.net/${MANIFEST_ID}`;
+    console.log(`📥 Trying Method 1: Direct access (${manifestUrl})...`);
+    try {
+      const response = await fetch(manifestUrl, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (response.ok) {
+        manifest = await response.json();
+        console.log('✅ Manifest fetched via direct access');
+      } else {
+        console.log(`   ❌ Failed: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.log(`   ❌ Error: ${error.message}`);
     }
     
-    const manifest = await response.json();
+    // Method 2: Try as bundle transaction
+    if (!manifest) {
+      manifestUrl = `https://arweave.net/${MANIFEST_ID}/manifest.json`;
+      console.log(`📥 Trying Method 2: Bundle manifest path (${manifestUrl})...`);
+      try {
+        const response = await fetch(manifestUrl, {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (response.ok) {
+          manifest = await response.json();
+          console.log('✅ Manifest fetched via bundle path');
+        } else {
+          console.log(`   ❌ Failed: ${response.status} ${response.statusText}`);
+        }
+      } catch (error) {
+        console.log(`   ❌ Error: ${error.message}`);
+      }
+    }
+    
+    // Method 3: Try accessing index.html to see if it's a manifest-hosted site
+    if (!manifest) {
+      console.log(`📥 Trying Method 3: Checking if manifest-hosted site...`);
+      try {
+        const indexUrl = `https://arweave.net/${MANIFEST_ID}/index.html`;
+        const response = await fetch(indexUrl, { method: 'HEAD' });
+        if (response.ok) {
+          console.log(`   ✅ Site is accessible at ${indexUrl}`);
+          console.log(`   💡 This appears to be a manifest-hosted site.`);
+          console.log(`   💡 The manifest might be embedded or accessed differently.`);
+          console.log(`\n   Try accessing resources directly:`);
+          console.log(`   - Banner: https://arweave.net/${MANIFEST_ID}/img/covers/ue_banner.jpg`);
+          console.log(`   - Logo: https://arweave.net/${MANIFEST_ID}/img/loge_horiz.png`);
+          console.log(`   - Font: https://arweave.net/${MANIFEST_ID}/fonts/IBM_Plex_Mono,Rationale,Shantell_Sans/Rationale/Rationale-Regular.ttf`);
+          console.log(`\n   If these return 404, the files are not in the manifest.`);
+          throw new Error('Manifest JSON not directly accessible - site appears to be manifest-hosted. Check resource URLs above.');
+        }
+      } catch (error) {
+        // Continue to final error
+      }
+    }
+    
+    if (!manifest) {
+      throw new Error(`Failed to fetch manifest via all methods. The transaction might not be confirmed yet, or the ID might be incorrect.`);
+    }
     
     console.log('✅ Manifest fetched successfully!\n');
     console.log('📋 Manifest Structure:');

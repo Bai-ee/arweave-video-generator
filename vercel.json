@@ -58,10 +58,6 @@
       "dest": "/api/deploy-website.js"
     },
     {
-      "src": "/api/force-upload-files",
-      "dest": "/api/force-upload-files.js"
-    },
-    {
       "src": "/api/update-website",
       "dest": "/api/deploy-website.js"
     },
