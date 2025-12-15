@@ -526,7 +526,7 @@ class ArweaveVideoGenerator {
                 backgroundPath = await this.generateBackgroundImage(audioArtist, prompt, width, height);
             }
 
-            // Step 3: Load top logo (serial_logo.png as default, or custom selected logo)
+            // Step 3: Load top logo (ue_barcode_black.png as default, or custom selected logo)
             // Top logo: Always appears at top, runs entire length, fades out at end with everything else
             console.log('[ArweaveVideoGenerator] Step 3: Loading top logo from Firebase...');
             const layers = [];
@@ -538,10 +538,10 @@ class ArweaveVideoGenerator {
                 const bucket = storage.bucket();
                 
                 let logoToLoad = null;
-                let logoFileName = 'serial_logo.png';
+                let logoFileName = 'ue_barcode_black.png'; // Default top logo
                 
                 if (topLogo && topLogo.trim() !== '') {
-                    // Custom top logo selected - load it instead of serial logo
+                    // Custom top logo selected - load it
                     console.log(`[ArweaveVideoGenerator] Custom top logo selected: "${topLogo}"`);
                     
                     // Get all logos from Firebase Storage
@@ -563,13 +563,13 @@ class ArweaveVideoGenerator {
                         logoFileName = path.basename(logoToLoad.name);
                         console.log(`[ArweaveVideoGenerator] ✅ Found custom top logo: ${logoFileName}`);
                     } else {
-                        console.warn(`[ArweaveVideoGenerator] ⚠️ Custom top logo "${topLogo}" not found, falling back to serial_logo.png`);
-                        logoToLoad = bucket.file('logos/serial_logo.png');
+                        console.warn(`[ArweaveVideoGenerator] ⚠️ Custom top logo "${topLogo}" not found, falling back to default ue_barcode_black.png`);
+                        logoToLoad = bucket.file('logos/ue_barcode_black.png');
                     }
                 } else {
-                    // No custom top logo - use serial logo as default
-                    console.log(`[ArweaveVideoGenerator] No custom top logo selected, using serial_logo.png (default)`);
-                    logoToLoad = bucket.file('logos/serial_logo.png');
+                    // No custom top logo - use ue_barcode_black.png as default
+                    console.log(`[ArweaveVideoGenerator] No custom top logo selected, using ue_barcode_black.png (default)`);
+                    logoToLoad = bucket.file('logos/ue_barcode_black.png');
                 }
                 
                 // Download and cache logo using Firebase Admin SDK (works with private files)
@@ -780,30 +780,48 @@ class ArweaveVideoGenerator {
                 const storage = getStorage();
                 const bucket = storage.bucket();
                 
-                // Get all logos from Firebase Storage (excluding serial_logo.png)
+                // Get all logos from Firebase Storage
                 console.log(`[ArweaveVideoGenerator] 📥 Loading logos from Firebase Storage (logos/ folder)...`);
                 const [logoFiles] = await bucket.getFiles({ prefix: 'logos/' });
-                const validLogos = logoFiles.filter(file => {
+                const allLogos = logoFiles.filter(file => {
                     const fileName = path.basename(file.name);
                     // Exclude SVG files - FFmpeg cannot handle them directly
                     return (fileName.endsWith('.png') || fileName.endsWith('.jpg')) &&
-                           fileName !== 'serial_logo.png' &&
                            !fileName.endsWith('.keep');
                 });
                 
-                if (validLogos.length > 0) {
+                // For random selection, exclude top logo defaults
+                const validLogosForRandom = allLogos.filter(file => {
+                    const fileName = path.basename(file.name);
+                    return fileName !== 'serial_logo.png' && fileName !== 'ue_barcode_black.png';
+                });
+                
+                if (allLogos.length > 0) {
                     // Use selected logo or pick random
                     let selectedLogo;
                     if (endLogo) {
-                        // Find the selected logo by filename
-                        selectedLogo = validLogos.find(logo => path.basename(logo.name) === endLogo);
+                        // Find the selected logo by filename (case-insensitive, allow any logo including top logo defaults)
+                        const endLogoLower = endLogo.toLowerCase().trim();
+                        selectedLogo = allLogos.find(logo => {
+                            const logoName = path.basename(logo.name).toLowerCase();
+                            return logoName === endLogoLower;
+                        });
                         if (!selectedLogo) {
                             console.warn(`[ArweaveVideoGenerator] ⚠️ Selected end logo "${endLogo}" not found, using random`);
-                            selectedLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
+                            if (validLogosForRandom.length > 0) {
+                                selectedLogo = validLogosForRandom[Math.floor(Math.random() * validLogosForRandom.length)];
+                            } else {
+                                selectedLogo = allLogos[Math.floor(Math.random() * allLogos.length)];
+                            }
                         }
                     } else {
-                        // Random selection (default)
-                        selectedLogo = validLogos[Math.floor(Math.random() * validLogos.length)];
+                        // Random selection (default) - exclude top logo defaults
+                        if (validLogosForRandom.length > 0) {
+                            selectedLogo = validLogosForRandom[Math.floor(Math.random() * validLogosForRandom.length)];
+                        } else {
+                            // Fallback if no valid logos (shouldn't happen)
+                            selectedLogo = allLogos[Math.floor(Math.random() * allLogos.length)];
+                        }
                     }
                     
                     const logoFileName = path.basename(selectedLogo.name);
