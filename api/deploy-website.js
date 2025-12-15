@@ -185,6 +185,22 @@ export default async function handler(req, res) {
       await fs.copy(sourceWebsiteRoot, tempWebsiteRoot, { overwrite: true });
       console.log(`[Deploy Website] Copied website to ${tempWebsiteRoot}`);
       
+      // Verify critical files were copied
+      const criticalFiles = [
+        'img/covers/ue_banner.jpg',
+        'img/loge_horiz.png',
+        'fonts/IBM_Plex_Mono,Rationale,Shantell_Sans/Rationale/Rationale-Regular.ttf'
+      ];
+      for (const criticalFile of criticalFiles) {
+        const copiedPath = path.join(tempWebsiteRoot, criticalFile);
+        const exists = await fs.pathExists(copiedPath);
+        if (exists) {
+          console.log(`[Deploy Website] ✅ Verified ${criticalFile} copied to /tmp`);
+        } else {
+          console.error(`[Deploy Website] ❌ CRITICAL: ${criticalFile} NOT copied to /tmp!`);
+        }
+      }
+      
       workingWebsiteRoot = tempWebsiteRoot;
       workingWebsitePath = tempWebsiteRoot;
     }
