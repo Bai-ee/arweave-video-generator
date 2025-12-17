@@ -4955,18 +4955,37 @@
       }
 
       try {
-        // Determine the folder path for the API call
-        // The delete-video API expects folder name without 'assets/' prefix
-        // (except for chicago-skyline-videos which it handles specially)
+        // Find the file object to get its fullPath
+        const fileObj = archiveFolderFiles.find(f => f.name === fileName);
+        if (!fileObj) {
+          throw new Error('File not found in current list');
+        }
+
+        // Determine folder path from fullPath if available
+        // The fullPath tells us exactly where the file is stored (e.g., "assets/noise/file.mp4")
         let folderPath = archiveSelectedFolder;
         
-        // Remove 'assets/' prefix if present
-        if (folderPath.startsWith('assets/')) {
-          folderPath = folderPath.replace('assets/', '');
+        if (fileObj.fullPath) {
+          // Extract folder path from fullPath (e.g., "assets/noise/file.mp4" -> "noise")
+          const pathParts = fileObj.fullPath.split('/');
+          pathParts.pop(); // Remove filename
+          const fullFolderPath = pathParts.join('/');
+          
+          // If the file is under assets/, extract just the folder name
+          // (e.g., "assets/noise" -> "noise", "assets/chicago-skyline-videos" -> "chicago-skyline-videos")
+          if (fullFolderPath.startsWith('assets/')) {
+            folderPath = fullFolderPath.replace('assets/', '');
+          } else {
+            folderPath = fullFolderPath;
+          }
+        } else {
+          // Fallback: use archiveSelectedFolder and remove assets/ prefix if present
+          if (folderPath.startsWith('assets/')) {
+            folderPath = folderPath.replace('assets/', '');
+          }
         }
-        
-        // For nested folders like 'assets/chicago-skyline-videos', 
-        // after removing 'assets/', we get 'chicago-skyline-videos' which the API handles correctly
+
+        console.log(`[ArchiveDelete] Deleting file: ${fileName}, folder: ${folderPath}, fullPath: ${fileObj.fullPath || 'N/A'}`);
 
         const response = await fetch(`/api/delete-video?folder=${encodeURIComponent(folderPath)}&file=${encodeURIComponent(fileName)}`, {
           method: 'DELETE'

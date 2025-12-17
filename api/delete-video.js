@@ -36,14 +36,26 @@ export default async function handler(req, res) {
 
     // Construct the full path
     // Handle special case for chicago-skyline-videos which is under assets/
-    // If folder is 'chicago-skyline-videos' (without assets/), add it
-    // If folder is 'assets/chicago-skyline-videos', use as-is
+    // Also handle other folders that might be under assets/ (like noise, retro_dust, etc.)
     let filePath;
-    if (folder === 'chicago-skyline-videos') {
-      filePath = `assets/chicago-skyline-videos/${file}`;
-    } else {
-      filePath = `${folder}/${file}`;
+    
+    // Remove 'assets/' prefix if present to normalize folder name
+    let normalizedFolder = folder;
+    if (normalizedFolder.startsWith('assets/')) {
+      normalizedFolder = normalizedFolder.replace('assets/', '');
     }
+    
+    // Check if this folder should be under assets/
+    // chicago-skyline-videos and overlay folders (noise, retro_dust, gritt, analog_film) are under assets/
+    const assetsFolders = ['chicago-skyline-videos', 'noise', 'retro_dust', 'gritt', 'analog_film'];
+    if (assetsFolders.includes(normalizedFolder)) {
+      filePath = `assets/${normalizedFolder}/${file}`;
+    } else {
+      // For other folders, use as-is (they're at root level)
+      filePath = `${normalizedFolder}/${file}`;
+    }
+    
+    console.log(`[DeleteVideo] Folder: ${folder}, Normalized: ${normalizedFolder}, FilePath: ${filePath}`);
     
     const fileRef = bucket.file(filePath);
 
