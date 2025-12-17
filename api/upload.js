@@ -429,7 +429,7 @@ export default async function handler(req, res) {
         // Just upload to folder, no artist database update needed
         actionMessage = `Image uploaded to ${targetFolder} folder`;
       } else if (imageAction === 'new-artist') {
-        // Create new artist with this image
+        // Create new artist with this image (as first thumbnail)
         await createNewArtist(db, artistName, artistGenre || 'electronic', arweaveUrl);
         actionMessage = `Created new artist "${artistName}" with image`;
       } else if (imageAction === 'add-to-folder') {
@@ -437,9 +437,10 @@ export default async function handler(req, res) {
         // Just store the URL - no thumbnail update
         actionMessage = `Added image to ${artistName}'s folder`;
       } else {
-        // Default: replace artist thumbnail (includes 'replace-thumbnail' action)
-        await updateArtistImage(db, artistName, arweaveUrl);
-        actionMessage = `Updated thumbnail for artist "${artistName}"`;
+        // Default: add artist thumbnail (includes 'replace-thumbnail' action)
+        // Add to thumbnails array (artists can have multiple thumbnails)
+        await addArtistThumbnail(db, artistName, arweaveUrl);
+        actionMessage = `Added thumbnail for artist "${artistName}"`;
       }
 
       return res.status(200).json({
@@ -616,9 +617,10 @@ async function updateWebsite(db) {
 }
 
 /**
- * Update artist image URL in Firebase artists JSON
+ * Add artist thumbnail URL to Firebase artists JSON
+ * Artists can have multiple thumbnails stored in artistThumbnails array
  */
-async function updateArtistImage(db, artistName, imageUrl) {
+async function addArtistThumbnail(db, artistName, imageUrl) {
   try {
     const artistsRef = db.collection('system').doc('artists');
     const artistsDoc = await artistsRef.get();
@@ -636,17 +638,33 @@ async function updateArtistImage(db, artistName, imageUrl) {
       artist = {
         artistName: artistName,
         artistFilename: artistName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.html',
-        artistImageFilename: imageUrl,
+        artistThumbnails: [imageUrl], // Array of thumbnail URLs
+        artistImageFilename: imageUrl, // Keep for backward compatibility
         artistGenre: 'electronic',
         mixes: [],
         trax: []
       };
       artistsData.push(artist);
-      console.log(`[Upload] Created new artist: ${artistName}`);
+      console.log(`[Upload] Created new artist: ${artistName} with thumbnail`);
     } else {
-      // Update existing artist image
-      artist.artistImageFilename = imageUrl;
-      console.log(`[Upload] Updated image for artist: ${artistName}`);
+      // Initialize artistThumbnails array if it doesn't exist
+      if (!artist.artistThumbnails) {
+        // Migrate from old artistImageFilename if it exists
+        artist.artistThumbnails = artist.artistImageFilename ? [artist.artistImageFilename] : [];
+      }
+      
+      // Add new thumbnail if it's not already in the array
+      if (!artist.artistThumbnails.includes(imageUrl)) {
+        artist.artistThumbnails.push(imageUrl);
+        console.log(`[Upload] Added thumbnail for artist: ${artistName} (${artist.artistThumbnails.length} total)`);
+      } else {
+        console.log(`[Upload] Thumbnail already exists for artist: ${artistName}`);
+      }
+      
+      // Update artistImageFilename for backward compatibility (use first thumbnail)
+      if (artist.artistThumbnails.length > 0) {
+        artist.artistImageFilename = artist.artistThumbnails[0];
+      }
     }
 
     // Save back to Firebase
@@ -675,23 +693,30 @@ async function createNewArtist(db, artistName, genre, imageUrl) {
     // Check if artist already exists
     const existingArtist = artistsData.find(a => a.artistName.toLowerCase() === artistName.toLowerCase());
     if (existingArtist) {
-      // Just update the image
-      existingArtist.artistImageFilename = imageUrl;
+      // Add thumbnail to existing artist
+      if (!existingArtist.artistThumbnails) {
+        existingArtist.artistThumbnails = existingArtist.artistImageFilename ? [existingArtist.artistImageFilename] : [];
+      }
+      if (!existingArtist.artistThumbnails.includes(imageUrl)) {
+        existingArtist.artistThumbnails.push(imageUrl);
+      }
+      existingArtist.artistImageFilename = existingArtist.artistThumbnails[0]; // Backward compatibility
       if (genre) existingArtist.artistGenre = genre;
-      console.log(`[Upload] Artist "${artistName}" already exists, updated image and genre`);
+      console.log(`[Upload] Artist "${artistName}" already exists, added thumbnail`);
     } else {
-      // Create new artist
+      // Create new artist with thumbnail array
       const newArtist = {
         artistName: artistName,
         artistFilename: artistName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.html',
-        artistImageFilename: imageUrl,
+        artistThumbnails: [imageUrl], // Array of thumbnail URLs
+        artistImageFilename: imageUrl, // Keep for backward compatibility
         artistGenre: genre || 'electronic',
         artistFolder: artistName.toLowerCase().replace(/[^a-z0-9]/g, ''),
         mixes: [],
         trax: []
       };
       artistsData.push(newArtist);
-      console.log(`[Upload] ✅ Created new artist: ${artistName} (${genre})`);
+      console.log(`[Upload] ✅ Created new artist: ${artistName} (${genre}) with thumbnail`);
     }
 
     // Save back to Firebase

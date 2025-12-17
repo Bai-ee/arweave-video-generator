@@ -331,9 +331,12 @@ export class VideoSegmentCompositor {
    * @param {number} targetDuration - Target duration in seconds (default: 30)
    * @param {number} segmentDuration - Duration of each segment in seconds (default: 5)
    * @param {string} audioPath - Optional path to audio file for BPM detection
+   * @param {string} artistImageUrl - Optional Arweave URL for artist image to use as last segment
+   * @param {number} canvasWidth - Canvas width (default: 720)
+   * @param {number} canvasHeight - Canvas height (default: 720)
    * @returns {Promise<string>} Path to concatenated video
    */
-  async createVideoFromSegments(videoPaths, targetDuration = 30, segmentDuration = 5, audioPath = null) {
+  async createVideoFromSegments(videoPaths, targetDuration = 30, segmentDuration = 5, audioPath = null, artistImageUrl = null, canvasWidth = 720, canvasHeight = 720) {
     // Handle grouped structure with any folder combination
     let folderMap = {}; // Dynamic folder map
     let isGrouped = false;
@@ -664,15 +667,43 @@ export class VideoSegmentCompositor {
       }
     }
 
+    // If artist image URL is provided, create two 5-second videos from it and add as 5th and 6th segments
+    if (artistImageUrl) {
+      console.log(`[VideoSegmentCompositor] 🖼️  Creating two 5-second videos from artist image: ${artistImageUrl}`);
+      try {
+        // Create first artist image segment (5th segment)
+        const artistImageSegment1 = await this.createImageVideoSegment(artistImageUrl, segmentDuration, canvasWidth, canvasHeight);
+        if (artistImageSegment1 && await fs.pathExists(artistImageSegment1)) {
+          segmentPaths.push(artistImageSegment1);
+          console.log(`[VideoSegmentCompositor] ✅ Added artist image as 5th segment`);
+        } else {
+          console.warn(`[VideoSegmentCompositor] ⚠️  Failed to create first artist image segment, continuing without it`);
+        }
+        
+        // Create second artist image segment (6th segment)
+        const artistImageSegment2 = await this.createImageVideoSegment(artistImageUrl, segmentDuration, canvasWidth, canvasHeight);
+        if (artistImageSegment2 && await fs.pathExists(artistImageSegment2)) {
+          segmentPaths.push(artistImageSegment2);
+          console.log(`[VideoSegmentCompositor] ✅ Added artist image as 6th segment`);
+        } else {
+          console.warn(`[VideoSegmentCompositor] ⚠️  Failed to create second artist image segment, continuing without it`);
+        }
+      } catch (error) {
+        console.error(`[VideoSegmentCompositor] ❌ Error creating artist image segments: ${error.message}`);
+        console.warn(`[VideoSegmentCompositor] ⚠️  Continuing without artist image segments`);
+      }
+    }
+
     // Concatenate segments with transitions
     const outputPath = path.join(
       this.tempDir,
       `concatenated_${Date.now()}.mp4`
     );
 
+    const finalDuration = artistImageUrl ? targetDuration + (segmentDuration * 2) : targetDuration;
     console.log(`[VideoSegmentCompositor] Concatenating ${segmentPaths.length} segments with transitions...`);
     console.log(`[VideoSegmentCompositor] Transitions: ${transitionTypes.map(t => t.type).join(', ')}`);
-    await this.concatenateSegmentsWithTransitions(segmentPaths, outputPath, targetDuration, transitionTypes, beatPositions);
+    await this.concatenateSegmentsWithTransitions(segmentPaths, outputPath, finalDuration, transitionTypes, beatPositions);
 
     // Cleanup segment files
     for (const segmentPath of segmentPaths) {
@@ -1012,6 +1043,104 @@ export class VideoSegmentCompositor {
         reject(error);
       });
     });
+  }
+
+  /**
+   * Create a 5-second video segment from an artist image URL
+   * Image is scaled to 90% width (square aspect ratio) and centered on canvas
+   * @param {string} imageUrl - Arweave URL of the artist image
+   * @param {number} duration - Duration in seconds (default: 5)
+   * @param {number} canvasWidth - Canvas width (default: 720)
+   * @param {number} canvasHeight - Canvas height (default: 720)
+   * @returns {Promise<string>} Path to video segment
+   */
+  async createImageVideoSegment(imageUrlOrPath, duration = 5, canvasWidth = 720, canvasHeight = 720) {
+    // Calculate image dimensions: 90% width, square aspect ratio
+    const imageWidth = Math.round(canvasWidth * 0.9); // 90% of canvas width
+    const imageHeight = imageWidth; // Square aspect ratio
+    const imageX = Math.round((canvasWidth - imageWidth) / 2); // Center horizontally
+    const imageY = Math.round((canvasHeight - imageHeight) / 2); // Center vertically
+    
+    console.log(`[VideoSegmentCompositor] Creating ${duration}s video from artist image`);
+    console.log(`[VideoSegmentCompositor] Image size: ${imageWidth}x${imageHeight}px, Position: (${imageX}, ${imageY})`);
+    
+    // Download image
+    const imagePath = path.join(this.tempDir, `artist_image_${Date.now()}.jpg`);
+    try {
+      // Download from Arweave URL (all artist thumbnails are stored as Arweave URLs)
+      console.log(`[VideoSegmentCompositor] Downloading artist image from Arweave: ${imageUrlOrPath}`);
+      const axios = (await import('axios')).default;
+      const response = await axios({
+        url: imageUrlOrPath,
+        method: 'GET',
+        responseType: 'stream',
+        timeout: 30000
+      });
+      
+      const writer = fs.createWriteStream(imagePath);
+      response.data.pipe(writer);
+      
+      await new Promise((resolve, reject) => {
+        writer.on('finish', resolve);
+        writer.on('error', reject);
+      });
+      
+      console.log(`[VideoSegmentCompositor] ✅ Image downloaded from Arweave: ${path.basename(imagePath)}`);
+    } catch (error) {
+      console.error(`[VideoSegmentCompositor] ❌ Failed to download artist image: ${error.message}`);
+      throw error;
+    }
+    
+    // Create video segment from image
+    const outputPath = path.join(this.tempDir, `artist_image_segment_${Date.now()}.mp4`);
+    
+    // Create a 5-second video with the image scaled and centered
+    // Use FFmpeg to create a video with:
+    // - Black background (720x720)
+    // - Image scaled to 90% width (648x648), square, centered
+    // - 5 seconds duration
+    // - 30 fps
+    // Filter chain: scale to fit 648x648, crop to square, pad to 720x720 centered
+    const filterChain = `scale=${imageWidth}:${imageHeight}:force_original_aspect_ratio=increase,crop=${imageWidth}:${imageHeight},pad=${canvasWidth}:${canvasHeight}:(${canvasWidth}-iw)/2:(${canvasHeight}-ih)/2:black`;
+    
+    const command = [
+      ffmpegPath,
+      '-loop', '1',
+      '-i', imagePath,
+      '-vf', filterChain,
+      '-t', duration.toString(),
+      '-r', '30',
+      '-pix_fmt', 'yuv420p',
+      '-c:v', 'libx264',
+      '-preset', 'fast',
+      '-crf', '23',
+      '-y',
+      outputPath
+    ];
+    
+    console.log(`[VideoSegmentCompositor] Creating video segment from image...`);
+    await this.executeFFmpeg(command, outputPath, 100 * 1024); // Minimum 100KB
+    
+    // Cleanup downloaded image
+    try {
+      await fs.remove(imagePath);
+    } catch (error) {
+      console.warn(`[VideoSegmentCompositor] Could not cleanup image: ${error.message}`);
+    }
+    
+    if (!await fs.pathExists(outputPath)) {
+      throw new Error(`Image video segment was not created: ${outputPath}`);
+    }
+    
+    const stats = await fs.stat(outputPath);
+    if (stats.size < 10240) {
+      await fs.remove(outputPath).catch(() => {});
+      throw new Error(`Image video segment is too small (${stats.size} bytes)`);
+    }
+    
+    console.log(`[VideoSegmentCompositor] ✅ Created artist image video segment: ${path.basename(outputPath)} (${(stats.size / 1024).toFixed(1)}KB)`);
+    
+    return outputPath;
   }
 
   /**

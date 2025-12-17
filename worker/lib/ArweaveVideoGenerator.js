@@ -406,14 +406,46 @@ class ArweaveVideoGenerator {
                     }
                     
                     try {
-                        // Create 30-second video from random 5-second segments with equal distribution
+                        // Check if artist has thumbnails to use as last segment
+                        let artistImageUrl = null;
+                        if (audioResult.artistData) {
+                            // Prefer artistThumbnails array, fallback to artistImageFilename for backward compatibility
+                            let thumbnails = [];
+                            if (audioResult.artistData.artistThumbnails && Array.isArray(audioResult.artistData.artistThumbnails)) {
+                                thumbnails = audioResult.artistData.artistThumbnails;
+                            } else if (audioResult.artistData.artistImageFilename) {
+                                thumbnails = [audioResult.artistData.artistImageFilename];
+                            }
+                            
+                            // Pick a random thumbnail from the array (or first if only one)
+                            if (thumbnails.length > 0) {
+                                const selectedThumbnail = thumbnails[Math.floor(Math.random() * thumbnails.length)];
+                                // Only use Arweave URLs (starts with http and contains arweave.net)
+                                if (selectedThumbnail.startsWith('http') && selectedThumbnail.includes('arweave.net')) {
+                                    artistImageUrl = selectedThumbnail;
+                                    console.log(`[ArweaveVideoGenerator] 🖼️  Found artist Arweave thumbnail: ${selectedThumbnail} (${thumbnails.length} available)`);
+                                }
+                            }
+                        }
+                        
+                        // If artist has image, create 4 segments (20s) + 2 image segments (10s) = 30s
+                        // Otherwise create 6 segments (30s)
+                        const videoDuration = artistImageUrl ? duration - 10 : duration;
+                        const segmentsNeeded = Math.ceil(videoDuration / 5);
+                        
+                        console.log(`[ArweaveVideoGenerator] Creating ${videoDuration}s video from ${segmentsNeeded} segments${artistImageUrl ? ' + 10s artist image (5th & 6th segments)' : ''}...`);
+                        
+                        // Create video from random 5-second segments with equal distribution
                         // Videos will be downloaded on-demand in VideoSegmentCompositor
                         console.log(`[ArweaveVideoGenerator] Attempting to create video from ${totalVideos} video references...`);
                         backgroundPath = await this.segmentCompositor.createVideoFromSegments(
                             groupedVideos, // Pass grouped structure with file references (not paths)
-                            duration,
+                            videoDuration, // Use reduced duration if artist image will be added
                             5, // 5-second segments
-                            audioFilePath // Pass audio path for BPM detection
+                            audioFilePath, // Pass audio path for BPM detection
+                            artistImageUrl, // Pass artist image URL if available
+                            width, // Canvas width
+                            height // Canvas height
                         );
                         
                         // Verify the video was actually created
@@ -471,13 +503,45 @@ class ArweaveVideoGenerator {
                     }
                     
                     try {
+                        // Check if artist has thumbnails to use as last segment
+                        let artistImageUrl = null;
+                        if (audioResult.artistData) {
+                            // Prefer artistThumbnails array, fallback to artistImageFilename for backward compatibility
+                            let thumbnails = [];
+                            if (audioResult.artistData.artistThumbnails && Array.isArray(audioResult.artistData.artistThumbnails)) {
+                                thumbnails = audioResult.artistData.artistThumbnails;
+                            } else if (audioResult.artistData.artistImageFilename) {
+                                thumbnails = [audioResult.artistData.artistImageFilename];
+                            }
+                            
+                            // Pick a random thumbnail from the array (or first if only one)
+                            if (thumbnails.length > 0) {
+                                const selectedThumbnail = thumbnails[Math.floor(Math.random() * thumbnails.length)];
+                                // Only use Arweave URLs (starts with http and contains arweave.net)
+                                if (selectedThumbnail.startsWith('http') && selectedThumbnail.includes('arweave.net')) {
+                                    artistImageUrl = selectedThumbnail;
+                                    console.log(`[ArweaveVideoGenerator] 🖼️  Found artist Arweave thumbnail: ${selectedThumbnail} (${thumbnails.length} available)`);
+                                }
+                            }
+                        }
+                        
+                        // If artist has image, create 4 segments (20s) + 2 image segments (10s) = 30s
+                        // Otherwise create 6 segments (30s)
+                        const videoDuration = artistImageUrl ? duration - 10 : duration;
+                        const segmentsNeeded = Math.ceil(videoDuration / 5);
+                        
+                        console.log(`[ArweaveVideoGenerator] Creating ${videoDuration}s video from ${segmentsNeeded} segments${artistImageUrl ? ' + 10s artist image (5th & 6th segments)' : ''}...`);
+                        
                         // Create 30-second video from random 5-second segments with transitions and beat sync
                         console.log(`[ArweaveVideoGenerator] Attempting to create video from ${totalVideos} videos...`);
                         backgroundPath = await this.segmentCompositor.createVideoFromSegments(
                             groupedVideos, // Pass grouped structure
-                            duration,
+                            videoDuration, // Use reduced duration if artist image will be added
                             5, // 5-second segments
-                            audioFilePath // Pass audio path for BPM detection
+                            audioFilePath, // Pass audio path for BPM detection
+                            artistImageUrl, // Pass artist image URL if available
+                            width, // Canvas width
+                            height // Canvas height
                         );
                         
                         // Verify the video was actually created
