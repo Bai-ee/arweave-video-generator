@@ -40,6 +40,7 @@ export default async function handler(req, res) {
     const overlayEffect = req.body.overlayEffect || null; // Specific overlay effect name or null for random
     const topLogo = req.body.topLogo || null; // Top logo filename or null for random
     const endLogo = req.body.endLogo || null; // End logo filename or null for random
+    const useArtistImage = req.body.useArtistImage !== undefined ? req.body.useArtistImage : true; // Use artist thumbnail as last 2 segments (default: true)
     
     console.log(`[GenerateVideo] Received logo parameters - topLogo: "${topLogo}" (type: ${typeof topLogo}), endLogo: "${endLogo}" (type: ${typeof endLogo})`);
     console.log(`[GenerateVideo] Received mix parameter - mixTitle: "${mixTitle}" (artist: "${artist}")`);
@@ -138,6 +139,7 @@ export default async function handler(req, res) {
       overlayEffect: overlayEffect, // Specific overlay effect name or null
       topLogo: topLogo, // Top logo filename or null for random
       endLogo: endLogo, // End logo filename or null for random
+      useArtistImage: useArtistImage, // Use artist thumbnail as last 2 segments (default: true)
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       completedAt: null,
       videoUrl: null,

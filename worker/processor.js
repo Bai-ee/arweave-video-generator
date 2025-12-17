@@ -86,7 +86,8 @@ async function processVideoJob(jobId, jobData, documentId = null) {
       enableOverlay: jobData.enableOverlay !== undefined ? jobData.enableOverlay : true, // Pass overlay toggle (default: true)
       overlayEffect: jobData.overlayEffect || null, // Pass specific overlay effect or null for random
       topLogo: jobData.topLogo || null, // Pass top logo filename or null for random
-      endLogo: jobData.endLogo || null // Pass end logo filename or null for random
+      endLogo: jobData.endLogo || null, // Pass end logo filename or null for random
+      useArtistImage: jobData.useArtistImage !== undefined ? jobData.useArtistImage : true // Pass useArtistImage flag (default: true)
     });
     
     console.log(`[Processor] Passing logo parameters to video generator - topLogo: "${jobData.topLogo || null}" (type: ${typeof jobData.topLogo}), endLogo: "${jobData.endLogo || null}" (type: ${typeof jobData.endLogo})`);

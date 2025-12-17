@@ -335,7 +335,8 @@ class ArweaveVideoGenerator {
             enableOverlay = true, // Overlay feature toggle (default: true)
             overlayEffect = null, // Specific overlay effect name or null for random
             topLogo = null, // Top logo filename or null for random
-            endLogo = null // End logo filename or null for random
+            endLogo = null, // End logo filename or null for random
+            useArtistImage = true // Use artist thumbnail as last 2 segments (default: true)
         } = options;
 
         console.log(`[ArweaveVideoGenerator] Starting video generation - ${duration}s for ${artist || 'random artist'}`);
@@ -406,9 +407,9 @@ class ArweaveVideoGenerator {
                     }
                     
                     try {
-                        // Check if artist has thumbnails to use as last segment
+                        // Check if artist has thumbnails to use as last segment (only if useArtistImage is enabled)
                         let artistImageUrl = null;
-                        if (audioResult.artistData) {
+                        if (useArtistImage && audioResult.artistData) {
                             // Prefer artistThumbnails array, fallback to artistImageFilename for backward compatibility
                             let thumbnails = [];
                             if (audioResult.artistData.artistThumbnails && Array.isArray(audioResult.artistData.artistThumbnails)) {
@@ -426,6 +427,8 @@ class ArweaveVideoGenerator {
                                     console.log(`[ArweaveVideoGenerator] 🖼️  Found artist Arweave thumbnail: ${selectedThumbnail} (${thumbnails.length} available)`);
                                 }
                             }
+                        } else if (!useArtistImage) {
+                            console.log(`[ArweaveVideoGenerator] 🖼️  Artist image disabled by user - using 6 video segments`);
                         }
                         
                         // If artist has image, create 4 segments (20s) + 2 image segments (10s) = 30s
@@ -503,9 +506,9 @@ class ArweaveVideoGenerator {
                     }
                     
                     try {
-                        // Check if artist has thumbnails to use as last segment
+                        // Check if artist has thumbnails to use as last segment (only if useArtistImage is enabled)
                         let artistImageUrl = null;
-                        if (audioResult.artistData) {
+                        if (useArtistImage && audioResult.artistData) {
                             // Prefer artistThumbnails array, fallback to artistImageFilename for backward compatibility
                             let thumbnails = [];
                             if (audioResult.artistData.artistThumbnails && Array.isArray(audioResult.artistData.artistThumbnails)) {
@@ -523,6 +526,8 @@ class ArweaveVideoGenerator {
                                     console.log(`[ArweaveVideoGenerator] 🖼️  Found artist Arweave thumbnail: ${selectedThumbnail} (${thumbnails.length} available)`);
                                 }
                             }
+                        } else if (!useArtistImage) {
+                            console.log(`[ArweaveVideoGenerator] 🖼️  Artist image disabled by user - using 6 video segments`);
                         }
                         
                         // If artist has image, create 4 segments (20s) + 2 image segments (10s) = 30s

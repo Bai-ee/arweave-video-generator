@@ -438,8 +438,25 @@
                   </select>
                 </div>
 
+                <div id="artistImageToggleContainer" class="step-block" style="display: none;">
+                  <div class="step-label">9. Artist thumbnail</div>
+                  <div class="step-hint">Use artist thumbnail as last 2 segments (5th & 6th)</div>
+                  <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">
+                      <input 
+                        type="checkbox" 
+                        id="useArtistImageToggle"
+                        checked
+                        onchange="updateArtistImageToggle(this.checked)"
+                        style="accent-color: var(--color-yellow-75); cursor: pointer; width: 18px; height: 18px;"
+                      />
+                      <span>Enable artist thumbnail</span>
+                    </label>
+                  </div>
+                </div>
+
                 <div class="step-block">
-                  <div class="step-label">9. Generate</div>
+                  <div class="step-label">10. Generate</div>
                   <div class="step-hint"></div>
                   <div class="action-row" style="margin-top: 0.25rem;">
                     <button 
@@ -1326,6 +1343,7 @@
     let selectedOverlay = ''; // Overlay effect selection (empty = none, 'random' = random, or specific effect name)
     let selectedTopLogo = 'ue_barcode_black.png'; // Top logo selection (default: ue_barcode_black.png)
     let selectedEndLogo = 'ue_square.png'; // End logo selection (default: ue_square.png)
+    let useArtistImage = true; // Use artist thumbnail as last 2 segments (default: true)
     let availableLogos = []; // List of available logos
     const VIDEOS_PAGE_SIZE = 8;
     let visibleVideoCount = 0;
@@ -1776,6 +1794,7 @@
       // Show logo selection containers when folders are shown (step 6 & 7)
       const topLogoContainer = document.getElementById('topLogoContainer');
       const endLogoContainer = document.getElementById('endLogoContainer');
+      const artistImageToggleContainer = document.getElementById('artistImageToggleContainer');
       if (topLogoContainer) {
         topLogoContainer.style.display = 'block';
         // Load logos if not already loaded
@@ -1789,6 +1808,9 @@
         if (availableLogos.length === 0) {
           loadAvailableLogos();
         }
+      }
+      if (artistImageToggleContainer) {
+        artistImageToggleContainer.style.display = 'block';
       }
       
       // Show ALL available folders for both modes
@@ -2182,6 +2204,11 @@
       }
     }
 
+    window.updateArtistImageToggle = function(enabled) {
+      useArtistImage = enabled;
+      console.log(`✅ Artist thumbnail: ${enabled ? 'Enabled' : 'Disabled'}`);
+    }
+
     /**
      * Initialize filter selection buttons
      * COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity
@@ -2310,7 +2337,8 @@
           enableOverlay: overlayToUse !== '', // Overlay enabled if an effect is selected
           overlayEffect: overlayToUse || null, // Specific overlay effect name or null for random
           topLogo: selectedTopLogo === 'random' ? null : selectedTopLogo, // Top logo filename (default: loge_horiz.png) or null for random
-          endLogo: selectedEndLogo === 'random' ? null : selectedEndLogo // End logo filename (default: ue_logo_horiz.png) or null for random
+          endLogo: selectedEndLogo === 'random' ? null : selectedEndLogo, // End logo filename (default: ue_logo_horiz.png) or null for random
+          useArtistImage: useArtistImage // Use artist thumbnail as last 2 segments (default: true)
         };
         
         console.log(`[Frontend] Sending logo parameters - topLogo: "${requestBody.topLogo}" (from selectedTopLogo: "${selectedTopLogo}"), endLogo: "${requestBody.endLogo}" (from selectedEndLogo: "${selectedEndLogo}")`);
