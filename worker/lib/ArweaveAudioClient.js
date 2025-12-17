@@ -208,7 +208,7 @@ class ArweaveAudioClient {
   /**
    * Get artist and mix (specific or random)
    */
-  getArtistMix(artistName = null) {
+  getArtistMix(artistName = null, mixTitle = null) {
     if (!this.artistsData || this.artistsData.length === 0) {
       throw new Error('No artists data available');
     }
@@ -252,13 +252,33 @@ class ArweaveAudioClient {
       throw new Error(`Artist ${selectedArtist.artistName} has no mixes with valid Arweave URLs`);
     }
     
-    const randomMix = validMixes[Math.floor(Math.random() * validMixes.length)];
+    // If a specific mix title is provided, try to find it
+    let selectedMix;
+    if (mixTitle) {
+      const normalizedMixTitle = mixTitle.toLowerCase();
+      selectedMix = validMixes.find(mix => {
+        const normalizedTitle = mix.mixTitle.toLowerCase();
+        return normalizedTitle === normalizedMixTitle || 
+               normalizedTitle.includes(normalizedMixTitle) ||
+               normalizedMixTitle.includes(normalizedTitle);
+      });
+      
+      if (selectedMix) {
+        console.log(`[ArweaveAudioClient] Found specific mix: ${selectedMix.mixTitle}`);
+      } else {
+        console.warn(`[ArweaveAudioClient] Mix "${mixTitle}" not found for artist "${selectedArtist.artistName}", using random selection`);
+        selectedMix = validMixes[Math.floor(Math.random() * validMixes.length)];
+      }
+    } else {
+      // Random mix selection
+      selectedMix = validMixes[Math.floor(Math.random() * validMixes.length)];
+    }
     
-    console.log(`[ArweaveAudioClient] Selected mix: ${randomMix.mixTitle} (${validMixes.length} valid mixes available)`);
+    console.log(`[ArweaveAudioClient] Selected mix: ${selectedMix.mixTitle} (${validMixes.length} valid mixes available)`);
     
     return {
       artist: selectedArtist,
-      mix: randomMix
+      mix: selectedMix
     };
   }
 
@@ -627,9 +647,11 @@ class ArweaveAudioClient {
       // Extract requested duration and artist from prompt
       const requestedDuration = prompt ? this.extractRequestedDuration(prompt) : duration;
       const requestedArtist = prompt ? this.extractArtistFromPrompt(prompt) : options.artist;
+      const requestedMixTitle = options.mixTitle || null; // Get specific mix title from options
       
       console.log(`[ArweaveAudioClient] 🎯 Requested duration: ${requestedDuration}s`);
       console.log(`[ArweaveAudioClient] 🎤 Requested artist: ${requestedArtist || 'random'}`);
+      console.log(`[ArweaveAudioClient] 🎧 Requested mix: ${requestedMixTitle || 'random'}`);
       
       // Try multiple artists/mixes if one fails
       const maxAttempts = 3;
@@ -661,8 +683,8 @@ class ArweaveAudioClient {
             
             console.log(`[ArweaveAudioClient] 🎵 Selected track: BAI-EE - "${track.trackTitle}" (${track.trackDuration})`);
           } else {
-            // Get artist and mix (DJ mixes)
-            const result = this.getArtistMix(requestedArtist);
+            // Get artist and mix (DJ mixes) - pass mixTitle if provided
+            const result = this.getArtistMix(requestedArtist, requestedMixTitle);
             selectedArtist = result.artist;
             const mix = result.mix;
             

@@ -343,13 +343,27 @@
                     id="artistSelect"
                     class="select-styled"
                     style="margin: 0.35rem auto 0;"
+                    onchange="handleArtistSelectionChange()"
                   >
                     <option value="random">Random Artist</option>
                   </select>
                 </div>
 
+                <div id="mixSelectionContainer" class="step-block" style="display: none;">
+                  <div class="step-label">3. Select mix</div>
+                  <div class="step-hint"></div>
+                  <select 
+                    id="mixSelect"
+                    class="select-styled"
+                    style="margin: 0.35rem auto 0;"
+                    disabled
+                  >
+                    <option value="">Select an artist first</option>
+                  </select>
+                </div>
+
                 <div id="folderSelectionContainer" class="step-block" style="display: none;">
-                  <div class="step-label">3. Select folders</div>
+                  <div class="step-label">4. Select folders</div>
                   <div class="step-hint"></div>
                   <div id="folderCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; width: 100%; margin: 0 auto;">
                     <!-- Folders will be populated dynamically -->
@@ -357,7 +371,7 @@
                 </div>
 
                 <div id="filterSelectionContainer" class="step-block" style="display: none;">
-                  <div class="step-label">4. Add filter</div>
+                  <div class="step-label">5. Add filter</div>
                   <div class="step-hint"></div>
                   <select 
                     id="filterSelect"
@@ -379,7 +393,7 @@
                 </div>
 
                 <div id="overlayToggleContainer" class="step-block" style="display: none;">
-                  <div class="step-label">5. Overlay effect</div>
+                  <div class="step-label">6. Overlay effect</div>
                   <div class="step-hint"></div>
                   <select 
                     id="overlaySelect"
@@ -397,7 +411,7 @@
                 </div>
 
                 <div id="topLogoContainer" class="step-block" style="display: none;">
-                  <div class="step-label">6. Top logo</div>
+                  <div class="step-label">7. Top logo</div>
                   <div class="step-hint">Logo appears at 22 seconds (40% from top)</div>
                   <select 
                     id="topLogoSelect"
@@ -411,7 +425,7 @@
                 </div>
 
                 <div id="endLogoContainer" class="step-block" style="display: none;">
-                  <div class="step-label">7. End logo</div>
+                  <div class="step-label">8. End logo</div>
                   <div class="step-hint">Logo appears at 24 seconds (centered, overlaps fade)</div>
                   <select 
                     id="endLogoSelect"
@@ -425,7 +439,7 @@
                 </div>
 
                 <div class="step-block">
-                  <div class="step-label">8. Generate</div>
+                  <div class="step-label">9. Generate</div>
                   <div class="step-hint"></div>
                   <div class="action-row" style="margin-top: 0.25rem;">
                     <button 
@@ -1305,6 +1319,7 @@
     const filterIntensity = 0.8; // Always use 80% intensity (0.8)
     let selectedAudioSource = 'mixes'; // Default to 'mixes' for one-click generation
     let selectedArtist = 'random'; // Default to 'random' for one-click generation
+    let selectedMix = null; // Selected mix title or null for random
     let availableArtists = []; // List of available artists
     let selectedFolders = new Set(); // Set of selected folder names
     let availableFolders = []; // List of available folders for current mode
@@ -1712,6 +1727,7 @@
       const mixesBtn = document.getElementById('audioSourceMixes');
       const tracksBtn = document.getElementById('audioSourceTracks');
       const artistContainer = document.getElementById('artistSelectionContainer');
+      const mixContainer = document.getElementById('mixSelectionContainer');
       const folderContainer = document.getElementById('folderSelectionContainer');
       const filterContainer = document.getElementById('filterSelectionContainer');
       const overlayContainer = document.getElementById('overlayToggleContainer');
@@ -1727,6 +1743,8 @@
         tracksBtn.style.borderColor = '';
         tracksBtn.style.boxShadow = '';
         artistContainer.style.display = 'block';
+        // Mix container will be shown/hidden based on artist selection
+        mixContainer.style.display = 'block';
         folderContainer.style.display = 'block';
       } else {
         // Apply bright green hover state styling to selected TRACKS button
@@ -1739,8 +1757,10 @@
         mixesBtn.style.borderColor = '';
         mixesBtn.style.boxShadow = '';
         artistContainer.style.display = 'none';
+        mixContainer.style.display = 'none';
         folderContainer.style.display = 'block';
         selectedArtist = 'random'; // Reset to random for tracks
+        selectedMix = null; // Reset mix selection
       }
       
       // Show filter selection container (step 4)
@@ -1951,14 +1971,70 @@
     }
 
     /**
-     * Handle artist selection change
+     * Handle artist selection change - fetch and populate mixes
+     */
+    window.handleArtistSelectionChange = async function() {
+      const artistSelect = document.getElementById('artistSelect');
+      const mixSelect = document.getElementById('mixSelectionContainer');
+      const mixDropdown = document.getElementById('mixSelect');
+      
+      if (!artistSelect || !mixSelect || !mixDropdown) return;
+      
+      selectedArtist = artistSelect.value;
+      console.log(`✅ Selected artist: ${selectedArtist}`);
+      
+      // Reset mix selection
+      selectedMix = null;
+      
+      if (selectedArtist === 'random') {
+        // Disable mix dropdown for random artist
+        mixDropdown.disabled = true;
+        mixDropdown.innerHTML = '<option value="">Random mix will be selected</option>';
+      } else {
+        // Enable mix dropdown and fetch mixes for selected artist
+        mixDropdown.disabled = false;
+        mixDropdown.innerHTML = '<option value="">Loading mixes...</option>';
+        
+        try {
+          const response = await fetch(`/api/artists?artist=${encodeURIComponent(selectedArtist)}`);
+          const data = await response.json();
+          
+          if (data.success && data.mixes && data.mixes.length > 0) {
+            // Clear and populate mix dropdown
+            mixDropdown.innerHTML = '<option value="">Random Mix</option>';
+            
+            data.mixes.forEach(mix => {
+              const option = document.createElement('option');
+              option.value = mix.title;
+              option.textContent = mix.title;
+              mixDropdown.appendChild(option);
+            });
+            
+            console.log(`✅ Loaded ${data.mixes.length} mixes for ${selectedArtist}`);
+          } else {
+            mixDropdown.innerHTML = '<option value="">No mixes available</option>';
+            console.warn(`⚠️ No mixes found for artist: ${selectedArtist}`);
+          }
+        } catch (error) {
+          console.error('❌ Error loading mixes:', error);
+          mixDropdown.innerHTML = '<option value="">Error loading mixes</option>';
+        }
+      }
+    };
+    
+    /**
+     * Handle mix selection change
      */
     document.addEventListener('DOMContentLoaded', () => {
-      const artistSelect = document.getElementById('artistSelect');
-      if (artistSelect) {
-        artistSelect.addEventListener('change', (e) => {
-          selectedArtist = e.target.value;
-          console.log(`✅ Selected artist: ${selectedArtist}`);
+      const mixSelect = document.getElementById('mixSelect');
+      if (mixSelect) {
+        mixSelect.addEventListener('change', (e) => {
+          selectedMix = e.target.value || null;
+          if (selectedMix) {
+            console.log(`✅ Selected mix: ${selectedMix}`);
+          } else {
+            console.log(`✅ Mix selection: Random`);
+          }
         });
       }
     });
@@ -2239,9 +2315,13 @@
         
         console.log(`[Frontend] Sending logo parameters - topLogo: "${requestBody.topLogo}" (from selectedTopLogo: "${selectedTopLogo}"), endLogo: "${requestBody.endLogo}" (from selectedEndLogo: "${selectedEndLogo}")`);
         
-        // Add artist selection only for mixes
+        // Add artist and mix selection only for mixes
         if (selectedAudioSource === 'mixes') {
           requestBody.artist = selectedArtist || 'random';
+          // Include mix title if a specific mix is selected (not random)
+          if (selectedMix && selectedMix !== '') {
+            requestBody.mixTitle = selectedMix;
+          }
         } else {
           // For tracks, always use random (or BAI-EE if available)
           requestBody.artist = 'random';

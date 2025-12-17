@@ -31,6 +31,7 @@ export default async function handler(req, res) {
     // Get parameters from request body
     const duration = req.body.duration || 30;
     const artist = req.body.artist || 'random';
+    const mixTitle = req.body.mixTitle || null; // Specific mix title or null for random
     const videoFilter = req.body.videoFilter || null; // Optional video filter
     const useTrax = req.body.useTrax === true; // true for tracks, false for mixes
     const filterIntensity = req.body.filterIntensity !== undefined ? parseFloat(req.body.filterIntensity) : 0.4; // Filter intensity 0.0-1.0 (default 0.4 = 40%)
@@ -41,6 +42,7 @@ export default async function handler(req, res) {
     const endLogo = req.body.endLogo || null; // End logo filename or null for random
     
     console.log(`[GenerateVideo] Received logo parameters - topLogo: "${topLogo}" (type: ${typeof topLogo}), endLogo: "${endLogo}" (type: ${typeof endLogo})`);
+    console.log(`[GenerateVideo] Received mix parameter - mixTitle: "${mixTitle}" (artist: "${artist}")`);
 
     // Validate selectedFolders
     if (!Array.isArray(selectedFolders)) {
@@ -126,6 +128,7 @@ export default async function handler(req, res) {
       jobId,
       status: 'pending', // Root level for easy querying
       artist,
+      mixTitle: mixTitle || null, // Specific mix title or null for random
       duration,
       videoFilter: videoFilter, // Optional video filter key
       filterIntensity: filterIntensity, // Filter intensity 0.0-1.0
@@ -142,7 +145,7 @@ export default async function handler(req, res) {
       metadata: {
         fileName: null,
         fileSize: null,
-        mixTitle: null
+        mixTitle: mixTitle || null
       }
     };
 

@@ -32,6 +32,10 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Check if requesting a specific artist's mixes
+    const artistName = req.query.artist;
+    const includeMixes = req.query.includeMixes === 'true' || artistName;
+
     // Try to load from Firebase first
     let artistsData = null;
     
@@ -84,7 +88,48 @@ export default async function handler(req, res) {
       });
     }
 
-    // Extract artist names and genres
+    // If requesting a specific artist's mixes
+    if (artistName) {
+      const normalizedSearch = artistName.toLowerCase();
+      const artist = artistsData.find(a => {
+        const normalizedName = a.artistName.toLowerCase();
+        return normalizedName === normalizedSearch || 
+               normalizedName.includes(normalizedSearch) || 
+               normalizedSearch.includes(normalizedName);
+      });
+
+      if (!artist) {
+        return res.status(404).json({
+          success: false,
+          error: `Artist "${artistName}" not found`
+        });
+      }
+
+      // Filter mixes with valid Arweave URLs
+      const validMixes = (artist.mixes || []).filter(mix => 
+        mix.mixArweaveURL && 
+        mix.mixArweaveURL.startsWith('http') && 
+        mix.mixArweaveURL.includes('arweave.net')
+      );
+
+      return res.status(200).json({
+        success: true,
+        artist: {
+          name: artist.artistName,
+          genre: artist.artistGenre || 'Electronic',
+          mixCount: validMixes.length
+        },
+        mixes: validMixes.map(mix => ({
+          title: mix.mixTitle,
+          arweaveURL: mix.mixArweaveURL,
+          dateYear: mix.mixDateYear || '',
+          duration: mix.mixDuration || ''
+        })),
+        count: validMixes.length
+      });
+    }
+
+    // Extract artist names and genres (default behavior)
     const artists = artistsData.map(artist => ({
       name: artist.artistName,
       genre: artist.artistGenre || 'Electronic',

@@ -323,6 +323,7 @@ class ArweaveVideoGenerator {
         const {
             duration = 30,
             artist = null,
+            mixTitle = null, // Specific mix title or null for random
             prompt = null,
             width = 720,
             height = 720,
@@ -352,6 +353,7 @@ class ArweaveVideoGenerator {
                 console.log('[ArweaveVideoGenerator] Step 1: Generating Arweave audio clip...');
                 audioResult = await this.audioClient.generateAudioClip(duration, fadeIn, fadeOut, prompt, { 
                     artist,
+                    mixTitle: mixTitle, // Pass specific mix title or null for random
                     useTrax: useTrax // Pass useTrax flag to audio client
                 });
                 console.log(`[ArweaveVideoGenerator] Audio generated: ${audioResult.artist} - ${audioResult.mixTitle || audioResult.trackTitle}`);

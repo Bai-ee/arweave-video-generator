@@ -75,6 +75,7 @@ async function processVideoJob(jobId, jobData, documentId = null) {
     const videoResult = await videoGenerator.generateVideoWithAudio({
       duration: jobData.duration,
       artist: jobData.artist === 'random' ? null : jobData.artist,
+      mixTitle: jobData.mixTitle || null, // Pass specific mix title or null for random
       width: 720,
       height: 720,
       fadeIn: 2,
