@@ -3078,8 +3078,11 @@
       // Sharing a URL only shares the link - we need to share the actual file
       if (isIOS()) {
         console.log('[Download] iOS detected - fetching video via proxy to share as file');
-        const proxyUrl = `/api/videos?download=true&videoUrl=${encodeURIComponent(videoUrl)}&filename=${encodeURIComponent(filename)}`;
+        // Use base64 encoding to preserve signed URL signature exactly
+        const encodedUrl = btoa(unescape(encodeURIComponent(videoUrl)));
+        const proxyUrl = `/api/videos?download=true&videoUrlB64=${encodedUrl}&filename=${encodeURIComponent(filename)}`;
         console.log('[Download] iOS: Proxy URL length:', proxyUrl.length);
+        console.log('[Download] iOS: Original URL length:', videoUrl.length);
         
         try {
           showToast('Preparing video for download...', 'info');

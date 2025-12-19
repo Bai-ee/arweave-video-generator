@@ -6,7 +6,7 @@
  * Handles both video listing and individual video status
  */
 
-import { initializeFirebaseAdmin, getFirestore } from '../lib/firebase-admin.js';
+import { initializeFirebaseAdmin, getFirestore, getStorage } from '../lib/firebase-admin.js';
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -228,12 +228,32 @@ async function handleVideoDownload(req, res) {
     console.log('[Video Download] Query params:', {
       download: req.query.download,
       hasVideoUrl: !!req.query.videoUrl,
+      hasVideoUrlB64: !!req.query.videoUrlB64,
       videoUrlLength: req.query.videoUrl ? req.query.videoUrl.length : 0,
+      videoUrlB64Length: req.query.videoUrlB64 ? req.query.videoUrlB64.length : 0,
       hasFilename: !!req.query.filename,
       filename: req.query.filename
     });
     
-    const videoUrl = decodeURIComponent(req.query.videoUrl);
+    // Support both base64 encoded (for signed URLs) and regular encoding
+    let videoUrl;
+    if (req.query.videoUrlB64) {
+      // Decode base64-encoded URL (preserves signed URL signature exactly)
+      try {
+        videoUrl = decodeURIComponent(escape(atob(req.query.videoUrlB64)));
+        console.log('[Video Download] Using base64-encoded URL');
+      } catch (b64Error) {
+        console.error('[Video Download] Base64 decode failed:', b64Error);
+        return res.status(400).json({ error: 'Invalid base64 URL encoding' });
+      }
+    } else if (req.query.videoUrl) {
+      // Fallback to regular URL encoding
+      videoUrl = decodeURIComponent(req.query.videoUrl);
+      console.log('[Video Download] Using regular URL encoding');
+    } else {
+      return res.status(400).json({ error: 'videoUrl or videoUrlB64 parameter required' });
+    }
+    
     const filename = req.query.filename ? decodeURIComponent(req.query.filename) : 'video.mp4';
     
     console.log('[Video Download] Decoded video URL length:', videoUrl.length);
@@ -241,50 +261,116 @@ async function handleVideoDownload(req, res) {
     console.log('[Video Download] Video URL (last 50 chars):', videoUrl.substring(videoUrl.length - 50));
     console.log('[Video Download] Filename:', filename);
     
-    // Fetch video from Firebase Storage
-    console.log('[Video Download] Starting fetch from Firebase Storage...');
-    const fetchStart = Date.now();
-    const response = await fetch(videoUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    const fetchTime = Date.now() - fetchStart;
+    // Try to extract storage path from signed URL and use Admin SDK directly
+    // This is more reliable than fetching the signed URL
+    let videoBuffer;
+    let useDirectFetch = true;
     
-    console.log('[Video Download] Fetch completed in', fetchTime, 'ms');
-    console.log('[Video Download] Response status:', response.status, response.statusText);
-    console.log('[Video Download] Response headers:', {
-      'content-type': response.headers.get('content-type'),
-      'content-length': response.headers.get('content-length'),
-      'content-disposition': response.headers.get('content-disposition')
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      console.error('[Video Download] Failed to fetch video:', response.status, response.statusText);
-      console.error('[Video Download] Error response body:', errorText.substring(0, 500));
-      return res.status(response.status).json({ 
-        error: 'Failed to fetch video', 
-        status: response.status,
-        statusText: response.statusText
-      });
+    try {
+      // Extract storage path from signed URL
+      // Format: https://storage.googleapis.com/BUCKET/PATH?GoogleAccessId=...&Expires=...&Signature=...
+      // Or: https://BUCKET.storage.googleapis.com/PATH?...
+      let bucketName, storagePath;
+      
+      // Try standard format first
+      let urlMatch = videoUrl.match(/https:\/\/storage\.googleapis\.com\/([^\/]+)\/(.+?)(\?|$)/);
+      if (urlMatch) {
+        bucketName = urlMatch[1];
+        storagePath = decodeURIComponent(urlMatch[2]);
+      } else {
+        // Try alternate format: https://BUCKET.storage.googleapis.com/PATH
+        urlMatch = videoUrl.match(/https:\/\/([^\/]+)\.storage\.googleapis\.com\/(.+?)(\?|$)/);
+        if (urlMatch) {
+          bucketName = urlMatch[1];
+          storagePath = decodeURIComponent(urlMatch[2]);
+        }
+      }
+      
+      if (bucketName && storagePath) {
+        console.log('[Video Download] Extracted bucket:', bucketName);
+        console.log('[Video Download] Extracted storage path:', storagePath);
+        
+        // Use Firebase Admin SDK to download directly (more reliable, no signature issues)
+        initializeFirebaseAdmin();
+        const storage = getStorage();
+        // Use the bucket from storage (works with any bucket name format)
+        const bucket = storage.bucket(bucketName);
+        const file = bucket.file(storagePath);
+        
+        console.log('[Video Download] Downloading directly from Firebase Storage using Admin SDK...');
+        const downloadStart = Date.now();
+        
+        // Download file as buffer using Admin SDK
+        const [fileBuffer] = await file.download();
+        const downloadTime = Date.now() - downloadStart;
+        
+        console.log('[Video Download] Direct download completed in', downloadTime, 'ms');
+        console.log('[Video Download] File buffer size:', fileBuffer.length, 'bytes');
+        
+        videoBuffer = fileBuffer;
+        useDirectFetch = false;
+      }
+    } catch (adminError) {
+      console.warn('[Video Download] Admin SDK download failed, falling back to fetch:', adminError.message);
+      useDirectFetch = true;
     }
     
-    console.log('[Video Download] Converting response to array buffer...');
-    const bufferStart = Date.now();
-    const videoBuffer = await response.arrayBuffer();
-    const bufferTime = Date.now() - bufferStart;
-    console.log('[Video Download] Buffer conversion completed in', bufferTime, 'ms');
-    console.log('[Video Download] Video buffer size:', videoBuffer.byteLength, 'bytes (', (videoBuffer.byteLength / 1024 / 1024).toFixed(2), 'MB)');
+    // Fallback: Fetch video from signed URL if Admin SDK failed
+    if (useDirectFetch) {
+      console.log('[Video Download] Starting fetch from Firebase Storage signed URL...');
+      const fetchStart = Date.now();
+      const response = await fetch(videoUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
+      const fetchTime = Date.now() - fetchStart;
+    
+      console.log('[Video Download] Fetch completed in', fetchTime, 'ms');
+      console.log('[Video Download] Response status:', response.status, response.statusText);
+      console.log('[Video Download] Response headers:', {
+        'content-type': response.headers.get('content-type'),
+        'content-length': response.headers.get('content-length'),
+        'content-disposition': response.headers.get('content-disposition')
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        console.error('[Video Download] Failed to fetch video:', response.status, response.statusText);
+        console.error('[Video Download] Error response body:', errorText.substring(0, 500));
+        return res.status(response.status).json({ 
+          error: 'Failed to fetch video', 
+          status: response.status,
+          statusText: response.statusText
+        });
+      }
+      
+      console.log('[Video Download] Converting response to array buffer...');
+      const bufferStart = Date.now();
+      videoBuffer = await response.arrayBuffer();
+      const bufferTime = Date.now() - bufferStart;
+      console.log('[Video Download] Buffer conversion completed in', bufferTime, 'ms');
+      console.log('[Video Download] Video buffer size:', videoBuffer.byteLength, 'bytes (', (videoBuffer.byteLength / 1024 / 1024).toFixed(2), 'MB)');
+    }
+    
+    // videoBuffer is now set (either from Admin SDK or fetch)
+    if (!videoBuffer) {
+      console.error('[Video Download] No video buffer obtained');
+      return res.status(500).json({ error: 'Failed to obtain video data' });
+    }
+    
+    // Convert to Buffer if needed
+    const finalBuffer = Buffer.isBuffer(videoBuffer) ? videoBuffer : Buffer.from(videoBuffer);
+    console.log('[Video Download] Final buffer size:', finalBuffer.length, 'bytes');
     
     // Set download headers
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Length', videoBuffer.byteLength);
+    res.setHeader('Content-Length', finalBuffer.length);
     res.setHeader('Cache-Control', 'no-cache');
     
     console.log('[Video Download] Sending video buffer to client...');
     const sendStart = Date.now();
     // Send video buffer
-    res.send(Buffer.from(videoBuffer));
+    res.send(finalBuffer);
     const sendTime = Date.now() - sendStart;
     const totalTime = Date.now() - startTime;
     
