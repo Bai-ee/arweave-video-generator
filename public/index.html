@@ -2960,136 +2960,194 @@
     }
 
     /**
-     * Download video (with mobile support - fetches video as blob and opens native share sheet)
+     * Create a download helper page for iOS
+     */
+    function createIOSDownloadPage(videoUrl, filename) {
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Save Video - ${filename}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #ffd700;
+    }
+    .instructions {
+      background: rgba(255, 215, 0, 0.1);
+      border: 2px solid #ffd700;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      max-width: 500px;
+    }
+    .instructions ol {
+      text-align: left;
+      margin: 1rem 0;
+      padding-left: 1.5rem;
+    }
+    .instructions li {
+      margin: 0.75rem 0;
+      line-height: 1.5;
+    }
+    video {
+      width: 100%;
+      max-width: 600px;
+      border-radius: 10px;
+      margin: 1rem 0;
+      background: #000;
+    }
+    .filename {
+      color: #888;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <h1>📱 Save Video to Photos</h1>
+  <div class="instructions">
+    <p><strong>To save this video to your Photos:</strong></p>
+    <ol>
+      <li>Long press (hold) on the video below</li>
+      <li>Select <strong>"Save to Photos"</strong> or <strong>"Save Video"</strong></li>
+      <li>The video will be saved to your Camera Roll</li>
+    </ol>
+  </div>
+  <video src="${videoUrl}" controls playsinline autoplay></video>
+  <div class="filename">${filename}</div>
+</body>
+</html>`;
+      
+      const blob = new Blob([html], { type: 'text/html' });
+      return URL.createObjectURL(blob);
+    }
+
+    /**
+     * Download video (iOS-optimized - opens video directly without fetch)
      */
     window.downloadVideo = async function(videoUrl, filename) {
-      try {
-        // Show loading toast
-        showToast('Preparing video for download...', 'info');
-        
-        // Fetch the video as a blob
-        const response = await fetch(videoUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch video: ${response.statusText}`);
+      // For iOS, skip fetch and open video directly
+      if (isIOS()) {
+        // First, try Share API with the direct URL
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: filename,
+              text: `Save ${filename} to Photos`,
+              url: videoUrl
+            });
+            showToast('Share menu opened! Select "Save to Photos"', 'success');
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') {
+              return; // User cancelled
+            }
+            console.log('Share API failed, opening video page:', shareErr);
+          }
         }
         
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        
-        // For mobile devices, ALWAYS use Share API with the file
-        if (isMobileDevice()) {
-          // Convert blob to File for Share API
+        // Fallback: Create helper page and open it
+        try {
+          const downloadPageUrl = createIOSDownloadPage(videoUrl, filename);
+          const newWindow = window.open(downloadPageUrl, '_blank');
+          
+          if (newWindow) {
+            showToast('Video page opened! Long press the video and select "Save to Photos"', 'success');
+            // Keep blob URL alive
+            setTimeout(() => {
+              URL.revokeObjectURL(downloadPageUrl);
+            }, 60000);
+            return;
+          } else {
+            // Popup blocked, open video directly
+            window.open(videoUrl, '_blank');
+            showToast('Video opened! Long press and select "Save to Photos"', 'info');
+            return;
+          }
+        } catch (err) {
+          // Last resort: open video URL directly
+          window.open(videoUrl, '_blank');
+          showToast('Video opened! Long press the video to save it.', 'info');
+          return;
+        }
+      }
+      
+      // For Android and other mobile, try fetch + Share API
+      if (isMobileDevice()) {
+        try {
+          showToast('Preparing video...', 'info');
+          
+          const response = await fetch(videoUrl, {
+            mode: 'cors',
+            credentials: 'omit'
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch: ${response.status}`);
+          }
+          
+          const blob = await response.blob();
           const file = new File([blob], filename, { 
             type: blob.type || 'video/mp4',
             lastModified: Date.now()
           });
           
-          // Try Share API if available
-          if (navigator.share) {
-            try {
-              // First, try sharing the file directly (iOS 13+ and Android)
-              // Don't check canShare - just try it and catch the error
-              try {
-                await navigator.share({
-                  title: filename,
-                  text: `Save ${filename} to your device`,
-                  files: [file]
-                });
-                
-                // Success! Clean up blob URL after a delay
-                setTimeout(() => {
-                  URL.revokeObjectURL(blobUrl);
-                }, 3000);
-                
-                showToast('Share menu opened! Look for "Save to Photos" or "Save Video"', 'success');
-                return;
-              } catch (fileShareErr) {
-                // File sharing not supported, try blob URL
-                console.log('File share not supported, trying blob URL:', fileShareErr.message);
-                
-                // Try sharing the blob URL (works on some iOS versions)
-                try {
-                  await navigator.share({
-                    title: filename,
-                    text: `Save ${filename} to Photos`,
-                    url: blobUrl
-                  });
-                  
-                  setTimeout(() => {
-                    URL.revokeObjectURL(blobUrl);
-                  }, 3000);
-                  
-                  showToast('Share menu opened! Select "Save to Photos"', 'success');
-                  return;
-                } catch (urlShareErr) {
-                  // URL sharing also failed
-                  if (urlShareErr.name === 'AbortError') {
-                    // User cancelled
-                    URL.revokeObjectURL(blobUrl);
-                    return;
-                  }
-                  throw urlShareErr;
-                }
-              }
-            } catch (shareErr) {
-              // Share API completely failed
-              console.error('Share API error:', shareErr);
-              
-              if (shareErr.name === 'AbortError') {
-                URL.revokeObjectURL(blobUrl);
-                return;
-              }
-            }
+          // Try Share API with file
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: filename,
+              text: `Save ${filename}`,
+              files: [file]
+            });
+            showToast('Share menu opened! Select "Save" or "Download"', 'success');
+            return;
           }
           
-          // If Share API doesn't exist or failed, try opening blob URL
-          // This allows user to long-press and save
-          try {
-            // Create a temporary link and open it
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = filename;
-            link.target = '_blank';
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            
-            // Try to trigger download first
-            link.click();
-            
-            // Also try opening in new window for iOS
-            if (isIOS()) {
-              setTimeout(() => {
-                const newWindow = window.open(blobUrl, '_blank');
-                if (newWindow) {
-                  showToast('Video opened. Long press the video and select "Save to Photos"', 'info');
-                  // Keep blob URL alive
-                  setTimeout(() => {
-                    URL.revokeObjectURL(blobUrl);
-                  }, 30000);
-                  document.body.removeChild(link);
-                  return;
-                }
-              }, 100);
-            }
-            
-            document.body.removeChild(link);
-            showToast('Download started! Check your downloads or gallery.', 'success');
-            
-            // Clean up after delay
-            setTimeout(() => {
-              URL.revokeObjectURL(blobUrl);
-            }, 5000);
-            return;
-            
-          } catch (openErr) {
-            console.error('Failed to open/download:', openErr);
-            URL.revokeObjectURL(blobUrl);
-            showToast('Download failed. Please use "Copy Link" and open in browser.', 'error');
-            return;
-          }
+          // Fallback: open video URL
+          window.open(videoUrl, '_blank');
+          showToast('Video opened! Long press to save.', 'info');
+          
+        } catch (error) {
+          console.error('Mobile download error:', error);
+          window.open(videoUrl, '_blank');
+          showToast('Video opened! Long press the video to save it.', 'info');
+        }
+        return;
+      }
+      
+      // Desktop: Standard download with fetch
+      try {
+        showToast('Downloading video...', 'info');
+        
+        const response = await fetch(videoUrl, {
+          mode: 'cors',
+          credentials: 'omit'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch: ${response.status}`);
         }
         
-        // Desktop: Use standard download
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
         const link = document.createElement('a');
         link.href = blobUrl;
         link.download = filename;
@@ -3098,7 +3156,6 @@
         link.click();
         document.body.removeChild(link);
         
-        // Clean up blob URL after a delay
         setTimeout(() => {
           URL.revokeObjectURL(blobUrl);
         }, 1000);
@@ -3107,7 +3164,8 @@
         
       } catch (error) {
         console.error('Download error:', error);
-        showToast(`Download failed: ${error.message}. Try "Copy Link" instead.`, 'error');
+        window.open(videoUrl, '_blank');
+        showToast('Video opened in new tab. Right-click to save.', 'info');
       }
     }
 
