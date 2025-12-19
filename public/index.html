@@ -3074,56 +3074,148 @@
         console.log('[Download] Video URL (full):', videoUrl);
         console.log('[Download] Filename:', filename);
       
-      // For iOS: Skip proxy entirely - use direct URL with Share API or open directly
-      // This avoids 400 errors from URL length limits and encoding issues
+      // For iOS: Fetch video via proxy, then share as File object
+      // Sharing a URL only shares the link - we need to share the actual file
       if (isIOS()) {
-        console.log('[Download] iOS detected - using direct URL approach (no proxy)');
-        // First, try Share API with direct URL (simplest approach)
-        if (navigator.share) {
-          console.log('[Download] iOS: Attempting Share API with direct URL');
-          try {
-            await navigator.share({
-              title: filename,
-              text: `Save ${filename} to Photos`,
-              url: videoUrl
-            });
-            console.log('[Download] iOS: Share API succeeded - user selected option');
-            showToast('Share menu opened! Select "Save to Photos" or "Save Video"', 'success');
-            return;
-          } catch (shareErr) {
-            if (shareErr.name === 'AbortError') {
-              console.log('[Download] iOS: User cancelled Share API');
-              return; // User cancelled
-            }
-            console.log('[Download] iOS: Share API with URL failed:', shareErr.name, shareErr.message);
-          }
-        } else {
-          console.log('[Download] iOS: Share API not available');
-        }
+        console.log('[Download] iOS detected - fetching video via proxy to share as file');
+        const proxyUrl = `/api/videos?download=true&videoUrl=${encodeURIComponent(videoUrl)}&filename=${encodeURIComponent(filename)}`;
+        console.log('[Download] iOS: Proxy URL length:', proxyUrl.length);
         
-        // Fallback: Open video URL directly - user can long-press to save
-        console.log('[Download] iOS: Opening helper page with video');
         try {
-          const downloadPageUrl = createIOSDownloadPage(videoUrl, filename);
+          showToast('Preparing video for download...', 'info');
+          console.log('[Download] iOS: Fetching video from proxy...');
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => {
+            console.log('[Download] iOS: Proxy fetch timeout (15s)');
+            controller.abort();
+          }, 15000); // 15 second timeout for iOS
+          
+          const fetchStart = Date.now();
+          const response = await fetch(proxyUrl, {
+            method: 'GET',
+            credentials: 'same-origin',
+            signal: controller.signal
+          });
+          const fetchTime = Date.now() - fetchStart;
+          
+          clearTimeout(timeoutId);
+          console.log('[Download] iOS: Proxy fetch completed in', fetchTime, 'ms');
+          console.log('[Download] iOS: Response status:', response.status, response.statusText);
+          
+          if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            console.error('[Download] iOS: Proxy failed with status', response.status);
+            console.error('[Download] iOS: Error response:', errorText.substring(0, 200));
+            throw new Error(`Proxy failed: ${response.status}`);
+          }
+          
+          console.log('[Download] iOS: Converting response to blob...');
+          const blob = await response.blob();
+          console.log('[Download] iOS: Blob created - size:', blob.size, 'bytes, type:', blob.type);
+          
+          // Create File object from blob
+          const file = new File([blob], filename, { 
+            type: blob.type || 'video/mp4',
+            lastModified: Date.now()
+          });
+          console.log('[Download] iOS: File object created');
+          
+          // Share the File object (this will show "Save to Photos" option)
+          if (navigator.share) {
+            console.log('[Download] iOS: Attempting Share API with File object');
+            try {
+              // Check if files can be shared
+              if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                console.log('[Download] iOS: canShare returned true, sharing file...');
+                await navigator.share({
+                  title: filename,
+                  text: `Save ${filename} to Photos`,
+                  files: [file]
+                });
+                console.log('[Download] iOS: Share API with file succeeded!');
+                showToast('Share menu opened! Select "Save to Photos"', 'success');
+                return;
+              } else {
+                console.log('[Download] iOS: canShare returned false, trying anyway...');
+                // Try sharing without canShare check (some iOS versions)
+                try {
+                  await navigator.share({
+                    title: filename,
+                    text: `Save ${filename} to Photos`,
+                    files: [file]
+                  });
+                  console.log('[Download] iOS: Share API with file succeeded (without canShare check)!');
+                  showToast('Share menu opened! Select "Save to Photos"', 'success');
+                  return;
+                } catch (shareErr) {
+                  if (shareErr.name === 'AbortError') {
+                    console.log('[Download] iOS: User cancelled Share API');
+                    return;
+                  }
+                  console.error('[Download] iOS: Share API with file failed:', shareErr.name, shareErr.message);
+                  throw shareErr;
+                }
+              }
+            } catch (shareErr) {
+              if (shareErr.name === 'AbortError') {
+                console.log('[Download] iOS: User cancelled Share API');
+                return;
+              }
+              console.error('[Download] iOS: Share API error:', shareErr.name, shareErr.message);
+              // Fall through to blob URL fallback
+            }
+          } else {
+            console.log('[Download] iOS: Share API not available');
+          }
+          
+          // Fallback: Create blob URL and open helper page
+          console.log('[Download] iOS: Share API not available or failed, using blob URL fallback');
+          const blobUrl = URL.createObjectURL(blob);
+          const downloadPageUrl = createIOSDownloadPage(blobUrl, filename);
           const newWindow = window.open(downloadPageUrl, '_blank');
           
           if (newWindow) {
-            console.log('[Download] iOS: Helper page opened successfully');
+            console.log('[Download] iOS: Helper page opened with blob URL');
             showToast('Video opened! Long press the video and select "Save to Photos"', 'success');
             setTimeout(() => {
+              URL.revokeObjectURL(blobUrl);
               URL.revokeObjectURL(downloadPageUrl);
             }, 60000);
             return;
           } else {
-            // Popup blocked, open video directly
-            console.log('[Download] iOS: Popup blocked, opening video URL directly');
-            window.open(videoUrl, '_blank');
+            console.log('[Download] iOS: Popup blocked, opening blob URL directly');
+            window.open(blobUrl, '_blank');
             showToast('Video opened! Long press and select "Save to Photos"', 'info');
+            setTimeout(() => {
+              URL.revokeObjectURL(blobUrl);
+            }, 30000);
             return;
           }
-        } catch (err) {
-          console.error('[Download] iOS: Error opening helper page:', err);
-          // Last resort: open video URL directly
+          
+        } catch (proxyError) {
+          console.error('[Download] iOS: Proxy fetch failed:', proxyError.name, proxyError.message);
+          console.log('[Download] iOS: Falling back to direct URL sharing');
+          
+          // Last resort: Try sharing URL directly (better than nothing)
+          if (navigator.share) {
+            try {
+              await navigator.share({
+                title: filename,
+                text: `Save ${filename} to Photos`,
+                url: videoUrl
+              });
+              console.log('[Download] iOS: Share API with URL succeeded as fallback');
+              showToast('Share menu opened! Look for "Save to Photos" option', 'success');
+              return;
+            } catch (shareErr) {
+              if (shareErr.name === 'AbortError') return;
+              console.error('[Download] iOS: Share API with URL also failed:', shareErr);
+            }
+          }
+          
+          // Final fallback: Open video URL directly
+          console.log('[Download] iOS: All methods failed, opening video URL directly');
           window.open(videoUrl, '_blank');
           showToast('Video opened! Long press the video to save it.', 'info');
         }
