@@ -914,6 +914,10 @@ textarea {
   display: grid;
   gap: 0.4rem;
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin-bottom: 1rem;
 }
 
 .video-item-meta {
@@ -1336,11 +1340,19 @@ textarea {
   }
 
   .videos-mobile-list {
-    display: grid;
-    gap: 0.75rem;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  
+  .videos-mobile-list > .video-item-card {
+    width: 100%;
+    margin-bottom: 0;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   .videos-mobile {

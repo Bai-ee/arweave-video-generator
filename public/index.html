@@ -2667,8 +2667,35 @@
         const actions = getActionsHtml(video);
         const card = document.createElement('div');
         card.className = 'video-item-card';
+        
+        // Create thumbnail HTML if video is completed
+        let thumbnailHtml = '<div style="width: 100%; padding-top: 56.25%; background: #0a0a0a; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem; position: relative;"><div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">No preview</div></div>';
+        if (video.status === 'completed' && video.videoUrl) {
+          const escapedUrl = video.videoUrl.replace(/'/g, "\\'");
+          thumbnailHtml = `
+            <div style="position: relative; width: 100%; padding-top: 56.25%; background: #0a0a0a; border-radius: 4px; overflow: hidden; cursor: pointer; margin-bottom: 0.75rem;" onclick="viewVideo('${escapedUrl}')">
+              <video 
+                src="${escapedUrl}" 
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; display: block;"
+                loading="lazy"
+                preload="metadata"
+                muted
+                playsinline
+                onloadedmetadata="this.currentTime=1"
+                onerror="this.parentElement.innerHTML='<div style=\\'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; font-size: 0.7rem;\\'>Preview unavailable</div>'"
+              ></video>
+              <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; opacity: 0.7; z-index: 1;">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="var(--color-yellow-75)">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </div>
+            </div>
+          `;
+        }
+        
         card.innerHTML = `
           <button class="dismiss-chip" onclick="dismissVideo('${videoId}')">&times;</button>
+          ${thumbnailHtml}
           <div style="font-family: var(--font-mathias); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-yellow-75); font-size: 1rem;">
             ${video.artist || 'Unknown'}
           </div>
@@ -2698,14 +2725,15 @@
       const actions = getActionsHtml(video);
 
       // Create thumbnail HTML if video is completed
-      let thumbnailHtml = '<div style="width: 100px; height: 56px; background: #0a0a0a; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">No preview</div>';
+      let thumbnailHtml = '<div style="width: 120px; height: 67.5px; background: #0a0a0a; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem; flex-shrink: 0;">No preview</div>';
       if (video.status === 'completed' && video.videoUrl) {
         const escapedUrl = video.videoUrl.replace(/'/g, "\\'");
         thumbnailHtml = `
-          <div style="position: relative; width: 100px; height: 56px; background: #0a0a0a; border-radius: 4px; overflow: hidden; cursor: pointer;" onclick="viewVideo('${escapedUrl}')">
+          <div style="position: relative; width: 120px; height: 67.5px; background: #0a0a0a; border-radius: 4px; overflow: hidden; cursor: pointer; flex-shrink: 0; max-width: 120px; max-height: 67.5px;" onclick="viewVideo('${escapedUrl}')">
             <video 
               src="${escapedUrl}" 
-              style="width: 100%; height: 100%; object-fit: cover;"
+              style="width: 100%; height: 100%; object-fit: contain; display: block;"
+              loading="lazy"
               preload="metadata"
               muted
               playsinline
@@ -2722,7 +2750,7 @@
       }
       
       row.innerHTML = `
-        <td class="px-2" style="padding: 1rem; text-align: center;">
+        <td class="px-2" style="padding: 1rem; text-align: center; width: 120px; min-width: 120px; max-width: 120px;">
           ${thumbnailHtml}
         </td>
         <td class="px-2" style="padding: 1rem; text-align: center; color: var(--color-yellow-75); font-family: var(--font-body);">
