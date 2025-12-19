@@ -3,7 +3,8 @@
 **Purpose**: This is the **single file to use as context** when starting a new chat thread. It provides complete system overview and points to all other documentation.
 
 **Last Updated**: December 2025  
-**Status**: ✅ Production Ready MVP
+**Status**: ✅ Production Ready MVP  
+**Version**: 1.1.0
 
 ---
 
@@ -59,26 +60,30 @@
 ## 📁 Key Files & Directories
 
 ### Frontend
-- `public/index.html` - Single-page application (4470 lines)
-  - Upload section, Generate section, Deploy section, Archive section
+- `public/index.html` - Single-page application (5325 lines)
+  - Upload section (videos, images, artist thumbnails)
+  - Generate section (audio source, artist, mix, folders, filter, overlay, logos, artist thumbnail toggle)
+  - Deploy section, Archive section, Manage section
   - Real-time status polling, Firebase SDK integration
 
 ### API Layer (`api/`)
-- `generate-video.js` - Creates video jobs (validates folders, creates Firestore job)
+- `generate-video.js` - Creates video jobs (validates folders, creates Firestore job, handles `useArtistImage` parameter)
 - `videos.js` - Lists videos + handles `/api/video-status`
 - `video-folders.js` - **Dynamic folder discovery** (lists all folders)
 - `usage.js` - Handles `/api/usage`, `/api/storage-usage`, `/api/firestore-usage`
 - `deploy-website.js` - Deploys website to Arweave + updates ArNS
 - `archive-upload.js` - Archives files to Arweave
-- `upload-video.js`, `delete-video.js`, `artists.js`, `manage-artists.js`, `upload.js`, `migrate-image-urls.js`
+- `upload.js` - Uploads files to Arweave (handles artist thumbnails, stores Arweave URLs)
+- `artists.js` - Fetches artist data (includes `artistThumbnails` array)
+- `upload-video.js`, `delete-video.js`, `manage-artists.js`, `migrate-image-urls.js`
 
 ### Worker Layer (`worker/`)
-- `processor.js` - GitHub Actions entry point (polls Firestore, processes jobs)
-- `lib/ArweaveVideoGenerator.js` - Main orchestrator
+- `processor.js` - GitHub Actions entry point (polls Firestore, processes jobs, passes `useArtistImage` flag)
+- `lib/ArweaveVideoGenerator.js` - Main orchestrator (handles artist thumbnail logic, conditional image usage)
 - `lib/VideoLoader.js` - **Dynamic folder discovery** + video loading
-- `lib/VideoSegmentCompositor.js` - Extracts 5s segments, concatenates to 30s
+- `lib/VideoSegmentCompositor.js` - Extracts 5s segments, concatenates to 30s, creates artist image segments from Arweave URLs
 - `lib/VideoCompositor.js` - Final composition (overlays, filters, audio)
-- `lib/ArweaveAudioClient.js` - Fetches audio from Arweave
+- `lib/ArweaveAudioClient.js` - Fetches audio from Arweave (handles `mixTitle` parameter)
 - `lib/DALLEImageGenerator.js` - AI background generation (fallback)
 
 ### Shared Libraries (`lib/`)
@@ -86,6 +91,16 @@
 - `ArNSUpdater.js` - Updates ArNS records
 - `WebsiteDeployer.js` - Deploys website to Arweave
 - `WebsiteSync.js` - Syncs Firebase to website/artists.json
+
+### Scripts
+- `update-artist-images-from-manifest.js` - Updates artist JSON with Arweave URLs from deployment manifest
+- `upload-artists-json.js` - Uploads artist JSON to Firebase
+- `test-artist-image.js` - Test script for artist image feature
+
+### Scripts
+- `update-artist-images-from-manifest.js` - Updates artist JSON with Arweave URLs from deployment manifest
+- `upload-artists-json.js` - Uploads artist JSON to Firebase
+- `worker/test-artist-image.js` - Test script for artist image feature
 
 ### Configuration
 - `vercel.json` - Vercel routes and function config (12 functions)
@@ -97,7 +112,13 @@
 ## 🔄 Key Data Flows
 
 ### Video Generation Flow
-1. User selects folders → POST `/api/generate-video`
+1. User selects audio source (MIXES or TRACKS)
+2. User selects artist (for MIXES) or uses random
+3. User selects mix (optional, for MIXES)
+4. User selects video folders (checkboxes)
+5. User selects filter, overlay, logos
+6. User toggles artist thumbnail (step 9, default: enabled)
+7. POST `/api/generate-video` with all parameters
 2. API validates folders → Creates job in Firestore (`videoJobs` collection, status: 'pending')
 3. GitHub Actions (runs every minute) → Finds pending job
 4. Worker: Updates status to 'processing' → **Dynamically discovers folders** → Loads videos → Extracts 5s segments → Concatenates to 30s → Applies filters/overlays → Combines audio → Uploads to Firebase Storage → Updates Firestore (status: 'completed', videoUrl)
@@ -139,7 +160,7 @@
 
 ---
 
-## ✅ MVP Features (15 Features)
+## ✅ MVP Features (16 Features)
 
 1. **Video Generation** - 30s videos from 5s segments, dynamic folder selection
 2. **Dynamic Folder Discovery** - Automatically finds all folders (no hardcoded lists)
@@ -156,6 +177,7 @@
 13. **Artist Management** - Create/update artists in Firestore
 14. **Logo Selection** - Custom top and end logos (defaults: ue_barcode_black.png, ue_square.png)
 15. **Overlay Effects** - Selectable overlay effects (Analog Film, Gritt, Noise, Retro Dust)
+16. **Artist Thumbnails** - Multiple Arweave-hosted thumbnails per artist, toggle to use as last 2 video segments
 
 **📖 See [FEATURES.md](./FEATURES.md) for complete feature documentation.**
 
@@ -294,3 +316,6 @@ for (const key of knownFolders) {
 **Status**: ✅ Production Ready MVP
 
 **Use this file as context when starting new chat threads!**
+
+
+

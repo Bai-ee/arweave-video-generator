@@ -2,6 +2,9 @@
 
 This document describes all features of the Arweave Video Generator system, their verification status, and usage instructions.
 
+**Last Updated**: December 2025  
+**Version**: 1.1.0
+
 ## Feature Verification Status
 
 ✅ **All features verified and working in live environment**
@@ -536,6 +539,62 @@ This document describes all features of the Arweave Video Generator system, thei
 - ✅ Overlays switch every 10 seconds
 - ✅ Overlay opacity and blend mode work correctly
 - ✅ Random overlay selection works
+
+### 16. Artist Thumbnail Images ✅
+
+**Status**: Verified and working
+
+**Description**: Artists can have multiple thumbnail images stored as Arweave URLs. When enabled, artist thumbnails are used as the last 2 video segments (5th & 6th segments, last 10 seconds).
+
+**How It Works**:
+1. Artist thumbnails are uploaded to Arweave and stored in `artistThumbnails` array in artist JSON
+2. Each artist can have multiple thumbnails (array of Arweave URLs)
+3. When generating videos, system randomly selects one thumbnail from available thumbnails
+4. Thumbnail is downloaded from Arweave and converted to a 5-second video segment
+5. Two identical segments are created (5th and 6th segments = last 10 seconds)
+6. Image is scaled to 90% canvas width, square aspect ratio, centered on black background
+
+**Usage**:
+1. Upload artist thumbnail via "Upload" section → "Artist Thumbnail" option
+2. Image is uploaded to Arweave and URL is added to `artistThumbnails` array
+3. In video generation, toggle appears in step 9: "Artist thumbnail"
+4. Toggle is enabled by default (checked)
+5. When enabled: Uses 4 video segments (20s) + 2 artist image segments (10s) = 30s total
+6. When disabled: Uses 6 video segments (30s) total, no artist image
+
+**Technical Details**:
+- **Storage**: `artistThumbnails` array in artist JSON (Firestore `system/artists`)
+- **Format**: Arweave URLs only (e.g., `https://arweave.net/{transactionId}`)
+- **Backward Compatibility**: `artistImageFilename` field maintained (set to first thumbnail)
+- **Image Processing**: 
+  - Downloads image from Arweave URL
+  - Scales to 90% canvas width (648px for 720x720 canvas)
+  - Square aspect ratio (648x648px)
+  - Centered on black background (720x720px)
+  - Creates 5-second video loop
+- **Video Generation**: 
+  - When enabled: Creates 4 video segments + 2 artist image segments
+  - When disabled: Creates 6 video segments
+- **API Parameter**: `useArtistImage` (boolean, default: true)
+- **Frontend Toggle**: Step 9 checkbox in generate video UI
+
+**Update Script**:
+- `update-artist-images-from-manifest.js` - Extracts Arweave URLs from deployment manifest and updates artist JSON
+- Run: `node update-artist-images-from-manifest.js`
+- Loads manifest from Firebase (`system/deployment-manifest`)
+- Maps `img/artists/*` paths to artist names
+- Constructs Arweave URLs from transaction IDs
+- Updates `artistThumbnails` arrays
+
+**Verification**:
+- ✅ Artist thumbnails stored as Arweave URLs in `artistThumbnails` array
+- ✅ Multiple thumbnails per artist supported
+- ✅ Random thumbnail selection works
+- ✅ Toggle enables/disables artist image usage
+- ✅ Image download from Arweave works
+- ✅ Image-to-video conversion works (5-second segments)
+- ✅ Two segments created correctly (5th & 6th)
+- ✅ When disabled, uses 6 video segments as normal
 
 ## Future Enhancements
 

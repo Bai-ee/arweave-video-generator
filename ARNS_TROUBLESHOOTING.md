@@ -140,3 +140,6 @@ If ArNS is still not working:
 2. Check browser console for deployment response
 3. Verify environment variables are set correctly
 4. Check wallet has sufficient AR balance for ArNS updates
+
+
+

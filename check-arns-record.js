@@ -71,3 +71,6 @@ async function checkArNSRecord() {
 }
 
 checkArNSRecord();
+
+
+

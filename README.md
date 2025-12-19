@@ -2,7 +2,7 @@
 
 **Status**: ✅ Production Ready MVP  
 **Last Updated**: December 2025  
-**Version**: 1.0.0
+**Version**: 1.1.0
 
 > **📚 Documentation Map**: This README is the **single-file context** for new chat threads. For detailed documentation, see:
 > - **[DOCUMENTATION_INDEX.md](./DOCUMENTATION_INDEX.md)** - Complete navigation guide to all documentation
@@ -41,6 +41,8 @@ The Arweave Video Generator is a **production-ready MVP** that automatically gen
 
 ✅ **Video Generation**: 30-second videos from 5-second segments  
 ✅ **Dynamic Folder Discovery**: Automatically finds new folders in Firebase Storage  
+✅ **Artist Thumbnails**: Multiple Arweave-hosted thumbnails per artist, used as last 2 video segments  
+✅ **Artist Image Toggle**: Enable/disable artist thumbnail usage in video generation  
 ✅ **ArNS Integration**: Automatic domain updates (`undergroundexistence.ar.io`)  
 ✅ **Website Deployment**: Deploys generated website to Arweave  
 ✅ **Usage Tracking**: Real-time Firebase Storage and Firestore usage indicators  
@@ -289,14 +291,20 @@ git push origin main
     "selectedFolders": ["rositas", "skyline"],
     "useTrax": false,
     "artist": "random",
+    "mixTitle": "Live at Podlasie",
     "duration": 30,
     "videoFilter": "look_hard_bw_street_doc",
     "filterIntensity": 0.8,
-    "enableOverlay": false
+    "enableOverlay": true,
+    "overlayEffect": null,
+    "topLogo": null,
+    "endLogo": null,
+    "useArtistImage": true
   }
   ```
 - **Processing**: GitHub Actions workflow (runs every minute)
 - **Output**: Video stored in `videos/{jobId}.mp4` in Firebase Storage
+- **Artist Thumbnails**: When `useArtistImage` is true, uses artist thumbnail as last 2 segments (5th & 6th, last 10 seconds)
 
 ### 2. Dynamic Folder Discovery
 
@@ -842,12 +850,26 @@ Archives files from Firebase Storage to Arweave.
    # Test folder combinations
    node test-multiple-folder-combinations.js
    
+   # Test artist image feature
+   cd worker && node test-artist-image.js
+   
    # Test ArNS
    node test-arns.js
    
    # Check ArNS record
    node check-arns-record.js
    ```
+
+4. **Update Artist Images from Manifest**:
+   ```bash
+   # Extract Arweave URLs from deployment manifest and update artist JSON
+   node update-artist-images-from-manifest.js
+   ```
+   - Loads manifest from Firebase (`system/deployment-manifest`)
+   - Maps `img/artists/*` paths to artist names
+   - Constructs Arweave URLs from transaction IDs
+   - Updates `artistThumbnails` arrays in artist JSON
+   - Syncs updates to Firebase
 
 ### Code Structure Guidelines
 
@@ -1209,6 +1231,22 @@ These are **contracts** that other parts of the system depend on. **Don't change
 
 ## 📝 Version History
 
+### v1.1.0 (December 2025) - Artist Thumbnails Update
+
+**New Features**:
+- ✅ Multiple artist thumbnails support (Arweave URLs stored in `artistThumbnails` array)
+- ✅ Artist thumbnail toggle in video generation UI (step 9)
+- ✅ Artist image update script (`update-artist-images-from-manifest.js`)
+- ✅ Artist thumbnails used as last 2 video segments (5th & 6th, last 10 seconds) when enabled
+- ✅ Mix selection dropdown (populated based on selected artist)
+
+**Technical Changes**:
+- Updated `api/upload.js` to store artist thumbnails as Arweave URLs only
+- Added `useArtistImage` parameter to video generation API (default: true)
+- Modified `ArweaveVideoGenerator.js` to conditionally use artist image based on toggle
+- Created `update-artist-images-from-manifest.js` script for bulk artist image updates
+- Updated `VideoSegmentCompositor.js` to create image video segments from Arweave URLs
+
 ### v1.0.0 (December 2025) - Production MVP
 
 **Core Features**:
@@ -1232,3 +1270,6 @@ These are **contracts** that other parts of the system depend on. **Don't change
 **Last Updated**: December 2025  
 **Maintained By**: Development Team  
 **Status**: ✅ Production Ready MVP
+
+
+

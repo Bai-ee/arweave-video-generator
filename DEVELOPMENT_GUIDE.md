@@ -750,6 +750,34 @@ generateTextLayers(artist, mixTitle, width, height) {
 - Text layers are automatically processed in `buildFilterComplex()`
 - No changes needed to VideoCompositor
 
+### How to Update Artist Images from Deployment Manifest
+
+**Purpose**: Extract Arweave URLs for artist images from the last deployed website manifest and update the artist JSON.
+
+**Usage**:
+```bash
+node update-artist-images-from-manifest.js
+```
+
+**What It Does**:
+1. Loads deployment manifest from Firebase (`system/deployment-manifest`)
+2. Finds all `img/artists/*` files in the manifest
+3. Maps them to artists by matching paths
+4. Constructs Arweave URLs from transaction IDs (`https://arweave.net/{transactionId}`)
+5. Updates `artistThumbnails` array for each artist
+6. Updates `artistImageFilename` for backward compatibility
+7. Saves updated JSON and syncs to Firebase
+
+**Prerequisites**:
+- Website must be deployed at least once (manifest must exist in Firebase)
+- Firebase credentials configured (`FIREBASE_SERVICE_ACCOUNT_KEY`)
+- Artist JSON must have `artistImageFilename` fields with `img/artists/` paths
+
+**Output**:
+- Updates `COMPLETE_ARTISTS_JSON.json` locally
+- Updates Firebase `system/artists` collection
+- Logs which artists were updated and their Arweave URLs
+
 ### How to Add a New Background Type
 
 **✅ No Code Changes Needed for New Folders!**
@@ -851,6 +879,9 @@ node test-local.js
 - [ ] Video backgrounds load from Firebase
 - [ ] All layers compose correctly
 - [ ] Text overlays render properly
+- [ ] Artist thumbnails download from Arweave (if enabled)
+- [ ] Artist image segments created correctly (5th & 6th segments)
+- [ ] Toggle enables/disables artist image usage
 - [ ] Final video uploads to Firebase Storage
 - [ ] Firestore status updates correctly
 - [ ] Frontend displays video
@@ -998,6 +1029,15 @@ node upload-chicago-videos.js
 - **Multiple Sources**: Load from multiple Firebase folders and combine
 - **Random Selection**: Use random segments from available videos for variety
 - **Duration Control**: Use `-t` flag to ensure exact target duration
+- **Artist Image Segments**: Download from Arweave, convert to 5-second video, create two identical segments (5th & 6th)
+
+### Artist Thumbnail Management
+- **Storage**: `artistThumbnails` array in artist JSON (Firestore `system/artists`)
+- **Format**: Arweave URLs only (`https://arweave.net/{transactionId}`)
+- **Multiple Thumbnails**: Artists can have multiple thumbnails (array)
+- **Random Selection**: System randomly selects one thumbnail per video generation
+- **Update Script**: `update-artist-images-from-manifest.js` extracts URLs from deployment manifest
+- **Image Processing**: 90% canvas width, square aspect ratio, centered on black background
 
 ---
 
@@ -1065,6 +1105,10 @@ new CompositionConfig(
 - ✅ Firebase Storage folder organization
 - ✅ Client-side video upload with optimization
 - ✅ Video segment extraction and composition from multiple sources
+- ✅ Multiple artist thumbnails support (Arweave URLs stored in `artistThumbnails` array)
+- ✅ Artist thumbnail toggle in video generation (enable/disable artist image as last 2 segments)
+- ✅ Artist image update script (`update-artist-images-from-manifest.js`)
+- ✅ Artist image as video segments (5th & 6th segments, last 10 seconds)
 
 ### Recent Fixes (2025-01-30)
 - **Video Concatenation**: Changed from `-c copy` to re-encoding (libx264/aac) to ensure compatibility
@@ -1088,7 +1132,13 @@ When making changes:
 
 ---
 
-**Last Updated**: 2025-01-30
+**Last Updated**: December 2025
 **Maintained By**: Development Team
 **Status**: ✅ Production Ready
+
+### Recent Updates (December 2025)
+- **Artist Thumbnails**: Added support for multiple Arweave-hosted thumbnails per artist
+- **Artist Image Toggle**: Added UI toggle to enable/disable artist thumbnail usage in video generation
+- **Update Script**: Created `update-artist-images-from-manifest.js` to extract Arweave URLs from deployment manifest
+- **Image Segments**: Artist thumbnails used as 5th & 6th video segments (last 10 seconds) when enabled
 

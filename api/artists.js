@@ -117,7 +117,8 @@ export default async function handler(req, res) {
         artist: {
           name: artist.artistName,
           genre: artist.artistGenre || 'Electronic',
-          mixCount: validMixes.length
+          mixCount: validMixes.length,
+          imageUrl: artist.artistImageFilename || null
         },
         mixes: validMixes.map(mix => ({
           title: mix.mixTitle,
@@ -134,7 +135,8 @@ export default async function handler(req, res) {
       name: artist.artistName,
       genre: artist.artistGenre || 'Electronic',
       mixCount: artist.mixes ? artist.mixes.length : 0,
-      trackCount: artist.trax ? artist.trax.length : 0
+      trackCount: artist.trax ? artist.trax.length : 0,
+      imageUrl: artist.artistImageFilename || null
     }));
 
     return res.status(200).json({

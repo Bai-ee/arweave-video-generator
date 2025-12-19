@@ -1,7 +1,8 @@
 # API Reference Documentation
 
 **Last Updated**: December 2025  
-**Status**: ✅ Production Ready MVP
+**Status**: ✅ Production Ready MVP  
+**Version**: 1.1.0
 
 ## Overview
 
@@ -24,32 +25,32 @@ Creates a video generation job in Firestore. Processing happens asynchronously v
 {
   "duration": 30,
   "artist": "random",
+  "mixTitle": "Live at Podlasie",
   "selectedFolders": ["rositas", "skyline", "neighborhood"],
   "useTrax": false,
   "videoFilter": "look_hard_bw_street_doc",
   "filterIntensity": 0.8,
-  "enableOverlay": false,
+  "enableOverlay": true,
   "overlayEffect": null,
   "topLogo": null,
-  "endLogo": null
+  "endLogo": null,
+  "useArtistImage": true
 }
 ```
 
 **Parameters**:
 - `duration` (number, optional): Video duration in seconds. Default: 30
 - `artist` (string, optional): Artist name or 'random'. Default: 'random'
+- `mixTitle` (string, optional): Specific mix title (for MIXES mode). If provided, uses this specific mix instead of random selection. Default: null (random)
 - `selectedFolders` (array, required): Array of folder names. Must have at least one folder.
 - `useTrax` (boolean, optional): true for ORIGINAL TRACKS, false for DJ MIXES. Default: false
 - `videoFilter` (string, optional): Filter key from VIDEO_FILTERS. Default: 'look_hard_bw_street_doc'
 - `filterIntensity` (number, optional): Filter intensity 0.0-1.0. Default: 0.8
-- `enableOverlay` (boolean, optional): Enable overlay effects. Default: false
+- `enableOverlay` (boolean, optional): Enable overlay effects. Default: true
 - `overlayEffect` (string, optional): Overlay effect name ('analog_film', 'gritt', 'noise', 'retro_dust') or null for random. Default: null
 - `topLogo` (string, optional): Top logo filename from logos/ folder or null for default (ue_barcode_black.png). Default: null
 - `endLogo` (string, optional): End logo filename from logos/ folder or null for default (ue_square.png). Default: null
-- `useTrax` (boolean, optional): `true` for tracks, `false` for mixes. Default: `false`
-- `videoFilter` (string, optional): Filter key. Default: 'look_hard_bw_street_doc'
-- `filterIntensity` (number, optional): Filter intensity 0.0-1.0. Default: 0.4
-- `enableOverlay` (boolean, optional): Enable overlay effects. Default: `true`
+- `useArtistImage` (boolean, optional): Use artist thumbnail as last 2 segments (5th & 6th). When enabled, uses 4 video segments + 2 artist image segments. When disabled, uses 6 video segments. Default: true
 
 **Validation**:
 - `selectedFolders` must be an array with at least one folder
@@ -667,3 +668,6 @@ Configured in `vercel.json`:
 ---
 
 **Last Updated**: December 2025
+
+
+

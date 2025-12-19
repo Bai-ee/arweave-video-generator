@@ -223,3 +223,4 @@ async function updateArtistImagesFromManifest() {
 }
 
 updateArtistImagesFromManifest();
+
