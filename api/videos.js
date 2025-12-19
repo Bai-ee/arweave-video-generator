@@ -33,6 +33,11 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Check for download mode (must be checked before other query params)
+    if (req.query.download === 'true' && req.query.videoUrl) {
+      return await handleVideoDownload(req, res);
+    }
+
     // Check if this is a status request (has jobId in query or path)
     const jobId = req.query.jobId || (req.url.includes('/video-status/') ? req.url.split('/video-status/')[1]?.split('?')[0] : null);
     
@@ -210,6 +215,45 @@ export default async function handler(req, res) {
       error: 'Failed to get videos list',
       message: error.message 
     });
+  }
+}
+
+/**
+ * Handle video download request - proxies video from Firebase Storage
+ */
+async function handleVideoDownload(req, res) {
+  try {
+    const videoUrl = decodeURIComponent(req.query.videoUrl);
+    const filename = req.query.filename ? decodeURIComponent(req.query.filename) : 'video.mp4';
+    
+    console.log(`[Video Download] Downloading video: ${videoUrl.substring(0, 100)}...`);
+    
+    // Fetch video from Firebase Storage
+    const response = await fetch(videoUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    
+    if (!response.ok) {
+      console.error(`[Video Download] Failed to fetch video: ${response.status} ${response.statusText}`);
+      return res.status(response.status).json({ error: 'Failed to fetch video', status: response.status });
+    }
+    
+    const videoBuffer = await response.arrayBuffer();
+    console.log(`[Video Download] Fetched ${videoBuffer.byteLength} bytes`);
+    
+    // Set download headers
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', videoBuffer.byteLength);
+    res.setHeader('Cache-Control', 'no-cache');
+    
+    // Send video buffer
+    res.send(Buffer.from(videoBuffer));
+    console.log(`[Video Download] Video sent successfully`);
+  } catch (error) {
+    console.error('[Video Download] Error:', error.message);
+    console.error('[Video Download] Stack:', error.stack);
+    return res.status(500).json({ error: 'Download failed', message: error.message });
   }
 }
 

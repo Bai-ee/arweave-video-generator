@@ -87,7 +87,7 @@
       "maxDuration": 10
     },
     "api/videos.js": {
-      "maxDuration": 5
+      "maxDuration": 60
     },
     "api/upload-video.js": {
       "maxDuration": 60
