@@ -721,11 +721,22 @@ class ArweaveAudioClient {
             finalPath = path.join(this.outputDir, fileName);
             
             // Calculate random start time for variety
-            const maxStartTime = Math.max(0, totalDurationSeconds - requestedDuration - 10);
-            startTime = totalDurationSeconds > requestedDuration ? 
-              Math.floor(Math.random() * maxStartTime) : 0;
+            // ALWAYS skip the first 60 seconds (1 minute) to avoid dead air/silence at the beginning
+            const MIN_START_TIME = 60; // Skip first 60 seconds (1 minute)
+            const minStartTime = MIN_START_TIME;
+            const maxStartTime = Math.max(minStartTime, totalDurationSeconds - requestedDuration - 10);
             
-            console.log(`[ArweaveAudioClient] Random sampling: ${requestedDuration}s from ${totalDurationSeconds}s total, starting at ${startTime}s`);
+            // Ensure we have enough duration to extract the requested segment
+            if (totalDurationSeconds < minStartTime + requestedDuration) {
+              // If file is too short, start from a later point or use what's available
+              startTime = Math.max(0, totalDurationSeconds - requestedDuration);
+              console.warn(`[ArweaveAudioClient] ⚠️ Audio file is shorter than expected (${totalDurationSeconds}s). Starting at ${startTime}s to fit ${requestedDuration}s segment.`);
+            } else {
+              // Random start time between minStartTime and maxStartTime
+              startTime = Math.floor(Math.random() * (maxStartTime - minStartTime + 1)) + minStartTime;
+            }
+            
+            console.log(`[ArweaveAudioClient] Random sampling: ${requestedDuration}s from ${totalDurationSeconds}s total, starting at ${startTime}s (skipped first ${MIN_START_TIME}s to avoid dead air)`);
           }
 
           // Create metadata - always use BAI-EE for tracks
