@@ -2927,6 +2927,13 @@
     }
 
     /**
+     * Detect if user is on iOS
+     */
+    function isIOS() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+
+    /**
      * Copy text to clipboard
      */
     async function copyToClipboard(text) {
@@ -2953,53 +2960,120 @@
     }
 
     /**
-     * Download video (with mobile support)
+     * Download video (with mobile support - fetches video as blob for proper download)
      */
     window.downloadVideo = async function(videoUrl, filename) {
-      if (isMobileDevice()) {
-        // On mobile, try to use Share API first
-        if (navigator.share) {
+      try {
+        // Show loading toast
+        showToast('Downloading video...', 'info');
+        
+        // Fetch the video as a blob
+        const response = await fetch(videoUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch video: ${response.statusText}`);
+        }
+        
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        
+        // For mobile, try Share API with the blob file (iOS 13+ and Android)
+        if (isMobileDevice() && navigator.share) {
           try {
-            await navigator.share({
-              title: filename,
-              text: `Download ${filename}`,
-              url: videoUrl
-            });
-            showToast('Share dialog opened - you can save the video from there', 'success');
-            return;
-          } catch (err) {
-            // User cancelled or share failed, fall through to copy link
-            if (err.name !== 'AbortError') {
-              console.log('Share failed, falling back to copy link:', err);
+            // Convert blob to File for Share API
+            const file = new File([blob], filename, { type: blob.type || 'video/mp4' });
+            
+            // Check if we can share files (some browsers support this)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                title: filename,
+                text: `Save ${filename} to your device`,
+                files: [file]
+              });
+              
+              // Clean up blob URL after a delay (give time for share to complete)
+              setTimeout(() => {
+                URL.revokeObjectURL(blobUrl);
+              }, 1000);
+              
+              showToast('Share menu opened! Look for "Save to Photos" or "Save Video"', 'success');
+              return;
+            } else if (isIOS()) {
+              // For iOS, try sharing the blob URL directly (iOS Safari workaround)
+              // This will open the share sheet where user can save to Photos
+              const shareData = {
+                title: filename,
+                text: `Save ${filename}`,
+                url: blobUrl
+              };
+              
+              if (navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+                setTimeout(() => {
+                  URL.revokeObjectURL(blobUrl);
+                }, 1000);
+                showToast('Share menu opened! Select "Save to Photos"', 'success');
+                return;
+              }
+            }
+          } catch (shareErr) {
+            // Share API failed or user cancelled, fall through to blob download
+            if (shareErr.name !== 'AbortError') {
+              console.log('Share API failed, using blob download:', shareErr);
+            } else {
+              // User cancelled share - clean up and return
+              URL.revokeObjectURL(blobUrl);
+              return;
             }
           }
         }
         
-        // Fallback: Copy link to clipboard
-        const success = await copyToClipboard(videoUrl);
-        if (success) {
-          showToast('Video link copied! Paste it in your browser to download.', 'success');
-        } else {
-          // Show URL in prompt as last resort
-          prompt('Copy this video URL to download:', videoUrl);
-        }
-        return;
-      }
-      
-      // Desktop: Use standard download
-      try {
-        const link = document.createElement('a');
-        link.href = videoUrl;
-        link.download = filename;
-        link.target = '_blank';
+        // Trigger download using blob URL
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      } catch (err) {
-        console.error('Download failed:', err);
-        // Fallback: Open in new tab
-        window.open(videoUrl, '_blank');
-        showToast('Video opened in new tab - right-click to save', 'info');
+        
+        // Clean up blob URL after a delay (give time for download to start)
+        setTimeout(() => {
+          URL.revokeObjectURL(blobUrl);
+        }, 1000);
+        
+        if (isMobileDevice()) {
+          showToast('Download started! Check your downloads folder or gallery.', 'success');
+        } else {
+          showToast('Video download started!', 'success');
+        }
+        
+      } catch (error) {
+        console.error('Download error:', error);
+        
+        // Fallback 1: Try direct download link (works on some mobile browsers)
+        try {
+          const link = document.createElement('a');
+          link.href = videoUrl;
+          link.download = filename;
+          link.target = '_blank';
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showToast('Download link opened - long press to save', 'info');
+        } catch (fallbackError) {
+          // Fallback 2: Open in new tab with instructions
+          const newWindow = window.open(videoUrl, '_blank');
+          if (isIOS()) {
+            showToast('Video opened. Long press the video and select "Save to Photos"', 'info');
+          } else if (isMobileDevice()) {
+            showToast('Video opened. Long press the video to save it to your device.', 'info');
+          } else {
+            showToast('Video opened in new tab. Right-click to save.', 'info');
+          }
+        }
       }
     }
 
