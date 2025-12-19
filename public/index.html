@@ -1233,10 +1233,36 @@
             id="videoPlayer" 
             controls 
             autoplay
-            style="width: 100%; height: 100%; max-width: 100%; max-height: calc(90vh - 120px); object-fit: contain;"
+            style="width: 100%; height: 100%; max-width: 100%; max-height: calc(90vh - 200px); object-fit: contain;"
           >
             Your browser does not support the video tag.
           </video>
+        </div>
+        <div id="videoUrlContainer" style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.5); border-radius: 5px; display: none;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+              <div style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; margin-bottom: 0.25rem;">VIDEO URL:</div>
+              <div id="videoUrlDisplay" style="color: #fff; font-family: var(--font-body); font-size: 0.7rem; word-break: break-all; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px;"></div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button 
+                id="copyVideoUrlBtn"
+                onclick="copyVideoUrlFromModal()" 
+                style="background: var(--color-yellow-75); color: black; border: none; border-radius: 5px; padding: 0.5rem 1rem; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem; white-space: nowrap;"
+              >
+                COPY URL
+              </button>
+              <a 
+                id="openVideoUrlBtn"
+                href="" 
+                target="_blank"
+                rel="noopener noreferrer"
+                style="background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 5px; padding: 0.5rem 1rem; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem; text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center;"
+              >
+                OPEN
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2740,6 +2766,8 @@
       if (video.status === 'completed' && video.videoUrl) {
         const escapedUrl = video.videoUrl.replace(/'/g, "\\'");
         const filename = `${video.artist || 'video'}_${video.duration || 30}s.mp4`.replace(/'/g, "\\'");
+        const isMobile = isMobileDevice();
+        const downloadLabel = isMobile ? 'SAVE/COPY' : 'DOWNLOAD';
         
         return `
           <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; width: 100%;">
@@ -2763,7 +2791,15 @@
               class="btn-base btn-secondary"
               style="flex: 1; min-width: 100px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias); border-radius: 10px; padding: 0.75rem 1rem; font-weight: bold; font-size: 0.875rem;"
             >
-              DOWNLOAD
+              ${downloadLabel}
+            </button>
+            <button 
+              onclick="copyVideoLink('${escapedUrl}')" 
+              class="btn-base btn-secondary"
+              style="flex: 1; min-width: 100px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias); border-radius: 10px; padding: 0.75rem 1rem; font-weight: bold; font-size: 0.875rem;"
+              title="Copy video URL to clipboard"
+            >
+              COPY LINK
             </button>
           </div>
         `;
@@ -2817,10 +2853,20 @@
     window.viewVideo = function(videoUrl) {
       const modal = document.getElementById('videoViewModal');
       const videoPlayer = document.getElementById('videoPlayer');
+      const urlContainer = document.getElementById('videoUrlContainer');
+      const urlDisplay = document.getElementById('videoUrlDisplay');
+      const openUrlBtn = document.getElementById('openVideoUrlBtn');
       
       if (modal && videoPlayer) {
         // Set video source
         videoPlayer.src = videoUrl;
+        
+        // Show and populate URL container
+        if (urlContainer && urlDisplay && openUrlBtn) {
+          urlDisplay.textContent = videoUrl;
+          openUrlBtn.href = videoUrl;
+          urlContainer.style.display = 'block';
+        }
         
         // Show modal
         modal.style.display = 'flex';
@@ -2829,6 +2875,28 @@
         videoPlayer.play().catch(err => {
           console.warn('Autoplay prevented:', err);
         });
+      }
+    };
+
+    /**
+     * Copy video URL from modal
+     */
+    window.copyVideoUrlFromModal = async function() {
+      const urlDisplay = document.getElementById('videoUrlDisplay');
+      if (urlDisplay && urlDisplay.textContent) {
+        const success = await copyToClipboard(urlDisplay.textContent);
+        if (success) {
+          const btn = document.getElementById('copyVideoUrlBtn');
+          const originalText = btn.textContent;
+          btn.textContent = 'COPIED!';
+          btn.style.background = '#10b981';
+          setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = 'var(--color-yellow-75)';
+          }, 2000);
+        } else {
+          showToast('Failed to copy URL', 'error');
+        }
       }
     };
 
@@ -2851,13 +2919,100 @@
     };
 
     /**
-     * Download video
+     * Detect if user is on mobile device
      */
-    window.downloadVideo = function(videoUrl, filename) {
-      const link = document.createElement('a');
-      link.href = videoUrl;
-      link.download = filename;
-      link.click();
+    function isMobileDevice() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+             (window.matchMedia && window.matchMedia("(max-width: 768px)").matches);
+    }
+
+    /**
+     * Copy text to clipboard
+     */
+    async function copyToClipboard(text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } else {
+          // Fallback for older browsers
+          const textArea = document.createElement('textarea');
+          textArea.value = text;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-999999px';
+          document.body.appendChild(textArea);
+          textArea.select();
+          const success = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          return success;
+        }
+      } catch (err) {
+        console.error('Failed to copy:', err);
+        return false;
+      }
+    }
+
+    /**
+     * Download video (with mobile support)
+     */
+    window.downloadVideo = async function(videoUrl, filename) {
+      if (isMobileDevice()) {
+        // On mobile, try to use Share API first
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: filename,
+              text: `Download ${filename}`,
+              url: videoUrl
+            });
+            showToast('Share dialog opened - you can save the video from there', 'success');
+            return;
+          } catch (err) {
+            // User cancelled or share failed, fall through to copy link
+            if (err.name !== 'AbortError') {
+              console.log('Share failed, falling back to copy link:', err);
+            }
+          }
+        }
+        
+        // Fallback: Copy link to clipboard
+        const success = await copyToClipboard(videoUrl);
+        if (success) {
+          showToast('Video link copied! Paste it in your browser to download.', 'success');
+        } else {
+          // Show URL in prompt as last resort
+          prompt('Copy this video URL to download:', videoUrl);
+        }
+        return;
+      }
+      
+      // Desktop: Use standard download
+      try {
+        const link = document.createElement('a');
+        link.href = videoUrl;
+        link.download = filename;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error('Download failed:', err);
+        // Fallback: Open in new tab
+        window.open(videoUrl, '_blank');
+        showToast('Video opened in new tab - right-click to save', 'info');
+      }
+    }
+
+    /**
+     * Copy video link to clipboard
+     */
+    window.copyVideoLink = async function(videoUrl) {
+      const success = await copyToClipboard(videoUrl);
+      if (success) {
+        showToast('Video link copied to clipboard!', 'success');
+      } else {
+        prompt('Copy this video URL:', videoUrl);
+      }
     }
 
     /**
@@ -4647,6 +4802,10 @@
               const escapedName = video.name.replace(/'/g, "\\'");
               const escapedFullPath = video.fullPath.replace(/'/g, "\\'");
               
+              // Detect mobile for button label
+              const isMobile = isMobileDevice();
+              const downloadLabel = isMobile ? 'SAVE/COPY' : 'Download';
+              
               videoCard.innerHTML = `
                 <div style="position: relative; width: 100%; padding-top: 56.25%; background: #0a0a0a; cursor: pointer;" onclick="window.open('${escapedUrl}', '_blank')">
                   <video 
@@ -4690,7 +4849,14 @@
                       onclick="downloadVideo('${escapedUrl}', '${escapedName}')"
                       style="flex: 1; min-width: 80px; padding: 0.5rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
                     >
-                      Download
+                      ${downloadLabel}
+                    </button>
+                    <button 
+                      onclick="copyVideoLink('${escapedUrl}')"
+                      style="flex: 1; min-width: 80px; padding: 0.5rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
+                      title="Copy video URL"
+                    >
+                      Copy Link
                     </button>
                     <button 
                       onclick="deleteVideo('${currentFolder}', '${escapedName}')"
