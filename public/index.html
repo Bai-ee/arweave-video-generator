@@ -2787,7 +2787,7 @@
               OPEN IN BROWSER
             </a>
             <button 
-              onclick="downloadVideo('${escapedUrl}', '${filename}')" 
+              onclick="(function() { const url = '${escapedUrl}'; const name = '${filename}'; console.log('[Download] Button clicked!'); console.log('[Download] URL:', url ? url.substring(0, 100) : 'NULL'); console.log('[Download] Filename:', name); console.log('[Download] downloadVideo exists:', typeof downloadVideo); try { if (typeof downloadVideo === 'function') { downloadVideo(url, name); } else { console.error('[Download] downloadVideo is not a function!', typeof downloadVideo); alert('Download function not available'); } } catch(e) { console.error('[Download] Error calling downloadVideo:', e); alert('Download error: ' + e.message); } })()" 
               class="btn-base btn-secondary"
               style="flex: 1; min-width: 100px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias); border-radius: 10px; padding: 0.75rem 1rem; font-weight: bold; font-size: 0.875rem;"
             >
@@ -3043,10 +3043,36 @@
      * Download video (iOS: direct URL, Android/Desktop: proxy if needed)
      */
     window.downloadVideo = async function(videoUrl, filename) {
-      console.log('[Download] ===== Download initiated =====');
-      console.log('[Download] Device:', isIOS() ? 'iOS' : isMobileDevice() ? 'Android/Mobile' : 'Desktop');
-      console.log('[Download] Video URL:', videoUrl.substring(0, 100) + '...');
-      console.log('[Download] Filename:', filename);
+      try {
+        // Log function existence check
+        console.log('[Download] Function downloadVideo exists and is being called');
+        console.log('[Download] window.downloadVideo type:', typeof window.downloadVideo);
+        console.log('[Download] ===== Download initiated =====');
+        console.log('[Download] Function called with:', { videoUrl: videoUrl ? videoUrl.substring(0, 100) + '...' : 'NULL', filename });
+        console.log('[Download] Video URL type:', typeof videoUrl, 'Length:', videoUrl ? videoUrl.length : 0);
+        console.log('[Download] Filename type:', typeof filename);
+        
+        // Validate inputs
+        if (!videoUrl) {
+          console.error('[Download] ERROR: videoUrl is null or undefined');
+          showToast('Error: Video URL is missing', 'error');
+          return;
+        }
+        
+        if (typeof videoUrl !== 'string') {
+          console.error('[Download] ERROR: videoUrl is not a string:', typeof videoUrl, videoUrl);
+          showToast('Error: Invalid video URL', 'error');
+          return;
+        }
+        
+        if (!filename) {
+          filename = 'video.mp4';
+          console.log('[Download] No filename provided, using default:', filename);
+        }
+        
+        console.log('[Download] Device:', isIOS() ? 'iOS' : isMobileDevice() ? 'Android/Mobile' : 'Desktop');
+        console.log('[Download] Video URL (full):', videoUrl);
+        console.log('[Download] Filename:', filename);
       
       // For iOS: Skip proxy entirely - use direct URL with Share API or open directly
       // This avoids 400 errors from URL length limits and encoding issues
@@ -3294,6 +3320,14 @@
         showToast('Download started via direct link!', 'info');
       }
       console.log('[Download] ===== Download function completed =====');
+      } catch (error) {
+        console.error('[Download] ===== FATAL ERROR in downloadVideo =====');
+        console.error('[Download] Error name:', error.name);
+        console.error('[Download] Error message:', error.message);
+        console.error('[Download] Error stack:', error.stack);
+        console.error('[Download] Error occurred with:', { videoUrl: videoUrl ? videoUrl.substring(0, 100) : 'NULL', filename });
+        showToast(`Download error: ${error.message}`, 'error');
+      }
     }
 
     /**
@@ -5139,7 +5173,7 @@
                       View
                     </button>
                     <button 
-                      onclick="downloadVideo('${escapedUrl}', '${escapedName}')"
+                      onclick="(function() { const url = '${escapedUrl}'; const name = '${escapedName}'; console.log('[Download] Manage section button clicked!'); console.log('[Download] URL:', url ? url.substring(0, 100) : 'NULL'); console.log('[Download] Filename:', name); console.log('[Download] downloadVideo exists:', typeof downloadVideo); try { if (typeof downloadVideo === 'function') { downloadVideo(url, name); } else { console.error('[Download] downloadVideo is not a function!', typeof downloadVideo); alert('Download function not available'); } } catch(e) { console.error('[Download] Error calling downloadVideo:', e); alert('Download error: ' + e.message); } })()"
                       style="flex: 1; min-width: 80px; padding: 0.5rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); border-radius: 10px; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.75rem;"
                     >
                       ${downloadLabel}
