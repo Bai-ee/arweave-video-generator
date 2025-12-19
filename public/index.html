@@ -3040,129 +3040,229 @@
     }
 
     /**
-     * Download video (uses server-side proxy to bypass CORS for iOS/Android)
+     * Download video (iOS: direct URL, Android/Desktop: proxy if needed)
      */
     window.downloadVideo = async function(videoUrl, filename) {
-      // Construct proxy URL
-      const proxyUrl = `/api/videos?download=true&videoUrl=${encodeURIComponent(videoUrl)}&filename=${encodeURIComponent(filename)}`;
+      console.log('[Download] ===== Download initiated =====');
+      console.log('[Download] Device:', isIOS() ? 'iOS' : isMobileDevice() ? 'Android/Mobile' : 'Desktop');
+      console.log('[Download] Video URL:', videoUrl.substring(0, 100) + '...');
+      console.log('[Download] Filename:', filename);
       
-      // For iOS and Android mobile devices
-      if (isMobileDevice()) {
-        try {
-          showToast('Preparing video for download...', 'info');
-          
-          // Fetch from same-origin proxy (no CORS issues)
-          const response = await fetch(proxyUrl, {
-            method: 'GET',
-            credentials: 'same-origin'
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
-          }
-          
-          // Convert response to blob
-          const blob = await response.blob();
-          
-          // Create File object from blob
-          const file = new File([blob], filename, { 
-            type: blob.type || 'video/mp4',
-            lastModified: Date.now()
-          });
-          
-          // Try Web Share API with file (iOS 13+ and Android)
-          if (navigator.share) {
-            try {
-              // Check if files can be shared
-              if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                  title: filename,
-                  text: `Save ${filename} to Photos`,
-                  files: [file]
-                });
-                showToast('Share menu opened! Select "Save to Photos" or "Save Video"', 'success');
-                return;
-              } else {
-                // Try sharing without canShare check (some iOS versions)
-                try {
-                  await navigator.share({
-                    title: filename,
-                    text: `Save ${filename} to Photos`,
-                    files: [file]
-                  });
-                  showToast('Share menu opened! Select "Save to Photos"', 'success');
-                  return;
-                } catch (shareErr) {
-                  if (shareErr.name === 'AbortError') {
-                    return; // User cancelled
-                  }
-                  console.log('Share API with files failed, trying blob URL:', shareErr);
-                }
-              }
-            } catch (shareErr) {
-              if (shareErr.name === 'AbortError') {
-                return; // User cancelled
-              }
-              console.log('Share API failed, trying fallback:', shareErr);
-            }
-          }
-          
-          // Fallback: Create blob URL and open helper page
+      // For iOS: Skip proxy entirely - use direct URL with Share API or open directly
+      // This avoids 400 errors from URL length limits and encoding issues
+      if (isIOS()) {
+        console.log('[Download] iOS detected - using direct URL approach (no proxy)');
+        // First, try Share API with direct URL (simplest approach)
+        if (navigator.share) {
+          console.log('[Download] iOS: Attempting Share API with direct URL');
           try {
-            const blobUrl = URL.createObjectURL(blob);
-            const downloadPageUrl = createIOSDownloadPage(blobUrl, filename);
-            const newWindow = window.open(downloadPageUrl, '_blank');
-            
-            if (newWindow) {
-              showToast('Video page opened! Long press the video and select "Save to Photos"', 'success');
-              // Keep blob URLs alive
-              setTimeout(() => {
-                URL.revokeObjectURL(blobUrl);
-                URL.revokeObjectURL(downloadPageUrl);
-              }, 60000);
-              return;
-            } else {
-              // Popup blocked, try opening blob URL directly
-              window.open(blobUrl, '_blank');
-              showToast('Video opened! Long press and select "Save to Photos"', 'info');
-              setTimeout(() => {
-                URL.revokeObjectURL(blobUrl);
-              }, 30000);
-              return;
+            await navigator.share({
+              title: filename,
+              text: `Save ${filename} to Photos`,
+              url: videoUrl
+            });
+            console.log('[Download] iOS: Share API succeeded - user selected option');
+            showToast('Share menu opened! Select "Save to Photos" or "Save Video"', 'success');
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') {
+              console.log('[Download] iOS: User cancelled Share API');
+              return; // User cancelled
             }
-          } catch (fallbackErr) {
-            console.error('Fallback failed:', fallbackErr);
-            // Last resort: open original video URL
-            window.open(videoUrl, '_blank');
-            showToast('Video opened! Long press the video to save it.', 'info');
+            console.log('[Download] iOS: Share API with URL failed:', shareErr.name, shareErr.message);
           }
+        } else {
+          console.log('[Download] iOS: Share API not available');
+        }
+        
+        // Fallback: Open video URL directly - user can long-press to save
+        console.log('[Download] iOS: Opening helper page with video');
+        try {
+          const downloadPageUrl = createIOSDownloadPage(videoUrl, filename);
+          const newWindow = window.open(downloadPageUrl, '_blank');
           
-        } catch (error) {
-          console.error('Mobile download error:', error);
-          showToast(`Download failed: ${error.message}. Opening video in new tab...`, 'error');
-          // Fallback to opening original URL
-          setTimeout(() => {
+          if (newWindow) {
+            console.log('[Download] iOS: Helper page opened successfully');
+            showToast('Video opened! Long press the video and select "Save to Photos"', 'success');
+            setTimeout(() => {
+              URL.revokeObjectURL(downloadPageUrl);
+            }, 60000);
+            return;
+          } else {
+            // Popup blocked, open video directly
+            console.log('[Download] iOS: Popup blocked, opening video URL directly');
             window.open(videoUrl, '_blank');
-          }, 1000);
+            showToast('Video opened! Long press and select "Save to Photos"', 'info');
+            return;
+          }
+        } catch (err) {
+          console.error('[Download] iOS: Error opening helper page:', err);
+          // Last resort: open video URL directly
+          window.open(videoUrl, '_blank');
+          showToast('Video opened! Long press the video to save it.', 'info');
         }
         return;
       }
       
-      // Desktop: Fetch from proxy and trigger download
+      // For Android: Try proxy, but fallback immediately to direct URL if it fails
+      if (isMobileDevice()) {
+        console.log('[Download] Android/Mobile detected - trying proxy first');
+        // Construct proxy URL
+        const proxyUrl = `/api/videos?download=true&videoUrl=${encodeURIComponent(videoUrl)}&filename=${encodeURIComponent(filename)}`;
+        console.log('[Download] Android: Proxy URL length:', proxyUrl.length, 'chars');
+        console.log('[Download] Android: Proxy URL (first 200 chars):', proxyUrl.substring(0, 200));
+        
+        try {
+          showToast('Preparing video...', 'info');
+          console.log('[Download] Android: Attempting proxy fetch with 5s timeout');
+          
+          // Try proxy first (quick timeout)
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => {
+            console.log('[Download] Android: Proxy fetch timeout (5s)');
+            controller.abort();
+          }, 5000); // 5 second timeout
+          
+          const fetchStart = Date.now();
+          const response = await fetch(proxyUrl, {
+            method: 'GET',
+            credentials: 'same-origin',
+            signal: controller.signal
+          });
+          const fetchTime = Date.now() - fetchStart;
+          
+          clearTimeout(timeoutId);
+          console.log('[Download] Android: Proxy fetch completed in', fetchTime, 'ms');
+          console.log('[Download] Android: Response status:', response.status, response.statusText);
+          console.log('[Download] Android: Response headers:', {
+            'content-type': response.headers.get('content-type'),
+            'content-length': response.headers.get('content-length')
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            console.error('[Download] Android: Proxy failed with status', response.status);
+            console.error('[Download] Android: Error response:', errorText.substring(0, 200));
+            throw new Error(`Proxy failed: ${response.status} ${response.statusText}`);
+          }
+          
+          // Convert response to blob
+          console.log('[Download] Android: Converting response to blob');
+          const blob = await response.blob();
+          console.log('[Download] Android: Blob created - size:', blob.size, 'bytes, type:', blob.type);
+          
+          const file = new File([blob], filename, { 
+            type: blob.type || 'video/mp4',
+            lastModified: Date.now()
+          });
+          console.log('[Download] Android: File object created');
+          
+          // Try Web Share API with file
+          if (navigator.share) {
+            const canShare = navigator.canShare ? navigator.canShare({ files: [file] }) : false;
+            console.log('[Download] Android: Share API available, canShare:', canShare);
+            
+            if (canShare) {
+              console.log('[Download] Android: Attempting Share API with file');
+              try {
+                await navigator.share({
+                  title: filename,
+                  text: `Save ${filename}`,
+                  files: [file]
+                });
+                console.log('[Download] Android: Share API succeeded');
+                showToast('Share menu opened! Select "Save" or "Download"', 'success');
+                return;
+              } catch (shareErr) {
+                console.error('[Download] Android: Share API error:', shareErr.name, shareErr.message);
+                throw shareErr;
+              }
+            } else {
+              console.log('[Download] Android: Cannot share file, will fallback');
+            }
+          } else {
+            console.log('[Download] Android: Share API not available');
+          }
+        } catch (proxyError) {
+          console.error('[Download] Android: Proxy attempt failed:', proxyError.name, proxyError.message);
+          console.log('[Download] Android: Falling back to direct URL');
+          // Immediately fallback to direct URL - don't show error
+        }
+        
+        // Fallback: Use direct URL (same as iOS)
+        console.log('[Download] Android: Using direct URL fallback');
+        if (navigator.share) {
+          console.log('[Download] Android: Attempting Share API with direct URL');
+          try {
+            await navigator.share({
+              title: filename,
+              text: `Save ${filename} to Photos`,
+              url: videoUrl
+            });
+            console.log('[Download] Android: Share API with URL succeeded');
+            showToast('Share menu opened! Select "Save to Photos"', 'success');
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') {
+              console.log('[Download] Android: User cancelled Share API');
+              return;
+            }
+            console.error('[Download] Android: Share API with URL failed:', shareErr.name, shareErr.message);
+          }
+        }
+        
+        // Last resort: open video directly
+        console.log('[Download] Android: Opening video URL directly');
+        window.open(videoUrl, '_blank');
+        showToast('Video opened! Long press to save.', 'info');
+        return;
+      }
+      
+      // Desktop: Try proxy, fallback to direct download
+      console.log('[Download] Desktop detected - trying proxy');
+      const proxyUrl = `/api/videos?download=true&videoUrl=${encodeURIComponent(videoUrl)}&filename=${encodeURIComponent(filename)}`;
+      console.log('[Download] Desktop: Proxy URL length:', proxyUrl.length, 'chars');
+      console.log('[Download] Desktop: Proxy URL (first 200 chars):', proxyUrl.substring(0, 200));
+      
       try {
         showToast('Downloading video...', 'info');
+        console.log('[Download] Desktop: Attempting proxy fetch with 10s timeout');
         
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.log('[Download] Desktop: Proxy fetch timeout (10s)');
+          controller.abort();
+        }, 10000); // 10 second timeout
+        
+        const fetchStart = Date.now();
         const response = await fetch(proxyUrl, {
           method: 'GET',
-          credentials: 'same-origin'
+          credentials: 'same-origin',
+          signal: controller.signal
+        });
+        const fetchTime = Date.now() - fetchStart;
+        
+        clearTimeout(timeoutId);
+        console.log('[Download] Desktop: Proxy fetch completed in', fetchTime, 'ms');
+        console.log('[Download] Desktop: Response status:', response.status, response.statusText);
+        console.log('[Download] Desktop: Response headers:', {
+          'content-type': response.headers.get('content-type'),
+          'content-length': response.headers.get('content-length')
         });
         
         if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+          const errorText = await response.text().catch(() => '');
+          console.error('[Download] Desktop: Proxy failed with status', response.status);
+          console.error('[Download] Desktop: Error response:', errorText.substring(0, 200));
+          throw new Error(`Proxy failed: ${response.status} ${response.statusText}`);
         }
         
+        console.log('[Download] Desktop: Converting response to blob');
         const blob = await response.blob();
+        console.log('[Download] Desktop: Blob created - size:', blob.size, 'bytes, type:', blob.type);
+        
         const blobUrl = URL.createObjectURL(blob);
+        console.log('[Download] Desktop: Blob URL created, triggering download');
         
         const link = document.createElement('a');
         link.href = blobUrl;
@@ -3176,15 +3276,24 @@
           URL.revokeObjectURL(blobUrl);
         }, 1000);
         
+        console.log('[Download] Desktop: Download triggered successfully');
         showToast('Video download started!', 'success');
         
       } catch (error) {
-        console.error('Download error:', error);
-        showToast(`Download failed: ${error.message}. Opening video in new tab...`, 'error');
-        setTimeout(() => {
-          window.open(videoUrl, '_blank');
-        }, 1000);
+        console.error('[Download] Desktop: Proxy attempt failed:', error.name, error.message);
+        console.log('[Download] Desktop: Falling back to direct download link');
+        // Fallback: Direct download link
+        const link = document.createElement('a');
+        link.href = videoUrl;
+        link.download = filename;
+        link.target = '_blank';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('Download started via direct link!', 'info');
       }
+      console.log('[Download] ===== Download function completed =====');
     }
 
     /**

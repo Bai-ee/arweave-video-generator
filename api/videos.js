@@ -222,24 +222,58 @@ export default async function handler(req, res) {
  * Handle video download request - proxies video from Firebase Storage
  */
 async function handleVideoDownload(req, res) {
+  const startTime = Date.now();
   try {
+    console.log('[Video Download] ===== Download request received =====');
+    console.log('[Video Download] Query params:', {
+      download: req.query.download,
+      hasVideoUrl: !!req.query.videoUrl,
+      videoUrlLength: req.query.videoUrl ? req.query.videoUrl.length : 0,
+      hasFilename: !!req.query.filename,
+      filename: req.query.filename
+    });
+    
     const videoUrl = decodeURIComponent(req.query.videoUrl);
     const filename = req.query.filename ? decodeURIComponent(req.query.filename) : 'video.mp4';
     
-    console.log(`[Video Download] Downloading video: ${videoUrl.substring(0, 100)}...`);
+    console.log('[Video Download] Decoded video URL length:', videoUrl.length);
+    console.log('[Video Download] Video URL (first 150 chars):', videoUrl.substring(0, 150));
+    console.log('[Video Download] Video URL (last 50 chars):', videoUrl.substring(videoUrl.length - 50));
+    console.log('[Video Download] Filename:', filename);
     
     // Fetch video from Firebase Storage
+    console.log('[Video Download] Starting fetch from Firebase Storage...');
+    const fetchStart = Date.now();
     const response = await fetch(videoUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
+    const fetchTime = Date.now() - fetchStart;
+    
+    console.log('[Video Download] Fetch completed in', fetchTime, 'ms');
+    console.log('[Video Download] Response status:', response.status, response.statusText);
+    console.log('[Video Download] Response headers:', {
+      'content-type': response.headers.get('content-type'),
+      'content-length': response.headers.get('content-length'),
+      'content-disposition': response.headers.get('content-disposition')
+    });
     
     if (!response.ok) {
-      console.error(`[Video Download] Failed to fetch video: ${response.status} ${response.statusText}`);
-      return res.status(response.status).json({ error: 'Failed to fetch video', status: response.status });
+      const errorText = await response.text().catch(() => '');
+      console.error('[Video Download] Failed to fetch video:', response.status, response.statusText);
+      console.error('[Video Download] Error response body:', errorText.substring(0, 500));
+      return res.status(response.status).json({ 
+        error: 'Failed to fetch video', 
+        status: response.status,
+        statusText: response.statusText
+      });
     }
     
+    console.log('[Video Download] Converting response to array buffer...');
+    const bufferStart = Date.now();
     const videoBuffer = await response.arrayBuffer();
-    console.log(`[Video Download] Fetched ${videoBuffer.byteLength} bytes`);
+    const bufferTime = Date.now() - bufferStart;
+    console.log('[Video Download] Buffer conversion completed in', bufferTime, 'ms');
+    console.log('[Video Download] Video buffer size:', videoBuffer.byteLength, 'bytes (', (videoBuffer.byteLength / 1024 / 1024).toFixed(2), 'MB)');
     
     // Set download headers
     res.setHeader('Content-Type', 'application/octet-stream');
@@ -247,13 +281,29 @@ async function handleVideoDownload(req, res) {
     res.setHeader('Content-Length', videoBuffer.byteLength);
     res.setHeader('Cache-Control', 'no-cache');
     
+    console.log('[Video Download] Sending video buffer to client...');
+    const sendStart = Date.now();
     // Send video buffer
     res.send(Buffer.from(videoBuffer));
-    console.log(`[Video Download] Video sent successfully`);
+    const sendTime = Date.now() - sendStart;
+    const totalTime = Date.now() - startTime;
+    
+    console.log('[Video Download] Video sent successfully');
+    console.log('[Video Download] Send time:', sendTime, 'ms');
+    console.log('[Video Download] Total request time:', totalTime, 'ms');
+    console.log('[Video Download] ===== Download request completed =====');
   } catch (error) {
-    console.error('[Video Download] Error:', error.message);
-    console.error('[Video Download] Stack:', error.stack);
-    return res.status(500).json({ error: 'Download failed', message: error.message });
+    const totalTime = Date.now() - startTime;
+    console.error('[Video Download] ===== Download request failed =====');
+    console.error('[Video Download] Error name:', error.name);
+    console.error('[Video Download] Error message:', error.message);
+    console.error('[Video Download] Error stack:', error.stack);
+    console.error('[Video Download] Total time before error:', totalTime, 'ms');
+    return res.status(500).json({ 
+      error: 'Download failed', 
+      message: error.message,
+      name: error.name
+    });
   }
 }
 
