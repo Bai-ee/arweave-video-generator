@@ -465,14 +465,14 @@
                   <!-- Custom media selection (hidden by default) -->
                   <div id="customMediaSelection" style="display: none; margin-top: 0.75rem; gap: 0.75rem; flex-direction: column;">
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
-                      <select 
-                        id="customMediaFolderSelect" 
-                        class="select-styled" 
+                    <select 
+                      id="customMediaFolderSelect" 
+                      class="select-styled" 
                         style="flex: 1; margin-bottom: 0;"
-                        onchange="loadCustomMediaFiles(this.value)"
-                      >
-                        <option value="">Select folder...</option>
-                      </select>
+                      onchange="loadCustomMediaFiles(this.value)"
+                    >
+                      <option value="">Select folder...</option>
+                    </select>
                       <button 
                         type="button"
                         id="customMediaUploadBtn"
@@ -490,13 +490,15 @@
                         onchange="handleCustomMediaUpload(event)"
                       />
                     </div>
-                    <select 
-                      id="customMediaFileSelect" 
-                      class="select-styled" 
-                      disabled
-                    >
-                      <option value="">Select file...</option>
-                    </select>
+                    <div id="customMediaPreviewContainer" style="display: none; margin-top: 0.75rem;">
+                      <div style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem; margin-bottom: 0.5rem;">Select media (IMAGE or VIDEO):</div>
+                      <div id="customMediaGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem; max-height: 400px; overflow-y: auto; padding: 0.5rem;">
+                        <!-- Media thumbnails will be populated here -->
+                      </div>
+                      <div id="customMediaSelected" style="margin-top: 0.75rem; color: var(--color-yellow-75); font-size: 0.875rem; min-height: 1.5rem;">
+                        No media selected
+                      </div>
+                    </div>
                   </div>
                   
                   <!-- Text overlay input (shown when no artist thumbnail and no end logo) -->
@@ -2380,18 +2382,20 @@
     };
     
     window.loadCustomMediaFiles = async function(folderName) {
-      const fileSelect = document.getElementById('customMediaFileSelect');
-      if (!fileSelect || !folderName) {
-        if (fileSelect) {
-          fileSelect.disabled = true;
-          fileSelect.innerHTML = '<option value="">Select file...</option>';
-        }
+      const previewContainer = document.getElementById('customMediaPreviewContainer');
+      const mediaGrid = document.getElementById('customMediaGrid');
+      const selectedDisplay = document.getElementById('customMediaSelected');
+      
+      if (!previewContainer || !mediaGrid || !folderName) {
+        if (previewContainer) previewContainer.style.display = 'none';
         customEndMedia = null;
         return;
       }
       
-      fileSelect.disabled = true;
-      fileSelect.innerHTML = '<option value="">Loading...</option>';
+      previewContainer.style.display = 'block';
+      mediaGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--color-yellow-75);">Loading media...</div>';
+      customEndMedia = null;
+      if (selectedDisplay) selectedDisplay.textContent = 'No media selected';
       
       try {
         const response = await fetch(`/api/video-folders?folder=${encodeURIComponent(folderName)}`);
@@ -2399,54 +2403,165 @@
         
         if (data.success && (data.videos || data.items)) {
           const files = data.videos || data.items;
-          fileSelect.innerHTML = '<option value="">Select file...</option>';
+          mediaGrid.innerHTML = '';
           
-          // Filter to show both images and videos, display with type indicator
-          files.forEach(file => {
+          // Filter to show both images and videos
+          const mediaFiles = files.filter(file => {
+            const isImage = file.contentType && file.contentType.startsWith('image/');
+            const isVideo = file.contentType && file.contentType.startsWith('video/');
+            return isImage || isVideo;
+          });
+          
+          if (mediaFiles.length === 0) {
+            mediaGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--color-yellow-75);">No images or videos found</div>';
+            return;
+          }
+          
+          // Get Firebase Storage reference
+          const storage = window.firebase?.storage;
+          if (!storage) {
+            mediaGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #ef4444;">Firebase Storage not available</div>';
+            return;
+          }
+          
+          // Load media thumbnails with square format
+          for (const file of mediaFiles) {
             const isImage = file.contentType && file.contentType.startsWith('image/');
             const isVideo = file.contentType && file.contentType.startsWith('video/');
             
-            if (isImage || isVideo) {
-              const option = document.createElement('option');
-              option.value = file.name;
-              option.textContent = `${file.name} (${isImage ? 'Image' : 'Video'})`;
-              option.dataset.type = isImage ? 'image' : 'video';
-              option.dataset.fullPath = file.fullPath || file.name;
-              fileSelect.appendChild(option);
+            const mediaCard = document.createElement('div');
+            mediaCard.className = 'custom-media-card';
+            mediaCard.dataset.fileName = file.name;
+            mediaCard.dataset.fileType = isImage ? 'image' : 'video';
+            mediaCard.dataset.fullPath = file.fullPath || file.name;
+            mediaCard.style.cursor = 'pointer';
+            mediaCard.style.border = '2px solid #333';
+            mediaCard.style.borderRadius = '4px';
+            mediaCard.style.overflow = 'hidden';
+            mediaCard.style.backgroundColor = '#0a0a0a';
+            mediaCard.style.transition = 'all 0.2s';
+            mediaCard.style.aspectRatio = '1'; // Square format
+            
+            // Create container for square thumbnail
+            const thumbnailContainer = document.createElement('div');
+            thumbnailContainer.style.width = '100%';
+            thumbnailContainer.style.aspectRatio = '1';
+            thumbnailContainer.style.position = 'relative';
+            thumbnailContainer.style.overflow = 'hidden';
+            thumbnailContainer.style.backgroundColor = '#0a0a0a';
+            
+            // Get file path
+            const filePath = file.fullPath || `${folderName}/${file.name}`;
+            
+            try {
+              const fileRef = storage.ref(filePath);
+              const fileUrl = await fileRef.getDownloadURL();
+              
+              if (isImage) {
+                // Image preview (square)
+                const img = document.createElement('img');
+                img.src = fileUrl;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.style.display = 'block';
+                img.onerror = function() {
+                  thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+                };
+                thumbnailContainer.appendChild(img);
+              } else {
+                // Video preview (square)
+                const video = document.createElement('video');
+                video.src = fileUrl;
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.objectFit = 'cover';
+                video.style.display = 'block';
+                video.muted = true;
+                video.playsInline = true;
+                video.preload = 'metadata';
+                video.onloadedmetadata = function() {
+                  this.currentTime = 1;
+                };
+                video.onerror = function() {
+                  thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+                };
+                thumbnailContainer.appendChild(video);
+              }
+            } catch (error) {
+              console.error(`Error loading thumbnail for ${file.name}:`, error);
+              thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
             }
-          });
-          
-          fileSelect.disabled = false;
+            
+            // Type indicator
+            const typeBadge = document.createElement('div');
+            typeBadge.style.position = 'absolute';
+            typeBadge.style.top = '0.25rem';
+            typeBadge.style.right = '0.25rem';
+            typeBadge.style.padding = '0.25rem 0.5rem';
+            typeBadge.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            typeBadge.style.color = 'var(--color-yellow-75)';
+            typeBadge.style.fontSize = '0.7rem';
+            typeBadge.style.borderRadius = '4px';
+            typeBadge.textContent = isImage ? 'IMG' : 'VID';
+            thumbnailContainer.appendChild(typeBadge);
+            
+            const fileNameDiv = document.createElement('div');
+            fileNameDiv.style.padding = '0.5rem';
+            fileNameDiv.style.fontSize = '0.75rem';
+            fileNameDiv.style.color = '#ccc';
+            fileNameDiv.style.textOverflow = 'ellipsis';
+            fileNameDiv.style.overflow = 'hidden';
+            fileNameDiv.style.whiteSpace = 'nowrap';
+            fileNameDiv.textContent = file.name;
+            
+            mediaCard.appendChild(thumbnailContainer);
+            mediaCard.appendChild(fileNameDiv);
+            
+            // Add click handler
+            mediaCard.addEventListener('click', function() {
+              // Remove selected class from all cards
+              const allCards = mediaGrid.querySelectorAll('.custom-media-card');
+              allCards.forEach(card => {
+                card.style.borderColor = '#333';
+                card.style.backgroundColor = '#0a0a0a';
+                card.style.transform = 'scale(1)';
+              });
+              
+              // Add selected class to clicked card
+              this.style.borderColor = 'var(--color-yellow-75)';
+              this.style.backgroundColor = 'rgba(255, 255, 0, 0.1)';
+              this.style.transform = 'scale(1.05)';
+              
+              // Update customEndMedia
+              const folderSelect = document.getElementById('customMediaFolderSelect');
+              customEndMedia = {
+                folder: folderSelect ? folderSelect.value : folderName,
+                fileName: this.dataset.fileName,
+                fullPath: this.dataset.fullPath,
+                type: this.dataset.fileType
+              };
+              
+              if (selectedDisplay) {
+                selectedDisplay.textContent = `Selected: ${file.name} (${isImage ? 'Image' : 'Video'})`;
+                selectedDisplay.style.color = 'var(--color-yellow-75)';
+              }
+              
+              console.log('✅ Custom end media selected:', customEndMedia);
+            });
+            
+            mediaGrid.appendChild(mediaCard);
+          }
         } else {
-          fileSelect.innerHTML = '<option value="">No files found</option>';
+          mediaGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #ef4444;">No files found</div>';
         }
       } catch (error) {
         console.error('Error loading custom media files:', error);
-        fileSelect.innerHTML = '<option value="">Error loading files</option>';
+        mediaGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #ef4444;">Error loading files</div>';
       }
     };
     
-    // Handle file selection change
-    document.addEventListener('DOMContentLoaded', () => {
-      const fileSelect = document.getElementById('customMediaFileSelect');
-      if (fileSelect) {
-        fileSelect.addEventListener('change', function() {
-          const folderSelect = document.getElementById('customMediaFolderSelect');
-          if (this.value && folderSelect && folderSelect.value) {
-            const selectedOption = this.options[this.selectedIndex];
-            customEndMedia = {
-              folder: folderSelect.value,
-              fileName: this.value,
-              fullPath: selectedOption.dataset.fullPath || this.value,
-              type: selectedOption.dataset.type || 'video'
-            };
-            console.log('✅ Custom end media selected:', customEndMedia);
-          } else {
-            customEndMedia = null;
-          }
-        });
-      }
-    });
+    // Old dropdown removed - now using thumbnail grid
 
     /**
      * Handle custom media image upload
@@ -2469,7 +2584,7 @@
         return;
       }
       
-      const folderSelect = document.getElementById('customMediaFolderSelect');
+          const folderSelect = document.getElementById('customMediaFolderSelect');
       if (!folderSelect || !folderSelect.value) {
         showToast('Please select a folder first', 'error');
         fileInput.value = '';
@@ -2503,26 +2618,19 @@
         if (result.success) {
           showToast('Image uploaded successfully!', 'success');
           
-          // Refresh the file list for the selected folder
+          // Refresh the media grid for the selected folder
           await loadCustomMediaFiles(folder);
           
-          // Auto-select the uploaded file
-          const fileSelect = document.getElementById('customMediaFileSelect');
-          if (fileSelect) {
-            // Wait a bit for the dropdown to populate
-            setTimeout(() => {
-              const fileName = file.name;
-              // Find the option with matching filename
-              for (let i = 0; i < fileSelect.options.length; i++) {
-                const option = fileSelect.options[i];
-                if (option.value === fileName || option.textContent.includes(fileName)) {
-                  fileSelect.value = option.value;
-                  fileSelect.dispatchEvent(new Event('change'));
-                  break;
-                }
+          // Auto-select the uploaded file in the grid
+          setTimeout(() => {
+            const mediaGrid = document.getElementById('customMediaGrid');
+            if (mediaGrid) {
+              const uploadedCard = mediaGrid.querySelector(`[data-file-name="${file.name}"]`);
+              if (uploadedCard) {
+                uploadedCard.click(); // Trigger click to select
               }
-            }, 500);
-          }
+            }
+          }, 500);
         } else {
           showToast(`Upload failed: ${result.error || 'Unknown error'}`, 'error');
         }
@@ -2549,17 +2657,30 @@
       
       // Show only when exactly 1 folder is selected
       if (selectedFolders.size === 1) {
-        videoOrderContainer.style.display = 'block';
-        // Only load if not already loaded (prevent duplicates)
-        if (!videoOrderUILoaded) {
-          const selectedFolder = Array.from(selectedFolders)[0];
-          await loadVideoOrderOptions(selectedFolder);
-          videoOrderUILoaded = true;
+        const selectedFolder = Array.from(selectedFolders)[0];
+        const selectsContainer = document.getElementById('videoOrderSelects');
+        
+        // Check if UI is already loaded for this folder
+        const existingSegments = selectsContainer?.querySelectorAll('.segment-container');
+        if (existingSegments && existingSegments.length === 6) {
+          // Already loaded, don't reload
+          videoOrderContainer.style.display = 'block';
+          return;
         }
-      } else {
+        
+        // Load the UI
+        videoOrderContainer.style.display = 'block';
+        await loadVideoOrderOptions(selectedFolder);
+        videoOrderUILoaded = true;
+          } else {
         videoOrderContainer.style.display = 'none';
         videoOrder = null;
         videoOrderUILoaded = false;
+        // Clear the container to prevent duplicates
+        const selectsContainer = document.getElementById('videoOrderSelects');
+        if (selectsContainer) {
+          selectsContainer.innerHTML = '';
+        }
       }
     };
     
@@ -2569,6 +2690,12 @@
     window.loadVideoOrderOptions = async function(folderName) {
       const selectsContainer = document.getElementById('videoOrderSelects');
       if (!selectsContainer) return;
+      
+      // Check if already populated to prevent duplicates
+      if (selectsContainer.children.length > 0 && selectsContainer.querySelector('.segment-container')) {
+        console.log('Video order UI already populated, skipping...');
+        return;
+      }
       
       // Clear existing content
       selectsContainer.innerHTML = '<div style="text-align: center; color: var(--color-yellow-75);">Loading videos...</div>';
@@ -2602,13 +2729,19 @@
           return;
         }
         
-        // Create 6 segment selectors (one for each segment)
+        // Clear container
+        selectsContainer.innerHTML = '';
+        
+        // Create 6 segment selectors (one for each segment) - EXACTLY 6, no duplicates
         for (let i = 0; i < 6; i++) {
           const segmentDiv = document.createElement('div');
+          segmentDiv.className = 'segment-container';
+          segmentDiv.dataset.segmentIndex = i;
           segmentDiv.style.border = '2px solid var(--color-yellow-75)';
           segmentDiv.style.borderRadius = '8px';
           segmentDiv.style.padding = '1rem';
           segmentDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.05)';
+          segmentDiv.style.marginBottom = '1rem';
           
           const label = document.createElement('div');
           label.style.color = 'var(--color-yellow-75)';
@@ -2635,8 +2768,8 @@
           videosGrid.style.overflowY = 'auto';
           videosGrid.style.padding = '0.5rem';
           
-          // Load video thumbnails asynchronously
-          videos.forEach(async (video, videoIndex) => {
+          // Load video thumbnails - use for...of loop for proper async handling
+          for (const video of videos) {
             const videoCard = document.createElement('div');
             videoCard.className = 'video-order-card';
             videoCard.dataset.videoName = video.name;
@@ -2648,11 +2781,21 @@
             videoCard.style.backgroundColor = '#0a0a0a';
             videoCard.style.transition = 'all 0.2s';
             videoCard.style.position = 'relative';
+            videoCard.style.aspectRatio = '1'; // Square format
             
-            // Create video element for thumbnail
+            // Create container for square video thumbnail
+            const thumbnailContainer = document.createElement('div');
+            thumbnailContainer.style.width = '100%';
+            thumbnailContainer.style.aspectRatio = '1';
+            thumbnailContainer.style.position = 'relative';
+            thumbnailContainer.style.overflow = 'hidden';
+            thumbnailContainer.style.backgroundColor = '#0a0a0a';
+            
+            // Create video element for thumbnail (square format)
             const videoElement = document.createElement('video');
             videoElement.style.width = '100%';
-            videoElement.style.height = 'auto';
+            videoElement.style.height = '100%';
+            videoElement.style.objectFit = 'cover'; // Cover to fill square
             videoElement.style.display = 'block';
             videoElement.style.pointerEvents = 'none';
             videoElement.muted = true;
@@ -2660,7 +2803,6 @@
             videoElement.preload = 'metadata';
             
             // Get video URL from Firebase Storage
-            // Handle folder path (may have assets/ prefix or fullPath)
             const videoPath = video.fullPath || `${folderName}/${video.name}`;
             try {
               const videoRef = storage.ref(videoPath);
@@ -2672,13 +2814,19 @@
                 this.currentTime = 1;
               };
               
+              videoElement.onseeked = function() {
+                // Thumbnail loaded
+              };
+              
               videoElement.onerror = function() {
-                videoCard.innerHTML = '<div style="width: 100%; padding-top: 56.25%; background: #0a0a0a; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+                thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
               };
             } catch (error) {
               console.error(`Error loading thumbnail for ${video.name}:`, error);
-              videoCard.innerHTML = '<div style="width: 100%; padding-top: 56.25%; background: #0a0a0a; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+              thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
             }
+            
+            thumbnailContainer.appendChild(videoElement);
             
             const videoNameDiv = document.createElement('div');
             videoNameDiv.style.padding = '0.5rem';
@@ -2689,7 +2837,7 @@
             videoNameDiv.style.whiteSpace = 'nowrap';
             videoNameDiv.textContent = video.name;
             
-            videoCard.appendChild(videoElement);
+            videoCard.appendChild(thumbnailContainer);
             videoCard.appendChild(videoNameDiv);
             
             // Add click handler
@@ -2721,7 +2869,7 @@
             });
             
             videosGrid.appendChild(videoCard);
-          });
+          }
           
           segmentDiv.appendChild(label);
           segmentDiv.appendChild(selectedDisplay);
@@ -2747,7 +2895,7 @@
       const allSelected = videoOrder.every(item => item.videoName);
       console.log(`✅ Video order updated: ${allSelected ? 'All segments selected' : 'Some segments missing'}`);
     };
-    
+
     /**
      * Initialize filter selection buttons
      * COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity
