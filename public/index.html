@@ -434,16 +434,35 @@
 
                 <div id="endLogoContainer" class="step-block" style="display: none;">
                   <div class="step-label">8. End logo</div>
-                  <div class="step-hint">Logo appears at 24 seconds (centered, overlaps fade)</div>
+                  <div class="step-hint">Logo appears at 24 seconds (centered, overlaps fade). Select logo OR custom text below.</div>
                   <select 
                     id="endLogoSelect"
                     class="select-styled"
                     style="margin: 0.35rem auto 0;"
                     onchange="updateEndLogoSelection(this.value)"
                   >
-                    <option value="ue_square.png">UE Square (Default)</option>
+                    <option value="">None (use custom text instead)</option>
+                    <option value="ue_square.png">UE Square</option>
                     <option value="random">Random</option>
                   </select>
+                  
+                  <!-- Text overlay input (shown when no end logo is selected) -->
+                  <div id="endTextOverlayContainer" style="display: none; margin-top: 0.75rem;">
+                    <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
+                      Custom Text Overlay (shown when no end logo selected)
+                    </label>
+                    <input 
+                      type="text" 
+                      id="endTextOverlayInput" 
+                      class="select-styled" 
+                      placeholder="MM/DD/YYYY"
+                      style="margin: 0;"
+                      onchange="updateEndTextOverlay(this.value)"
+                    />
+                    <div class="step-hint" style="margin-top: 0.25rem; font-size: 0.75rem;">
+                      Text appears centered at the end of the video (last 2 segments, 20s-30s)
+                    </div>
+                  </div>
                 </div>
 
                 <div id="artistImageToggleContainer" class="step-block" style="display: none;">
@@ -498,24 +517,6 @@
                       <div id="customMediaSelected" style="margin-top: 0.75rem; color: var(--color-yellow-75); font-size: 0.875rem; min-height: 1.5rem;">
                         No media selected
                       </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Text overlay input (shown when no artist thumbnail and no end logo) -->
-                  <div id="endTextOverlayContainer" style="display: none; margin-top: 0.75rem;">
-                    <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-                      End Text Overlay (optional)
-                    </label>
-                    <input 
-                      type="text" 
-                      id="endTextOverlayInput" 
-                      class="select-styled" 
-                      placeholder="MM/DD/YYYY"
-                      style="margin: 0;"
-                      onchange="updateEndTextOverlay(this.value)"
-                    />
-                    <div class="step-hint" style="margin-top: 0.25rem; font-size: 0.75rem;">
-                      Text appears centered at the end of the video (last 2 segments)
                     </div>
                   </div>
                 </div>
@@ -1435,7 +1436,7 @@
     let availableFolders = []; // List of available folders for current mode
     let selectedOverlay = ''; // Overlay effect selection (empty = none, 'random' = random, or specific effect name)
     let selectedTopLogo = 'ue_barcode_black.png'; // Top logo selection (default: ue_barcode_black.png)
-    let selectedEndLogo = 'ue_square.png'; // End logo selection (default: ue_square.png)
+    let selectedEndLogo = ''; // End logo selection (empty = use text overlay, or specific logo filename)
     let endMediaMode = 'artist'; // 'none', 'artist', or 'custom'
     let endTextOverlay = null; // Text overlay for end of video (when no artist thumbnail/end logo)
     let customEndMedia = null; // { folder: string, fileName: string, fullPath: string, type: 'image' | 'video' }
@@ -1903,6 +1904,8 @@
         if (availableLogos.length === 0) {
           loadAvailableLogos();
         }
+        // Initialize text overlay visibility when container is shown
+        updateTextOverlayVisibility();
       }
       if (artistImageToggleContainer) {
         artistImageToggleContainer.style.display = 'block';
@@ -2252,14 +2255,21 @@
       }
       
       if (endLogoSelect) {
-        // Clear and rebuild with default first
+        // Clear and rebuild
         endLogoSelect.innerHTML = '';
         
-        // Add default logo first
+        // Add "None" option first (default - uses text overlay)
+        const noneOption = document.createElement('option');
+        noneOption.value = '';
+        noneOption.textContent = 'None (use custom text instead)';
+        noneOption.selected = !selectedEndLogo || selectedEndLogo === '';
+        endLogoSelect.appendChild(noneOption);
+        
+        // Add default logo option
         const defaultOption = document.createElement('option');
         defaultOption.value = 'ue_square.png';
-        defaultOption.textContent = 'UE Square (Default)';
-        defaultOption.selected = true;
+        defaultOption.textContent = 'UE Square';
+        defaultOption.selected = selectedEndLogo === 'ue_square.png';
         endLogoSelect.appendChild(defaultOption);
         
         // Add all other logos
@@ -2268,6 +2278,7 @@
             const option = document.createElement('option');
             option.value = logo.name;
             option.textContent = logo.name.replace(/\.(png|jpg)$/i, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            option.selected = selectedEndLogo === logo.name;
             endLogoSelect.appendChild(option);
           }
         });
@@ -2276,10 +2287,16 @@
         const randomOption = document.createElement('option');
         randomOption.value = 'random';
         randomOption.textContent = 'Random';
+        randomOption.selected = selectedEndLogo === 'random';
         endLogoSelect.appendChild(randomOption);
         
-        // Set selected value
+        // Set selected value if it exists
+        if (selectedEndLogo) {
         endLogoSelect.value = selectedEndLogo;
+        }
+        
+        // Initialize text overlay visibility
+        updateTextOverlayVisibility();
       }
     }
 
@@ -2311,16 +2328,18 @@
     }
     
     /**
-     * Update text overlay visibility based on end media mode
-     * Text overlay is shown when no artist thumbnail is selected (endMediaMode === 'none')
-     * It's independent of end logo selection (end logo appears at 24s, text overlay at 20s-30s)
+     * Update text overlay visibility based on end logo selection
+     * Text overlay is shown when NO end logo is selected (empty string or null)
+     * It's independent of artist thumbnail/custom media selection
+     * Text overlay appears at 20s-30s (last 2 segments), end logo appears at 24s
      */
     function updateTextOverlayVisibility() {
       const textOverlayContainer = document.getElementById('endTextOverlayContainer');
       const textOverlayInput = document.getElementById('endTextOverlayInput');
       
-      // Show text overlay when endMediaMode is 'none' (no artist thumbnail or custom media)
-      const shouldShow = endMediaMode === 'none';
+      // Show text overlay when NO end logo is selected (empty string or null)
+      // This is independent of artist thumbnail/custom media selection
+      const shouldShow = !selectedEndLogo || selectedEndLogo === '';
       
       if (textOverlayContainer) {
         if (shouldShow) {
@@ -2338,7 +2357,8 @@
           }
         } else {
           textOverlayContainer.style.display = 'none';
-          endTextOverlay = null;
+          // Don't clear endTextOverlay value, just hide the input
+          // The value will be used if user switches back to no end logo
         }
       }
     }
@@ -2351,7 +2371,6 @@
       if (mode === 'custom') {
         customSelection.style.display = 'flex';
         populateCustomMediaFolders();
-        endTextOverlay = null;
       } else if (mode === 'none') {
         customSelection.style.display = 'none';
         customEndMedia = null;
@@ -2367,11 +2386,10 @@
           fileSelect.disabled = true;
           fileSelect.innerHTML = '<option value="">Select file...</option>';
         }
-        endTextOverlay = null;
       }
       
-      // Update text overlay visibility based on mode and end logo
-      updateTextOverlayVisibility();
+      // Text overlay visibility is independent of end media mode
+      // It only depends on end logo selection
       
       console.log(`✅ End media mode: ${mode}`);
     };
@@ -3106,10 +3124,10 @@
           enableOverlay: overlayToUse !== '', // Overlay enabled if an effect is selected
           overlayEffect: overlayToUse || null, // Specific overlay effect name or null for random
           topLogo: selectedTopLogo === 'random' ? null : selectedTopLogo, // Top logo filename (default: loge_horiz.png) or null for random
-          endLogo: selectedEndLogo === 'random' ? null : selectedEndLogo, // End logo filename (default: ue_logo_horiz.png) or null for random
+          endLogo: selectedEndLogo === 'random' ? null : (selectedEndLogo || null), // End logo filename or null if empty (empty = use text overlay)
           useArtistImage: endMediaMode === 'artist', // true only if artist mode selected
           customEndMedia: endMediaMode === 'custom' ? customEndMedia : null, // Pass custom media if selected
-          endTextOverlay: endMediaMode === 'none' ? endTextOverlay : null, // Pass text overlay if no artist thumbnail
+          endTextOverlay: (!selectedEndLogo || selectedEndLogo === '') ? endTextOverlay : null, // Pass text overlay when no end logo is selected (independent of artist thumbnail)
           videoOrder: selectedFolders.size === 1 && videoOrder && videoOrder.every(item => item.videoName) ? videoOrder : null // Pass video order if single folder and all segments selected
         };
         

@@ -997,8 +997,10 @@ class ArweaveVideoGenerator {
                 // Continue without logo if it fails
             }
 
-            // Step 6.5: Add text overlay at end if provided (when no artist thumbnail and no end logo)
-            if (endTextOverlay && !useArtistImage && !endLogo) {
+            // Step 6.5: Add text overlay at end if provided (when no end logo is selected)
+            // Text overlay is independent of artist thumbnail/custom media selection
+            // It appears at 20s-30s (last 2 segments), while end logo appears at 24s
+            if (endTextOverlay && !endLogo) {
                 console.log(`[ArweaveVideoGenerator] Step 6.5: Adding end text overlay: "${endTextOverlay}"`);
                 
                 // Text appears for last 2 segments (20s-30s for 30s video)
