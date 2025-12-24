@@ -336,7 +336,10 @@ class ArweaveVideoGenerator {
             overlayEffect = null, // Specific overlay effect name or null for random
             topLogo = null, // Top logo filename or null for random
             endLogo = null, // End logo filename or null for random
-            useArtistImage = true // Use artist thumbnail as last 2 segments (default: true)
+            useArtistImage = true, // Use artist thumbnail as last 2 segments (default: true)
+            customEndMedia = null, // Custom end media selection { folder, fileName, fullPath, type }
+            endTextOverlay = null, // Text overlay for end of video (when no artist thumbnail/end logo)
+            videoOrder = null // Video order for single folder videos [{segmentIndex: number, videoName: string}, ...]
         } = options;
 
         console.log(`[ArweaveVideoGenerator] Starting video generation - ${duration}s for ${artist || 'random artist'}`);
@@ -447,8 +450,10 @@ class ArweaveVideoGenerator {
                             5, // 5-second segments
                             audioFilePath, // Pass audio path for BPM detection
                             artistImageUrl, // Pass artist image URL if available
+                            null, // endMediaType (not used for artist image)
                             width, // Canvas width
-                            height // Canvas height
+                            height, // Canvas height
+                            videoOrder // Pass video order if provided
                         );
                         
                         // Verify the video was actually created
@@ -506,10 +511,45 @@ class ArweaveVideoGenerator {
                     }
                     
                     try {
-                        // Check if artist has thumbnails to use as last segment (only if useArtistImage is enabled)
-                        let artistImageUrl = null;
-                        if (useArtistImage && audioResult.artistData) {
-                            // Prefer artistThumbnails array, fallback to artistImageFilename for backward compatibility
+                        // Determine end media (custom media, artist image, or none)
+                        let endMediaUrl = null;
+                        let endMediaType = null; // 'image' or 'video'
+                        
+                        if (customEndMedia) {
+                            // Custom media mode: Download from Firebase Storage
+                            const { folder, fileName, fullPath, type } = customEndMedia;
+                            console.log(`[ArweaveVideoGenerator] 🎬 Using custom end media: ${fileName} (${type}) from ${folder}`);
+                            
+                            try {
+                                const { getStorage } = await import('../firebase-admin.js');
+                                const storage = getStorage();
+                                const bucket = storage.bucket();
+                                
+                                // Construct storage path (handle both with/without assets/ prefix)
+                                const storagePath = fullPath || `${folder}/${fileName}`;
+                                const file = bucket.file(storagePath);
+                                
+                                // Check if file exists
+                                const [exists] = await file.exists();
+                                if (!exists) {
+                                    throw new Error(`File not found: ${storagePath}`);
+                                }
+                                
+                                // Generate signed URL for download
+                                const [signedUrl] = await file.getSignedUrl({
+                                    action: 'read',
+                                    expires: Date.now() + 60 * 60 * 1000 // 1 hour
+                                });
+                                
+                                endMediaUrl = signedUrl;
+                                endMediaType = type;
+                                console.log(`[ArweaveVideoGenerator] ✅ Custom end media URL obtained: ${signedUrl.substring(0, 100)}...`);
+                            } catch (error) {
+                                console.error(`[ArweaveVideoGenerator] ❌ Failed to load custom end media: ${error.message}`);
+                                // Fall through to use 6 video segments
+                            }
+                        } else if (useArtistImage && audioResult.artistData) {
+                            // Artist image mode: Use existing logic
                             let thumbnails = [];
                             if (audioResult.artistData.artistThumbnails && Array.isArray(audioResult.artistData.artistThumbnails)) {
                                 thumbnails = audioResult.artistData.artistThumbnails;
@@ -522,31 +562,37 @@ class ArweaveVideoGenerator {
                                 const selectedThumbnail = thumbnails[Math.floor(Math.random() * thumbnails.length)];
                                 // Only use Arweave URLs (starts with http and contains arweave.net)
                                 if (selectedThumbnail.startsWith('http') && selectedThumbnail.includes('arweave.net')) {
-                                    artistImageUrl = selectedThumbnail;
+                                    endMediaUrl = selectedThumbnail;
+                                    endMediaType = 'image';
                                     console.log(`[ArweaveVideoGenerator] 🖼️  Found artist Arweave thumbnail: ${selectedThumbnail} (${thumbnails.length} available)`);
                                 }
                             }
-                        } else if (!useArtistImage) {
+                        } else if (!useArtistImage && !customEndMedia) {
                             console.log(`[ArweaveVideoGenerator] 🖼️  Artist image disabled by user - using 6 video segments`);
                         }
                         
-                        // If artist has image, create 4 segments (20s) + 2 image segments (10s) = 30s
+                        // If end media is available, create 4 segments (20s) + 2 end media segments (10s) = 30s
                         // Otherwise create 6 segments (30s)
-                        const videoDuration = artistImageUrl ? duration - 10 : duration;
+                        const videoDuration = endMediaUrl ? duration - 10 : duration;
                         const segmentsNeeded = Math.ceil(videoDuration / 5);
                         
-                        console.log(`[ArweaveVideoGenerator] Creating ${videoDuration}s video from ${segmentsNeeded} segments${artistImageUrl ? ' + 10s artist image (5th & 6th segments)' : ''}...`);
+                        const endMediaDescription = endMediaUrl 
+                            ? ` + 10s ${endMediaType === 'video' ? 'custom video' : endMediaType === 'image' && customEndMedia ? 'custom image' : 'artist image'} (5th & 6th segments)`
+                            : '';
+                        console.log(`[ArweaveVideoGenerator] Creating ${videoDuration}s video from ${segmentsNeeded} segments${endMediaDescription}...`);
                         
                         // Create 30-second video from random 5-second segments with transitions and beat sync
                         console.log(`[ArweaveVideoGenerator] Attempting to create video from ${totalVideos} videos...`);
                         backgroundPath = await this.segmentCompositor.createVideoFromSegments(
                             groupedVideos, // Pass grouped structure
-                            videoDuration, // Use reduced duration if artist image will be added
+                            videoDuration, // Use reduced duration if end media will be added
                             5, // 5-second segments
                             audioFilePath, // Pass audio path for BPM detection
-                            artistImageUrl, // Pass artist image URL if available
+                            endMediaUrl, // Pass custom or artist image URL
+                            endMediaType, // Pass 'image' or 'video' or null
                             width, // Canvas width
-                            height // Canvas height
+                            height, // Canvas height
+                            videoOrder // Pass video order if provided
                         );
                         
                         // Verify the video was actually created
@@ -951,8 +997,42 @@ class ArweaveVideoGenerator {
                 // Continue without logo if it fails
             }
 
-            // Step 6: Compose final video with all layers
-            console.log('[ArweaveVideoGenerator] Step 6: Composing final video with layers...');
+            // Step 6.5: Add text overlay at end if provided (when no artist thumbnail and no end logo)
+            if (endTextOverlay && !useArtistImage && !endLogo) {
+                console.log(`[ArweaveVideoGenerator] Step 6.5: Adding end text overlay: "${endTextOverlay}"`);
+                
+                // Text appears for last 2 segments (20s-30s for 30s video)
+                const textStartTime = duration - 10; // Start at 20 seconds
+                const textDuration = 10; // Duration of 10 seconds (last 2 segments)
+                
+                // Calculate centered position
+                const textFontSize = Math.round(height * 0.15); // Large font, 15% of canvas height
+                const textX = width / 2; // Centered horizontally
+                const textY = height / 2; // Centered vertically
+                
+                // Create text layer with large, centered text
+                const endTextLayer = new LayerConfig(
+                    'text',
+                    endTextOverlay,
+                    { x: textX, y: textY },
+                    { width: width, height: textFontSize * 2 }, // Width for centering, height for text
+                    1.0, // Full opacity
+                    350, // z-index (above background, below end logo if present)
+                    1.0, // scale
+                    null, // No custom font - use system font
+                    textStartTime, // start at 20 seconds
+                    textDuration // duration of 10 seconds
+                );
+                endTextLayer.addAfterFade = true; // Mark to add after fade filter
+                endTextLayer.textColor = '0xFFFFFF'; // White text
+                endTextLayer.fontSize = textFontSize; // Store font size for VideoCompositor
+                layers.push(endTextLayer);
+                
+                console.log(`[ArweaveVideoGenerator] ✅ End text overlay added: "${endTextOverlay}" at (${textX}, ${textY}), size: ${textFontSize}px, timing: ${textStartTime}s-${textStartTime + textDuration}s`);
+            }
+
+            // Step 7: Compose final video with all layers
+            console.log('[ArweaveVideoGenerator] Step 7: Composing final video with layers...');
             
             // Generate temp video path
             const tempVideoPath = path.join(this.tempDir, `${audioArtist.replace(/[^a-zA-Z0-9]/g, '_')}_video_${Date.now()}.mp4`);

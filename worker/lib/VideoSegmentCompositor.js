@@ -331,12 +331,13 @@ export class VideoSegmentCompositor {
    * @param {number} targetDuration - Target duration in seconds (default: 30)
    * @param {number} segmentDuration - Duration of each segment in seconds (default: 5)
    * @param {string} audioPath - Optional path to audio file for BPM detection
-   * @param {string} artistImageUrl - Optional Arweave URL for artist image to use as last segment
+   * @param {string} endMediaUrl - Optional URL for end media (artist image or custom media) to use as last 2 segments
+   * @param {string} endMediaType - Optional type of end media: 'image' or 'video' (default: 'image' if endMediaUrl provided)
    * @param {number} canvasWidth - Canvas width (default: 720)
    * @param {number} canvasHeight - Canvas height (default: 720)
    * @returns {Promise<string>} Path to concatenated video
    */
-  async createVideoFromSegments(videoPaths, targetDuration = 30, segmentDuration = 5, audioPath = null, artistImageUrl = null, canvasWidth = 720, canvasHeight = 720) {
+  async createVideoFromSegments(videoPaths, targetDuration = 30, segmentDuration = 5, audioPath = null, endMediaUrl = null, endMediaType = null, canvasWidth = 720, canvasHeight = 720, videoOrder = null) {
     // Handle grouped structure with any folder combination
     let folderMap = {}; // Dynamic folder map
     let isGrouped = false;
@@ -455,6 +456,7 @@ export class VideoSegmentCompositor {
       let selectedVideo = null;
       let sourceFolder = '';
       let selectedFileRef = null; // For Firebase file references
+      let selectedItem = null; // Video item to use for this segment
 
       // Convert folderMap to array of folder objects
       const allFolders = Object.entries(folderMap)
@@ -465,48 +467,79 @@ export class VideoSegmentCompositor {
         throw new Error('No valid videos available for segment extraction');
       }
 
-      // Select video from any folder (global tracking, no repeats until all used)
-      let availableVideos = [];
-      
-      // Collect all available videos from all folders
-      for (const folder of allFolders) {
-        for (const v of folder.videos) {
-          const videoKey = hasFileReferences ? v.name : v;
-          if (!usedAllVideos.has(videoKey)) {
-            availableVideos.push({ video: v, folder: folder.name });
+      // Use videoOrder if provided (for single folder videos)
+      if (videoOrder && Array.isArray(videoOrder) && videoOrder.length > 0 && allFolders.length === 1) {
+        const orderItem = videoOrder[i];
+        if (orderItem && orderItem.videoName) {
+          const targetFolder = allFolders[0];
+          const targetVideoName = orderItem.videoName;
+          
+          // Find the video by name in the folder
+          let foundVideo = null;
+          for (const v of targetFolder.videos) {
+            const videoName = hasFileReferences ? v.name : path.basename(v);
+            if (videoName === targetVideoName || videoName.endsWith(targetVideoName)) {
+              foundVideo = v;
+              break;
+            }
+          }
+          
+          if (foundVideo) {
+            selectedItem = foundVideo;
+            sourceFolder = targetFolder.name;
+            console.log(`[VideoSegmentCompositor] 🎬 Using ordered video ${i + 1}/${segmentsNeeded}: ${targetVideoName} from ${sourceFolder}`);
+          } else {
+            console.warn(`[VideoSegmentCompositor] ⚠️ Video "${targetVideoName}" not found in folder, falling back to random selection`);
+            // Fall through to random selection
           }
         }
       }
       
-      // If no available videos, check if all have been used
-      if (availableVideos.length === 0) {
-        if (usedAllVideos.size >= totalVideosAvailable && totalVideosAvailable > 0) {
-          // All videos used, reset and allow repeats
-          console.log(`[VideoSegmentCompositor] All ${totalVideosAvailable} videos used, resetting and allowing repeats`);
-          usedAllVideos.clear();
-          // Re-collect all videos
-          for (const folder of allFolders) {
-            for (const v of folder.videos) {
+      // If videoOrder not used or failed, use random selection
+      if (!selectedItem) {
+        // Select video from any folder (global tracking, no repeats until all used)
+        let availableVideos = [];
+        
+        // Collect all available videos from all folders
+        for (const folder of allFolders) {
+          for (const v of folder.videos) {
+            const videoKey = hasFileReferences ? v.name : v;
+            if (!usedAllVideos.has(videoKey)) {
               availableVideos.push({ video: v, folder: folder.name });
             }
           }
-        } else {
-          throw new Error(`Not enough unique videos available. Need ${segmentsNeeded} segments but only ${totalVideosAvailable} videos available.`);
         }
+        
+        // If no available videos, check if all have been used
+        if (availableVideos.length === 0) {
+          if (usedAllVideos.size >= totalVideosAvailable && totalVideosAvailable > 0) {
+            // All videos used, reset and allow repeats
+            console.log(`[VideoSegmentCompositor] All ${totalVideosAvailable} videos used, resetting and allowing repeats`);
+            usedAllVideos.clear();
+            // Re-collect all videos
+            for (const folder of allFolders) {
+              for (const v of folder.videos) {
+                availableVideos.push({ video: v, folder: folder.name });
+              }
+            }
+          } else {
+            throw new Error(`Not enough unique videos available. Need ${segmentsNeeded} segments but only ${totalVideosAvailable} videos available.`);
+          }
+        }
+        
+        // Randomly select from available videos
+        const selected = availableVideos[Math.floor(Math.random() * availableVideos.length)];
+        sourceFolder = selected.folder;
+        selectedItem = selected.video;
+        
+        // Track as used (prevent repeats)
+        const videoKey = hasFileReferences ? selectedItem.name : selectedItem;
+        usedAllVideos.add(videoKey);
+        
+        // Log selection to verify no repeats
+        const videoDisplayName = hasFileReferences ? selectedItem.name : path.basename(selectedItem);
+        console.log(`[VideoSegmentCompositor] 🎬 Selected video ${i + 1}/${segmentsNeeded}: ${videoDisplayName} from ${sourceFolder} (${usedAllVideos.size}/${totalVideosAvailable} used)`);
       }
-      
-      // Randomly select from available videos
-      const selected = availableVideos[Math.floor(Math.random() * availableVideos.length)];
-      sourceFolder = selected.folder;
-      const selectedItem = selected.video;
-      
-      // Track as used (prevent repeats)
-      const videoKey = hasFileReferences ? selectedItem.name : selectedItem;
-      usedAllVideos.add(videoKey);
-      
-      // Log selection to verify no repeats
-      const videoDisplayName = hasFileReferences ? selectedItem.name : path.basename(selectedItem);
-      console.log(`[VideoSegmentCompositor] 🎬 Selected video ${i + 1}/${segmentsNeeded}: ${videoDisplayName} from ${sourceFolder} (${usedAllVideos.size}/${totalVideosAvailable} used)`);
       
       if (hasFileReferences) {
         selectedFileRef = selectedItem;
@@ -667,30 +700,40 @@ export class VideoSegmentCompositor {
       }
     }
 
-    // If artist image URL is provided, create two 5-second videos from it and add as 5th and 6th segments
-    if (artistImageUrl) {
-      console.log(`[VideoSegmentCompositor] 🖼️  Creating two 5-second videos from artist image: ${artistImageUrl}`);
+    // If end media URL is provided, create two 5-second videos from it and add as 5th and 6th segments
+    if (endMediaUrl) {
+      const mediaType = endMediaType || 'image'; // Default to image for backward compatibility
+      console.log(`[VideoSegmentCompositor] 🎬 Creating two 5-second videos from end media (${mediaType}): ${endMediaUrl}`);
       try {
-        // Create first artist image segment (5th segment)
-        const artistImageSegment1 = await this.createImageVideoSegment(artistImageUrl, segmentDuration, canvasWidth, canvasHeight);
-        if (artistImageSegment1 && await fs.pathExists(artistImageSegment1)) {
-          segmentPaths.push(artistImageSegment1);
-          console.log(`[VideoSegmentCompositor] ✅ Added artist image as 5th segment`);
+        let endMediaSegment1 = null;
+        let endMediaSegment2 = null;
+        
+        if (mediaType === 'video') {
+          // For video: download and extract 5-second segment
+          endMediaSegment1 = await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
+          endMediaSegment2 = await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
         } else {
-          console.warn(`[VideoSegmentCompositor] ⚠️  Failed to create first artist image segment, continuing without it`);
+          // For image: use existing image-to-video conversion
+          endMediaSegment1 = await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
+          endMediaSegment2 = await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
         }
         
-        // Create second artist image segment (6th segment)
-        const artistImageSegment2 = await this.createImageVideoSegment(artistImageUrl, segmentDuration, canvasWidth, canvasHeight);
-        if (artistImageSegment2 && await fs.pathExists(artistImageSegment2)) {
-          segmentPaths.push(artistImageSegment2);
-          console.log(`[VideoSegmentCompositor] ✅ Added artist image as 6th segment`);
+        if (endMediaSegment1 && await fs.pathExists(endMediaSegment1)) {
+          segmentPaths.push(endMediaSegment1);
+          console.log(`[VideoSegmentCompositor] ✅ Added end media (${mediaType}) as 5th segment`);
         } else {
-          console.warn(`[VideoSegmentCompositor] ⚠️  Failed to create second artist image segment, continuing without it`);
+          console.warn(`[VideoSegmentCompositor] ⚠️  Failed to create first end media segment, continuing without it`);
+        }
+        
+        if (endMediaSegment2 && await fs.pathExists(endMediaSegment2)) {
+          segmentPaths.push(endMediaSegment2);
+          console.log(`[VideoSegmentCompositor] ✅ Added end media (${mediaType}) as 6th segment`);
+        } else {
+          console.warn(`[VideoSegmentCompositor] ⚠️  Failed to create second end media segment, continuing without it`);
         }
       } catch (error) {
-        console.error(`[VideoSegmentCompositor] ❌ Error creating artist image segments: ${error.message}`);
-        console.warn(`[VideoSegmentCompositor] ⚠️  Continuing without artist image segments`);
+        console.error(`[VideoSegmentCompositor] ❌ Error creating end media segments: ${error.message}`);
+        console.warn(`[VideoSegmentCompositor] ⚠️  Continuing without end media segments`);
       }
     }
 
@@ -700,7 +743,7 @@ export class VideoSegmentCompositor {
       `concatenated_${Date.now()}.mp4`
     );
 
-    const finalDuration = artistImageUrl ? targetDuration + (segmentDuration * 2) : targetDuration;
+    const finalDuration = endMediaUrl ? targetDuration + (segmentDuration * 2) : targetDuration;
     console.log(`[VideoSegmentCompositor] Concatenating ${segmentPaths.length} segments with transitions...`);
     console.log(`[VideoSegmentCompositor] Transitions: ${transitionTypes.map(t => t.type).join(', ')}`);
     await this.concatenateSegmentsWithTransitions(segmentPaths, outputPath, finalDuration, transitionTypes, beatPositions);
@@ -1139,6 +1182,110 @@ export class VideoSegmentCompositor {
     }
     
     console.log(`[VideoSegmentCompositor] ✅ Created artist image video segment: ${path.basename(outputPath)} (${(stats.size / 1024).toFixed(1)}KB)`);
+    
+    return outputPath;
+  }
+
+  /**
+   * Create a 5-second video segment from a video URL
+   * Downloads video, extracts a random 5-second segment, scales to fit canvas
+   * @param {string} videoUrl - URL of the video (Firebase Storage signed URL)
+   * @param {number} duration - Duration in seconds (default: 5)
+   * @param {number} canvasWidth - Canvas width (default: 720)
+   * @param {number} canvasHeight - Canvas height (default: 720)
+   * @returns {Promise<string>} Path to video segment
+   */
+  async createVideoSegmentFromUrl(videoUrl, duration = 5, canvasWidth = 720, canvasHeight = 720) {
+    const fs = await import('fs-extra');
+    const { execSync } = await import('child_process');
+    
+    console.log(`[VideoSegmentCompositor] Creating ${duration}s video segment from video URL`);
+    
+    // Download video
+    const videoPath = path.join(this.tempDir, `custom_video_${Date.now()}.mp4`);
+    try {
+      console.log(`[VideoSegmentCompositor] Downloading video from URL: ${videoUrl.substring(0, 100)}...`);
+      const axios = (await import('axios')).default;
+      const response = await axios({
+        url: videoUrl,
+        method: 'GET',
+        responseType: 'stream',
+        timeout: 60000 // 60 second timeout
+      });
+      
+      const writer = fs.createWriteStream(videoPath);
+      response.data.pipe(writer);
+      
+      await new Promise((resolve, reject) => {
+        writer.on('finish', resolve);
+        writer.on('error', reject);
+      });
+      
+      console.log(`[VideoSegmentCompositor] ✅ Downloaded video: ${path.basename(videoPath)}`);
+    } catch (error) {
+      console.error(`[VideoSegmentCompositor] ❌ Failed to download video: ${error.message}`);
+      throw error;
+    }
+    
+    // Get video duration and dimensions
+    const ffprobePath = 'ffprobe';
+    let videoDuration = 0;
+    let videoWidth = canvasWidth;
+    let videoHeight = canvasHeight;
+    
+    try {
+      const durationCommand = `${ffprobePath} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
+      videoDuration = parseFloat(execSync(durationCommand, { encoding: 'utf8' }).trim());
+      
+      const sizeCommand = `${ffprobePath} -v error -select_streams v:0 -show_entries stream=width,height -of default=noprint_wrappers=1 "${videoPath}"`;
+      const sizeOutput = execSync(sizeCommand, { encoding: 'utf8' }).trim();
+      const sizeMatch = sizeOutput.match(/width=(\d+)\s+height=(\d+)/);
+      if (sizeMatch) {
+        videoWidth = parseInt(sizeMatch[1]);
+        videoHeight = parseInt(sizeMatch[2]);
+      }
+    } catch (error) {
+      console.warn(`[VideoSegmentCompositor] ⚠️  Could not probe video, using defaults: ${error.message}`);
+    }
+    
+    // Calculate random start time (ensure we have at least 5 seconds)
+    const maxStartTime = Math.max(0, videoDuration - duration);
+    const startTime = Math.random() * maxStartTime;
+    
+    console.log(`[VideoSegmentCompositor] Video: ${videoWidth}x${videoHeight}px, Duration: ${videoDuration.toFixed(2)}s, Extracting from ${startTime.toFixed(2)}s`);
+    
+    // Create output path
+    const outputPath = path.join(this.tempDir, `custom_video_segment_${Date.now()}.mp4`);
+    
+    // Extract 5-second segment, scale to fit canvas (maintain aspect ratio, center, add black bars if needed)
+    const ffmpegPath = 'ffmpeg';
+    const scaleFilter = `scale='if(gt(iw/ih,${canvasWidth}/${canvasHeight}),${canvasWidth},-1)':'if(gt(iw/ih,${canvasWidth}/${canvasHeight}),-1,${canvasHeight})'`;
+    const padFilter = `pad=${canvasWidth}:${canvasHeight}:(ow-iw)/2:(oh-ih)/2:black`;
+    
+    const command = `${ffmpegPath} -i "${videoPath}" -ss ${startTime} -t ${duration} -vf "${scaleFilter},${padFilter}" -c:v libx264 -preset fast -crf 23 -an "${outputPath}" -y`;
+    
+    try {
+      execSync(command, { stdio: 'inherit' });
+    } catch (error) {
+      console.error(`[VideoSegmentCompositor] ❌ FFmpeg error: ${error.message}`);
+      await fs.remove(videoPath).catch(() => {});
+      throw error;
+    }
+    
+    // Cleanup downloaded video
+    await fs.remove(videoPath).catch(() => {});
+    
+    if (!await fs.pathExists(outputPath)) {
+      throw new Error(`Video segment was not created: ${outputPath}`);
+    }
+    
+    const stats = await fs.stat(outputPath);
+    if (stats.size < 10240) {
+      await fs.remove(outputPath).catch(() => {});
+      throw new Error(`Video segment is too small (${stats.size} bytes)`);
+    }
+    
+    console.log(`[VideoSegmentCompositor] ✅ Created custom video segment: ${path.basename(outputPath)} (${(stats.size / 1024).toFixed(1)}KB)`);
     
     return outputPath;
   }

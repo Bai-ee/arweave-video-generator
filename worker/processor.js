@@ -87,7 +87,10 @@ async function processVideoJob(jobId, jobData, documentId = null) {
       overlayEffect: jobData.overlayEffect || null, // Pass specific overlay effect or null for random
       topLogo: jobData.topLogo || null, // Pass top logo filename or null for random
       endLogo: jobData.endLogo || null, // Pass end logo filename or null for random
-      useArtistImage: jobData.useArtistImage !== undefined ? jobData.useArtistImage : true // Pass useArtistImage flag (default: true)
+      useArtistImage: jobData.useArtistImage !== undefined ? jobData.useArtistImage : true, // Pass useArtistImage flag (default: true)
+      customEndMedia: jobData.customEndMedia || null, // Pass custom end media selection if provided
+      endTextOverlay: jobData.endTextOverlay || null, // Pass end text overlay if provided
+      videoOrder: jobData.videoOrder || null // Pass video order if provided
     });
     
     console.log(`[Processor] Passing logo parameters to video generator - topLogo: "${jobData.topLogo || null}" (type: ${typeof jobData.topLogo}), endLogo: "${jobData.endLogo || null}" (type: ${typeof jobData.endLogo})`);

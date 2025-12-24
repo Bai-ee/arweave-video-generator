@@ -370,6 +370,14 @@
                   </div>
                 </div>
 
+                <div id="videoOrderContainer" class="step-block" style="display: none;">
+                  <div class="step-label">4.5. Select video order</div>
+                  <div class="step-hint">Choose which video to use for each segment (only shown when 1 folder is selected)</div>
+                  <div id="videoOrderSelects" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem;">
+                    <!-- Video order dropdowns will be populated dynamically -->
+                  </div>
+                </div>
+
                 <div id="filterSelectionContainer" class="step-block" style="display: none;">
                   <div class="step-label">5. Add filter</div>
                   <div class="step-hint"></div>
@@ -440,18 +448,73 @@
 
                 <div id="artistImageToggleContainer" class="step-block" style="display: none;">
                   <div class="step-label">9. Artist thumbnail</div>
-                  <div class="step-hint">Use artist thumbnail as last 2 segments (5th & 6th)</div>
-                  <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem;">
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">
+                  <div class="step-hint">Use custom media for last 2 segments (5th & 6th)</div>
+                  
+                  <!-- Main dropdown -->
+                  <select 
+                    id="endMediaModeSelect" 
+                    class="select-styled" 
+                    style="margin: 0.35rem auto 0;"
+                    onchange="updateEndMediaMode(this.value)"
+                  >
+                    <option value="none">None (6 video segments)</option>
+                    <option value="artist" selected>Use artist image</option>
+                    <option value="custom">Select custom media</option>
+                  </select>
+                  
+                  <!-- Custom media selection (hidden by default) -->
+                  <div id="customMediaSelection" style="display: none; margin-top: 0.75rem; gap: 0.75rem; flex-direction: column;">
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                      <select 
+                        id="customMediaFolderSelect" 
+                        class="select-styled" 
+                        style="flex: 1; margin-bottom: 0;"
+                        onchange="loadCustomMediaFiles(this.value)"
+                      >
+                        <option value="">Select folder...</option>
+                      </select>
+                      <button 
+                        type="button"
+                        id="customMediaUploadBtn"
+                        onclick="document.getElementById('customMediaFileInput').click()"
+                        class="btn-base btn-secondary"
+                        style="padding: 0.5rem 1rem; white-space: nowrap; margin-bottom: 0;"
+                      >
+                        Upload Image
+                      </button>
                       <input 
-                        type="checkbox" 
-                        id="useArtistImageToggle"
-                        checked
-                        onchange="updateArtistImageToggle(this.checked)"
-                        style="accent-color: var(--color-yellow-75); cursor: pointer; width: 18px; height: 18px;"
+                        type="file" 
+                        id="customMediaFileInput" 
+                        accept="image/*" 
+                        style="display: none;"
+                        onchange="handleCustomMediaUpload(event)"
                       />
-                      <span>Enable artist thumbnail</span>
+                    </div>
+                    <select 
+                      id="customMediaFileSelect" 
+                      class="select-styled" 
+                      disabled
+                    >
+                      <option value="">Select file...</option>
+                    </select>
+                  </div>
+                  
+                  <!-- Text overlay input (shown when no artist thumbnail and no end logo) -->
+                  <div id="endTextOverlayContainer" style="display: none; margin-top: 0.75rem;">
+                    <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
+                      End Text Overlay (optional)
                     </label>
+                    <input 
+                      type="text" 
+                      id="endTextOverlayInput" 
+                      class="select-styled" 
+                      placeholder="MM/DD/YYYY"
+                      style="margin: 0;"
+                      onchange="updateEndTextOverlay(this.value)"
+                    />
+                    <div class="step-hint" style="margin-top: 0.25rem; font-size: 0.75rem;">
+                      Text appears centered at the end of the video (last 2 segments)
+                    </div>
                   </div>
                 </div>
 
@@ -1366,11 +1429,14 @@
     let selectedMix = null; // Selected mix title or null for random
     let availableArtists = []; // List of available artists
     let selectedFolders = new Set(); // Set of selected folder names
+    let videoOrder = null; // Array of {segmentIndex: number, videoName: string} when single folder is selected
     let availableFolders = []; // List of available folders for current mode
     let selectedOverlay = ''; // Overlay effect selection (empty = none, 'random' = random, or specific effect name)
     let selectedTopLogo = 'ue_barcode_black.png'; // Top logo selection (default: ue_barcode_black.png)
     let selectedEndLogo = 'ue_square.png'; // End logo selection (default: ue_square.png)
-    let useArtistImage = true; // Use artist thumbnail as last 2 segments (default: true)
+    let endMediaMode = 'artist'; // 'none', 'artist', or 'custom'
+    let endTextOverlay = null; // Text overlay for end of video (when no artist thumbnail/end logo)
+    let customEndMedia = null; // { folder: string, fileName: string, fullPath: string, type: 'image' | 'video' }
     let availableLogos = []; // List of available logos
     const VIDEOS_PAGE_SIZE = 8;
     let visibleVideoCount = 0;
@@ -1926,6 +1992,8 @@
             folderItem.style.background = '';
             folderItem.style.transform = '';
             folderItem.style.boxShadow = '';
+            // Update video order UI visibility
+            updateVideoOrderUI();
           } else {
             selectedFolders.add(actualFolderName);
             isSelected = true;
@@ -1938,6 +2006,8 @@
             folderItem.style.transform = '';
           }
           console.log(`✅ Selected folders:`, Array.from(selectedFolders));
+          // Update video order UI visibility
+          updateVideoOrderUI();
         });
         
         // Add hover effect that works for both selected and unselected states
@@ -2231,11 +2301,352 @@
       }
     }
 
-    window.updateArtistImageToggle = function(enabled) {
-      useArtistImage = enabled;
-      console.log(`✅ Artist thumbnail: ${enabled ? 'Enabled' : 'Disabled'}`);
-    }
+    window.updateEndMediaMode = function(mode) {
+      endMediaMode = mode;
+      const customSelection = document.getElementById('customMediaSelection');
+      const fileSelect = document.getElementById('customMediaFileSelect');
+      const textOverlayContainer = document.getElementById('endTextOverlayContainer');
+      const textOverlayInput = document.getElementById('endTextOverlayInput');
+      
+      if (mode === 'custom') {
+        customSelection.style.display = 'flex';
+        populateCustomMediaFolders();
+        if (textOverlayContainer) textOverlayContainer.style.display = 'none';
+      } else if (mode === 'none') {
+        customSelection.style.display = 'none';
+        customEndMedia = null;
+        if (fileSelect) {
+          fileSelect.disabled = true;
+          fileSelect.innerHTML = '<option value="">Select file...</option>';
+        }
+        // Show text overlay input when no artist thumbnail
+        if (textOverlayContainer) {
+          textOverlayContainer.style.display = 'block';
+          // Pre-populate with current date if empty
+          if (textOverlayInput && !textOverlayInput.value) {
+            const today = new Date();
+            const formattedDate = today.toLocaleDateString('en-US', {
+              month: '2-digit',
+              day: '2-digit',
+              year: 'numeric'
+            });
+            textOverlayInput.value = formattedDate;
+            endTextOverlay = formattedDate;
+          }
+        }
+      } else {
+        // 'artist' mode
+        customSelection.style.display = 'none';
+        customEndMedia = null;
+        if (fileSelect) {
+          fileSelect.disabled = true;
+          fileSelect.innerHTML = '<option value="">Select file...</option>';
+        }
+        if (textOverlayContainer) textOverlayContainer.style.display = 'none';
+        endTextOverlay = null;
+      }
+      console.log(`✅ End media mode: ${mode}`);
+    };
+    
+    /**
+     * Update end text overlay value
+     */
+    window.updateEndTextOverlay = function(value) {
+      endTextOverlay = value && value.trim() ? value.trim() : null;
+      console.log(`✅ End text overlay: ${endTextOverlay || 'none'}`);
+    };
+    
+    window.populateCustomMediaFolders = function() {
+      const folderSelect = document.getElementById('customMediaFolderSelect');
+      if (!folderSelect || availableFolders.length === 0) {
+        if (availableFolders.length === 0) {
+          loadAvailableFolders().then(() => {
+            populateCustomMediaFolders();
+          });
+        }
+        return;
+      }
+      
+      folderSelect.innerHTML = '<option value="">Select folder...</option>';
+      availableFolders.forEach(folder => {
+        const option = document.createElement('option');
+        option.value = folder.name;
+        const displayName = folder.displayName || folder.name.replace('assets/', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        option.textContent = `${displayName} (${folder.count || 0} items)`;
+        folderSelect.appendChild(option);
+      });
+    };
+    
+    window.loadCustomMediaFiles = async function(folderName) {
+      const fileSelect = document.getElementById('customMediaFileSelect');
+      if (!fileSelect || !folderName) {
+        if (fileSelect) {
+          fileSelect.disabled = true;
+          fileSelect.innerHTML = '<option value="">Select file...</option>';
+        }
+        customEndMedia = null;
+        return;
+      }
+      
+      fileSelect.disabled = true;
+      fileSelect.innerHTML = '<option value="">Loading...</option>';
+      
+      try {
+        const response = await fetch(`/api/video-folders?folder=${encodeURIComponent(folderName)}`);
+        const data = await response.json();
+        
+        if (data.success && (data.videos || data.items)) {
+          const files = data.videos || data.items;
+          fileSelect.innerHTML = '<option value="">Select file...</option>';
+          
+          // Filter to show both images and videos, display with type indicator
+          files.forEach(file => {
+            const isImage = file.contentType && file.contentType.startsWith('image/');
+            const isVideo = file.contentType && file.contentType.startsWith('video/');
+            
+            if (isImage || isVideo) {
+              const option = document.createElement('option');
+              option.value = file.name;
+              option.textContent = `${file.name} (${isImage ? 'Image' : 'Video'})`;
+              option.dataset.type = isImage ? 'image' : 'video';
+              option.dataset.fullPath = file.fullPath || file.name;
+              fileSelect.appendChild(option);
+            }
+          });
+          
+          fileSelect.disabled = false;
+        } else {
+          fileSelect.innerHTML = '<option value="">No files found</option>';
+        }
+      } catch (error) {
+        console.error('Error loading custom media files:', error);
+        fileSelect.innerHTML = '<option value="">Error loading files</option>';
+      }
+    };
+    
+    // Handle file selection change
+    document.addEventListener('DOMContentLoaded', () => {
+      const fileSelect = document.getElementById('customMediaFileSelect');
+      if (fileSelect) {
+        fileSelect.addEventListener('change', function() {
+          const folderSelect = document.getElementById('customMediaFolderSelect');
+          if (this.value && folderSelect && folderSelect.value) {
+            const selectedOption = this.options[this.selectedIndex];
+            customEndMedia = {
+              folder: folderSelect.value,
+              fileName: this.value,
+              fullPath: selectedOption.dataset.fullPath || this.value,
+              type: selectedOption.dataset.type || 'video'
+            };
+            console.log('✅ Custom end media selected:', customEndMedia);
+          } else {
+            customEndMedia = null;
+          }
+        });
+      }
+    });
 
+    /**
+     * Handle custom media image upload
+     */
+    window.handleCustomMediaUpload = async function(event) {
+      const fileInput = event.target;
+      const files = Array.from(fileInput.files);
+      
+      if (files.length === 0) {
+        return;
+      }
+      
+      // Only handle first file for custom media
+      const file = files[0];
+      
+      // Check if it's an image
+      if (!file.type.startsWith('image/')) {
+        showToast('Please select an image file', 'error');
+        fileInput.value = '';
+        return;
+      }
+      
+      const folderSelect = document.getElementById('customMediaFolderSelect');
+      if (!folderSelect || !folderSelect.value) {
+        showToast('Please select a folder first', 'error');
+        fileInput.value = '';
+        return;
+      }
+      
+      const folder = folderSelect.value;
+      const uploadBtn = document.getElementById('customMediaUploadBtn');
+      const originalBtnText = uploadBtn.textContent;
+      
+      // Disable button and show loading
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'Uploading...';
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', 'image');
+        formData.append('folder', folder);
+        formData.append('isNewFolder', 'false');
+        
+        showToast('Uploading image...', 'info');
+        
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showToast('Image uploaded successfully!', 'success');
+          
+          // Refresh the file list for the selected folder
+          await loadCustomMediaFiles(folder);
+          
+          // Auto-select the uploaded file
+          const fileSelect = document.getElementById('customMediaFileSelect');
+          if (fileSelect) {
+            // Wait a bit for the dropdown to populate
+            setTimeout(() => {
+              const fileName = file.name;
+              // Find the option with matching filename
+              for (let i = 0; i < fileSelect.options.length; i++) {
+                const option = fileSelect.options[i];
+                if (option.value === fileName || option.textContent.includes(fileName)) {
+                  fileSelect.value = option.value;
+                  fileSelect.dispatchEvent(new Event('change'));
+                  break;
+                }
+              }
+            }, 500);
+          }
+        } else {
+          showToast(`Upload failed: ${result.error || 'Unknown error'}`, 'error');
+        }
+      } catch (error) {
+        console.error('Error uploading custom media:', error);
+        showToast('Upload error: ' + error.message, 'error');
+      } finally {
+        // Reset button and file input
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = originalBtnText;
+        fileInput.value = '';
+      }
+    };
+
+    /**
+     * Update video order UI visibility based on folder selection
+     */
+    window.updateVideoOrderUI = async function() {
+      const videoOrderContainer = document.getElementById('videoOrderContainer');
+      if (!videoOrderContainer) return;
+      
+      // Show only when exactly 1 folder is selected
+      if (selectedFolders.size === 1) {
+        videoOrderContainer.style.display = 'block';
+        // Load videos for the selected folder
+        const selectedFolder = Array.from(selectedFolders)[0];
+        await loadVideoOrderOptions(selectedFolder);
+      } else {
+        videoOrderContainer.style.display = 'none';
+        videoOrder = null;
+      }
+    };
+    
+    /**
+     * Load videos from selected folder and populate order dropdowns
+     */
+    window.loadVideoOrderOptions = async function(folderName) {
+      const selectsContainer = document.getElementById('videoOrderSelects');
+      if (!selectsContainer) return;
+      
+      // Clear existing selects
+      selectsContainer.innerHTML = '';
+      videoOrder = [];
+      
+      try {
+        // Fetch videos from folder
+        const response = await fetch(`/api/video-folders?folder=${encodeURIComponent(folderName)}`);
+        const data = await response.json();
+        
+        if (!data.success || !data.videos) {
+          console.error('Failed to load videos for order selection:', data.error);
+          selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center;">Failed to load videos</p>';
+          return;
+        }
+        
+        // Filter to only videos (not images)
+        const videos = data.videos.filter(file => 
+          file.contentType && file.contentType.startsWith('video/')
+        );
+        
+        if (videos.length === 0) {
+          selectsContainer.innerHTML = '<p style="color: var(--color-yellow-75); text-align: center;">No videos found in this folder</p>';
+          return;
+        }
+        
+        // Create 6 dropdowns (one for each segment)
+        for (let i = 0; i < 6; i++) {
+          const label = document.createElement('label');
+          label.style.display = 'block';
+          label.style.color = 'var(--color-yellow-75)';
+          label.style.fontFamily = 'var(--font-mathias)';
+          label.style.fontSize = '0.875rem';
+          label.style.marginBottom = '0.25rem';
+          label.textContent = `Segment ${i + 1}:`;
+          
+          const select = document.createElement('select');
+          select.className = 'select-styled';
+          select.id = `videoOrderSelect${i}`;
+          select.style.margin = '0';
+          select.innerHTML = '<option value="">Select video...</option>';
+          
+          // Populate with videos
+          videos.forEach(video => {
+            const option = document.createElement('option');
+            option.value = video.name;
+            option.textContent = video.name;
+            select.appendChild(option);
+          });
+          
+          // Add change listener
+          select.addEventListener('change', function() {
+            updateVideoOrder();
+          });
+          
+          selectsContainer.appendChild(label);
+          selectsContainer.appendChild(select);
+          
+          // Initialize videoOrder array
+          videoOrder.push({ segmentIndex: i, videoName: '' });
+        }
+      } catch (error) {
+        console.error('Error loading video order options:', error);
+        selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center;">Error loading videos</p>';
+      }
+    };
+    
+    /**
+     * Update video order array from dropdown selections
+     */
+    window.updateVideoOrder = function() {
+      if (!videoOrder) return;
+      
+      for (let i = 0; i < 6; i++) {
+        const select = document.getElementById(`videoOrderSelect${i}`);
+        if (select && select.value) {
+          videoOrder[i] = { segmentIndex: i, videoName: select.value };
+        } else {
+          videoOrder[i] = { segmentIndex: i, videoName: '' };
+        }
+      }
+      
+      // Check if all segments have videos selected
+      const allSelected = videoOrder.every(item => item.videoName);
+      console.log(`✅ Video order updated: ${allSelected ? 'All segments selected' : 'Some segments missing'}`);
+    };
+    
     /**
      * Initialize filter selection buttons
      * COMMENTED OUT: Always using Hard B&W Street Doc @ 80% intensity
@@ -2365,7 +2776,10 @@
           overlayEffect: overlayToUse || null, // Specific overlay effect name or null for random
           topLogo: selectedTopLogo === 'random' ? null : selectedTopLogo, // Top logo filename (default: loge_horiz.png) or null for random
           endLogo: selectedEndLogo === 'random' ? null : selectedEndLogo, // End logo filename (default: ue_logo_horiz.png) or null for random
-          useArtistImage: useArtistImage // Use artist thumbnail as last 2 segments (default: true)
+          useArtistImage: endMediaMode === 'artist', // true only if artist mode selected
+          customEndMedia: endMediaMode === 'custom' ? customEndMedia : null, // Pass custom media if selected
+          endTextOverlay: endMediaMode === 'none' ? endTextOverlay : null, // Pass text overlay if no artist thumbnail
+          videoOrder: selectedFolders.size === 1 && videoOrder && videoOrder.every(item => item.videoName) ? videoOrder : null // Pass video order if single folder and all segments selected
         };
         
         console.log(`[Frontend] Sending logo parameters - topLogo: "${requestBody.topLogo}" (from selectedTopLogo: "${selectedTopLogo}"), endLogo: "${requestBody.endLogo}" (from selectedEndLogo: "${selectedEndLogo}")`);
@@ -5985,4 +6399,6 @@
 
 </body>
 </html>
+
+
 

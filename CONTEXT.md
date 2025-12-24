@@ -38,9 +38,10 @@
 - Vercel Hobby plan allows only **12 serverless functions**
 - We're at the limit - new endpoints must be combined with existing ones
 - Current functions: `generate-video.js`, `videos.js`, `video-folders.js`, `upload-video.js`, `delete-video.js`, `usage.js`, `artists.js`, `manage-artists.js`, `deploy-website.js`, `archive-upload.js`, `upload.js`, `migrate-image-urls.js`
+- **Note**: `migrate-image-urls.js` exists but is not currently configured in `vercel.json` (may be a one-time migration script)
 
 ### 3. Folder Validation (Exact Match Only)
-- Only excludes exact matches: `logos`, `paper_backgrounds`, `mixes`, `mixes/baiee`, `mixes/bai-ee`
+- Only excludes exact matches: `logos`, `paper_backgrounds`, `mixes`, `mixes/baiee`, `mixes/bai-ee`, `videos`
 - **Allows**: Any other folder including `retro_dust`, `noise`, `grit`, and user-created folders
 - File: `api/generate-video.js`
 
@@ -60,7 +61,7 @@
 ## 📁 Key Files & Directories
 
 ### Frontend
-- `public/index.html` - Single-page application (5325 lines)
+- `public/index.html` - Single-page application (6114 lines)
   - Upload section (videos, images, artist thumbnails)
   - Generate section (audio source, artist, mix, folders, filter, overlay, logos, artist thumbnail toggle)
   - Deploy section, Archive section, Manage section
@@ -68,7 +69,7 @@
 
 ### API Layer (`api/`)
 - `generate-video.js` - Creates video jobs (validates folders, creates Firestore job, handles `useArtistImage` parameter)
-- `videos.js` - Lists videos + handles `/api/video-status`
+- `videos.js` - Lists videos + handles `/api/video-status` + **handles `/api/videos?download=true`** (proxies video downloads from Firebase Storage, supports base64-encoded URLs for iOS)
 - `video-folders.js` - **Dynamic folder discovery** (lists all folders)
 - `usage.js` - Handles `/api/usage`, `/api/storage-usage`, `/api/firestore-usage`
 - `deploy-website.js` - Deploys website to Arweave + updates ArNS
@@ -95,11 +96,6 @@
 ### Scripts
 - `update-artist-images-from-manifest.js` - Updates artist JSON with Arweave URLs from deployment manifest
 - `upload-artists-json.js` - Uploads artist JSON to Firebase
-- `test-artist-image.js` - Test script for artist image feature
-
-### Scripts
-- `update-artist-images-from-manifest.js` - Updates artist JSON with Arweave URLs from deployment manifest
-- `upload-artists-json.js` - Uploads artist JSON to Firebase
 - `worker/test-artist-image.js` - Test script for artist image feature
 
 ### Configuration
@@ -119,10 +115,19 @@
 5. User selects filter, overlay, logos
 6. User toggles artist thumbnail (step 9, default: enabled)
 7. POST `/api/generate-video` with all parameters
-2. API validates folders → Creates job in Firestore (`videoJobs` collection, status: 'pending')
-3. GitHub Actions (runs every minute) → Finds pending job
-4. Worker: Updates status to 'processing' → **Dynamically discovers folders** → Loads videos → Extracts 5s segments → Concatenates to 30s → Applies filters/overlays → Combines audio → Uploads to Firebase Storage → Updates Firestore (status: 'completed', videoUrl)
-5. Frontend polls `/api/videos` → Displays video when ready
+8. API validates folders → Creates job in Firestore (`videoJobs` collection, status: 'pending')
+9. GitHub Actions (runs every minute) → Finds pending job
+10. Worker: Updates status to 'processing' → **Dynamically discovers folders** → Loads videos → Extracts 5s segments → Concatenates to 30s → Applies filters/overlays → Combines audio → Uploads to Firebase Storage → Updates Firestore (status: 'completed', videoUrl)
+11. Frontend polls `/api/videos` → Displays video when ready
+
+### Video Download Flow
+1. User clicks "DOWNLOAD" button on completed video
+2. Frontend detects device type (iOS/Android/Desktop)
+3. **iOS**: Base64-encodes video URL → GET `/api/videos?download=true&videoUrlB64=...&filename=...`
+4. **Android/Desktop**: URL-encodes video URL → GET `/api/videos?download=true&videoUrl=...&filename=...`
+5. API extracts storage path from signed URL → Downloads via Firebase Admin SDK (or fallback fetch)
+6. API streams video buffer to client with proper headers (`Content-Disposition: attachment`)
+7. Frontend receives blob → iOS uses Share API, Android/Desktop triggers download
 
 ### Website Deployment Flow
 1. User clicks "Deploy Website" → POST `/api/deploy-website`
@@ -160,7 +165,7 @@
 
 ---
 
-## ✅ MVP Features (16 Features)
+## ✅ MVP Features (17 Features)
 
 1. **Video Generation** - 30s videos from 5s segments, dynamic folder selection
 2. **Dynamic Folder Discovery** - Automatically finds all folders (no hardcoded lists)
@@ -172,12 +177,13 @@
 8. **Video Upload** - Direct upload to Firebase Storage (bypasses Vercel 10MB limit)
 9. **Audio Source Selection** - DJ MIXES or ORIGINAL TRACKS
 10. **Video List & Polling** - Real-time status updates
-11. **Video Filter Application** - Hard B&W Street Doc @ 80% (hardcoded)
-12. **Folder Preview** - Preview videos in folders before generation
-13. **Artist Management** - Create/update artists in Firestore
-14. **Logo Selection** - Custom top and end logos (defaults: ue_barcode_black.png, ue_square.png)
-15. **Overlay Effects** - Selectable overlay effects (Analog Film, Gritt, Noise, Retro Dust)
-16. **Artist Thumbnails** - Multiple Arweave-hosted thumbnails per artist, toggle to use as last 2 video segments
+11. **Video Download** - Download videos via proxy endpoint (`/api/videos?download=true`), supports iOS (base64-encoded URLs), Android, and Desktop with fallbacks
+12. **Video Filter Application** - Hard B&W Street Doc @ 80% (hardcoded)
+13. **Folder Preview** - Preview videos in folders before generation
+14. **Artist Management** - Create/update artists in Firestore
+15. **Logo Selection** - Custom top and end logos (defaults: ue_barcode_black.png, ue_square.png)
+16. **Overlay Effects** - Selectable overlay effects (Analog Film, Gritt, Noise, Retro Dust)
+17. **Artist Thumbnails** - Multiple Arweave-hosted thumbnails per artist, toggle to use as last 2 video segments
 
 **📖 See [FEATURES.md](./FEATURES.md) for complete feature documentation.**
 
@@ -203,7 +209,8 @@ Before making any changes, verify:
 ## 📚 Complete Documentation Map
 
 ### Core Documentation
-- **[README.md](./README.md)** - This file (complete system overview)
+- **[README.md](./README.md)** - Project overview and setup instructions
+- **[CONTEXT.md](./CONTEXT.md)** - This file (complete system overview for AI context)
 - **[DOCUMENTATION_INDEX.md](./DOCUMENTATION_INDEX.md)** - Navigation guide to all documentation
 - **[FUTURE_PROOFING.md](./FUTURE_PROOFING.md)** - ⚠️ **CRITICAL**: Read before making changes
 - **[SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md)** - Detailed architecture
@@ -316,6 +323,12 @@ for (const key of knownFolders) {
 **Status**: ✅ Production Ready MVP
 
 **Use this file as context when starting new chat threads!**
+
+
+
+
+
+
 
 
 

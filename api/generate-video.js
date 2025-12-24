@@ -41,9 +41,15 @@ export default async function handler(req, res) {
     const topLogo = req.body.topLogo || null; // Top logo filename or null for random
     const endLogo = req.body.endLogo || null; // End logo filename or null for random
     const useArtistImage = req.body.useArtistImage !== undefined ? req.body.useArtistImage : true; // Use artist thumbnail as last 2 segments (default: true)
+    const customEndMedia = req.body.customEndMedia || null; // { folder: string, fileName: string, fullPath: string, type: 'image' | 'video' }
+    const endTextOverlay = req.body.endTextOverlay || null; // Text overlay for end of video (when no artist thumbnail)
+    const videoOrder = req.body.videoOrder || null; // Array of {segmentIndex: number, videoName: string} for single folder videos
     
     console.log(`[GenerateVideo] Received logo parameters - topLogo: "${topLogo}" (type: ${typeof topLogo}), endLogo: "${endLogo}" (type: ${typeof endLogo})`);
     console.log(`[GenerateVideo] Received mix parameter - mixTitle: "${mixTitle}" (artist: "${artist}")`);
+    console.log(`[GenerateVideo] Received custom end media:`, customEndMedia);
+    console.log(`[GenerateVideo] Received end text overlay: "${endTextOverlay}"`);
+    console.log(`[GenerateVideo] Received video order:`, videoOrder);
 
     // Validate selectedFolders
     if (!Array.isArray(selectedFolders)) {
@@ -113,6 +119,56 @@ export default async function handler(req, res) {
       });
     }
 
+    // Validate videoOrder if provided
+    if (videoOrder !== null) {
+      // Only accept videoOrder when exactly 1 folder is selected
+      if (normalizedFolders.length !== 1) {
+        return res.status(400).json({
+          success: false,
+          error: 'videoOrder can only be used when exactly 1 folder is selected'
+        });
+      }
+      
+      // Validate videoOrder is an array
+      if (!Array.isArray(videoOrder)) {
+        return res.status(400).json({
+          success: false,
+          error: 'videoOrder must be an array'
+        });
+      }
+      
+      // Validate videoOrder has exactly 6 items (for 30s video with 5s segments)
+      if (videoOrder.length !== 6) {
+        return res.status(400).json({
+          success: false,
+          error: 'videoOrder must have exactly 6 items (one for each segment)'
+        });
+      }
+      
+      // Validate each item has segmentIndex and videoName
+      for (let i = 0; i < videoOrder.length; i++) {
+        const item = videoOrder[i];
+        if (!item || typeof item.segmentIndex !== 'number' || typeof item.videoName !== 'string') {
+          return res.status(400).json({
+            success: false,
+            error: `videoOrder[${i}] must have segmentIndex (number) and videoName (string)`
+          });
+        }
+        if (item.segmentIndex !== i) {
+          return res.status(400).json({
+            success: false,
+            error: `videoOrder[${i}].segmentIndex must be ${i}`
+          });
+        }
+        if (!item.videoName || item.videoName.trim() === '') {
+          return res.status(400).json({
+            success: false,
+            error: `videoOrder[${i}].videoName cannot be empty`
+          });
+        }
+      }
+    }
+
     console.log(`[Generate Video] Validated ${normalizedFolders.length} folder(s): [${normalizedFolders.join(', ')}]`);
 
     // Generate unique job ID
@@ -140,6 +196,9 @@ export default async function handler(req, res) {
       topLogo: topLogo, // Top logo filename or null for random
       endLogo: endLogo, // End logo filename or null for random
       useArtistImage: useArtistImage, // Use artist thumbnail as last 2 segments (default: true)
+      customEndMedia: customEndMedia, // Custom end media selection { folder, fileName, fullPath, type }
+      endTextOverlay: endTextOverlay, // Text overlay for end of video (when no artist thumbnail)
+      videoOrder: videoOrder, // Video order for single folder videos
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       completedAt: null,
       videoUrl: null,
