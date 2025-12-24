@@ -887,6 +887,13 @@ class ArweaveVideoGenerator {
             // Step 6: Add random logo overlay at 24 seconds (6 seconds before end, overlaps fade by 1 second)
             console.log('[ArweaveVideoGenerator] Step 6: Loading random logo for end overlay from Firebase...');
             const logoStartTime = duration - 6; // 24 seconds for 30s video (1 second earlier to overlap fade)
+            // Step 6: Add end logo if provided (only if text overlay is not set - mutually exclusive)
+            // If endTextOverlay is set, endLogo must be null (enforced at frontend, but double-check here)
+            if (endTextOverlay) {
+                endLogo = null; // Ensure end logo is null when text overlay is set
+            }
+            
+            if (endLogo && !endTextOverlay) {
             let logoCachePath = null; // Declare outside try block for cleanup
             
             try {
@@ -996,11 +1003,14 @@ class ArweaveVideoGenerator {
                 console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load logo from Firebase:`, error.message);
                 // Continue without logo if it fails
             }
+            } else {
+                console.log(`[ArweaveVideoGenerator] Step 6: Skipping end logo (text overlay is set or no end logo selected)`);
+            }
 
-            // Step 6.5: Add text overlay at end if provided (when no end logo is selected)
-            // Text overlay is independent of artist thumbnail/custom media selection
-            // It appears at 20s-30s (last 2 segments), while end logo appears at 24s
-            if (endTextOverlay && !endLogo) {
+            // Step 6.5: Add text overlay at end if provided (mutually exclusive with end logo)
+            // Text overlay and end logo are mutually exclusive - if text overlay is set, end logo must be null
+            // Text overlay appears at 20s-30s (last 2 segments), while end logo appears at 24s
+            if (endTextOverlay) {
                 console.log(`[ArweaveVideoGenerator] Step 6.5: Adding end text overlay: "${endTextOverlay}"`);
                 
                 // Text appears for last 2 segments (20s-30s for 30s video)

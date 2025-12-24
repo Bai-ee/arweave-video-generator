@@ -2314,13 +2314,21 @@
 
     /**
      * Update end logo selection
+     * When end logo is selected, clear text overlay (mutually exclusive)
      */
     window.updateEndLogoSelection = function(logoValue) {
       selectedEndLogo = logoValue;
-      if (logoValue === 'random') {
-        console.log(`✅ End logo: Random`);
+      
+      // If end logo is selected (not empty), clear text overlay
+      if (logoValue && logoValue !== '') {
+        endTextOverlay = null;
+        const textOverlayInput = document.getElementById('endTextOverlayInput');
+        if (textOverlayInput) {
+          textOverlayInput.value = '';
+        }
+        console.log(`✅ End logo set: ${logoValue === 'random' ? 'Random' : logoValue} - Text overlay cleared`);
       } else {
-        console.log(`✅ End logo: ${logoValue}`);
+        console.log(`✅ End logo cleared - Text overlay can be used`);
       }
       
       // Update text overlay visibility based on end logo selection
@@ -2396,10 +2404,22 @@
     
     /**
      * Update end text overlay value
+     * When text overlay is set, clear end logo selection (mutually exclusive)
      */
     window.updateEndTextOverlay = function(value) {
       endTextOverlay = value && value.trim() ? value.trim() : null;
-      console.log(`✅ End text overlay: ${endTextOverlay || 'none'}`);
+      
+      // If text overlay is set, clear end logo selection
+      if (endTextOverlay) {
+        selectedEndLogo = '';
+        const endLogoSelect = document.getElementById('endLogoSelect');
+        if (endLogoSelect) {
+          endLogoSelect.value = '';
+        }
+        console.log(`✅ End text overlay set: "${endTextOverlay}" - End logo cleared`);
+      } else {
+        console.log(`✅ End text overlay cleared`);
+      }
     };
     
     window.populateCustomMediaFolders = function() {
@@ -3124,10 +3144,13 @@
           enableOverlay: overlayToUse !== '', // Overlay enabled if an effect is selected
           overlayEffect: overlayToUse || null, // Specific overlay effect name or null for random
           topLogo: selectedTopLogo === 'random' ? null : selectedTopLogo, // Top logo filename (default: loge_horiz.png) or null for random
-          endLogo: selectedEndLogo === 'random' ? null : (selectedEndLogo || null), // End logo filename or null if empty (empty = use text overlay)
+          // End logo and text overlay are mutually exclusive
+          // If text overlay is set, end logo must be null
+          // If end logo is set, text overlay must be null
+          endLogo: endTextOverlay ? null : (selectedEndLogo === 'random' ? null : (selectedEndLogo || null)), // End logo filename or null if text overlay is set
           useArtistImage: endMediaMode === 'artist', // true only if artist mode selected
           customEndMedia: endMediaMode === 'custom' ? customEndMedia : null, // Pass custom media if selected
-          endTextOverlay: (!selectedEndLogo || selectedEndLogo === '') ? endTextOverlay : null, // Pass text overlay when no end logo is selected (independent of artist thumbnail)
+          endTextOverlay: (!selectedEndLogo || selectedEndLogo === '') ? endTextOverlay : null, // Pass text overlay when no end logo is selected (mutually exclusive)
           videoOrder: selectedFolders.size === 1 && videoOrder && videoOrder.every(item => item.videoName) ? videoOrder : null // Pass video order if single folder and all segments selected
         };
         
