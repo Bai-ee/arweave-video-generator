@@ -373,8 +373,8 @@
                 <div id="videoOrderContainer" class="step-block" style="display: none;">
                   <div class="step-label">4.5. Select video order</div>
                   <div class="step-hint">Choose which video to use for each segment (only shown when 1 folder is selected)</div>
-                  <div id="videoOrderSelects" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem;">
-                    <!-- Video order dropdowns will be populated dynamically -->
+                  <div id="videoOrderSelects" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 0.75rem;">
+                    <!-- Video order segments will be populated dynamically -->
                   </div>
                 </div>
 
@@ -448,7 +448,7 @@
 
                 <div id="artistImageToggleContainer" class="step-block" style="display: none;">
                   <div class="step-label">9. Artist thumbnail</div>
-                  <div class="step-hint">Use custom media for last 2 segments (5th & 6th)</div>
+                  <div class="step-hint">Use custom media for last 2 segments (5th & 6th). Can select IMAGE or VIDEO.</div>
                   
                   <!-- Main dropdown -->
                   <select 
@@ -1919,6 +1919,7 @@
       const container = document.getElementById('folderCheckboxes');
       container.innerHTML = '';
       selectedFolders.clear();
+      videoOrderUILoaded = false;
       
       // Map folder names to display names (includes all folders)
       const folderDisplayMap = {
@@ -2006,7 +2007,8 @@
             folderItem.style.transform = '';
           }
           console.log(`✅ Selected folders:`, Array.from(selectedFolders));
-          // Update video order UI visibility
+          // Update video order UI visibility (reset loaded state when folder changes)
+          videoOrderUILoaded = false;
           updateVideoOrderUI();
         });
         
@@ -2535,6 +2537,9 @@
       }
     };
 
+    // Track if video order UI is already loaded to prevent duplicates
+    let videoOrderUILoaded = false;
+    
     /**
      * Update video order UI visibility based on folder selection
      */
@@ -2545,24 +2550,28 @@
       // Show only when exactly 1 folder is selected
       if (selectedFolders.size === 1) {
         videoOrderContainer.style.display = 'block';
-        // Load videos for the selected folder
-        const selectedFolder = Array.from(selectedFolders)[0];
-        await loadVideoOrderOptions(selectedFolder);
+        // Only load if not already loaded (prevent duplicates)
+        if (!videoOrderUILoaded) {
+          const selectedFolder = Array.from(selectedFolders)[0];
+          await loadVideoOrderOptions(selectedFolder);
+          videoOrderUILoaded = true;
+        }
       } else {
         videoOrderContainer.style.display = 'none';
         videoOrder = null;
+        videoOrderUILoaded = false;
       }
     };
     
     /**
-     * Load videos from selected folder and populate order dropdowns
+     * Load videos from selected folder and populate order selection with thumbnails
      */
     window.loadVideoOrderOptions = async function(folderName) {
       const selectsContainer = document.getElementById('videoOrderSelects');
       if (!selectsContainer) return;
       
-      // Clear existing selects
-      selectsContainer.innerHTML = '';
+      // Clear existing content
+      selectsContainer.innerHTML = '<div style="text-align: center; color: var(--color-yellow-75);">Loading videos...</div>';
       videoOrder = [];
       
       try {
@@ -2586,37 +2595,138 @@
           return;
         }
         
-        // Create 6 dropdowns (one for each segment)
+        // Get Firebase Storage reference for signed URLs
+        const storage = window.firebase?.storage;
+        if (!storage) {
+          selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center;">Firebase Storage not available</p>';
+          return;
+        }
+        
+        // Create 6 segment selectors (one for each segment)
         for (let i = 0; i < 6; i++) {
-          const label = document.createElement('label');
-          label.style.display = 'block';
+          const segmentDiv = document.createElement('div');
+          segmentDiv.style.border = '2px solid var(--color-yellow-75)';
+          segmentDiv.style.borderRadius = '8px';
+          segmentDiv.style.padding = '1rem';
+          segmentDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.05)';
+          
+          const label = document.createElement('div');
           label.style.color = 'var(--color-yellow-75)';
           label.style.fontFamily = 'var(--font-mathias)';
-          label.style.fontSize = '0.875rem';
-          label.style.marginBottom = '0.25rem';
-          label.textContent = `Segment ${i + 1}:`;
+          label.style.fontSize = '1rem';
+          label.style.fontWeight = 'bold';
+          label.style.marginBottom = '0.75rem';
+          label.textContent = `Segment ${i + 1}`;
           
-          const select = document.createElement('select');
-          select.className = 'select-styled';
-          select.id = `videoOrderSelect${i}`;
-          select.style.margin = '0';
-          select.innerHTML = '<option value="">Select video...</option>';
+          const selectedDisplay = document.createElement('div');
+          selectedDisplay.id = `selectedVideo${i}`;
+          selectedDisplay.style.color = '#888';
+          selectedDisplay.style.fontSize = '0.875rem';
+          selectedDisplay.style.marginBottom = '0.75rem';
+          selectedDisplay.style.minHeight = '1.5rem';
+          selectedDisplay.textContent = 'No video selected';
           
-          // Populate with videos
-          videos.forEach(video => {
-            const option = document.createElement('option');
-            option.value = video.name;
-            option.textContent = video.name;
-            select.appendChild(option);
+          const videosGrid = document.createElement('div');
+          videosGrid.id = `videosGrid${i}`;
+          videosGrid.style.display = 'grid';
+          videosGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
+          videosGrid.style.gap = '0.75rem';
+          videosGrid.style.maxHeight = '300px';
+          videosGrid.style.overflowY = 'auto';
+          videosGrid.style.padding = '0.5rem';
+          
+          // Load video thumbnails asynchronously
+          videos.forEach(async (video, videoIndex) => {
+            const videoCard = document.createElement('div');
+            videoCard.className = 'video-order-card';
+            videoCard.dataset.videoName = video.name;
+            videoCard.dataset.segmentIndex = i;
+            videoCard.style.cursor = 'pointer';
+            videoCard.style.border = '2px solid #333';
+            videoCard.style.borderRadius = '4px';
+            videoCard.style.overflow = 'hidden';
+            videoCard.style.backgroundColor = '#0a0a0a';
+            videoCard.style.transition = 'all 0.2s';
+            videoCard.style.position = 'relative';
+            
+            // Create video element for thumbnail
+            const videoElement = document.createElement('video');
+            videoElement.style.width = '100%';
+            videoElement.style.height = 'auto';
+            videoElement.style.display = 'block';
+            videoElement.style.pointerEvents = 'none';
+            videoElement.muted = true;
+            videoElement.playsInline = true;
+            videoElement.preload = 'metadata';
+            
+            // Get video URL from Firebase Storage
+            // Handle folder path (may have assets/ prefix or fullPath)
+            const videoPath = video.fullPath || `${folderName}/${video.name}`;
+            try {
+              const videoRef = storage.ref(videoPath);
+              const videoUrl = await videoRef.getDownloadURL();
+              videoElement.src = videoUrl;
+              
+              // Set currentTime to 1 second for thumbnail
+              videoElement.onloadedmetadata = function() {
+                this.currentTime = 1;
+              };
+              
+              videoElement.onerror = function() {
+                videoCard.innerHTML = '<div style="width: 100%; padding-top: 56.25%; background: #0a0a0a; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+              };
+            } catch (error) {
+              console.error(`Error loading thumbnail for ${video.name}:`, error);
+              videoCard.innerHTML = '<div style="width: 100%; padding-top: 56.25%; background: #0a0a0a; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+            }
+            
+            const videoNameDiv = document.createElement('div');
+            videoNameDiv.style.padding = '0.5rem';
+            videoNameDiv.style.fontSize = '0.75rem';
+            videoNameDiv.style.color = '#ccc';
+            videoNameDiv.style.textOverflow = 'ellipsis';
+            videoNameDiv.style.overflow = 'hidden';
+            videoNameDiv.style.whiteSpace = 'nowrap';
+            videoNameDiv.textContent = video.name;
+            
+            videoCard.appendChild(videoElement);
+            videoCard.appendChild(videoNameDiv);
+            
+            // Add click handler
+            videoCard.addEventListener('click', function() {
+              // Remove selected class from all cards in this segment
+              const allCards = videosGrid.querySelectorAll('.video-order-card');
+              allCards.forEach(card => {
+                card.style.borderColor = '#333';
+                card.style.backgroundColor = '#0a0a0a';
+                card.style.transform = 'scale(1)';
+              });
+              
+              // Add selected class to clicked card
+              this.style.borderColor = 'var(--color-yellow-75)';
+              this.style.backgroundColor = 'rgba(255, 255, 0, 0.1)';
+              this.style.transform = 'scale(1.05)';
+              
+              // Update selected display
+              selectedDisplay.textContent = `Selected: ${video.name}`;
+              selectedDisplay.style.color = 'var(--color-yellow-75)';
+              
+              // Update videoOrder array
+              if (!videoOrder[i]) {
+                videoOrder[i] = { segmentIndex: i, videoName: '' };
+              }
+              videoOrder[i].videoName = video.name;
+              
+              updateVideoOrder();
+            });
+            
+            videosGrid.appendChild(videoCard);
           });
           
-          // Add change listener
-          select.addEventListener('change', function() {
-            updateVideoOrder();
-          });
-          
-          selectsContainer.appendChild(label);
-          selectsContainer.appendChild(select);
+          segmentDiv.appendChild(label);
+          segmentDiv.appendChild(selectedDisplay);
+          segmentDiv.appendChild(videosGrid);
+          selectsContainer.appendChild(segmentDiv);
           
           // Initialize videoOrder array
           videoOrder.push({ segmentIndex: i, videoName: '' });
@@ -2628,19 +2738,10 @@
     };
     
     /**
-     * Update video order array from dropdown selections
+     * Update video order array (called when video is selected)
      */
     window.updateVideoOrder = function() {
       if (!videoOrder) return;
-      
-      for (let i = 0; i < 6; i++) {
-        const select = document.getElementById(`videoOrderSelect${i}`);
-        if (select && select.value) {
-          videoOrder[i] = { segmentIndex: i, videoName: select.value };
-        } else {
-          videoOrder[i] = { segmentIndex: i, videoName: '' };
-        }
-      }
       
       // Check if all segments have videos selected
       const allSelected = videoOrder.every(item => item.videoName);
