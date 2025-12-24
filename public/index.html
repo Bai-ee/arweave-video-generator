@@ -1906,6 +1906,8 @@
       }
       if (artistImageToggleContainer) {
         artistImageToggleContainer.style.display = 'block';
+        // Initialize text overlay visibility when container is shown
+        updateTextOverlayVisibility();
       }
       
       // Show ALL available folders for both modes
@@ -2303,28 +2305,25 @@
       } else {
         console.log(`✅ End logo: ${logoValue}`);
       }
+      
+      // Update text overlay visibility based on end logo selection
+      updateTextOverlayVisibility();
     }
-
-    window.updateEndMediaMode = function(mode) {
-      endMediaMode = mode;
-      const customSelection = document.getElementById('customMediaSelection');
-      const fileSelect = document.getElementById('customMediaFileSelect');
+    
+    /**
+     * Update text overlay visibility based on end media mode
+     * Text overlay is shown when no artist thumbnail is selected (endMediaMode === 'none')
+     * It's independent of end logo selection (end logo appears at 24s, text overlay at 20s-30s)
+     */
+    function updateTextOverlayVisibility() {
       const textOverlayContainer = document.getElementById('endTextOverlayContainer');
       const textOverlayInput = document.getElementById('endTextOverlayInput');
       
-      if (mode === 'custom') {
-        customSelection.style.display = 'flex';
-        populateCustomMediaFolders();
-        if (textOverlayContainer) textOverlayContainer.style.display = 'none';
-      } else if (mode === 'none') {
-        customSelection.style.display = 'none';
-        customEndMedia = null;
-        if (fileSelect) {
-          fileSelect.disabled = true;
-          fileSelect.innerHTML = '<option value="">Select file...</option>';
-        }
-        // Show text overlay input when no artist thumbnail
-        if (textOverlayContainer) {
+      // Show text overlay when endMediaMode is 'none' (no artist thumbnail or custom media)
+      const shouldShow = endMediaMode === 'none';
+      
+      if (textOverlayContainer) {
+        if (shouldShow) {
           textOverlayContainer.style.display = 'block';
           // Pre-populate with current date if empty
           if (textOverlayInput && !textOverlayInput.value) {
@@ -2337,6 +2336,28 @@
             textOverlayInput.value = formattedDate;
             endTextOverlay = formattedDate;
           }
+        } else {
+          textOverlayContainer.style.display = 'none';
+          endTextOverlay = null;
+        }
+      }
+    }
+
+    window.updateEndMediaMode = function(mode) {
+      endMediaMode = mode;
+      const customSelection = document.getElementById('customMediaSelection');
+      const fileSelect = document.getElementById('customMediaFileSelect');
+      
+      if (mode === 'custom') {
+        customSelection.style.display = 'flex';
+        populateCustomMediaFolders();
+        endTextOverlay = null;
+      } else if (mode === 'none') {
+        customSelection.style.display = 'none';
+        customEndMedia = null;
+        if (fileSelect) {
+          fileSelect.disabled = true;
+          fileSelect.innerHTML = '<option value="">Select file...</option>';
         }
       } else {
         // 'artist' mode
@@ -2346,9 +2367,12 @@
           fileSelect.disabled = true;
           fileSelect.innerHTML = '<option value="">Select file...</option>';
         }
-        if (textOverlayContainer) textOverlayContainer.style.display = 'none';
         endTextOverlay = null;
       }
+      
+      // Update text overlay visibility based on mode and end logo
+      updateTextOverlayVisibility();
+      
       console.log(`✅ End media mode: ${mode}`);
     };
     
@@ -2418,14 +2442,17 @@
           }
           
           // Get Firebase Storage reference
-          const storage = window.firebase?.storage;
-          if (!storage) {
+          const { storage, ref, getDownloadURL } = window.firebase || {};
+          if (!storage || !ref || !getDownloadURL) {
             mediaGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #ef4444;">Firebase Storage not available</div>';
             return;
           }
           
-          // Load media thumbnails with square format
-          for (const file of mediaFiles) {
+          // Determine if we need lazy loading (more than 10 files)
+          const needsLazyLoading = mediaFiles.length > 10;
+          
+          // Load media thumbnails with square format and lazy loading
+          mediaFiles.forEach((file, fileIndex) => {
             const isImage = file.contentType && file.contentType.startsWith('image/');
             const isVideo = file.contentType && file.contentType.startsWith('video/');
             
@@ -2453,44 +2480,21 @@
             // Get file path
             const filePath = file.fullPath || `${folderName}/${file.name}`;
             
-            try {
-              const fileRef = storage.ref(filePath);
-              const fileUrl = await fileRef.getDownloadURL();
-              
-              if (isImage) {
-                // Image preview (square)
-                const img = document.createElement('img');
-                img.src = fileUrl;
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                img.style.display = 'block';
-                img.onerror = function() {
-                  thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
-                };
-                thumbnailContainer.appendChild(img);
-              } else {
-                // Video preview (square)
-                const video = document.createElement('video');
-                video.src = fileUrl;
-                video.style.width = '100%';
-                video.style.height = '100%';
-                video.style.objectFit = 'cover';
-                video.style.display = 'block';
-                video.muted = true;
-                video.playsInline = true;
-                video.preload = 'metadata';
-                video.onloadedmetadata = function() {
-                  this.currentTime = 1;
-                };
-                video.onerror = function() {
-                  thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
-                };
-                thumbnailContainer.appendChild(video);
-              }
-            } catch (error) {
-              console.error(`Error loading thumbnail for ${file.name}:`, error);
-              thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+            // Lazy loading: only load first 10 immediately, rest load on scroll
+            if (needsLazyLoading && fileIndex >= 10) {
+              // Use Intersection Observer for lazy loading
+              const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                  if (entry.isIntersecting) {
+                    loadMediaThumbnail(thumbnailContainer, file, filePath, isImage, isVideo, storage, ref, getDownloadURL);
+                    observer.unobserve(entry.target);
+                  }
+                });
+              }, { rootMargin: '50px' });
+              observer.observe(mediaCard);
+            } else {
+              // Load immediately for first 10 files
+              loadMediaThumbnail(thumbnailContainer, file, filePath, isImage, isVideo, storage, ref, getDownloadURL);
             }
             
             // Type indicator
@@ -2551,7 +2555,7 @@
             });
             
             mediaGrid.appendChild(mediaCard);
-          }
+          }); // Close forEach
         } else {
           mediaGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #ef4444;">No files found</div>';
         }
@@ -2723,14 +2727,17 @@
         }
         
         // Get Firebase Storage reference for signed URLs
-        const storage = window.firebase?.storage;
-        if (!storage) {
+        const { storage, ref, getDownloadURL } = window.firebase || {};
+        if (!storage || !ref || !getDownloadURL) {
           selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center;">Firebase Storage not available</p>';
           return;
         }
         
         // Clear container
         selectsContainer.innerHTML = '';
+        
+        // Determine if we need lazy loading (more than 10 videos)
+        const needsLazyLoading = videos.length > 10;
         
         // Create 6 segment selectors (one for each segment) - EXACTLY 6, no duplicates
         for (let i = 0; i < 6; i++) {
@@ -2768,8 +2775,8 @@
           videosGrid.style.overflowY = 'auto';
           videosGrid.style.padding = '0.5rem';
           
-          // Load video thumbnails - use for...of loop for proper async handling
-          for (const video of videos) {
+          // Load video thumbnails with lazy loading if needed
+          videos.forEach((video, videoIndex) => {
             const videoCard = document.createElement('div');
             videoCard.className = 'video-order-card';
             videoCard.dataset.videoName = video.name;
@@ -2800,30 +2807,25 @@
             videoElement.style.pointerEvents = 'none';
             videoElement.muted = true;
             videoElement.playsInline = true;
-            videoElement.preload = 'metadata';
             
-            // Get video URL from Firebase Storage
-            const videoPath = video.fullPath || `${folderName}/${video.name}`;
-            try {
-              const videoRef = storage.ref(videoPath);
-              const videoUrl = await videoRef.getDownloadURL();
-              videoElement.src = videoUrl;
-              
-              // Set currentTime to 1 second for thumbnail
-              videoElement.onloadedmetadata = function() {
-                this.currentTime = 1;
-              };
-              
-              videoElement.onseeked = function() {
-                // Thumbnail loaded
-              };
-              
-              videoElement.onerror = function() {
-                thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
-              };
-            } catch (error) {
-              console.error(`Error loading thumbnail for ${video.name}:`, error);
-              thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+            // Lazy loading: only load first 10 immediately, rest load on scroll
+            if (needsLazyLoading && videoIndex >= 10) {
+              videoElement.loading = 'lazy';
+              videoElement.preload = 'none';
+              // Use Intersection Observer for lazy loading
+              const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                  if (entry.isIntersecting) {
+                    loadVideoThumbnail(videoElement, video, folderName, thumbnailContainer, storage, ref, getDownloadURL);
+                    observer.unobserve(entry.target);
+                  }
+                });
+              }, { rootMargin: '50px' });
+              observer.observe(videoCard);
+            } else {
+              // Load immediately for first 10 videos
+              videoElement.preload = 'metadata';
+              loadVideoThumbnail(videoElement, video, folderName, thumbnailContainer, storage, ref, getDownloadURL);
             }
             
             thumbnailContainer.appendChild(videoElement);
@@ -2869,7 +2871,7 @@
             });
             
             videosGrid.appendChild(videoCard);
-          }
+          });
           
           segmentDiv.appendChild(label);
           segmentDiv.appendChild(selectedDisplay);
@@ -2884,6 +2886,86 @@
         selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center;">Error loading videos</p>';
       }
     };
+    
+    /**
+     * Load video thumbnail helper function
+     */
+    async function loadVideoThumbnail(videoElement, video, folderName, thumbnailContainer, storage, ref, getDownloadURL) {
+      const videoPath = video.fullPath || `${folderName}/${video.name}`;
+      try {
+        const videoRef = ref(storage, videoPath);
+        const videoUrl = await getDownloadURL(videoRef);
+        videoElement.src = videoUrl;
+        
+        // Set currentTime to 1 second for thumbnail
+        videoElement.onloadedmetadata = function() {
+          this.currentTime = 1;
+        };
+        
+        videoElement.onseeked = function() {
+          // Thumbnail loaded successfully
+          console.log(`✅ Thumbnail loaded for ${video.name}`);
+        };
+        
+        videoElement.onerror = function(e) {
+          console.error(`Error loading video thumbnail for ${video.name}:`, e);
+          thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+        };
+      } catch (error) {
+        console.error(`Error loading thumbnail for ${video.name}:`, error);
+        thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+      }
+    }
+    
+    /**
+     * Load media thumbnail helper function (for custom media selection)
+     */
+    async function loadMediaThumbnail(thumbnailContainer, file, filePath, isImage, isVideo, storage, ref, getDownloadURL) {
+      try {
+        const fileRef = ref(storage, filePath);
+        const fileUrl = await getDownloadURL(fileRef);
+        
+        if (isImage) {
+          // Image preview (square)
+          const img = document.createElement('img');
+          img.src = fileUrl;
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          img.style.display = 'block';
+          img.loading = 'lazy';
+          img.onerror = function() {
+            thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+          };
+          thumbnailContainer.appendChild(img);
+        } else {
+          // Video preview (square)
+          const video = document.createElement('video');
+          video.src = fileUrl;
+          video.style.width = '100%';
+          video.style.height = '100%';
+          video.style.objectFit = 'cover';
+          video.style.display = 'block';
+          video.muted = true;
+          video.playsInline = true;
+          video.preload = 'metadata';
+          video.onloadedmetadata = function() {
+            this.currentTime = 1;
+          };
+          video.onseeked = function() {
+            console.log(`✅ Video thumbnail loaded for ${file.name}`);
+          };
+          video.onerror = function(e) {
+            console.error(`Error loading video thumbnail for ${file.name}:`, e);
+            thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+          };
+          thumbnailContainer.appendChild(video);
+        }
+      } catch (error) {
+        console.error(`Error loading thumbnail for ${file.name}:`, error);
+        thumbnailContainer.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.7rem;">Preview unavailable</div>';
+      }
+    }
     
     /**
      * Update video order array (called when video is selected)
