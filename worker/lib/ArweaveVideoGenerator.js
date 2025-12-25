@@ -1020,7 +1020,7 @@ class ArweaveVideoGenerator {
                 const textDuration = fadeStartTime - textStartTime; // Duration until fade starts (3.5 seconds)
                 
                 // Calculate centered position
-                const textFontSize = Math.round(height * 0.15); // Large font, 15% of canvas height
+                const textFontSize = Math.round(height * 0.05); // Reduced font size, 5% of canvas height (1/3 of original 15%)
                 const textX = width / 2; // Centered horizontally
                 const textY = height / 2; // Centered vertically
                 
