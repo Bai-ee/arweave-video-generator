@@ -1157,7 +1157,42 @@ textarea {
     max-width: 100% !important;
     box-sizing: border-box !important;
   }
-  
+
+  /* Fix archive files container grid - single column on mobile */
+  #archiveFilesContainer {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Fix archive folders container grid - 2 columns on mobile */
+  #archiveFoldersContainer {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Adjust folder card item padding on mobile */
+  .folder-card-item {
+    padding: 0.75rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Fix archive file selection header on mobile */
+  #archiveFileSelectionSection > div:first-child {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    align-items: flex-start !important;
+  }
+
+  #archiveFileSelectionSection > div:first-child > div {
+    width: 100% !important;
+  }
+
+  #archiveFileSelectionSection > div:first-child > div button {
+    flex: 1 !important;
+    font-size: 0.7rem !important;
+    padding: 0.4rem 0.75rem !important;
+  }
+
   /* Minimize video cards padding */
   .video-item-card {
     margin-left: 0;

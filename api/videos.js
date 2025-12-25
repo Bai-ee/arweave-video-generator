@@ -2,17 +2,20 @@
  * Vercel Serverless Function: Videos Endpoint
  * GET /api/videos - Returns list of all completed videos
  * GET /api/video-status/:jobId - Returns status of a specific video job
+ * POST /api/videos?action=create-atomic-asset - Converts a video to atomic asset
  * 
- * Handles both video listing and individual video status
+ * Handles video listing, status checks, and atomic asset creation
  */
 
-import { initializeFirebaseAdmin, getFirestore, getStorage } from '../lib/firebase-admin.js';
+import { initializeFirebaseAdmin, getFirestore, getStorage, admin } from '../lib/firebase-admin.js';
+import { uploadAtomicAsset } from '../lib/ArweaveUploader.js';
+import { createAtomicAssetMetadata } from '../lib/AtomicAssetHelper.js';
 
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   // Handle OPTIONS preflight
@@ -27,7 +30,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Only allow GET
+  // Handle POST for atomic asset creation
+  if (req.method === 'POST' && req.query.action === 'create-atomic-asset') {
+    return await handleCreateAtomicAsset(req, res);
+  }
+
+  // Only allow GET for other operations
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
