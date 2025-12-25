@@ -73,6 +73,16 @@
         });
       }
       
+      // Load data when section opens
+      if (!wasOpen && sectionId === 'atomicSection') {
+        // Load atomic videos when atomic section is opened
+        setTimeout(() => {
+          if (typeof window.loadAtomicVideos === 'function') {
+            window.loadAtomicVideos();
+          }
+        }, 100);
+      }
+      
       // Toggle the open class
       if (wasOpen) {
         panel.classList.remove('open');
