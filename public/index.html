@@ -6217,7 +6217,7 @@
                 thumbnailContainer.appendChild(placeholder);
               }
               
-              // Gradient overlay for text readability
+              // Gradient overlay for text readability (lighter to show thumbnails)
               const overlay = document.createElement('div');
               overlay.style.cssText = `
                 position: absolute;
@@ -6225,7 +6225,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.85) 100%);
+                background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.7) 100%);
                 z-index: 1;
                 pointer-events: none;
               `;
@@ -6414,12 +6414,12 @@
               videoCard.onmouseenter = () => {
                 videoCard.style.transform = 'scale(1.02)';
                 videoCard.style.borderColor = '#fff';
-                overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.75) 100%)';
+                overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.6) 100%)';
               };
               videoCard.onmouseleave = () => {
                 videoCard.style.transform = 'scale(1)';
                 videoCard.style.borderColor = 'var(--color-yellow-75)';
-                overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.85) 100%)';
+                overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.7) 100%)';
               };
               
               // Store video data
