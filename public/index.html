@@ -7112,30 +7112,25 @@
 
         // Add hover effects similar to folder cards
         fileCard.addEventListener('mouseenter', () => {
-          // Don't apply hover if delete button is being hovered
           if (!fileCard.querySelector('.archive-delete-btn:hover')) {
+            fileCard.style.transform = 'scale(1.02)';
             if (isSelected) {
-              // Selected state hover - enhance green styling
-              fileCard.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.2) 40%, rgba(12, 140, 97, 0.15) 80%, rgba(8, 100, 70, 0.12) 100%), rgba(16, 185, 129, 0.15)';
               fileCard.style.borderColor = '#14d391';
-              fileCard.style.transform = 'scale(1.02)';
             } else {
-              // Unselected state hover
-              fileCard.style.transform = 'scale(1.02)';
               fileCard.style.borderColor = '#666';
             }
+            overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.6) 100%)';
           }
         });
         
         fileCard.addEventListener('mouseleave', () => {
           fileCard.style.transform = '';
           if (isSelected) {
-            // Restore selected state
-            fileCard.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
             fileCard.style.borderColor = '#10b981';
           } else {
             fileCard.style.borderColor = '';
           }
+          overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.7) 100%)';
         });
 
         container.appendChild(fileCard);
