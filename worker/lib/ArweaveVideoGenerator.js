@@ -892,8 +892,10 @@ class ArweaveVideoGenerator {
             // Create a mutable variable since endLogo is const from destructuring
             let finalEndLogo = endTextOverlay ? null : endLogo;
             
+            // Declare logoCachePath outside if block for cleanup/logging
+            let logoCachePath = null;
+            
             if (finalEndLogo && !endTextOverlay) {
-            let logoCachePath = null; // Declare outside try block for cleanup
             
             try {
                 logoCachePath = path.join(this.cacheDir, `logo_${Date.now()}.png`);
