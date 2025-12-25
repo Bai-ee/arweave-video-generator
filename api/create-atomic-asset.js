@@ -3,10 +3,9 @@
  * POST /api/create-atomic-asset - Converts a generated video to ANS-110 atomic asset
  */
 
-import { initializeFirebaseAdmin, getFirestore, getStorage } from '../lib/firebase-admin.js';
+import { initializeFirebaseAdmin, getFirestore, getStorage, admin } from '../lib/firebase-admin.js';
 import { uploadAtomicAsset } from '../lib/ArweaveUploader.js';
 import { createAtomicAssetMetadata } from '../lib/AtomicAssetHelper.js';
-import admin, { firestore } from 'firebase-admin';
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -165,7 +164,7 @@ export default async function handler(req, res) {
       'metadata.arweaveTxId': uploadResult.transactionId,
       'metadata.arweaveUrl': uploadResult.arweaveUrl,
       'metadata.atomicAssetMetadata': atomicMetadata,
-      'metadata.atomicAssetCreatedAt': admin.firestore.Timestamp.now()
+      'metadata.atomicAssetCreatedAt': admin.firestore.FieldValue.serverTimestamp()
     };
 
     await db.collection('videoJobs').doc(jobId).update(updateData);
