@@ -68,6 +68,14 @@ website/fonts/**/*
 firebase-key.json
 firebase-credentials.json
 
+# Wallet exports (NEVER commit wallet files!)
+wallet-export/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!vercel.json
+
 # OS files
 .DS_Store
 Thumbs.db
