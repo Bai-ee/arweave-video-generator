@@ -18,7 +18,11 @@ import { ArweaveSigner } from '@ardrive/turbo-sdk';
 import dotenv from 'dotenv';
 
 // Load environment variables
-dotenv.config();
+// Try .env.local first, then fall back to .env
+dotenv.config({ path: '.env.local' });
+if (!process.env.ARWEAVE_WALLET_JWK) {
+  dotenv.config(); // Fall back to .env if .env.local doesn't have it
+}
 
 // ANS-110 Contract Source Code
 // This is the standard contract for atomic assets
