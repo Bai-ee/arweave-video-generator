@@ -6111,8 +6111,18 @@
           } else {
             data.videos.forEach(video => {
               const videoCard = document.createElement('div');
+              
+              // Determine if file is an image or video
+              const fileName = video.name.toLowerCase();
+              const isImage = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || fileName.endsWith('.gif') || fileName.endsWith('.webp');
+              const isVideo = fileName.endsWith('.mp4') || fileName.endsWith('.webm') || fileName.endsWith('.mov') || fileName.endsWith('.avi');
+              
+              // Set initial background - will be updated with thumbnail
               videoCard.style.cssText = `
                 background: #1a1a1a;
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
                 border: 2px solid var(--color-yellow-75);
                 border-radius: 10px;
                 overflow: hidden;
@@ -6120,14 +6130,31 @@
                 width: 100%;
                 display: flex;
                 flex-direction: column;
+                position: relative;
               `;
+              
+              // Add overlay for better text readability
+              const overlay = document.createElement('div');
+              overlay.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.8) 100%);
+                pointer-events: none;
+                z-index: 1;
+              `;
+              
               videoCard.onmouseover = () => {
                 videoCard.style.transform = 'scale(1.02)';
                 videoCard.style.borderColor = '#fff';
+                overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.7) 100%)';
               };
               videoCard.onmouseout = () => {
                 videoCard.style.transform = 'scale(1)';
                 videoCard.style.borderColor = 'var(--color-yellow-75)';
+                overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.8) 100%)';
               };
               
               const fileSizeMB = (video.size / (1024 * 1024)).toFixed(2);
@@ -6142,33 +6169,74 @@
               const isMobile = isMobileDevice();
               const downloadLabel = isMobile ? 'SAVE/COPY' : 'Download';
               
-              videoCard.innerHTML = `
-                <div style="position: relative; width: 100%; aspect-ratio: 1; background: #0a0a0a; cursor: pointer; overflow: hidden;" onclick="window.open('${escapedUrl}', '_blank')">
-                  <video 
-                    src="${video.publicUrl}" 
-                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
-                    preload="metadata"
-                    muted
-                    playsinline
-                    onerror="this.parentElement.innerHTML='<div style=\\'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--color-yellow-75); text-align: center;\\'><div style=\\'font-size: 0.75rem;\\'>Video preview unavailable</div></div>'"
-                    onloadedmetadata="this.currentTime=1"
-                  ></video>
-                  <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; opacity: 0.8; transition: opacity 0.3s;">
-                    <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; border: 3px solid var(--color-yellow-75);">
-                      <svg width="30" height="30" viewBox="0 0 24 24" fill="var(--color-yellow-75)">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
+              // Function to set thumbnail as background
+              const setThumbnailBackground = (imageUrl) => {
+                videoCard.style.backgroundImage = `url('${imageUrl}')`;
+              };
+              
+              // For images, use the URL directly as background
+              if (isImage) {
+                setThumbnailBackground(video.publicUrl);
+              } else if (isVideo) {
+                // For videos, capture first frame
+                const tempVideo = document.createElement('video');
+                tempVideo.src = video.publicUrl;
+                tempVideo.muted = true;
+                tempVideo.playsInline = true;
+                tempVideo.preload = 'metadata';
+                tempVideo.style.display = 'none';
+                
+                tempVideo.addEventListener('loadedmetadata', () => {
+                  tempVideo.currentTime = 0.1; // Seek to first frame
+                });
+                
+                tempVideo.addEventListener('seeked', () => {
+                  try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = tempVideo.videoWidth || 720;
+                    canvas.height = tempVideo.videoHeight || 720;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(tempVideo, 0, 0, canvas.width, canvas.height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    setThumbnailBackground(dataUrl);
+                    tempVideo.remove();
+                  } catch (error) {
+                    console.error('Error capturing video frame:', error);
+                    // Fallback: use a placeholder or the video URL
+                  }
+                });
+                
+                tempVideo.addEventListener('error', () => {
+                  // If video fails to load, keep default background
+                  tempVideo.remove();
+                });
+                
+                document.body.appendChild(tempVideo);
+              }
+              
+              // Add overlay to card before setting innerHTML
+              videoCard.appendChild(overlay);
+              
+              videoCard.innerHTML += `
+                <div style="position: relative; width: 100%; aspect-ratio: 1; cursor: pointer; overflow: hidden;" onclick="window.open('${escapedUrl}', '_blank')">
+                  ${isVideo ? `
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; opacity: 0.8; transition: opacity 0.3s; z-index: 2;">
+                      <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; border: 3px solid var(--color-yellow-75);">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="var(--color-yellow-75)">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </div>
                     </div>
-                  </div>
-                  <div style="position: absolute; bottom: 0.5rem; right: 0.5rem; background: rgba(0,0,0,0.7); color: var(--color-yellow-75); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-family: var(--font-mathias);">
+                  ` : ''}
+                  <div style="position: absolute; bottom: 0.5rem; right: 0.5rem; background: rgba(0,0,0,0.7); color: var(--color-yellow-75); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-family: var(--font-mathias); z-index: 2;">
                     ${fileSizeMB} MB
                   </div>
                 </div>
-                <div style="padding: 0.75rem; flex: 1; display: flex; flex-direction: column;">
-                  <div style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; word-break: break-word; line-height: 1.2; flex: 1;">
+                <div style="padding: 0.75rem; flex: 1; display: flex; flex-direction: column; position: relative; z-index: 2;">
+                  <div style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; font-size: 0.75rem; margin-bottom: 0.5rem; word-break: break-word; line-height: 1.2; flex: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
                     ${video.name}
                   </div>
-                  <div style="color: #888; font-family: var(--font-mathias); font-size: 0.65rem; margin-bottom: 0.5rem;">
+                  <div style="color: #ccc; font-family: var(--font-mathias); font-size: 0.65rem; margin-bottom: 0.5rem; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
                     ${fileSizeMB} MB • ${updatedDate}
                   </div>
                   <div style="margin-top: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
