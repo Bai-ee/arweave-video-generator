@@ -6158,14 +6158,20 @@
               if (isImage) {
                 const img = document.createElement('img');
                 img.src = video.publicUrl;
+                img.loading = 'lazy';
                 img.style.cssText = `
                   width: 100%;
                   height: 100%;
                   object-fit: cover;
                   display: block;
+                  background: #0a0a0a;
                 `;
                 img.onerror = () => {
+                  console.error('Failed to load image thumbnail:', video.publicUrl);
                   img.style.display = 'none';
+                };
+                img.onload = () => {
+                  console.log('Image thumbnail loaded:', video.name);
                 };
                 thumbnailContainer.appendChild(img);
               } else if (isVideo) {
@@ -6174,19 +6180,41 @@
                 vid.muted = true;
                 vid.playsInline = true;
                 vid.preload = 'metadata';
+                vid.crossOrigin = 'anonymous';
                 vid.style.cssText = `
                   width: 100%;
                   height: 100%;
                   object-fit: cover;
                   display: block;
+                  background: #0a0a0a;
                 `;
                 vid.onloadedmetadata = () => {
                   vid.currentTime = 0.1;
+                  console.log('Video metadata loaded, seeking to first frame:', video.name);
                 };
-                vid.onerror = () => {
+                vid.onseeked = () => {
+                  console.log('Video seeked to first frame:', video.name);
+                };
+                vid.onerror = (e) => {
+                  console.error('Failed to load video thumbnail:', video.publicUrl, e);
                   vid.style.display = 'none';
                 };
                 thumbnailContainer.appendChild(vid);
+              } else {
+                // Fallback for unknown file types
+                const placeholder = document.createElement('div');
+                placeholder.style.cssText = `
+                  width: 100%;
+                  height: 100%;
+                  background: #0a0a0a;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: #666;
+                  font-size: 0.7rem;
+                `;
+                placeholder.textContent = 'No preview';
+                thumbnailContainer.appendChild(placeholder);
               }
               
               // Gradient overlay for text readability
