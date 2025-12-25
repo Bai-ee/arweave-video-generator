@@ -753,10 +753,10 @@ class ArweaveVideoGenerator {
             // Note: drawtext doesn't support fontcolor directly in enable expression, so we'll use white text
             // We'll need to modify VideoCompositor to support white text color
             // Text should end when fade starts (so it fades out with video)
-            // Fade starts at duration - 8 seconds (22s for 30s video)
-            const fadeStartTime = duration - 8;
+            // Fade starts at duration - 6.5 seconds (23.5s for 30s video)
+            const fadeStartTime = duration - 6.5; // 23.5s for 30s video
             const textEndTime = fadeStartTime; // Text ends when fade starts
-            const textDuration = textEndTime - textStartTime; // Duration from start to fade
+            const textDuration = textEndTime - textStartTime; // Duration from start to fade (10s to 23.5s = 13.5s)
             
             const textLayer = new LayerConfig(
                 'text',
@@ -1010,13 +1010,14 @@ class ArweaveVideoGenerator {
 
             // Step 6.5: Add text overlay at end if provided (mutually exclusive with end logo)
             // Text overlay and end logo are mutually exclusive - if text overlay is set, end logo must be null
-            // Text overlay appears at 20s-30s (last 2 segments), while end logo appears at 24s
+            // Text overlay appears during 5th segment (20s-23.5s) and fades out with master fade
             if (endTextOverlay) {
                 console.log(`[ArweaveVideoGenerator] Step 6.5: Adding end text overlay: "${endTextOverlay}"`);
                 
-                // Text appears for last 2 segments (20s-30s for 30s video)
-                const textStartTime = duration - 10; // Start at 20 seconds
-                const textDuration = 10; // Duration of 10 seconds (last 2 segments)
+                // Text appears during 5th segment, visible for 3.5s (20s-23.5s), then fades out with master fade
+                const textStartTime = duration - 10; // Start at 20 seconds (beginning of 5th segment)
+                const fadeStartTime = duration - 6.5; // Fade starts at 23.5s
+                const textDuration = fadeStartTime - textStartTime; // Duration until fade starts (3.5 seconds)
                 
                 // Calculate centered position
                 const textFontSize = Math.round(height * 0.15); // Large font, 15% of canvas height
@@ -1036,12 +1037,12 @@ class ArweaveVideoGenerator {
                     textStartTime, // start at 20 seconds
                     textDuration // duration of 10 seconds
                 );
-                endTextLayer.addAfterFade = true; // Mark to add after fade filter
+                endTextLayer.addAfterFade = false; // Mark to fade out with video (not after fade)
                 endTextLayer.textColor = '0xFFFFFF'; // White text
                 endTextLayer.fontSize = textFontSize; // Store font size for VideoCompositor
                 layers.push(endTextLayer);
                 
-                console.log(`[ArweaveVideoGenerator] ✅ End text overlay added: "${endTextOverlay}" at (${textX}, ${textY}), size: ${textFontSize}px, timing: ${textStartTime}s-${textStartTime + textDuration}s`);
+                console.log(`[ArweaveVideoGenerator] ✅ End text overlay added: "${endTextOverlay}" at (${textX}, ${textY}), size: ${textFontSize}px, timing: ${textStartTime}s-${textStartTime + textDuration}s (fades out with master fade)`);
             }
 
             // Step 7: Compose final video with all layers
