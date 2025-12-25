@@ -6193,11 +6193,9 @@
                 thumbnailContainer.appendChild(img);
               } else if (isVideo) {
                 const vid = document.createElement('video');
-                vid.src = video.publicUrl;
                 vid.muted = true;
                 vid.playsInline = true;
                 vid.preload = 'metadata';
-                vid.crossOrigin = 'anonymous';
                 vid.style.cssText = `
                   width: 100%;
                   height: 100%;
@@ -6205,6 +6203,16 @@
                   display: block;
                   background: #0a0a0a;
                 `;
+                
+                // Use proxy endpoint to avoid CORS issues
+                try {
+                  const encodedUrl = encodeURIComponent(video.publicUrl);
+                  vid.src = `/api/videos?download=true&videoUrl=${encodedUrl}`;
+                } catch (e) {
+                  console.warn('[openFolder] Failed to encode URL, using direct:', e);
+                  vid.src = video.publicUrl;
+                }
+                
                 vid.onloadedmetadata = () => {
                   vid.currentTime = 0.1;
                   console.log('Video metadata loaded, seeking to first frame:', video.name);
@@ -6213,8 +6221,21 @@
                   console.log('Video seeked to first frame:', video.name);
                 };
                 vid.onerror = (e) => {
-                  console.error('Failed to load video thumbnail:', video.publicUrl, e);
+                  console.error('[openFolder] Failed to load video thumbnail:', video.publicUrl, e);
                   vid.style.display = 'none';
+                  const placeholder = document.createElement('div');
+                  placeholder.style.cssText = `
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #666;
+                    font-size: 0.7rem;
+                  `;
+                  placeholder.textContent = 'Video';
+                  thumbnailContainer.appendChild(placeholder);
                 };
                 thumbnailContainer.appendChild(vid);
               } else {
