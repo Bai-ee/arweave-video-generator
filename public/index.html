@@ -6943,11 +6943,11 @@
           cursor: pointer;
           overflow: hidden;
           background: #0a0a0a;
+          border: 2px solid ${isSelected ? '#10b981' : 'var(--color-yellow-75)'};
         `;
         
         // Apply selected state styling if file is selected
         if (isSelected) {
-          fileCard.style.border = '2px solid #10b981';
           fileCard.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(16, 185, 129, 0.08), 0 0 15px rgba(16, 185, 129, 0.2)';
         }
         
