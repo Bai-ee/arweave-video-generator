@@ -889,11 +889,10 @@ class ArweaveVideoGenerator {
             const logoStartTime = duration - 6; // 24 seconds for 30s video (1 second earlier to overlap fade)
             // Step 6: Add end logo if provided (only if text overlay is not set - mutually exclusive)
             // If endTextOverlay is set, endLogo must be null (enforced at frontend, but double-check here)
-            if (endTextOverlay) {
-                endLogo = null; // Ensure end logo is null when text overlay is set
-            }
+            // Create a mutable variable since endLogo is const from destructuring
+            let finalEndLogo = endTextOverlay ? null : endLogo;
             
-            if (endLogo && !endTextOverlay) {
+            if (finalEndLogo && !endTextOverlay) {
             let logoCachePath = null; // Declare outside try block for cleanup
             
             try {
@@ -923,9 +922,9 @@ class ArweaveVideoGenerator {
                 if (allLogos.length > 0) {
                     // Use selected logo or pick random
                     let selectedLogo;
-                    if (endLogo) {
+                    if (finalEndLogo) {
                         // Find the selected logo by filename (case-insensitive, allow any logo including top logo defaults)
-                        const endLogoLower = endLogo.toLowerCase().trim();
+                        const endLogoLower = finalEndLogo.toLowerCase().trim();
                         selectedLogo = allLogos.find(logo => {
                             const logoName = path.basename(logo.name).toLowerCase();
                             return logoName === endLogoLower;
@@ -959,7 +958,7 @@ class ArweaveVideoGenerator {
                     
                     const logoFileName = path.basename(selectedLogo.name);
                     
-                    console.log(`[ArweaveVideoGenerator] Selected logo: ${logoFileName}${endLogo ? ' (user selected)' : ' (random)'}`);
+                    console.log(`[ArweaveVideoGenerator] Selected logo: ${logoFileName}${finalEndLogo ? ' (user selected)' : ' (random)'}`);
                     
                     // Download and cache logo using Firebase Admin SDK (works with private files)
                     await selectedLogo.download({ destination: logoCachePath });

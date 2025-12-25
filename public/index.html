@@ -372,9 +372,13 @@
 
                 <div id="videoOrderContainer" class="step-block" style="display: none;">
                   <div class="step-label">4.5. Select video order</div>
-                  <div class="step-hint">Choose which video to use for each segment (only shown when 1 folder is selected)</div>
-                  <div id="videoOrderSelects" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 0.75rem;">
-                    <!-- Video order segments will be populated dynamically -->
+                  <div class="step-hint">Click videos in order 1-6 (only shown when 1 folder is selected)</div>
+                  <div id="videoOrderStatus" style="margin-top: 0.75rem; margin-bottom: 0.75rem; padding: 0.75rem; background: rgba(255, 255, 0, 0.05); border: 1px solid var(--color-yellow-75); border-radius: 4px; font-size: 0.875rem; color: var(--color-yellow-75);">
+                    <div>Selected: <span id="videoOrderCount">0</span> / 6</div>
+                    <div id="videoOrderList" style="margin-top: 0.5rem; font-size: 0.75rem; color: #ccc;"></div>
+                  </div>
+                  <div id="videoOrderSelects" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; width: 100%; margin-top: 0.75rem;">
+                    <!-- Video cards will be populated dynamically -->
                   </div>
                 </div>
 
@@ -2727,21 +2731,25 @@
     };
     
     /**
-     * Load videos from selected folder and populate order selection with thumbnails
+     * Load videos from selected folder and populate order selection with folder-style UI
+     * Click videos in order 1-6 to populate segments
      */
     window.loadVideoOrderOptions = async function(folderName) {
       const selectsContainer = document.getElementById('videoOrderSelects');
+      const statusCount = document.getElementById('videoOrderCount');
+      const statusList = document.getElementById('videoOrderList');
       if (!selectsContainer) return;
       
       // Check if already populated to prevent duplicates
-      if (selectsContainer.children.length > 0 && selectsContainer.querySelector('.segment-container')) {
+      if (selectsContainer.children.length > 0) {
         console.log('Video order UI already populated, skipping...');
         return;
       }
       
       // Clear existing content
-      selectsContainer.innerHTML = '<div style="text-align: center; color: var(--color-yellow-75);">Loading videos...</div>';
+      selectsContainer.innerHTML = '<div style="text-align: center; color: var(--color-yellow-75); grid-column: 1/-1;">Loading videos...</div>';
       videoOrder = [];
+      updateVideoOrderStatus();
       
       try {
         // Fetch videos from folder
@@ -2750,7 +2758,7 @@
         
         if (!data.success || !data.videos) {
           console.error('Failed to load videos for order selection:', data.error);
-          selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center;">Failed to load videos</p>';
+          selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center; grid-column: 1/-1;">Failed to load videos</p>';
           return;
         }
         
@@ -2760,14 +2768,14 @@
         );
         
         if (videos.length === 0) {
-          selectsContainer.innerHTML = '<p style="color: var(--color-yellow-75); text-align: center;">No videos found in this folder</p>';
+          selectsContainer.innerHTML = '<p style="color: var(--color-yellow-75); text-align: center; grid-column: 1/-1;">No videos found in this folder</p>';
           return;
         }
         
         // Get Firebase Storage reference for signed URLs
         const { storage, ref, getDownloadURL } = window.firebase || {};
         if (!storage || !ref || !getDownloadURL) {
-          selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center;">Firebase Storage not available</p>';
+          selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center; grid-column: 1/-1;">Firebase Storage not available</p>';
           return;
         }
         
@@ -2777,153 +2785,190 @@
         // Determine if we need lazy loading (more than 10 videos)
         const needsLazyLoading = videos.length > 10;
         
-        // Create 6 segment selectors (one for each segment) - EXACTLY 6, no duplicates
-        for (let i = 0; i < 6; i++) {
-          const segmentDiv = document.createElement('div');
-          segmentDiv.className = 'segment-container';
-          segmentDiv.dataset.segmentIndex = i;
-          segmentDiv.style.border = '2px solid var(--color-yellow-75)';
-          segmentDiv.style.borderRadius = '8px';
-          segmentDiv.style.padding = '1rem';
-          segmentDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.05)';
-          segmentDiv.style.marginBottom = '1rem';
+        // Initialize videoOrder array with 6 empty slots
+        videoOrder = Array.from({ length: 6 }, (_, i) => ({ segmentIndex: i, videoName: '' }));
+        
+        // Create video cards in a single grid (folder-style)
+        videos.forEach((video, videoIndex) => {
+          const videoCard = document.createElement('div');
+          videoCard.className = 'folder-card-item'; // Use same class as folder selection
+          videoCard.dataset.videoName = video.name;
+          videoCard.style.cursor = 'pointer';
+          videoCard.style.position = 'relative';
+          videoCard.style.aspectRatio = '1';
+          videoCard.style.overflow = 'hidden';
           
-          const label = document.createElement('div');
-          label.style.color = 'var(--color-yellow-75)';
-          label.style.fontFamily = 'var(--font-mathias)';
-          label.style.fontSize = '1rem';
-          label.style.fontWeight = 'bold';
-          label.style.marginBottom = '0.75rem';
-          label.textContent = `Segment ${i + 1}`;
+          // Track which segment this video is assigned to (if any)
+          let assignedSegment = null;
           
-          const selectedDisplay = document.createElement('div');
-          selectedDisplay.id = `selectedVideo${i}`;
-          selectedDisplay.style.color = '#888';
-          selectedDisplay.style.fontSize = '0.875rem';
-          selectedDisplay.style.marginBottom = '0.75rem';
-          selectedDisplay.style.minHeight = '1.5rem';
-          selectedDisplay.textContent = 'No video selected';
+          // Create container for square video thumbnail
+          const thumbnailContainer = document.createElement('div');
+          thumbnailContainer.style.width = '100%';
+          thumbnailContainer.style.height = '100%';
+          thumbnailContainer.style.position = 'relative';
+          thumbnailContainer.style.overflow = 'hidden';
+          thumbnailContainer.style.backgroundColor = '#0a0a0a';
           
-          const videosGrid = document.createElement('div');
-          videosGrid.id = `videosGrid${i}`;
-          videosGrid.style.display = 'grid';
-          videosGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
-          videosGrid.style.gap = '0.75rem';
-          videosGrid.style.maxHeight = '300px';
-          videosGrid.style.overflowY = 'auto';
-          videosGrid.style.padding = '0.5rem';
+          // Create video element for thumbnail (square format)
+          const videoElement = document.createElement('video');
+          videoElement.style.width = '100%';
+          videoElement.style.height = '100%';
+          videoElement.style.objectFit = 'cover';
+          videoElement.style.display = 'block';
+          videoElement.style.pointerEvents = 'none';
+          videoElement.muted = true;
+          videoElement.playsInline = true;
           
-          // Load video thumbnails with lazy loading if needed
-          videos.forEach((video, videoIndex) => {
-            const videoCard = document.createElement('div');
-            videoCard.className = 'video-order-card';
-            videoCard.dataset.videoName = video.name;
-            videoCard.dataset.segmentIndex = i;
-            videoCard.style.cursor = 'pointer';
-            videoCard.style.border = '2px solid #333';
-            videoCard.style.borderRadius = '4px';
-            videoCard.style.overflow = 'hidden';
-            videoCard.style.backgroundColor = '#0a0a0a';
-            videoCard.style.transition = 'all 0.2s';
-            videoCard.style.position = 'relative';
-            videoCard.style.aspectRatio = '1'; // Square format
-            
-            // Create container for square video thumbnail
-            const thumbnailContainer = document.createElement('div');
-            thumbnailContainer.style.width = '100%';
-            thumbnailContainer.style.aspectRatio = '1';
-            thumbnailContainer.style.position = 'relative';
-            thumbnailContainer.style.overflow = 'hidden';
-            thumbnailContainer.style.backgroundColor = '#0a0a0a';
-            
-            // Create video element for thumbnail (square format)
-            const videoElement = document.createElement('video');
-            videoElement.style.width = '100%';
-            videoElement.style.height = '100%';
-            videoElement.style.objectFit = 'cover'; // Cover to fill square
-            videoElement.style.display = 'block';
-            videoElement.style.pointerEvents = 'none';
-            videoElement.muted = true;
-            videoElement.playsInline = true;
-            
-            // Lazy loading: only load first 10 immediately, rest load on scroll
-            if (needsLazyLoading && videoIndex >= 10) {
-              videoElement.loading = 'lazy';
-              videoElement.preload = 'none';
-              // Use Intersection Observer for lazy loading
-              const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                  if (entry.isIntersecting) {
-                    loadVideoThumbnail(videoElement, video, folderName, thumbnailContainer, storage, ref, getDownloadURL);
-                    observer.unobserve(entry.target);
-                  }
-                });
-              }, { rootMargin: '50px' });
-              observer.observe(videoCard);
-            } else {
-              // Load immediately for first 10 videos
-              videoElement.preload = 'metadata';
-              loadVideoThumbnail(videoElement, video, folderName, thumbnailContainer, storage, ref, getDownloadURL);
+          // Segment badge (shown when video is selected)
+          const segmentBadge = document.createElement('div');
+          segmentBadge.style.position = 'absolute';
+          segmentBadge.style.top = '0.5rem';
+          segmentBadge.style.right = '0.5rem';
+          segmentBadge.style.padding = '0.25rem 0.5rem';
+          segmentBadge.style.backgroundColor = 'rgba(16, 185, 129, 0.9)';
+          segmentBadge.style.color = '#fff';
+          segmentBadge.style.fontSize = '0.875rem';
+          segmentBadge.style.fontWeight = 'bold';
+          segmentBadge.style.borderRadius = '4px';
+          segmentBadge.style.display = 'none';
+          segmentBadge.style.zIndex = '10';
+          segmentBadge.textContent = '1';
+          
+          // Lazy loading: only load first 10 immediately, rest load on scroll
+          if (needsLazyLoading && videoIndex >= 10) {
+            videoElement.loading = 'lazy';
+            videoElement.preload = 'none';
+            // Use Intersection Observer for lazy loading
+            const observer = new IntersectionObserver((entries) => {
+              entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                  loadVideoThumbnail(videoElement, video, folderName, thumbnailContainer, storage, ref, getDownloadURL);
+                  observer.unobserve(entry.target);
+                }
+              });
+            }, { rootMargin: '50px' });
+            observer.observe(videoCard);
+          } else {
+            // Load immediately for first 10 videos
+            videoElement.preload = 'metadata';
+            loadVideoThumbnail(videoElement, video, folderName, thumbnailContainer, storage, ref, getDownloadURL);
+          }
+          
+          thumbnailContainer.appendChild(videoElement);
+          thumbnailContainer.appendChild(segmentBadge);
+          
+          const videoNameDiv = document.createElement('div');
+          videoNameDiv.style.padding = '0.5rem';
+          videoNameDiv.style.fontSize = '0.75rem';
+          videoNameDiv.style.color = '#ccc';
+          videoNameDiv.style.textOverflow = 'ellipsis';
+          videoNameDiv.style.overflow = 'hidden';
+          videoNameDiv.style.whiteSpace = 'nowrap';
+          videoNameDiv.textContent = video.name;
+          
+          videoCard.appendChild(thumbnailContainer);
+          videoCard.appendChild(videoNameDiv);
+          
+          // Add click handler - assign to next available segment (1-6)
+          videoCard.addEventListener('click', function() {
+            // Find next available segment (1-6)
+            let nextSegment = null;
+            for (let i = 0; i < 6; i++) {
+              if (!videoOrder[i].videoName) {
+                nextSegment = i;
+                break;
+              }
             }
             
-            thumbnailContainer.appendChild(videoElement);
+            // If all segments filled, replace the last one
+            if (nextSegment === null) {
+              nextSegment = 5;
+            }
             
-            const videoNameDiv = document.createElement('div');
-            videoNameDiv.style.padding = '0.5rem';
-            videoNameDiv.style.fontSize = '0.75rem';
-            videoNameDiv.style.color = '#ccc';
-            videoNameDiv.style.textOverflow = 'ellipsis';
-            videoNameDiv.style.overflow = 'hidden';
-            videoNameDiv.style.whiteSpace = 'nowrap';
-            videoNameDiv.textContent = video.name;
+            // If this video is already assigned, remove it first
+            if (assignedSegment !== null) {
+              videoOrder[assignedSegment].videoName = '';
+              assignedSegment = null;
+              // Remove green styling
+              videoCard.setAttribute('data-selected', 'false');
+              videoCard.style.opacity = '1';
+              videoCard.style.borderColor = '#333';
+              videoCard.style.background = '';
+              videoCard.style.boxShadow = '';
+              segmentBadge.style.display = 'none';
+            }
             
-            videoCard.appendChild(thumbnailContainer);
-            videoCard.appendChild(videoNameDiv);
+            // Assign to new segment
+            assignedSegment = nextSegment;
+            videoOrder[assignedSegment].videoName = video.name;
+            segmentBadge.textContent = `${assignedSegment + 1}`;
+            segmentBadge.style.display = 'block';
             
-            // Add click handler
-            videoCard.addEventListener('click', function() {
-              // Remove selected class from all cards in this segment
-              const allCards = videosGrid.querySelectorAll('.video-order-card');
-              allCards.forEach(card => {
-                card.style.borderColor = '#333';
-                card.style.backgroundColor = '#0a0a0a';
-                card.style.transform = 'scale(1)';
-              });
-              
-              // Add selected class to clicked card
-              this.style.borderColor = 'var(--color-yellow-75)';
-              this.style.backgroundColor = 'rgba(255, 255, 0, 0.1)';
-              this.style.transform = 'scale(1.05)';
-              
-              // Update selected display
-              selectedDisplay.textContent = `Selected: ${video.name}`;
-              selectedDisplay.style.color = 'var(--color-yellow-75)';
-              
-              // Update videoOrder array
-              if (!videoOrder[i]) {
-                videoOrder[i] = { segmentIndex: i, videoName: '' };
-              }
-              videoOrder[i].videoName = video.name;
-              
-              updateVideoOrder();
-            });
+            // Apply green styling (same as folder selection)
+            videoCard.setAttribute('data-selected', 'true');
+            videoCard.style.opacity = '1';
+            videoCard.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
+            videoCard.style.borderColor = '#10b981';
+            videoCard.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(16, 185, 129, 0.08), 0 0 15px rgba(16, 185, 129, 0.2)';
             
-            videosGrid.appendChild(videoCard);
+            updateVideoOrder();
+            updateVideoOrderStatus();
           });
           
-          segmentDiv.appendChild(label);
-          segmentDiv.appendChild(selectedDisplay);
-          segmentDiv.appendChild(videosGrid);
-          selectsContainer.appendChild(segmentDiv);
+          // Add hover effect (same as folder selection)
+          videoCard.addEventListener('mouseenter', () => {
+            if (assignedSegment !== null) {
+              videoCard.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
+            } else {
+              videoCard.style.background = 'rgba(255, 255, 255, 0.05)';
+            }
+          });
           
-          // Initialize videoOrder array
-          videoOrder.push({ segmentIndex: i, videoName: '' });
-        }
+          videoCard.addEventListener('mouseleave', () => {
+            if (assignedSegment !== null) {
+              videoCard.style.background = 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.15) 40%, rgba(12, 140, 97, 0.1) 80%, rgba(8, 100, 70, 0.08) 100%), rgba(16, 185, 129, 0.1)';
+            } else {
+              videoCard.style.background = '';
+            }
+          });
+          
+          selectsContainer.appendChild(videoCard);
+        });
       } catch (error) {
         console.error('Error loading video order options:', error);
-        selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center;">Error loading videos</p>';
+        selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center; grid-column: 1/-1;">Error loading videos</p>';
       }
     };
+    
+    /**
+     * Update video order status display
+     */
+    function updateVideoOrderStatus() {
+      const statusCount = document.getElementById('videoOrderCount');
+      const statusList = document.getElementById('videoOrderList');
+      
+      if (!videoOrder) {
+        videoOrder = Array.from({ length: 6 }, (_, i) => ({ segmentIndex: i, videoName: '' }));
+      }
+      
+      const selectedCount = videoOrder.filter(item => item.videoName).length;
+      
+      if (statusCount) {
+        statusCount.textContent = selectedCount;
+      }
+      
+      if (statusList) {
+        const selectedVideos = videoOrder
+          .map((item, index) => item.videoName ? `${index + 1}. ${item.videoName}` : null)
+          .filter(Boolean);
+        
+        if (selectedVideos.length > 0) {
+          statusList.textContent = selectedVideos.join(' • ');
+        } else {
+          statusList.textContent = 'Click videos to assign them to segments 1-6';
+        }
+      }
+    }
     
     /**
      * Load video thumbnail helper function
@@ -3014,6 +3059,9 @@
       // Check if all segments have videos selected
       const allSelected = videoOrder.every(item => item.videoName);
       console.log(`✅ Video order updated: ${allSelected ? 'All segments selected' : 'Some segments missing'}`);
+      
+      // Update status display
+      updateVideoOrderStatus();
     };
 
     /**
