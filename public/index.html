@@ -6172,6 +6172,9 @@
               // Function to set thumbnail as background
               const setThumbnailBackground = (imageUrl) => {
                 videoCard.style.backgroundImage = `url('${imageUrl}')`;
+                videoCard.style.backgroundSize = 'cover';
+                videoCard.style.backgroundPosition = 'center';
+                videoCard.style.backgroundRepeat = 'no-repeat';
               };
               
               // For images, use the URL directly as background
@@ -6184,6 +6187,7 @@
                 tempVideo.muted = true;
                 tempVideo.playsInline = true;
                 tempVideo.preload = 'metadata';
+                tempVideo.crossOrigin = 'anonymous';
                 tempVideo.style.display = 'none';
                 
                 tempVideo.addEventListener('loadedmetadata', () => {
@@ -6202,7 +6206,9 @@
                     tempVideo.remove();
                   } catch (error) {
                     console.error('Error capturing video frame:', error);
-                    // Fallback: use a placeholder or the video URL
+                    // Fallback: try using video element as poster
+                    setThumbnailBackground(video.publicUrl);
+                    tempVideo.remove();
                   }
                 });
                 
@@ -6214,10 +6220,8 @@
                 document.body.appendChild(tempVideo);
               }
               
-              // Add overlay to card before setting innerHTML
-              videoCard.appendChild(overlay);
-              
-              videoCard.innerHTML += `
+              // Set innerHTML first
+              videoCard.innerHTML = `
                 <div style="position: relative; width: 100%; aspect-ratio: 1; cursor: pointer; overflow: hidden;" onclick="window.open('${escapedUrl}', '_blank')">
                   ${isVideo ? `
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; opacity: 0.8; transition: opacity 0.3s; z-index: 2;">
@@ -6268,6 +6272,9 @@
                   </div>
                 </div>
               `;
+              
+              // Add overlay after innerHTML is set
+              videoCard.appendChild(overlay);
               
               // Store video data on the card element for deletion
               videoCard.dataset.videoName = video.name;
