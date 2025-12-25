@@ -6299,6 +6299,307 @@
       }
     }
 
+    // Atomic Asset functionality
+    let atomicVideos = [];
+    
+    /**
+     * Load completed videos for atomic asset conversion
+     */
+    window.loadAtomicVideos = async function() {
+      const grid = document.getElementById('atomicVideosGrid');
+      const loading = document.getElementById('atomicVideosLoading');
+      const empty = document.getElementById('atomicVideosEmpty');
+      
+      if (!grid) return;
+      
+      loading.style.display = 'block';
+      empty.style.display = 'none';
+      grid.innerHTML = '';
+      
+      try {
+        const response = await fetch('/api/videos');
+        const data = await response.json();
+        
+        if (data.success && data.videos) {
+          // Filter only completed videos
+          atomicVideos = data.videos.filter(v => v.status === 'completed' && v.videoUrl);
+          
+          loading.style.display = 'none';
+          
+          if (atomicVideos.length === 0) {
+            empty.style.display = 'block';
+            return;
+          }
+          
+          // Display videos
+          atomicVideos.forEach(video => {
+            // Check if video is already an atomic asset
+            const videoMetadata = video.metadata || {};
+            const isAtomic = videoMetadata.atomicAsset === true || video.atomicAsset === true;
+            const arweaveUrl = videoMetadata.arweaveUrl || video.arweaveUrl || null;
+            
+            const videoCard = document.createElement('div');
+            videoCard.className = 'folder-card-item';
+            videoCard.style.cursor = 'pointer';
+            videoCard.style.position = 'relative';
+            videoCard.style.aspectRatio = '1';
+            videoCard.style.overflow = 'hidden';
+            videoCard.dataset.jobId = video.jobId || video.videoId;
+            
+            // Create thumbnail container
+            const thumbnailContainer = document.createElement('div');
+            thumbnailContainer.style.width = '100%';
+            thumbnailContainer.style.height = '100%';
+            thumbnailContainer.style.position = 'relative';
+            thumbnailContainer.style.overflow = 'hidden';
+            thumbnailContainer.style.backgroundColor = '#0a0a0a';
+            
+            // Video thumbnail
+            if (video.videoUrl) {
+              const videoElement = document.createElement('video');
+              videoElement.style.width = '100%';
+              videoElement.style.height = '100%';
+              videoElement.style.objectFit = 'cover';
+              videoElement.style.display = 'block';
+              videoElement.style.pointerEvents = 'none';
+              videoElement.muted = true;
+              videoElement.playsInline = true;
+              videoElement.preload = 'metadata';
+              videoElement.src = video.videoUrl;
+              videoElement.onloadedmetadata = () => {
+                videoElement.currentTime = 1;
+              };
+              thumbnailContainer.appendChild(videoElement);
+            }
+            
+            // Atomic asset badge
+            if (isAtomic) {
+              const badge = document.createElement('div');
+              badge.style.position = 'absolute';
+              badge.style.top = '0.5rem';
+              badge.style.left = '0.5rem';
+              badge.style.padding = '0.25rem 0.5rem';
+              badge.style.backgroundColor = 'rgba(16, 185, 129, 0.9)';
+              badge.style.color = '#fff';
+              badge.style.fontSize = '0.7rem';
+              badge.style.fontWeight = 'bold';
+              badge.style.borderRadius = '4px';
+              badge.style.zIndex = '10';
+              badge.textContent = 'ATOMIC';
+              thumbnailContainer.appendChild(badge);
+            }
+            
+            videoCard.appendChild(thumbnailContainer);
+            
+            // Click handler
+            videoCard.addEventListener('click', () => {
+              if (isAtomic && arweaveUrl) {
+                // Already atomic - show info or open Arweave link
+                if (confirm('This video is already an atomic asset. Open Arweave transaction?')) {
+                  window.open(arweaveUrl, '_blank');
+                }
+              } else {
+                // Show metadata form
+                showAtomicMetadataForm(video);
+              }
+            });
+            
+            // Hover effect
+            videoCard.addEventListener('mouseenter', () => {
+              videoCard.style.background = 'rgba(255, 255, 255, 0.05)';
+            });
+            videoCard.addEventListener('mouseleave', () => {
+              videoCard.style.background = '';
+            });
+            
+            grid.appendChild(videoCard);
+          });
+        } else {
+          throw new Error(data.error || 'Failed to load videos');
+        }
+      } catch (error) {
+        console.error('Error loading atomic videos:', error);
+        loading.style.display = 'none';
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #ef4444;">Error: ${error.message}</div>`;
+      }
+    };
+    
+    /**
+     * Show metadata editing form for atomic asset conversion
+     */
+    window.showAtomicMetadataForm = function(video) {
+      const jobId = video.jobId || video.videoId;
+      const artist = video.artist || 'Unknown';
+      const mixTitle = video.mixTitle || 'Untitled';
+      const duration = video.duration || 30;
+      const videoUrl = video.videoUrl;
+      
+      // Create modal
+      const modal = document.createElement('div');
+      modal.id = 'atomicMetadataModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 1rem;
+      `;
+      
+      modal.innerHTML = `
+        <div style="background: #1a1a1a; border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 1.5rem; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.25rem; margin: 0;">
+              Convert to Atomic Asset
+            </h2>
+            <button onclick="document.getElementById('atomicMetadataModal').remove()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
+          </div>
+          
+          ${videoUrl ? `
+            <div style="margin-bottom: 1rem; aspect-ratio: 1; background: #0a0a0a; border-radius: 8px; overflow: hidden;">
+              <video src="${videoUrl}" style="width: 100%; height: 100%; object-fit: cover;" muted playsinline preload="metadata" onloadedmetadata="this.currentTime=1"></video>
+            </div>
+          ` : ''}
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem; margin-bottom: 0.5rem;">
+              Title *
+            </label>
+            <input 
+              type="text" 
+              id="atomicTitle" 
+              value="${mixTitle}"
+              style="width: 100%; padding: 0.75rem; background: #0a0a0a; border: 2px solid var(--color-yellow-75); border-radius: 8px; color: #fff; font-family: var(--font-mathias); font-size: 0.875rem;"
+              required
+            />
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem; margin-bottom: 0.5rem;">
+              Description
+            </label>
+            <textarea 
+              id="atomicDescription" 
+              rows="3"
+              style="width: 100%; padding: 0.75rem; background: #0a0a0a; border: 2px solid var(--color-yellow-75); border-radius: 8px; color: #fff; font-family: var(--font-mathias); font-size: 0.875rem; resize: vertical;"
+              placeholder="Generated video for ${artist}"
+            >Generated video for ${artist}</textarea>
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem; margin-bottom: 0.5rem;">
+              Collection
+            </label>
+            <input 
+              type="text" 
+              id="atomicCollection" 
+              value="GeneratedVideos"
+              style="width: 100%; padding: 0.75rem; background: #0a0a0a; border: 2px solid var(--color-yellow-75); border-radius: 8px; color: #fff; font-family: var(--font-mathias); font-size: 0.875rem;"
+            />
+          </div>
+          
+          <div style="margin-bottom: 1.5rem; padding: 0.75rem; background: rgba(255, 255, 0, 0.05); border: 1px solid var(--color-yellow-75); border-radius: 8px;">
+            <div style="color: #888; font-family: var(--font-mathias); font-size: 0.75rem; margin-bottom: 0.25rem;">Artist: <span style="color: var(--color-yellow-75);">${artist}</span></div>
+            <div style="color: #888; font-family: var(--font-mathias); font-size: 0.75rem; margin-bottom: 0.25rem;">Duration: <span style="color: var(--color-yellow-75);">${duration}s</span></div>
+            <div style="color: #888; font-family: var(--font-mathias); font-size: 0.75rem;">Resolution: <span style="color: var(--color-yellow-75);">720x720</span></div>
+          </div>
+          
+          <div style="display: flex; gap: 0.75rem;">
+            <button 
+              onclick="document.getElementById('atomicMetadataModal').remove()"
+              style="flex: 1; padding: 0.75rem; background: transparent; border: 2px solid var(--color-yellow-75); border-radius: 8px; color: var(--color-yellow-75); font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+            >
+              Cancel
+            </button>
+            <button 
+              onclick="convertToAtomicAsset('${jobId}')"
+              id="atomicConvertBtn"
+              style="flex: 1; padding: 0.75rem; background: var(--color-yellow-75); border: none; border-radius: 8px; color: black; font-family: var(--font-mathias); font-weight: bold; cursor: pointer; font-size: 0.875rem;"
+            >
+              Convert to Atomic Asset
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+    };
+    
+    /**
+     * Convert video to atomic asset
+     */
+    window.convertToAtomicAsset = async function(jobId) {
+      const titleInput = document.getElementById('atomicTitle');
+      const descriptionInput = document.getElementById('atomicDescription');
+      const collectionInput = document.getElementById('atomicCollection');
+      const convertBtn = document.getElementById('atomicConvertBtn');
+      const modal = document.getElementById('atomicMetadataModal');
+      
+      if (!titleInput || !titleInput.value.trim()) {
+        alert('Title is required');
+        return;
+      }
+      
+      const metadata = {
+        title: titleInput.value.trim(),
+        description: descriptionInput?.value?.trim() || '',
+        collection: collectionInput?.value?.trim() || 'GeneratedVideos'
+      };
+      
+      // Disable button and show loading
+      convertBtn.disabled = true;
+      convertBtn.textContent = 'Converting...';
+      convertBtn.style.opacity = '0.6';
+      convertBtn.style.cursor = 'not-allowed';
+      
+      try {
+        const response = await fetch('/api/videos?action=create-atomic-asset', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            jobId: jobId,
+            metadata: metadata
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Show success message
+          alert(`✅ Video successfully converted to atomic asset!\n\nTransaction ID: ${data.transactionId}\n\nClick OK to view on Arweave.`);
+          
+          // Open Arweave transaction
+          window.open(data.arweaveUrl, '_blank');
+          
+          // Close modal
+          if (modal) modal.remove();
+          
+          // Reload videos
+          if (typeof window.loadAtomicVideos === 'function') {
+            window.loadAtomicVideos();
+          }
+        } else {
+          throw new Error(data.error || 'Conversion failed');
+        }
+      } catch (error) {
+        console.error('Error converting to atomic asset:', error);
+        alert(`❌ Failed to convert video: ${error.message}`);
+        
+        // Re-enable button
+        convertBtn.disabled = false;
+        convertBtn.textContent = 'Convert to Atomic Asset';
+        convertBtn.style.opacity = '1';
+        convertBtn.style.cursor = 'pointer';
+      }
+    };
+
     // Archive functionality
     let archiveAvailableFolders = [];
     let archiveSelectedFolder = null;
