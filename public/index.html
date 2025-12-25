@@ -108,6 +108,13 @@
           setTimeout(() => {
             if (typeof window.loadFolders === 'function') window.loadFolders();
           }, 100);
+        } else if (sectionId === 'atomicSection') {
+          setTimeout(() => {
+            if (typeof window.loadAtomicVideos === 'function') {
+              console.log('[toggleCollapsible] Loading atomic videos...');
+              window.loadAtomicVideos();
+            }
+          }, 100);
         }
       }
     };
