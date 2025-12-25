@@ -7060,22 +7060,44 @@
           thumbnailContainer.appendChild(img);
         } else if (isVideo && file.publicUrl) {
           const vid = document.createElement('video');
-          vid.src = file.publicUrl;
           vid.muted = true;
           vid.playsInline = true;
           vid.preload = 'metadata';
-          vid.crossOrigin = 'anonymous';
           vid.style.cssText = `
             width: 100%;
             height: 100%;
             object-fit: cover;
             display: block;
           `;
+          
+          // Use proxy endpoint to avoid CORS issues
+          try {
+            const encodedUrl = encodeURIComponent(file.publicUrl);
+            vid.src = `/api/videos?download=true&videoUrl=${encodedUrl}`;
+          } catch (e) {
+            console.warn('[archiveRenderFiles] Failed to encode URL, using direct:', e);
+            vid.src = file.publicUrl;
+          }
+          
           vid.onloadedmetadata = () => {
             vid.currentTime = 0.1;
           };
-          vid.onerror = () => {
+          vid.onerror = (e) => {
+            console.error('[archiveRenderFiles] Video thumbnail failed to load:', file.publicUrl, e);
             vid.style.display = 'none';
+            const placeholder = document.createElement('div');
+            placeholder.style.cssText = `
+              width: 100%;
+              height: 100%;
+              background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: #666;
+              font-size: 0.7rem;
+            `;
+            placeholder.textContent = 'Video';
+            thumbnailContainer.appendChild(placeholder);
           };
           thumbnailContainer.appendChild(vid);
         }
