@@ -6555,16 +6555,29 @@
       grid.innerHTML = '';
       
       try {
+        console.log('[loadAtomicVideos] Fetching videos from /api/videos...');
         const response = await fetch('/api/videos');
         const data = await response.json();
         
+        console.log('[loadAtomicVideos] API response:', { success: data.success, videoCount: data.videos?.length || 0 });
+        
         if (data.success && data.videos) {
           // Filter only completed videos
-          atomicVideos = data.videos.filter(v => v.status === 'completed' && v.videoUrl);
+          atomicVideos = data.videos.filter(v => {
+            const hasStatus = v.status === 'completed';
+            const hasVideoUrl = !!v.videoUrl;
+            if (!hasStatus || !hasVideoUrl) {
+              console.log(`[loadAtomicVideos] Filtered out video: ${v.jobId || v.videoId} - status: ${v.status}, hasVideoUrl: ${hasVideoUrl}`);
+            }
+            return hasStatus && hasVideoUrl;
+          });
+          
+          console.log(`[loadAtomicVideos] Found ${atomicVideos.length} completed videos with videoUrl`);
           
           loading.style.display = 'none';
           
           if (atomicVideos.length === 0) {
+            console.log('[loadAtomicVideos] No completed videos found, showing empty message');
             empty.style.display = 'block';
             return;
           }
