@@ -102,7 +102,10 @@ export default async function handler(req, res) {
         videoUrl: videoUrl,
         status: status,
         createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString(),
-        completedAt: data.completedAt?.toDate?.()?.toISOString() || data.completedAt || null
+        completedAt: data.completedAt?.toDate?.()?.toISOString() || data.completedAt || null,
+        metadata: data.metadata || {},
+        atomicAsset: data.metadata?.atomicAsset || false,
+        arweaveUrl: data.metadata?.arweaveUrl || null
       };
       
       // Log completed videos for debugging
