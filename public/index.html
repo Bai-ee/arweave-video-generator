@@ -6605,7 +6605,7 @@
             thumbnailContainer.style.overflow = 'hidden';
             thumbnailContainer.style.backgroundColor = '#0a0a0a';
             
-            // Video thumbnail
+            // Video thumbnail - use proxy to avoid CORS issues
             if (video.videoUrl) {
               const videoElement = document.createElement('video');
               videoElement.style.width = '100%';
@@ -6616,9 +6616,37 @@
               videoElement.muted = true;
               videoElement.playsInline = true;
               videoElement.preload = 'metadata';
-              videoElement.src = video.videoUrl;
+              
+              // Use proxy endpoint to avoid CORS issues
+              try {
+                const encodedUrl = encodeURIComponent(video.videoUrl);
+                videoElement.src = `/api/videos?download=true&videoUrl=${encodedUrl}`;
+              } catch (e) {
+                // Fallback to direct URL if encoding fails
+                console.warn('[loadAtomicVideos] Failed to encode URL, using direct:', e);
+                videoElement.src = video.videoUrl;
+              }
+              
               videoElement.onloadedmetadata = () => {
-                videoElement.currentTime = 1;
+                videoElement.currentTime = 0.1;
+              };
+              videoElement.onerror = (e) => {
+                console.error('[loadAtomicVideos] Video thumbnail failed to load:', video.videoUrl, e);
+                // Show placeholder on error
+                videoElement.style.display = 'none';
+                const placeholder = document.createElement('div');
+                placeholder.style.cssText = `
+                  width: 100%;
+                  height: 100%;
+                  background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: #666;
+                  font-size: 0.7rem;
+                `;
+                placeholder.textContent = 'Video';
+                thumbnailContainer.appendChild(placeholder);
               };
               thumbnailContainer.appendChild(videoElement);
             }
