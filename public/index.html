@@ -6099,6 +6099,7 @@
           data.folders.forEach(folder => {
             const folderCard = document.createElement('div');
             folderCard.className = 'folder-card-item';
+            folderCard.dataset.folderName = folder.name;
             folderCard.onclick = () => openFolder(folder.name);
             
             folderCard.innerHTML = `
@@ -6126,6 +6127,18 @@
      */
     window.openFolder = async function(folderName) {
       currentFolder = folderName;
+      
+      // Update active folder state
+      const allFolderCards = document.querySelectorAll('#foldersGrid .folder-card-item');
+      allFolderCards.forEach(card => {
+        if (card.dataset.folderName === folderName) {
+          card.style.border = '3px solid var(--color-yellow-75)';
+          card.style.background = 'rgba(230, 233, 224, 0.15)';
+        } else {
+          card.style.border = '';
+          card.style.background = '';
+        }
+      });
       
       const folderListView = document.getElementById('folderListView');
       const folderDetailView = document.getElementById('folderDetailView');
@@ -6167,19 +6180,26 @@
           } else {
             // SET GRID STYLES FIRST - BEFORE ADDING CARDS
             const isMobile = window.innerWidth <= 640;
-            videosGrid.style.display = 'grid';
-            videosGrid.style.width = '100%';
-            videosGrid.style.boxSizing = 'border-box';
+            console.log('[openFolder] Setting grid styles, isMobile:', isMobile, 'width:', window.innerWidth);
             
-            if (isMobile) {
-              videosGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
-              videosGrid.style.gap = '0.75rem';
-              videosGrid.style.padding = '0.5rem';
-            } else {
-              videosGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(220px, 1fr))';
-              videosGrid.style.gap = '1rem';
-              videosGrid.style.padding = '';
-            }
+            // Force grid display and layout
+            videosGrid.setAttribute('style', '');
+            videosGrid.style.cssText = `
+              display: grid !important;
+              width: 100% !important;
+              box-sizing: border-box !important;
+              ${isMobile ? `
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.75rem !important;
+                padding: 0.5rem !important;
+              ` : `
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+                gap: 1rem !important;
+                padding: 0 !important;
+              `}
+            `;
+            
+            console.log('[openFolder] Grid styles applied:', videosGrid.style.cssText);
             
             data.videos.forEach(video => {
               const videoCard = document.createElement('div');
@@ -6321,8 +6341,31 @@
               // CHECKBOX - TOP LEFT - MUST BE VISIBLE
               const checkbox = document.createElement('input');
               checkbox.type = 'checkbox';
+              checkbox.id = `checkbox-${video.name.replace(/[^a-zA-Z0-9]/g, '-')}`;
               checkbox.setAttribute('aria-label', 'Select file');
-              checkbox.style.cssText = `
+              
+              // Set styles directly on element
+              checkbox.style.position = 'absolute';
+              checkbox.style.top = '0.5rem';
+              checkbox.style.left = '0.5rem';
+              checkbox.style.width = '32px';
+              checkbox.style.height = '32px';
+              checkbox.style.zIndex = '999';
+              checkbox.style.cursor = 'pointer';
+              checkbox.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+              checkbox.style.border = '3px solid var(--color-yellow-75)';
+              checkbox.style.borderRadius = '4px';
+              checkbox.style.padding = '0';
+              checkbox.style.margin = '0';
+              checkbox.style.opacity = '1';
+              checkbox.style.visibility = 'visible';
+              checkbox.style.display = 'block';
+              checkbox.style.webkitAppearance = 'checkbox';
+              checkbox.style.appearance = 'checkbox';
+              checkbox.style.accentColor = 'var(--color-yellow-75)';
+              
+              // Also set via cssText as backup
+              checkbox.style.cssText += `
                 position: absolute !important;
                 top: 0.5rem !important;
                 left: 0.5rem !important;
@@ -6342,6 +6385,9 @@
                 appearance: checkbox !important;
                 accent-color: var(--color-yellow-75) !important;
               `;
+              
+              console.log('[openFolder] Checkbox created for:', video.name, checkbox.style.cssText);
+              
               checkbox.onclick = (e) => {
                 e.stopPropagation();
                 toggleVideoSelection(videoCard, video.name);
@@ -6437,7 +6483,20 @@
               
               videoCard.dataset.videoFullPath = video.fullPath;
               videosGrid.appendChild(videoCard);
+              
+              console.log('[openFolder] Card appended, grid columns:', videosGrid.style.gridTemplateColumns);
             });
+            
+            // Force grid layout one more time after all cards are added
+            setTimeout(() => {
+              const isMobileCheck = window.innerWidth <= 640;
+              if (isMobileCheck) {
+                videosGrid.style.setProperty('grid-template-columns', 'repeat(2, 1fr)', 'important');
+                videosGrid.style.setProperty('gap', '0.75rem', 'important');
+                videosGrid.style.setProperty('padding', '0.5rem', 'important');
+              }
+              console.log('[openFolder] Final grid check - columns:', videosGrid.style.gridTemplateColumns, 'computed:', window.getComputedStyle(videosGrid).gridTemplateColumns);
+            }, 100);
           }
         } else {
           throw new Error(data.error || 'Failed to load videos');
@@ -6453,6 +6512,14 @@
      */
     window.backToFolders = function() {
       currentFolder = null;
+      
+      // Reset active folder state
+      const allFolderCards = document.querySelectorAll('#foldersGrid .folder-card-item');
+      allFolderCards.forEach(card => {
+        card.style.border = '';
+        card.style.background = '';
+      });
+      
       const folderListView = document.getElementById('folderListView');
       const folderDetailView = document.getElementById('folderDetailView');
       

@@ -1218,19 +1218,20 @@ textarea {
     overflow: hidden !important;
   }
   
-  /* Mobile: 2 columns for videos grid - matching folder selection UI */
+  /* Mobile: 2 columns for videos grid - matching folder selection UI - AGGRESSIVE OVERRIDE */
   #videosGrid {
     display: grid !important;
     width: 100% !important;
     box-sizing: border-box !important;
-  }
-  
-  #videosGrid[style],
-  #videosGrid {
     padding: 0.5rem !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.75rem !important;
     max-width: 100% !important;
+  }
+  
+  /* Override any inline styles */
+  #videosGrid[style*="grid-template-columns"] {
+    grid-template-columns: repeat(2, 1fr) !important;
   }
   
   /* Ensure video cards are sized correctly for 2-column layout */
