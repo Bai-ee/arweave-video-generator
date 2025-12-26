@@ -6318,21 +6318,25 @@
               // Checkbox for multi-select - top left (visible and prominent)
               const checkbox = document.createElement('input');
               checkbox.type = 'checkbox';
+              checkbox.setAttribute('aria-label', 'Select file for deletion');
               checkbox.style.cssText = `
                 position: absolute;
                 top: 0.5rem;
                 left: 0.5rem;
                 width: 32px;
                 height: 32px;
-                z-index: 15;
+                z-index: 20;
                 cursor: pointer;
                 accent-color: var(--color-yellow-75);
-                background: rgba(0, 0, 0, 0.8);
+                background: rgba(0, 0, 0, 0.9);
                 border: 2px solid var(--color-yellow-75);
                 border-radius: 4px;
                 padding: 0;
                 margin: 0;
                 flex-shrink: 0;
+                opacity: 1;
+                visibility: visible;
+                display: block;
               `;
               checkbox.onclick = (e) => {
                 e.stopPropagation();

@@ -1218,6 +1218,7 @@ textarea {
     overflow: hidden !important;
   }
   
+  /* Mobile: 2 columns for videos grid - matching folder selection UI */
   #videosGrid {
     padding: 0.5rem !important;
     grid-template-columns: repeat(2, 1fr) !important;
@@ -1225,6 +1226,12 @@ textarea {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+  }
+  
+  /* Ensure video cards are sized correctly for 2-column layout */
+  #videosGrid .folder-card-item {
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
   
   /* Folder checkboxes - 2 column grid on mobile */
