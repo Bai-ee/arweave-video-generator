@@ -6322,14 +6322,17 @@
                 position: absolute;
                 top: 0.5rem;
                 left: 0.5rem;
-                width: 28px;
-                height: 28px;
+                width: 32px;
+                height: 32px;
                 z-index: 15;
                 cursor: pointer;
                 accent-color: var(--color-yellow-75);
-                background: rgba(0, 0, 0, 0.7);
+                background: rgba(0, 0, 0, 0.8);
+                border: 2px solid var(--color-yellow-75);
                 border-radius: 4px;
-                padding: 2px;
+                padding: 0;
+                margin: 0;
+                flex-shrink: 0;
               `;
               checkbox.onclick = (e) => {
                 e.stopPropagation();
