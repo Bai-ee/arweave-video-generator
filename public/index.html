@@ -315,51 +315,9 @@
                               Delete Selected (<span id="manageSelectedCount">0</span>)
                             </button>
                           </div>
-                          <div id="videosGrid" style="display: grid; width: 100%;">
+                          <div id="videosGrid">
                             <!-- Videos will be populated here -->
                           </div>
-                          <style>
-                            /* Force 2 columns on mobile - must override inline styles */
-                            @media (max-width: 640px) {
-                              #videosGrid[style] {
-                                grid-template-columns: repeat(2, 1fr) !important;
-                                gap: 0.75rem !important;
-                                min-width: 0 !important;
-                                padding: 0.5rem !important;
-                              }
-                              #videosGrid {
-                                grid-template-columns: repeat(2, 1fr) !important;
-                                gap: 0.75rem !important;
-                                min-width: 0 !important;
-                                padding: 0.5rem !important;
-                              }
-                              #videosGrid > * {
-                                min-width: 0 !important;
-                                max-width: 100% !important;
-                                width: 100% !important;
-                                box-sizing: border-box !important;
-                              }
-                              /* Ensure checkboxes are visible on mobile - highest priority */
-                              #videosGrid .folder-card-item input[type="checkbox"],
-                              #videosGrid input[type="checkbox"] {
-                                display: block !important;
-                                visibility: visible !important;
-                                opacity: 1 !important;
-                                z-index: 999 !important;
-                                position: absolute !important;
-                                top: 0.5rem !important;
-                                left: 0.5rem !important;
-                                width: 32px !important;
-                                height: 32px !important;
-                                background: rgba(0, 0, 0, 0.9) !important;
-                                border: 2px solid var(--color-yellow-75) !important;
-                                border-radius: 4px !important;
-                                cursor: pointer !important;
-                                -webkit-appearance: checkbox !important;
-                                appearance: checkbox !important;
-                              }
-                            }
-                          </style>
                           <div id="videosLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
                             Loading videos...
                           </div>
@@ -6164,7 +6122,7 @@
     }
 
     /**
-     * Open a folder to view its videos
+     * Open a folder to view its videos - COMPLETELY REBUILT
      */
     window.openFolder = async function(folderName) {
       currentFolder = folderName;
@@ -6187,17 +6145,6 @@
       videosLoading.style.display = 'block';
       videosEmpty.style.display = 'none';
       
-      // Force 2-column layout on mobile
-      if (window.innerWidth <= 640) {
-        videosGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
-        videosGrid.style.gap = '0.75rem';
-        videosGrid.style.padding = '0.5rem';
-      } else {
-        videosGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(220px, 1fr))';
-        videosGrid.style.gap = '1rem';
-        videosGrid.style.padding = '';
-      }
-      
       // Reset selection state
       const deleteBtn = document.getElementById('manageDeleteSelectedBtn');
       if (deleteBtn) {
@@ -6218,6 +6165,22 @@
           if (data.videos.length === 0) {
             videosEmpty.style.display = 'block';
           } else {
+            // SET GRID STYLES FIRST - BEFORE ADDING CARDS
+            const isMobile = window.innerWidth <= 640;
+            videosGrid.style.display = 'grid';
+            videosGrid.style.width = '100%';
+            videosGrid.style.boxSizing = 'border-box';
+            
+            if (isMobile) {
+              videosGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+              videosGrid.style.gap = '0.75rem';
+              videosGrid.style.padding = '0.5rem';
+            } else {
+              videosGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(220px, 1fr))';
+              videosGrid.style.gap = '1rem';
+              videosGrid.style.padding = '';
+            }
+            
             data.videos.forEach(video => {
               const videoCard = document.createElement('div');
               
@@ -6227,27 +6190,19 @@
               const isVideo = fileName.endsWith('.mp4') || fileName.endsWith('.webm') || fileName.endsWith('.mov') || fileName.endsWith('.avi');
               
               const fileSizeMB = (video.size / (1024 * 1024)).toFixed(2);
-              const updatedDate = video.updated ? new Date(video.updated).toLocaleDateString() : 'Unknown';
               
-              // Escape quotes in URLs and names for onclick handlers
-              const escapedUrl = video.publicUrl.replace(/'/g, "\\'");
-              const escapedName = video.name.replace(/'/g, "\\'");
-              const escapedFullPath = video.fullPath.replace(/'/g, "\\'");
-              
-              // Detect mobile for button label
-              const isMobile = isMobileDevice();
-              const downloadLabel = isMobile ? 'SAVE/COPY' : 'Download';
-              
-              // Card container - styled exactly like folder-card-item
+              // Card container - use folder-card-item class
               videoCard.className = 'folder-card-item';
               videoCard.dataset.videoName = video.name;
               videoCard.dataset.selected = 'false';
-              // Base styles matching folder-card-item
               videoCard.style.cssText = `
                 position: relative;
                 aspect-ratio: 1;
                 overflow: hidden;
                 cursor: pointer;
+                min-width: 0;
+                max-width: 100%;
+                width: 100%;
               `;
               
               // Thumbnail container (background)
@@ -6275,11 +6230,7 @@
                   background: #0a0a0a;
                 `;
                 img.onerror = () => {
-                  console.error('Failed to load image thumbnail:', video.publicUrl);
                   img.style.display = 'none';
-                };
-                img.onload = () => {
-                  console.log('Image thumbnail loaded:', video.name);
                 };
                 thumbnailContainer.appendChild(img);
               } else if (isVideo) {
@@ -6295,24 +6246,17 @@
                   background: #0a0a0a;
                 `;
                 
-                // Use proxy endpoint to avoid CORS issues
                 try {
                   const encodedUrl = encodeURIComponent(video.publicUrl);
                   vid.src = `/api/videos?download=true&videoUrl=${encodedUrl}`;
                 } catch (e) {
-                  console.warn('[openFolder] Failed to encode URL, using direct:', e);
                   vid.src = video.publicUrl;
                 }
                 
                 vid.onloadedmetadata = () => {
                   vid.currentTime = 0.1;
-                  console.log('Video metadata loaded, seeking to first frame:', video.name);
                 };
-                vid.onseeked = () => {
-                  console.log('Video seeked to first frame:', video.name);
-                };
-                vid.onerror = (e) => {
-                  console.error('[openFolder] Failed to load video thumbnail:', video.publicUrl, e);
+                vid.onerror = () => {
                   vid.style.display = 'none';
                   const placeholder = document.createElement('div');
                   placeholder.style.cssText = `
@@ -6330,7 +6274,6 @@
                 };
                 thumbnailContainer.appendChild(vid);
               } else {
-                // Fallback for unknown file types
                 const placeholder = document.createElement('div');
                 placeholder.style.cssText = `
                   width: 100%;
@@ -6346,7 +6289,7 @@
                 thumbnailContainer.appendChild(placeholder);
               }
               
-              // Gradient overlay for text readability (lighter to show thumbnails)
+              // Gradient overlay
               const overlay = document.createElement('div');
               overlay.style.cssText = `
                 position: absolute;
@@ -6358,9 +6301,8 @@
                 z-index: 1;
                 pointer-events: none;
               `;
-              // Ensure overlay doesn't block checkbox or delete button
               
-              // Content container - positioned absolutely over thumbnail
+              // Content container
               const contentContainer = document.createElement('div');
               contentContainer.style.cssText = `
                 position: relative;
@@ -6376,28 +6318,29 @@
                 text-align: center;
               `;
               
-              // Checkbox for multi-select - top left (visible and prominent)
+              // CHECKBOX - TOP LEFT - MUST BE VISIBLE
               const checkbox = document.createElement('input');
               checkbox.type = 'checkbox';
-              checkbox.setAttribute('aria-label', 'Select file for deletion');
+              checkbox.setAttribute('aria-label', 'Select file');
               checkbox.style.cssText = `
-                position: absolute;
-                top: 0.5rem;
-                left: 0.5rem;
-                width: 32px;
-                height: 32px;
-                z-index: 20;
-                cursor: pointer;
-                accent-color: var(--color-yellow-75);
-                background: rgba(0, 0, 0, 0.9);
-                border: 2px solid var(--color-yellow-75);
-                border-radius: 4px;
-                padding: 0;
-                margin: 0;
-                flex-shrink: 0;
-                opacity: 1;
-                visibility: visible;
-                display: block;
+                position: absolute !important;
+                top: 0.5rem !important;
+                left: 0.5rem !important;
+                width: 32px !important;
+                height: 32px !important;
+                z-index: 999 !important;
+                cursor: pointer !important;
+                background: rgba(0, 0, 0, 0.9) !important;
+                border: 3px solid var(--color-yellow-75) !important;
+                border-radius: 4px !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                display: block !important;
+                -webkit-appearance: checkbox !important;
+                appearance: checkbox !important;
+                accent-color: var(--color-yellow-75) !important;
               `;
               checkbox.onclick = (e) => {
                 e.stopPropagation();
@@ -6432,7 +6375,7 @@
                 padding: 0;
               `;
               
-              // File name - styled like folder name
+              // File name
               const fileNameDiv = document.createElement('div');
               fileNameDiv.className = 'folder-name';
               fileNameDiv.textContent = video.name;
@@ -6451,7 +6394,7 @@
                 -webkit-box-orient: vertical;
               `;
               
-              // File size - styled like folder count
+              // File size
               const fileSizeDiv = document.createElement('div');
               fileSizeDiv.className = 'folder-count';
               fileSizeDiv.textContent = `${fileSizeMB} MB`;
@@ -6462,7 +6405,7 @@
                 text-shadow: 0 1px 3px rgba(0,0,0,0.8);
               `;
               
-              // Assemble card - simple like folder cards
+              // Assemble card
               contentContainer.appendChild(checkbox);
               contentContainer.appendChild(deleteBtn);
               contentContainer.appendChild(fileNameDiv);
@@ -6472,16 +6415,15 @@
               videoCard.appendChild(overlay);
               videoCard.appendChild(contentContainer);
               
-              // Click handler for card - toggle selection instead of opening
+              // Click handler
               videoCard.onclick = (e) => {
-                // Don't toggle if clicking on buttons or checkbox
                 if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') {
                   return;
                 }
                 toggleVideoSelection(videoCard, video.name);
               };
               
-              // Hover effects - match folder-card-item behavior
+              // Hover effects
               videoCard.onmouseenter = () => {
                 if (videoCard.dataset.selected === 'false') {
                   overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.6) 100%)';
@@ -6493,22 +6435,9 @@
                 }
               };
               
-              // Store video data
               videoCard.dataset.videoFullPath = video.fullPath;
-              
               videosGrid.appendChild(videoCard);
             });
-            
-            // Force update grid layout after all videos are appended (especially for mobile)
-            if (window.innerWidth <= 640) {
-              videosGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
-              videosGrid.style.gap = '0.75rem';
-              videosGrid.style.padding = '0.5rem';
-            } else {
-              videosGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(220px, 1fr))';
-              videosGrid.style.gap = '1rem';
-              videosGrid.style.padding = '';
-            }
           }
         } else {
           throw new Error(data.error || 'Failed to load videos');

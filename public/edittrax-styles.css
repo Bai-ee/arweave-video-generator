@@ -1219,20 +1219,45 @@ textarea {
   }
   
   /* Mobile: 2 columns for videos grid - matching folder selection UI */
+  #videosGrid {
+    display: grid !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
   #videosGrid[style],
   #videosGrid {
     padding: 0.5rem !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.75rem !important;
-    width: 100% !important;
     max-width: 100% !important;
-    box-sizing: border-box !important;
   }
   
   /* Ensure video cards are sized correctly for 2-column layout */
   #videosGrid .folder-card-item {
     min-width: 0 !important;
     max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  /* Ensure checkboxes are ALWAYS visible */
+  #videosGrid .folder-card-item input[type="checkbox"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 999 !important;
+    position: absolute !important;
+    top: 0.5rem !important;
+    left: 0.5rem !important;
+    width: 32px !important;
+    height: 32px !important;
+    background: rgba(0, 0, 0, 0.9) !important;
+    border: 3px solid var(--color-yellow-75) !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    -webkit-appearance: checkbox !important;
+    appearance: checkbox !important;
+    accent-color: var(--color-yellow-75) !important;
   }
   
   /* Folder checkboxes - 2 column grid on mobile */
