@@ -302,9 +302,30 @@
                           </button>
                         </div>
                         <div style="padding: 1.5rem;">
+                          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem;">
+                              <button onclick="manageSelectAllFiles()" class="btn-base btn-secondary" style="padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;">
+                                Select All
+                              </button>
+                              <button onclick="manageDeselectAllFiles()" class="btn-base btn-secondary" style="padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer;">
+                                Deselect All
+                              </button>
+                            </div>
+                            <button id="manageDeleteSelectedBtn" onclick="manageDeleteSelectedFiles()" class="btn-base btn-secondary" style="padding: 0.5rem 1rem; border-radius: 10px; background: transparent; color: #ef4444; border: 2px solid #ef4444; font-family: var(--font-mathias); font-size: 0.75rem; cursor: pointer; display: none;">
+                              Delete Selected (<span id="manageSelectedCount">0</span>)
+                            </button>
+                          </div>
                           <div id="videosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; width: 100%;">
                             <!-- Videos will be populated here -->
                           </div>
+                          <style>
+                            @media (max-width: 640px) {
+                              #videosGrid {
+                                grid-template-columns: repeat(2, 1fr) !important;
+                                gap: 0.5rem !important;
+                              }
+                            }
+                          </style>
                           <div id="videosLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75);">
                             Loading videos...
                           </div>
@@ -6116,6 +6137,16 @@
       videosLoading.style.display = 'block';
       videosEmpty.style.display = 'none';
       
+      // Reset selection state
+      const deleteBtn = document.getElementById('manageDeleteSelectedBtn');
+      if (deleteBtn) {
+        deleteBtn.style.display = 'none';
+      }
+      const countSpan = document.getElementById('manageSelectedCount');
+      if (countSpan) {
+        countSpan.textContent = '0';
+      }
+      
       try {
         const response = await fetch(`/api/video-folders?folder=${encodeURIComponent(folderName)}`);
         const data = await response.json();
@@ -6148,6 +6179,8 @@
               
               // Card container - square format, mobile-friendly
               videoCard.className = 'folder-card-item';
+              videoCard.dataset.videoName = video.name;
+              videoCard.dataset.selected = 'false';
               videoCard.style.cssText = `
                 position: relative;
                 aspect-ratio: 1;
@@ -6280,6 +6313,24 @@
                 z-index: 2;
                 box-sizing: border-box;
               `;
+              
+              // Checkbox for multi-select
+              const checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                left: 0.5rem;
+                width: 24px;
+                height: 24px;
+                z-index: 10;
+                cursor: pointer;
+                accent-color: var(--color-yellow-75);
+              `;
+              checkbox.onclick = (e) => {
+                e.stopPropagation();
+                toggleVideoSelection(videoCard, video.name);
+              };
               
               // Delete button
               const deleteBtn = document.createElement('button');
@@ -6434,6 +6485,7 @@
               buttonsContainer.appendChild(linkBtn);
               buttonsContainer.appendChild(deleteActionBtn);
               
+              contentContainer.appendChild(checkbox);
               contentContainer.appendChild(deleteBtn);
               contentContainer.appendChild(fileNameDiv);
               contentContainer.appendChild(fileInfoDiv);
@@ -6443,25 +6495,32 @@
               videoCard.appendChild(overlay);
               videoCard.appendChild(contentContainer);
               
-              // Click handler for card
-              videoCard.onclick = () => {
-                window.open(video.publicUrl, '_blank');
+              // Click handler for card - toggle selection instead of opening
+              videoCard.onclick = (e) => {
+                // Don't toggle if clicking on buttons or checkbox
+                if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') {
+                  return;
+                }
+                toggleVideoSelection(videoCard, video.name);
               };
               
               // Hover effects
               videoCard.onmouseenter = () => {
-                videoCard.style.transform = 'scale(1.02)';
-                videoCard.style.borderColor = '#fff';
-                overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.6) 100%)';
+                if (videoCard.dataset.selected === 'false') {
+                  videoCard.style.transform = 'scale(1.02)';
+                  videoCard.style.borderColor = '#fff';
+                  overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.6) 100%)';
+                }
               };
               videoCard.onmouseleave = () => {
-                videoCard.style.transform = 'scale(1)';
-                videoCard.style.borderColor = 'var(--color-yellow-75)';
-                overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.7) 100%)';
+                if (videoCard.dataset.selected === 'false') {
+                  videoCard.style.transform = 'scale(1)';
+                  videoCard.style.borderColor = 'var(--color-yellow-75)';
+                  overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.7) 100%)';
+                }
               };
               
               // Store video data
-              videoCard.dataset.videoName = video.name;
               videoCard.dataset.videoFullPath = video.fullPath;
               
               videosGrid.appendChild(videoCard);
@@ -6505,6 +6564,179 @@
     }
 
     /**
+     * Toggle video selection for multi-delete
+     */
+    window.toggleVideoSelection = function(videoCard, videoName) {
+      const isSelected = videoCard.dataset.selected === 'true';
+      const checkbox = videoCard.querySelector('input[type="checkbox"]');
+      
+      if (isSelected) {
+        videoCard.dataset.selected = 'false';
+        videoCard.style.borderColor = 'var(--color-yellow-75)';
+        videoCard.style.background = '#0a0a0a';
+        videoCard.style.opacity = '1';
+        if (checkbox) checkbox.checked = false;
+      } else {
+        videoCard.dataset.selected = 'true';
+        videoCard.style.borderColor = '#10b981';
+        videoCard.style.background = 'rgba(16, 185, 129, 0.2)';
+        videoCard.style.opacity = '1';
+        if (checkbox) checkbox.checked = true;
+      }
+      
+      updateManageDeleteButton();
+    }
+
+    /**
+     * Update the delete selected button visibility and count
+     */
+    function updateManageDeleteButton() {
+      const videosGrid = document.getElementById('videosGrid');
+      const deleteBtn = document.getElementById('manageDeleteSelectedBtn');
+      const countSpan = document.getElementById('manageSelectedCount');
+      
+      if (!videosGrid || !deleteBtn || !countSpan) return;
+      
+      const selectedCards = Array.from(videosGrid.querySelectorAll('[data-video-name][data-selected="true"]'));
+      const count = selectedCards.length;
+      
+      if (count > 0) {
+        deleteBtn.style.display = 'block';
+        countSpan.textContent = count;
+      } else {
+        deleteBtn.style.display = 'none';
+      }
+    }
+
+    /**
+     * Select all files in manage section
+     */
+    window.manageSelectAllFiles = function() {
+      const videosGrid = document.getElementById('videosGrid');
+      if (!videosGrid) return;
+      
+      const videoCards = Array.from(videosGrid.querySelectorAll('[data-video-name]'));
+      videoCards.forEach(card => {
+        if (card.dataset.selected === 'false') {
+          const videoName = card.dataset.videoName;
+          toggleVideoSelection(card, videoName);
+        }
+      });
+    }
+
+    /**
+     * Deselect all files in manage section
+     */
+    window.manageDeselectAllFiles = function() {
+      const videosGrid = document.getElementById('videosGrid');
+      if (!videosGrid) return;
+      
+      const videoCards = Array.from(videosGrid.querySelectorAll('[data-video-name][data-selected="true"]'));
+      videoCards.forEach(card => {
+        const videoName = card.dataset.videoName;
+        toggleVideoSelection(card, videoName);
+      });
+    }
+
+    /**
+     * Delete all selected files
+     */
+    window.manageDeleteSelectedFiles = async function() {
+      const videosGrid = document.getElementById('videosGrid');
+      if (!videosGrid) return;
+      
+      const selectedCards = Array.from(videosGrid.querySelectorAll('[data-video-name][data-selected="true"]'));
+      const count = selectedCards.length;
+      
+      if (count === 0) {
+        showToast('No files selected', 'error');
+        return;
+      }
+      
+      const fileNames = selectedCards.map(card => card.dataset.videoName);
+      const fileList = fileNames.map(name => `  • ${name}`).join('\n');
+      
+      if (!confirm(`Are you sure you want to delete ${count} file${count !== 1 ? 's' : ''}?\n\n${fileList}\n\nThis action cannot be undone.`)) {
+        return;
+      }
+      
+      // Disable buttons during deletion
+      const deleteBtn = document.getElementById('manageDeleteSelectedBtn');
+      const selectAllBtn = document.querySelector('button[onclick="manageSelectAllFiles()"]');
+      const deselectAllBtn = document.querySelector('button[onclick="manageDeselectAllFiles()"]');
+      
+      if (deleteBtn) deleteBtn.disabled = true;
+      if (selectAllBtn) selectAllBtn.disabled = true;
+      if (deselectAllBtn) deselectAllBtn.disabled = true;
+      
+      try {
+        let successCount = 0;
+        let failCount = 0;
+        
+        // Delete files sequentially to avoid overwhelming the server
+        for (const fileName of fileNames) {
+          try {
+            const response = await fetch(`/api/delete-video?folder=${encodeURIComponent(currentFolder)}&file=${encodeURIComponent(fileName)}`, {
+              method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+              successCount++;
+              // Remove card from UI
+              const cardToRemove = selectedCards.find(card => card.dataset.videoName === fileName);
+              if (cardToRemove) {
+                cardToRemove.style.opacity = '0';
+                cardToRemove.style.transition = 'opacity 0.3s';
+                setTimeout(() => {
+                  cardToRemove.remove();
+                  updateManageDeleteButton();
+                  
+                  // Check if grid is empty
+                  if (videosGrid.children.length === 0) {
+                    const videosEmpty = document.getElementById('videosEmpty');
+                    if (videosEmpty) videosEmpty.style.display = 'block';
+                  }
+                }, 300);
+              }
+            } else {
+              failCount++;
+              console.error(`Failed to delete ${fileName}:`, data.error);
+            }
+          } catch (error) {
+            failCount++;
+            console.error(`Error deleting ${fileName}:`, error);
+          }
+        }
+        
+        // Show results
+        if (successCount > 0) {
+          showToast(`Successfully deleted ${successCount} file${successCount !== 1 ? 's' : ''}${failCount > 0 ? ` (${failCount} failed)` : ''}`, 'success');
+        } else {
+          showToast(`Failed to delete files: ${failCount} error${failCount !== 1 ? 's' : ''}`, 'error');
+        }
+        
+        // Reload folders to update counts
+        setTimeout(() => {
+          loadFolders();
+          if (currentFolder) {
+            openFolder(currentFolder);
+          }
+        }, 500);
+        
+      } catch (error) {
+        console.error('Error in bulk delete:', error);
+        showToast(`Error deleting files: ${error.message}`, 'error');
+      } finally {
+        // Re-enable buttons
+        if (deleteBtn) deleteBtn.disabled = false;
+        if (selectAllBtn) selectAllBtn.disabled = false;
+        if (deselectAllBtn) deselectAllBtn.disabled = false;
+      }
+    }
+
+    /**
      * Delete a video from Firebase Storage and UI
      */
     window.deleteVideo = async function(folderName, fileName) {
@@ -6532,6 +6764,7 @@
             cardToRemove.style.transition = 'opacity 0.3s';
             setTimeout(() => {
               cardToRemove.remove();
+              updateManageDeleteButton();
               
               // Check if grid is empty
               if (videosGrid.children.length === 0) {
