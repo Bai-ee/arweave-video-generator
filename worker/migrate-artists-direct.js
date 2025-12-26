@@ -48,3 +48,4 @@ console.log('   - Update Firebase with the complete artist list');
 
 
 
+

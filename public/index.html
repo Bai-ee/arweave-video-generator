@@ -319,10 +319,38 @@
                             <!-- Videos will be populated here -->
                           </div>
                           <style>
+                            /* Force 2 columns on mobile - must override inline styles */
                             @media (max-width: 640px) {
                               #videosGrid {
                                 grid-template-columns: repeat(2, 1fr) !important;
                                 gap: 0.75rem !important;
+                                min-width: 0 !important;
+                                padding: 0.5rem !important;
+                              }
+                              #videosGrid > * {
+                                min-width: 0 !important;
+                                max-width: 100% !important;
+                                width: 100% !important;
+                                box-sizing: border-box !important;
+                              }
+                              /* Ensure checkboxes are visible on mobile - highest priority */
+                              #videosGrid .folder-card-item input[type="checkbox"],
+                              #videosGrid input[type="checkbox"] {
+                                display: block !important;
+                                visibility: visible !important;
+                                opacity: 1 !important;
+                                z-index: 999 !important;
+                                position: absolute !important;
+                                top: 0.5rem !important;
+                                left: 0.5rem !important;
+                                width: 32px !important;
+                                height: 32px !important;
+                                background: rgba(0, 0, 0, 0.9) !important;
+                                border: 2px solid var(--color-yellow-75) !important;
+                                border-radius: 4px !important;
+                                cursor: pointer !important;
+                                -webkit-appearance: checkbox !important;
+                                appearance: checkbox !important;
                               }
                             }
                           </style>
@@ -772,7 +800,7 @@
               <div>
                 <div style="font-family: var(--font-mathias); font-weight: bold; line-height: 1.2; font-size: 1.8rem;">ATOMIC</div>
                 <div style="font-family: var(--font-body); font-size: 0.45rem; margin-top: 0.15rem;">Assets</div>
-              </div>
+        </div>
               <span class="chevron">▸</span>
             </button>
             <div id="atomicSection" class="collapsible-body">
@@ -1571,6 +1599,22 @@
       loadStorageUsage(); // Load storage usage on page load
       loadFirestoreUsage(); // Load Firestore usage on page load
       // loadFolders is now lazy-loaded when upload section is opened
+      
+      // Handle window resize to update videosGrid layout
+      window.addEventListener('resize', () => {
+        const videosGrid = document.getElementById('videosGrid');
+        if (videosGrid && videosGrid.children.length > 0) {
+          if (window.innerWidth <= 640) {
+            videosGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+            videosGrid.style.gap = '0.75rem';
+            videosGrid.style.padding = '0.5rem';
+          } else {
+            videosGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(220px, 1fr))';
+            videosGrid.style.gap = '1rem';
+            videosGrid.style.padding = '';
+          }
+        }
+      });
       
       // Pre-select mixes as default audio source for one-click generation
       setTimeout(() => {
@@ -2635,7 +2679,7 @@
                   selectedDisplay.textContent = 'No media selected';
                   selectedDisplay.style.color = '#888';
                 }
-              } else {
+        } else {
                 // Remove selected from all other cards
                 const allCards = mediaGrid.querySelectorAll('.folder-card-item');
                 allCards.forEach(card => {
@@ -6136,6 +6180,17 @@
       videosGrid.innerHTML = '';
       videosLoading.style.display = 'block';
       videosEmpty.style.display = 'none';
+      
+      // Force 2-column layout on mobile
+      if (window.innerWidth <= 640) {
+        videosGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        videosGrid.style.gap = '0.75rem';
+        videosGrid.style.padding = '0.5rem';
+      } else {
+        videosGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(220px, 1fr))';
+        videosGrid.style.gap = '1rem';
+        videosGrid.style.padding = '';
+      }
       
       // Reset selection state
       const deleteBtn = document.getElementById('manageDeleteSelectedBtn');
