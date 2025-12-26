@@ -1158,10 +1158,14 @@ textarea {
     box-sizing: border-box !important;
   }
 
-  /* Fix archive files container grid - single column on mobile */
+  /* Fix archive files container grid - 2 columns on mobile to match manage section */
   #archiveFilesContainer {
-    grid-template-columns: 1fr !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.75rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   /* Fix archive folders container grid - 2 columns on mobile */

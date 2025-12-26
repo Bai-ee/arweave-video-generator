@@ -693,7 +693,7 @@
                     </button>
                   </div>
                 </div>
-                <div id="archiveFilesContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; width: 100%; max-height: 500px; overflow-y: auto;">
+                <div id="archiveFilesContainer">
                   <!-- Files will be populated here -->
                 </div>
                 <div id="archiveFilesLoading" style="text-align: center; padding: 2rem; color: var(--color-yellow-75); display: none;">
@@ -7211,6 +7211,11 @@
       const container = document.getElementById('archiveFilesContainer');
       if (!container) return;
       container.innerHTML = '';
+      
+      // Ensure grid display is set (let CSS handle the columns)
+      container.style.display = 'grid';
+      container.style.width = '100%';
+      container.style.boxSizing = 'border-box';
 
       archiveFolderFiles.forEach(file => {
         const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
