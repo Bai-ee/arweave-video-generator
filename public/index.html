@@ -315,12 +315,18 @@
                               Delete Selected (<span id="manageSelectedCount">0</span>)
                             </button>
                           </div>
-                          <div id="videosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; width: 100%;">
+                          <div id="videosGrid" style="display: grid; width: 100%;">
                             <!-- Videos will be populated here -->
                           </div>
                           <style>
                             /* Force 2 columns on mobile - must override inline styles */
                             @media (max-width: 640px) {
+                              #videosGrid[style] {
+                                grid-template-columns: repeat(2, 1fr) !important;
+                                gap: 0.75rem !important;
+                                min-width: 0 !important;
+                                padding: 0.5rem !important;
+                              }
                               #videosGrid {
                                 grid-template-columns: repeat(2, 1fr) !important;
                                 gap: 0.75rem !important;
@@ -6492,6 +6498,17 @@
               
               videosGrid.appendChild(videoCard);
             });
+            
+            // Force update grid layout after all videos are appended (especially for mobile)
+            if (window.innerWidth <= 640) {
+              videosGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+              videosGrid.style.gap = '0.75rem';
+              videosGrid.style.padding = '0.5rem';
+            } else {
+              videosGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(220px, 1fr))';
+              videosGrid.style.gap = '1rem';
+              videosGrid.style.padding = '';
+            }
           }
         } else {
           throw new Error(data.error || 'Failed to load videos');

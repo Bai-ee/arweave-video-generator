@@ -1219,6 +1219,7 @@ textarea {
   }
   
   /* Mobile: 2 columns for videos grid - matching folder selection UI */
+  #videosGrid[style],
   #videosGrid {
     padding: 0.5rem !important;
     grid-template-columns: repeat(2, 1fr) !important;
