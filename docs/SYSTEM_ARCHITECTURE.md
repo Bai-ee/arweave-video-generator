@@ -10,7 +10,7 @@ The Arweave Video Generator is a production-ready system that creates branded mu
 - **Backend API**: Vercel Serverless Functions (Node.js)
 - **Video Processing**: GitHub Actions (runs FFmpeg)
 - **Storage**: Firebase Storage (videos, images, assets)
-- **Database**: Firestore (job tracking, metadata)
+- **Database**: Firestore (job tracking, metadata, system/artists doc)
 - **Audio Source**: Arweave decentralized storage
 - **Archive Storage**: Arweave (via ArDrive Turbo SDK)
 - **Video Processing**: FFmpeg (segment extraction, concatenation, composition)
@@ -39,6 +39,12 @@ The Arweave Video Generator is a production-ready system that creates branded mu
 │  │  - /api/video-folders           │ │
 │  │  - /api/upload-video             │ │
 │  │  - /api/archive-upload           │ │
+│  │  - /api/upload                  │ │
+│  │  - /api/deploy-website           │ │
+│  │  - /api/usage                    │ │
+│  │  - /api/delete-video             │ │
+│  │  - /api/manage-artists           │ │
+│  │  - /api/artists                  │ │
 │  └─────────────────────────────────┘ │
 └────────┬─────────────────────────────┘
          │
@@ -52,6 +58,7 @@ The Arweave Video Generator is a production-ready system that creates branded mu
 │  │  - videos collection           │ │
 │  │  - archiveJobs collection      │ │
 │  │  - archiveManifest collection   │ │
+│  │  - system/ artists document    │ │
 │  └───────────────────────────────┘ │
 │  ┌───────────────────────────────┐ │
 │  │  Firebase Storage (Files)     │ │
@@ -106,20 +113,17 @@ The Arweave Video Generator is a production-ready system that creates branded mu
 - Triggers GitHub Actions workflow via webhook (optional)
 - Returns job ID immediately (async processing)
 
-#### `video-status.js`
-- Polls job status from Firestore
-- Returns current status (pending/processing/completed/failed)
-
 #### `videos.js`
 - Lists all generated videos
-- Aggregates data from `videoJobs` and `videos` collections
+- Returns job status for `/api/video-status`
+- Handles download proxy and atomic asset creation
 
 #### `video-folders.js`
 - **Dynamically discovers** all folders in Firebase Storage (no hardcoded list)
 - Returns folder counts and file lists
 - Generates signed URLs for video access (CORS-compliant)
 - Supports any user-created folders (e.g., 'rositas', 'retro_dust', 'noise')
-- Excludes only: `logos`, `paper_backgrounds`, `mixes/Baiee` (exact matches)
+- Excludes exact matches: `logos`, `paper_backgrounds`, `mixes`, `mixes/baiee`, `mixes/bai-ee`, `videos`
 
 #### `upload-video.js`
 - Optimizes videos uploaded to Firebase Storage
@@ -258,7 +262,6 @@ The Arweave Video Generator is a production-ready system that creates branded mu
 arweave-video-generator/
 ├── api/                    # Vercel serverless functions
 │   ├── generate-video.js
-│   ├── video-status.js
 │   ├── videos.js
 │   ├── video-folders.js
 │   ├── upload-video.js
@@ -475,5 +478,3 @@ Firebase Storage:
 **Implementation**:
 - GitHub Actions workflow installs FFmpeg via `apt-get`
 - Code detects `GITHUB_ACTIONS` environment and uses system FFmpeg
-
-

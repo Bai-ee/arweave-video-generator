@@ -28,13 +28,16 @@ Creates a video generation job in Firestore. Processing happens asynchronously v
   "mixTitle": "Live at Podlasie",
   "selectedFolders": ["rositas", "skyline", "neighborhood"],
   "useTrax": false,
-  "videoFilter": "look_hard_bw_street_doc",
-  "filterIntensity": 0.8,
+  "videoFilter": null,
+  "filterIntensity": 0.4,
   "enableOverlay": true,
   "overlayEffect": null,
   "topLogo": null,
   "endLogo": null,
-  "useArtistImage": true
+  "useArtistImage": true,
+  "customEndMedia": null,
+  "endTextOverlay": null,
+  "videoOrder": null
 }
 ```
 
@@ -44,19 +47,23 @@ Creates a video generation job in Firestore. Processing happens asynchronously v
 - `mixTitle` (string, optional): Specific mix title (for MIXES mode). If provided, uses this specific mix instead of random selection. Default: null (random)
 - `selectedFolders` (array, required): Array of folder names. Must have at least one folder.
 - `useTrax` (boolean, optional): true for ORIGINAL TRACKS, false for DJ MIXES. Default: false
-- `videoFilter` (string, optional): Filter key from VIDEO_FILTERS. Default: 'look_hard_bw_street_doc'
-- `filterIntensity` (number, optional): Filter intensity 0.0-1.0. Default: 0.8
+- `videoFilter` (string, optional): Filter key from VIDEO_FILTERS or null. Default: null
+- `filterIntensity` (number, optional): Filter intensity 0.0-1.0. Default: 0.4
 - `enableOverlay` (boolean, optional): Enable overlay effects. Default: true
 - `overlayEffect` (string, optional): Overlay effect name ('analog_film', 'gritt', 'noise', 'retro_dust') or null for random. Default: null
 - `topLogo` (string, optional): Top logo filename from logos/ folder or null for default (ue_barcode_black.png). Default: null
 - `endLogo` (string, optional): End logo filename from logos/ folder or null for default (ue_square.png). Default: null
 - `useArtistImage` (boolean, optional): Use artist thumbnail as last 2 segments (5th & 6th). When enabled, uses 4 video segments + 2 artist image segments. When disabled, uses 6 video segments. Default: true
+- `customEndMedia` (object, optional): Custom end media selection for the final segment. Shape: `{ folder, fileName, fullPath, type }`.
+- `endTextOverlay` (string, optional): Text overlay used when no artist image is used.
+- `videoOrder` (array, optional): Only for a single selected folder; array of 6 items `{ segmentIndex, videoName }`.
 
 **Validation**:
 - `selectedFolders` must be an array with at least one folder
 - Folder names must be valid: lowercase, alphanumeric, hyphens, underscores, forward slashes
-- Excludes exact matches: `logos`, `paper_backgrounds`, `mixes`, `mixes/baiee`, `mixes/bai-ee`
+- Excludes exact matches: `logos`, `paper_backgrounds`, `mixes`, `mixes/baiee`, `mixes/bai-ee`, `videos`
 - **Allows**: Any other folder, including user-created folders like 'rositas', 'retro_dust', 'noise', 'grit'
+- `videoOrder` can only be used when exactly one folder is selected and must contain 6 items with sequential `segmentIndex` values
 
 **Response** (200):
 ```json
@@ -84,7 +91,8 @@ Creates a video generation job in Firestore. Processing happens asynchronously v
 
 Lists all generated videos from both `videoJobs` and `videos` collections.
 
-**Query Parameters**: None
+**Query Parameters**:
+- `limit` (number, optional): Max videos returned (default: 50)
 
 **Response** (200):
 ```json
@@ -148,6 +156,60 @@ Gets status of a specific video generation job.
 
 ---
 
+#### `GET /api/videos?download=true&videoUrl={url}` (or `videoUrlB64`)
+
+Proxies a Firebase Storage video URL for downloads (used for iOS/desktop download flow).
+
+**Query Parameters**:
+- `download` (string, required): Must be `true`
+- `videoUrl` (string, optional): URL-encoded Firebase Storage URL
+- `videoUrlB64` (string, optional): Base64-encoded URL (preferred for signed URLs)
+- `filename` (string, optional): Suggested download filename (default: `video.mp4`)
+
+**Response**: Binary file stream with `Content-Disposition: attachment`.
+
+**Implementation**: `api/videos.js`
+
+---
+
+#### `POST /api/videos?action=create-atomic-asset`
+
+Converts a completed video job into an Arweave atomic asset (ANS-110).
+
+**Request Body**:
+```json
+{
+  "jobId": "job-id",
+  "metadata": {
+    "title": "My Video Title",
+    "description": "Optional description",
+    "collection": "GeneratedVideos"
+  }
+}
+```
+
+**Requirements**:
+- `jobId` must exist and be `completed`
+- `metadata.title` is required
+- Env vars: `ARWEAVE_WALLET_JWK`, `ARWEAVE_WALLET_ADDRESS`, `ATOMIC_ASSET_CONTRACT_SRC`
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "transactionId": "arweave-tx-id",
+  "arweaveUrl": "https://arweave.net/...",
+  "turboUrl": "https://turbo.ardrive.io/...",
+  "fileName": "video_job-id.mp4",
+  "fileSize": 12345678,
+  "metadata": { "Title": "My Video Title" }
+}
+```
+
+**Implementation**: `api/videos.js`
+
+---
+
 ### Folder Management
 
 #### `GET /api/video-folders`
@@ -186,7 +248,7 @@ Lists all available folders in Firebase Storage (dynamically discovered).
 **Key Features**:
 - **Dynamic Discovery**: Discovers all folders by listing files (no hardcoded list)
 - **Supports New Folders**: Any user-created folder automatically appears
-- **Excludes**: Only `logos`, `paper_backgrounds`, `mixes/Baiee` (exact matches)
+- **Excludes**: `logos`, `paper_backgrounds`, `mixes`, `mixes/baiee`, `mixes/bai-ee`, `videos` (exact matches)
 
 **Implementation**: `api/video-folders.js`
 
@@ -339,7 +401,17 @@ Gets both Storage and Firestore usage.
 
 Deploys website to Arweave and updates ArNS record.
 
-**Request Body**: None (no parameters needed)
+**Request Body** (optional):
+```json
+{
+  "websiteDir": "website",
+  "updateOnly": false
+}
+```
+
+**Notes**:
+- `websiteDir` can be a relative or absolute path.
+- `updateOnly: true` will sync artists + regenerate HTML without deploying (local only; blocked in Vercel production).
 
 **Response** (200):
 ```json
@@ -369,6 +441,17 @@ Deploys website to Arweave and updates ArNS record.
 - Non-blocking: deployment succeeds even if ArNS update fails
 - Uses `lib/ArNSUpdater.js`
 - Propagation time: 5-60 minutes
+
+**Implementation**: `api/deploy-website.js`
+
+---
+
+#### `GET /api/deploy-website`
+
+Returns a cost estimate for the next deployment (after syncing artists and regenerating pages).
+
+**Query Parameters**:
+- `websiteDir` (string, optional): Path to website directory (default: `website`)
 
 **Implementation**: `api/deploy-website.js`
 
@@ -530,7 +613,11 @@ Deletes a video from Firebase Storage.
 
 #### `GET /api/artists`
 
-Lists all artists from Firestore.
+Lists all artists from Firestore (`system/artists` document) or local fallback data.
+
+**Query Parameters**:
+- `artist` (string, optional): If provided, returns mixes for a specific artist
+- `includeMixes` (string, optional): `true` to include mixes (also implied by `artist`)
 
 **Response** (200):
 ```json
@@ -538,15 +625,11 @@ Lists all artists from Firestore.
   "success": true,
   "artists": [
     {
-      "artistName": "TYREL WILLIAMS",
-      "artistFilename": "tyrel.html",
-      "mixes": [
-        {
-          "mixTitle": "Live at Podlasie",
-          "mixArweaveURL": "https://arweave.net/...",
-          "duration": 7200
-        }
-      ]
+      "name": "TYREL WILLIAMS",
+      "genre": "Electronic",
+      "mixCount": 12,
+      "trackCount": 3,
+      "imageUrl": "https://arweave.net/..."
     }
   ],
   "count": 15
@@ -564,14 +647,20 @@ Creates or updates artists in Firestore.
 **Request Body**:
 ```json
 {
-  "action": "create",
+  "action": "addMix",
   "artistName": "New Artist",
-  "artistImage": "base64-encoded-image",
-  "mixes": [...]
+  "mixUrl": "https://arweave.net/...",
+  "mixTitle": "Live at Podlasie",
+  "mixDateYear": "2025",
+  "mixDuration": "60:00",
+  "mixImageFilename": ""
 }
 ```
 
-**Actions**: `create`, `update`, `delete`
+**Actions**:
+- `addMix`: adds a mix entry
+- `addTrack`: adds a track entry
+- `updateArtist`: updates artist fields (currently `artistGenre`)
 
 **Implementation**: `api/manage-artists.js`
 
@@ -583,7 +672,17 @@ Creates or updates artists in Firestore.
 
 General file upload handler for artist images and media files.
 
-**Request**: Multipart form data
+**Request**:
+- Multipart form data (legacy)
+- JSON body with `firebasePath` for Firebase-to-Arweave uploads
+
+**Implementation**: `api/upload.js`
+
+---
+
+#### `GET /api/upload?fileSize={bytes}`
+
+Returns an Arweave cost estimate for a file size.
 
 **Implementation**: `api/upload.js`
 
@@ -592,6 +691,8 @@ General file upload handler for artist images and media files.
 #### `POST /api/migrate-image-urls`
 
 Migrates image URLs in Firestore to Arweave URLs.
+
+**Note**: This handler is not routed in `vercel.json` by default; use as a one-off migration or add a route if needed.
 
 **Implementation**: `api/migrate-image-urls.js`
 
@@ -659,21 +760,17 @@ res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
 Configured in `vercel.json`:
 - `generate-video.js`: 10 seconds
-- `videos.js`: 5 seconds
+- `videos.js`: 60 seconds
 - `upload-video.js`: 60 seconds
+- `artists.js`: 5 seconds
+- `video-folders.js`: 10 seconds
+- `delete-video.js`: 10 seconds
 - `archive-upload.js`: 120 seconds
+- `upload.js`: 300 seconds
+- `manage-artists.js`: 60 seconds
 - `deploy-website.js`: 300 seconds (5 minutes)
 - `usage.js`: 10 seconds
 
 ---
 
 **Last Updated**: December 2025
-
-
-
-
-
-
-
-
-

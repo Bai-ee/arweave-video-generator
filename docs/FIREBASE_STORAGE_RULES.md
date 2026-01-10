@@ -6,7 +6,9 @@ The storage rules allow:
 - **Public read access** to all files
 - **Public write access** to specific folders with restrictions:
   - File size limit: 500MB
-  - Content type: Must be video/*
+  - Content type: video/* for standard video folders
+  - Content type: audio/* or image/* for mixes
+  - Content type: video/* or image/* for dynamically created folders (excluding restricted folders)
 
 ## Allowed Upload Folders
 
@@ -18,6 +20,8 @@ The storage rules allow:
 - `neighborhood/`
 - `user-uploads/` (legacy)
 - `chicago-skyline-videos/` (for video generator)
+- `mixes/{artistName}/` (audio/* and image/* for mix assets)
+- `{folderName}/` (dynamic folders for video/* or image/*, excluding `logos`, `paper_backgrounds`, `assets`)
 
 ## Deploying Rules
 
@@ -43,9 +47,10 @@ firebase deploy --only storage
 
 ## Security Notes
 
-- Rules allow public writes to specific folders
-- File size is limited to 500MB
-- Only video files are allowed
+- Rules allow public writes to specific folders and to dynamically created folders
+- File size is limited to 500MB for all allowed uploads
+- Video folders allow `video/*`; mixes allow `audio/*` and `image/*`; dynamic folders allow `video/*` and `image/*`
+- Writes to `assets/**` are explicitly denied
 - All files are publicly readable (for easy sharing)
 
 If you need more security, consider:
@@ -53,6 +58,5 @@ If you need more security, consider:
 - Adding file name validation
 - Adding rate limiting
 - Restricting by IP or domain
-
 
 

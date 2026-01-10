@@ -19,6 +19,11 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.3",
+    "vercel": "^38.0.0"
+  },
+  "scripts": {
+    "dev": "vercel dev --listen 3003",
+    "start": "vercel dev --listen 3003"
   }
 }

@@ -46,6 +46,26 @@ class ArweaveVideoGenerator {
         fs.ensureDirSync(this.cacheDir);
     }
 
+    hashSeed(input) {
+        const text = String(input || '');
+        let hash = 2166136261;
+        for (let i = 0; i < text.length; i++) {
+            hash ^= text.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+    }
+
+    createSeededRandom(seedText) {
+        let state = this.hashSeed(seedText);
+        return () => {
+            state = (state + 0x6D2B79F5) | 0;
+            let t = Math.imul(state ^ (state >>> 15), 1 | state);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
     /**
      * Generate a simple but effective Chicago skyline background image
      * Uses basic FFmpeg commands to ensure reliability
@@ -320,6 +340,7 @@ class ArweaveVideoGenerator {
     async generateVideoWithAudio(options = {}, existingAudioResult = null) {
         // Store overlay opacity from options for use in layer creation
         this.currentOverlayOpacity = options.overlayOpacity !== undefined ? options.overlayOpacity : 0.5;
+        const explain = process.env.VIDEO_EXPLAIN === 'true';
         const {
             duration = 30,
             artist = null,
@@ -348,6 +369,20 @@ class ArweaveVideoGenerator {
 
         try {
             let audioResult;
+            const audioSeedPayload = {
+                artist,
+                mixTitle,
+                prompt,
+                duration,
+                fadeIn,
+                fadeOut,
+                useTrax,
+                selectedFolders: Array.isArray(selectedFolders) ? [...selectedFolders].sort() : [],
+                videoOrder: videoOrder || null
+            };
+            const audioSeed = JSON.stringify(audioSeedPayload);
+            const audioRandom = this.createSeededRandom(audioSeed);
+            this.audioClient.setRandom(audioRandom);
             
             // Step 1: Use existing audio or generate new audio clip
             if (existingAudioResult) {
@@ -375,6 +410,44 @@ class ArweaveVideoGenerator {
             const audioMixTitle = audioResult.mixTitle || audioResult.trackTitle || 'Unknown';
             const audioDuration = audioResult.duration;
             const audioArweaveUrl = audioResult.arweaveUrl;
+
+            const deterministicSeedPayload = {
+                artist: audioArtist,
+                mixTitle: audioMixTitle,
+                duration,
+                width,
+                height,
+                fadeIn,
+                fadeOut,
+                videoFilter: videoFilter ? `${videoFilter.substring(0, 120)}` : null,
+                useTrax,
+                selectedFolders: Array.isArray(selectedFolders) ? [...selectedFolders].sort() : [],
+                enableOverlay,
+                overlayEffect,
+                topLogo,
+                endLogo,
+                useArtistImage,
+                customEndMedia: customEndMedia
+                    ? {
+                        folder: customEndMedia.folder || null,
+                        fileName: customEndMedia.fileName || null,
+                        fullPath: customEndMedia.fullPath || null,
+                        type: customEndMedia.type || null
+                    }
+                    : null,
+                endTextOverlay,
+                videoOrder: videoOrder || null,
+                audioArweaveUrl: audioArweaveUrl || null
+            };
+
+            const deterministicSeed = JSON.stringify(deterministicSeedPayload);
+            const deterministicRandom = this.createSeededRandom(deterministicSeed);
+            this.segmentCompositor.setRandom(deterministicRandom);
+
+            if (explain) {
+                console.log('[ArweaveVideoGenerator] Explain mode seed payload:', deterministicSeedPayload);
+                console.log('[ArweaveVideoGenerator] Explain mode seed hash:', this.hashSeed(deterministicSeed));
+            }
 
             // Step 2: Create 30-second video from 5-second segments
             console.log('[ArweaveVideoGenerator] Step 2: Creating video from segments...');
@@ -423,7 +496,7 @@ class ArweaveVideoGenerator {
                             
                             // Pick a random thumbnail from the array (or first if only one)
                             if (thumbnails.length > 0) {
-                                const selectedThumbnail = thumbnails[Math.floor(Math.random() * thumbnails.length)];
+                                const selectedThumbnail = thumbnails[Math.floor(deterministicRandom() * thumbnails.length)];
                                 // Only use Arweave URLs (starts with http and contains arweave.net)
                                 if (selectedThumbnail.startsWith('http') && selectedThumbnail.includes('arweave.net')) {
                                     artistImageUrl = selectedThumbnail;
@@ -559,7 +632,7 @@ class ArweaveVideoGenerator {
                             
                             // Pick a random thumbnail from the array (or first if only one)
                             if (thumbnails.length > 0) {
-                                const selectedThumbnail = thumbnails[Math.floor(Math.random() * thumbnails.length)];
+                                const selectedThumbnail = thumbnails[Math.floor(deterministicRandom() * thumbnails.length)];
                                 // Only use Arweave URLs (starts with http and contains arweave.net)
                                 if (selectedThumbnail.startsWith('http') && selectedThumbnail.includes('arweave.net')) {
                                     endMediaUrl = selectedThumbnail;
@@ -795,9 +868,33 @@ class ArweaveVideoGenerator {
                 
                 console.log(`[ArweaveVideoGenerator] 📥 Available overlay asset folders: ${OVERLAY_ASSET_FOLDERS.join(', ')}`);
                 
-                // Select ONE random folder for this video
-                const selectedFolderPath = OVERLAY_ASSET_FOLDERS[Math.floor(Math.random() * OVERLAY_ASSET_FOLDERS.length)];
-                console.log(`[ArweaveVideoGenerator] 🎲 Selected overlay folder: ${selectedFolderPath}`);
+                const overlayEffectMap = {
+                    analog_film: 'assets/analog_film',
+                    gritt: 'assets/gritt',
+                    noise: 'assets/noise',
+                    retro_dust: 'assets/retro_dust'
+                };
+                const normalizedOverlayEffect = overlayEffect
+                    ? overlayEffect.toString().toLowerCase().trim().replace(/\s+/g, '_').replace(/-/g, '_')
+                    : null;
+                const overlayEffectIsNone = normalizedOverlayEffect === 'none' || normalizedOverlayEffect === 'off' || normalizedOverlayEffect === 'disabled';
+
+                if (overlayEffectIsNone) {
+                    console.log('[ArweaveVideoGenerator] Overlay effect set to none - skipping overlays');
+                } else {
+                    let selectedFolderPath = null;
+                    if (normalizedOverlayEffect && normalizedOverlayEffect !== 'random') {
+                        selectedFolderPath = overlayEffectMap[normalizedOverlayEffect] || null;
+                        if (!selectedFolderPath) {
+                            console.warn(`[ArweaveVideoGenerator] Unknown overlay effect "${overlayEffect}", falling back to random`);
+                        }
+                    }
+
+                    if (!selectedFolderPath) {
+                        selectedFolderPath = OVERLAY_ASSET_FOLDERS[Math.floor(deterministicRandom() * OVERLAY_ASSET_FOLDERS.length)];
+                    }
+
+                    console.log(`[ArweaveVideoGenerator] 🎲 Selected overlay folder: ${selectedFolderPath}`);
                 
                 // Load all videos from the selected folder
                 const [files] = await bucket.getFiles({ prefix: `${selectedFolderPath}/` });
@@ -828,7 +925,7 @@ class ArweaveVideoGenerator {
                         let videoIndex;
                         let attempts = 0;
                         do {
-                            videoIndex = Math.floor(Math.random() * folderVideos.length);
+                            videoIndex = Math.floor(deterministicRandom() * folderVideos.length);
                             attempts++;
                             // If we've used all videos, reset the set
                             if (usedVideoIndices.size >= folderVideos.length) {
@@ -875,6 +972,7 @@ class ArweaveVideoGenerator {
                     
                     console.log(`[ArweaveVideoGenerator] ✅ Created ${numSegments} overlay segments from ${selectedFolderPath}`);
                     console.log(`[ArweaveVideoGenerator] Overlay videos will switch every ${segmentDuration} seconds`);
+                }
                 }
                 } catch (error) {
                     console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load overlay videos from assets/:`, error.message);
@@ -934,9 +1032,9 @@ class ArweaveVideoGenerator {
                         if (!selectedLogo) {
                             console.warn(`[ArweaveVideoGenerator] ⚠️ Selected end logo "${endLogo}" not found, using random`);
                             if (validLogosForRandom.length > 0) {
-                                selectedLogo = validLogosForRandom[Math.floor(Math.random() * validLogosForRandom.length)];
+                                selectedLogo = validLogosForRandom[Math.floor(deterministicRandom() * validLogosForRandom.length)];
                             } else {
-                                selectedLogo = allLogos[Math.floor(Math.random() * allLogos.length)];
+                                selectedLogo = allLogos[Math.floor(deterministicRandom() * allLogos.length)];
                             }
                         }
                     } else {
@@ -951,9 +1049,9 @@ class ArweaveVideoGenerator {
                         } else {
                             console.warn(`[ArweaveVideoGenerator] ⚠️ Default end logo ue_square.png not found, using random`);
                             if (validLogosForRandom.length > 0) {
-                                selectedLogo = validLogosForRandom[Math.floor(Math.random() * validLogosForRandom.length)];
+                                selectedLogo = validLogosForRandom[Math.floor(deterministicRandom() * validLogosForRandom.length)];
                             } else {
-                                selectedLogo = allLogos[Math.floor(Math.random() * allLogos.length)];
+                                selectedLogo = allLogos[Math.floor(deterministicRandom() * allLogos.length)];
                             }
                         }
                     }

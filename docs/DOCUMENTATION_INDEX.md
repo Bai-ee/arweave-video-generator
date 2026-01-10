@@ -7,6 +7,8 @@
 
 This document provides an index of all documentation files in the Arweave Video Generator repository. All documentation has been updated to be **hyper-accurate** and **future-proof** for 3rd party developers.
 
+**Docs location**: All repository documentation lives in the `/docs` folder. Two empty placeholders exist at repo root for AI workflows: `AI_CONTEXT.md` and `AI_INDEX.md`.
+
 ---
 
 ## Core Documentation

@@ -49,6 +49,15 @@ class ArweaveAudioClient {
     // Ensure output directory exists
     this.outputDir = path.join(process.cwd(), 'content', 'audio');
     fs.ensureDirSync(this.outputDir);
+    this.random = Math.random;
+  }
+
+  setRandom(randomFn) {
+    this.random = typeof randomFn === 'function' ? randomFn : Math.random;
+  }
+
+  getRandom() {
+    return (this.random || Math.random)();
   }
 
   /**
@@ -233,7 +242,7 @@ class ArweaveAudioClient {
     
     // Fallback to random artist if not found
     if (!selectedArtist) {
-      selectedArtist = this.artistsData[Math.floor(Math.random() * this.artistsData.length)];
+      selectedArtist = this.artistsData[Math.floor(this.getRandom() * this.artistsData.length)];
     }
     
     // Get random mix from that artist
@@ -267,11 +276,11 @@ class ArweaveAudioClient {
         console.log(`[ArweaveAudioClient] Found specific mix: ${selectedMix.mixTitle}`);
       } else {
         console.warn(`[ArweaveAudioClient] Mix "${mixTitle}" not found for artist "${selectedArtist.artistName}", using random selection`);
-        selectedMix = validMixes[Math.floor(Math.random() * validMixes.length)];
+        selectedMix = validMixes[Math.floor(this.getRandom() * validMixes.length)];
       }
     } else {
       // Random mix selection
-      selectedMix = validMixes[Math.floor(Math.random() * validMixes.length)];
+      selectedMix = validMixes[Math.floor(this.getRandom() * validMixes.length)];
     }
     
     console.log(`[ArweaveAudioClient] Selected mix: ${selectedMix.mixTitle} (${validMixes.length} valid mixes available)`);
@@ -308,7 +317,7 @@ class ArweaveAudioClient {
     
     // Fallback to random artist if not found
     if (!selectedArtist) {
-      selectedArtist = this.artistsData[Math.floor(Math.random() * this.artistsData.length)];
+      selectedArtist = this.artistsData[Math.floor(this.getRandom() * this.artistsData.length)];
     }
     
     // Get random track from that artist
@@ -327,7 +336,7 @@ class ArweaveAudioClient {
       throw new Error(`Artist ${selectedArtist.artistName} has no trax with valid URLs`);
     }
     
-    const randomTrack = validTrax[Math.floor(Math.random() * validTrax.length)];
+    const randomTrack = validTrax[Math.floor(this.getRandom() * validTrax.length)];
     
     console.log(`[ArweaveAudioClient] Selected track: ${randomTrack.trackTitle} (${validTrax.length} valid trax available)`);
     
@@ -733,7 +742,7 @@ class ArweaveAudioClient {
               console.warn(`[ArweaveAudioClient] ⚠️ Audio file is shorter than expected (${totalDurationSeconds}s). Starting at ${startTime}s to fit ${requestedDuration}s segment.`);
             } else {
               // Random start time between minStartTime and maxStartTime
-              startTime = Math.floor(Math.random() * (maxStartTime - minStartTime + 1)) + minStartTime;
+              startTime = Math.floor(this.getRandom() * (maxStartTime - minStartTime + 1)) + minStartTime;
             }
             
             console.log(`[ArweaveAudioClient] Random sampling: ${requestedDuration}s from ${totalDurationSeconds}s total, starting at ${startTime}s (skipped first ${MIN_START_TIME}s to avoid dead air)`);

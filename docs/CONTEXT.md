@@ -6,6 +6,8 @@
 **Status**: ✅ Production Ready MVP  
 **Version**: 1.1.0
 
+**Docs location**: All repository docs live in `/docs`. The repo root includes empty placeholders `AI_CONTEXT.md` and `AI_INDEX.md` for AI workflow bootstrapping.
+
 ---
 
 ## 🚀 Quick System Overview
@@ -140,7 +142,7 @@
 
 - `videoJobs` - Job tracking (status: 'pending' | 'processing' | 'completed' | 'failed')
 - `videos` - Completed videos (duplicate of videoJobs for easier querying)
-- `artists` - Artist/mix metadata
+- `system/artists` - Artist/mix metadata document
 - `archiveJobs` - Archive job tracking
 - `archiveManifest` - Archive index
 
@@ -323,8 +325,6 @@ for (const key of knownFolders) {
 **Status**: ✅ Production Ready MVP
 
 **Use this file as context when starting new chat threads!**
-
-
 
 
 

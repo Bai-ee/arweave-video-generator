@@ -40,6 +40,19 @@ if (process.env.GITHUB_ACTIONS === 'true') {
   }
 }
 
+const parsedFps = Number(process.env.VIDEO_FPS || 30);
+const VIDEO_FPS = Number.isFinite(parsedFps) && parsedFps > 0 ? parsedFps : 30;
+const VIDEO_CRF = process.env.VIDEO_CRF || '23';
+const VIDEO_PRESET = process.env.VIDEO_PRESET || 'medium';
+const VIDEO_AUDIO_BITRATE = process.env.VIDEO_AUDIO_BITRATE || '192k';
+const VIDEO_MOVFLAGS = process.env.VIDEO_MOVFLAGS || '+faststart';
+const VIDEO_EXPLAIN = process.env.VIDEO_EXPLAIN === 'true';
+const parsedMinOutputBytes = Number(process.env.VIDEO_MIN_OUTPUT_BYTES || 1048576);
+const VIDEO_MIN_OUTPUT_BYTES = Number.isFinite(parsedMinOutputBytes) && parsedMinOutputBytes >= 0 ? parsedMinOutputBytes : 1048576;
+const parsedDurationTolerance = Number(process.env.VIDEO_DURATION_TOLERANCE_SEC || 0.5);
+const VIDEO_DURATION_TOLERANCE_SEC = Number.isFinite(parsedDurationTolerance) && parsedDurationTolerance >= 0 ? parsedDurationTolerance : 0.5;
+const VIDEO_STRICT_VALIDATION = process.env.VIDEO_STRICT_VALIDATION === 'true';
+
 /**
  * Layer configuration interface
  */
@@ -94,6 +107,9 @@ export class VideoCompositor {
       console.log(`[VideoCompositor] Audio: ${config.audio}`);
       console.log(`[VideoCompositor] Layers: ${config.layers.length}`);
       console.log(`[VideoCompositor] Canvas: ${config.width}x${config.height}`);
+      if (VIDEO_EXPLAIN) {
+        console.log(`[VideoCompositor] Explain mode enabled (fps=${VIDEO_FPS}, crf=${VIDEO_CRF}, preset=${VIDEO_PRESET}, audio=${VIDEO_AUDIO_BITRATE}, movflags=${VIDEO_MOVFLAGS})`);
+      }
 
       // Verify all input files exist
       if (!await fs.pathExists(config.baseVideo)) {
@@ -133,15 +149,18 @@ export class VideoCompositor {
 
       // Execute FFmpeg using spawn for better control
       const result = await this.executeFFmpeg(command, config.outputPath);
+      await this.validateOutput(config);
       
       // Clean up filter complex file if it was created
-      if (filterFile) {
+      if (filterFile && !VIDEO_EXPLAIN) {
         try {
           await fs.remove(filterFile);
           console.log(`[VideoCompositor] Cleaned up filter complex file`);
         } catch (cleanupError) {
           console.warn(`[VideoCompositor] Failed to cleanup filter complex file: ${cleanupError.message}`);
         }
+      } else if (filterFile && VIDEO_EXPLAIN) {
+        console.log(`[VideoCompositor] Explain mode: keeping filter complex file at ${filterFile}`);
       }
       
       // Clean up text files if any were created
@@ -207,7 +226,7 @@ export class VideoCompositor {
       console.log(`[VideoCompositor] Applying custom video filter: ${config.videoFilter.substring(0, 100)}...`);
     } else {
       // Default: scale to canvas and apply black and white
-      baseFilter = `[0:v]scale=${canvasWidth}:${canvasHeight}:force_original_aspect_ratio=increase,crop=${canvasWidth}:${canvasHeight},hue=s=0[base_scaled]`;
+      baseFilter = `[0:v]scale=${canvasWidth}:${canvasHeight}:force_original_aspect_ratio=increase,crop=${canvasWidth}:${canvasHeight},fps=${VIDEO_FPS},hue=s=0[base_scaled]`;
       console.log(`[VideoCompositor] Applying default black and white filter`);
     }
     
@@ -348,7 +367,7 @@ export class VideoCompositor {
         
         if (layer.blendMode === 'overlay') {
           // For overlay blend mode, we'll scale and position in the blend step
-          const scaleFilter = `[${inputIndex}:v]scale=${finalWidth}:${finalHeight}:force_original_aspect_ratio=increase,crop=${finalWidth}:${finalHeight},fps=30[scaled_video${videoLayerIndex}]`;
+          const scaleFilter = `[${inputIndex}:v]scale=${finalWidth}:${finalHeight}:force_original_aspect_ratio=increase,crop=${finalWidth}:${finalHeight},fps=${VIDEO_FPS}[scaled_video${videoLayerIndex}]`;
           filters.push(scaleFilter);
           // Overlay blend mode: use blend filter with overlay mode
           // First, prepare the video with opacity if needed
@@ -626,7 +645,7 @@ export class VideoCompositor {
           // Scale video to canvas size
           const finalWidth = Math.round(layer.size.width * (layer.scale || 1));
           const finalHeight = Math.round(layer.size.height * (layer.scale || 1));
-          const scaleFilter = `[${inputIndex}:v]scale=${finalWidth}:${finalHeight}:force_original_aspect_ratio=increase,crop=${finalWidth}:${finalHeight},fps=30[scaled_video_after${videoLayerIndex}]`;
+          const scaleFilter = `[${inputIndex}:v]scale=${finalWidth}:${finalHeight}:force_original_aspect_ratio=increase,crop=${finalWidth}:${finalHeight},fps=${VIDEO_FPS}[scaled_video_after${videoLayerIndex}]`;
           filters.push(scaleFilter);
           
           // Apply blend mode if specified
@@ -827,15 +846,16 @@ export class VideoCompositor {
     if (filterComplex) {
       const hasText = filterComplex.includes('drawtext');
       const isLong = filterComplex.length > 2000;
+      const shouldWriteFile = VIDEO_EXPLAIN || hasText || isLong;
       
       // Use file method if filter has text or is long (prevents truncation)
-      if (hasText || isLong) {
+      if (shouldWriteFile) {
         // Use temp-uploads in cwd directly (cwd is already the worker directory)
         const tempDir = path.join(process.cwd(), 'temp-uploads');
         await fs.ensureDir(tempDir);
         filterComplexFile = path.join(tempDir, `filter_complex_${Date.now()}.txt`);
         await fs.writeFile(filterComplexFile, filterComplex, 'utf8');
-        console.log(`[VideoCompositor] Filter complex ${hasText ? 'has text' : 'is long'} (${filterComplex.length} chars), wrote to file: ${path.basename(filterComplexFile)}`);
+        console.log(`[VideoCompositor] Filter complex ${(hasText || isLong) ? (hasText ? 'has text' : 'is long') : 'explain mode'} (${filterComplex.length} chars), wrote to file: ${path.basename(filterComplexFile)}`);
         command.push('-filter_complex_script', filterComplexFile);
       } else {
         console.log(`[VideoCompositor] Filter complex length: ${filterComplex.length} chars (using command-line arg)`);
@@ -951,9 +971,11 @@ export class VideoCompositor {
 
     // Video codec settings
     command.push('-c:v', 'libx264');
-    command.push('-preset', 'medium');
-    command.push('-crf', '23');
+    command.push('-preset', VIDEO_PRESET);
+    command.push('-crf', VIDEO_CRF);
     command.push('-pix_fmt', 'yuv420p');
+    command.push('-r', VIDEO_FPS.toString());
+    command.push('-movflags', VIDEO_MOVFLAGS);
 
     // Audio codec and fade out (only if audio stream exists)
     if (hasAudioStream) {
@@ -967,7 +989,7 @@ export class VideoCompositor {
       }
       
       command.push('-c:a', 'aac');
-      command.push('-b:a', '192k');
+      command.push('-b:a', VIDEO_AUDIO_BITRATE);
     } else {
       console.log(`[VideoCompositor] Skipping audio codec settings (no audio stream)`);
     }
@@ -1040,6 +1062,102 @@ export class VideoCompositor {
     }
   }
 
+  async probeDuration(filePath) {
+    try {
+      let ffprobePath = ffmpegPath.replace('ffmpeg', 'ffprobe');
+      if (ffmpegPath.includes('ffmpeg-static')) {
+        try {
+          const ffprobeStatic = await import('ffprobe-static');
+          if (ffprobeStatic && ffprobeStatic.path) {
+            ffprobePath = ffprobeStatic.path;
+          }
+        } catch (e) {
+          // Fall back to system ffprobe
+        }
+      }
+
+      const { spawn } = await import('child_process');
+      return new Promise((resolve) => {
+        const ffprobe = spawn(ffprobePath, [
+          '-v', 'error',
+          '-show_entries', 'format=duration',
+          '-of', 'default=noprint_wrappers=1:nokey=1',
+          filePath
+        ], { stdio: 'pipe' });
+
+        let output = '';
+        ffprobe.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+
+        ffprobe.on('close', (code) => {
+          if (code === 0) {
+            const duration = parseFloat(output.trim());
+            if (!Number.isNaN(duration) && duration > 0) {
+              resolve(duration);
+              return;
+            }
+          }
+          resolve(null);
+        });
+
+        ffprobe.on('error', () => {
+          resolve(null);
+        });
+      });
+    } catch (error) {
+      console.warn(`[VideoCompositor] Duration probe failed: ${error.message}`);
+      return null;
+    }
+  }
+
+  async validateOutput(config) {
+    try {
+      if (!await fs.pathExists(config.outputPath)) {
+        throw new Error('Output file not found for validation');
+      }
+
+      const stats = await fs.stat(config.outputPath);
+      if (VIDEO_MIN_OUTPUT_BYTES > 0 && stats.size < VIDEO_MIN_OUTPUT_BYTES) {
+        const message = `Output file too small: ${(stats.size / 1024 / 1024).toFixed(2)}MB (minimum ${(VIDEO_MIN_OUTPUT_BYTES / 1024 / 1024).toFixed(2)}MB)`;
+        if (VIDEO_STRICT_VALIDATION) {
+          throw new Error(message);
+        }
+        console.warn(`[VideoCompositor] ⚠️  ${message}`);
+      }
+
+      const outputDuration = await this.probeDuration(config.outputPath);
+      const audioDuration = await this.probeDuration(config.audio);
+
+      if (outputDuration && config.duration) {
+        const delta = Math.abs(outputDuration - config.duration);
+        if (delta > VIDEO_DURATION_TOLERANCE_SEC) {
+          const message = `Output duration mismatch: ${outputDuration.toFixed(2)}s vs target ${config.duration.toFixed(2)}s (Δ ${delta.toFixed(2)}s)`;
+          if (VIDEO_STRICT_VALIDATION) {
+            throw new Error(message);
+          }
+          console.warn(`[VideoCompositor] ⚠️  ${message}`);
+        }
+      }
+
+      if (outputDuration && audioDuration) {
+        const delta = Math.abs(outputDuration - audioDuration);
+        if (delta > VIDEO_DURATION_TOLERANCE_SEC) {
+          const message = `A/V duration mismatch: output ${outputDuration.toFixed(2)}s vs audio ${audioDuration.toFixed(2)}s (Δ ${delta.toFixed(2)}s)`;
+          if (VIDEO_STRICT_VALIDATION) {
+            throw new Error(message);
+          }
+          console.warn(`[VideoCompositor] ⚠️  ${message}`);
+        }
+      }
+    } catch (error) {
+      if (VIDEO_STRICT_VALIDATION) {
+        throw error;
+      }
+      console.warn(`[VideoCompositor] ⚠️  Validation warning: ${error.message}`);
+    }
+  }
+
   /**
    * Execute FFmpeg command using spawn
    */
@@ -1056,6 +1174,9 @@ export class VideoCompositor {
         return arg;
       });
       console.log(`[VideoCompositor] FFmpeg command: ${ffmpegPath} ${debugArgs.join(' ')}`);
+      if (VIDEO_EXPLAIN) {
+        console.log(`[VideoCompositor] Explain mode command: ${ffmpegPath} ${args.join(' ')}`);
+      }
       
       // Check for filter_complex arg and log its length
       const filterComplexIndex = args.indexOf('-filter_complex');
@@ -1113,4 +1234,3 @@ export class VideoCompositor {
     });
   }
 }
-

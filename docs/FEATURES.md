@@ -58,6 +58,8 @@ This document describes all features of the Arweave Video Generator system, thei
 - **Processing**: GitHub Actions workflow runs every minute
 - **Output**: Video stored in `videos/` folder in Firebase Storage
 - **URL Format**: Signed URL (1 year expiry, CORS-compliant)
+- **Determinism**: Random selections are seeded from job inputs so identical inputs produce identical outputs
+- **Validation**: ffprobe sanity checks for durations and output size (configurable via `VIDEO_MIN_OUTPUT_BYTES`, `VIDEO_DURATION_TOLERANCE_SEC`, `VIDEO_STRICT_VALIDATION`)
 
 **Verification**:
 - ✅ Job creation in Firestore with `selectedFolders` array
@@ -132,7 +134,7 @@ This document describes all features of the Arweave Video Generator system, thei
 
 **Technical Details**:
 - **Upload Method**: Direct to Firebase Storage using Firebase SDK
-- **File Size Limit**: 500MB per file (videos), 50MB (images)
+- **File Size Limit**: 500MB per file (videos and images)
 - **Supported Formats**: 
   - Videos: .mov, .mp4, .m4v, .avi, .mkv, .webm
   - Images: .png, .jpg, .jpeg, .gif, .svg, .webp
@@ -371,7 +373,7 @@ This document describes all features of the Arweave Video Generator system, thei
 
 **Status**: Verified and working
 
-**Description**: Users can select video filters from a dropdown menu. Default filter is "Hard B&W Street Doc" at 80% intensity.
+**Description**: Users can select video filters from a dropdown menu. Default filter is "Hard B&W Street Doc" at 40% intensity.
 
 **Usage**:
 1. After selecting audio source, filter dropdown appears
@@ -389,7 +391,7 @@ This document describes all features of the Arweave Video Generator system, thei
 **Technical Details**:
 - Filter is applied in `VideoCompositor`
 - Filter key: Selected from `VIDEO_FILTERS` object
-- Intensity: 0.8 (80% - fixed)
+- Intensity: 0.4 (40% - fixed)
 - Applied via FFmpeg filter_complex
 - Random option selects a random filter from available options
 
@@ -605,5 +607,3 @@ Potential improvements (not yet implemented):
 - Video editing capabilities
 - Real-time collaboration
 - Video analytics
-
-

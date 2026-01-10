@@ -16,10 +16,27 @@ if (process.env.GITHUB_ACTIONS !== 'true' && ffmpegStatic) {
   ffmpegPath = 'ffmpeg';
 }
 
+const parsedFps = Number(process.env.VIDEO_FPS || 30);
+const VIDEO_FPS = Number.isFinite(parsedFps) && parsedFps > 0 ? parsedFps : 30;
+const VIDEO_SEGMENT_CRF = process.env.VIDEO_SEGMENT_CRF || process.env.VIDEO_CRF || '23';
+const VIDEO_SEGMENT_PRESET = process.env.VIDEO_SEGMENT_PRESET || 'fast';
+const VIDEO_SEGMENT_AUDIO_BITRATE = process.env.VIDEO_SEGMENT_AUDIO_BITRATE || '128k';
+const VIDEO_MOVFLAGS = process.env.VIDEO_MOVFLAGS || '+faststart';
+const VIDEO_EXPLAIN = process.env.VIDEO_EXPLAIN === 'true';
+
 export class VideoSegmentCompositor {
   constructor() {
     this.tempDir = path.join(process.cwd(), 'temp-uploads');
     fs.ensureDirSync(this.tempDir);
+    this.random = Math.random;
+  }
+
+  setRandom(randomFn) {
+    this.random = typeof randomFn === 'function' ? randomFn : Math.random;
+  }
+
+  getRandom() {
+    return (this.random || Math.random)();
   }
 
   /**
@@ -150,7 +167,7 @@ export class VideoSegmentCompositor {
       } else {
         // Random start time (leave room for segment duration)
         const maxStartTime = videoDuration - segmentDuration;
-        startTime = Math.random() * maxStartTime;
+        startTime = this.getRandom() * maxStartTime;
         if (beatPositions.length > 0) {
           console.log(`[VideoSegmentCompositor] ⚠️  No targetTime provided, using random start (not beat-aligned)`);
         }
@@ -188,17 +205,18 @@ export class VideoSegmentCompositor {
           '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
           '-ss', startTime.toString(),
           '-t', segmentDuration.toString(),
-          '-filter_complex', '[0:v]scale=720:720:force_original_aspect_ratio=increase,crop=720:720,fps=30,format=yuv420p[v];[1:a]atrim=0:' + segmentDuration.toString() + '[a]',
+          '-filter_complex', `[0:v]scale=720:720:force_original_aspect_ratio=increase,crop=720:720,fps=${VIDEO_FPS},format=yuv420p[v];[1:a]atrim=0:${segmentDuration.toString()}[a]`,
           '-map', '[v]',
           '-map', '[a]',
           '-c:v', 'libx264',
-          '-preset', 'fast',
-          '-crf', '23',
-          '-r', '30', // Ensure 30fps output
-          '-g', '30', // GOP size for better seeking
+          '-preset', VIDEO_SEGMENT_PRESET,
+          '-crf', VIDEO_SEGMENT_CRF,
+          '-r', VIDEO_FPS.toString(),
+          '-g', VIDEO_FPS.toString(),
           '-c:a', 'aac',
-          '-b:a', '128k',
+          '-b:a', VIDEO_SEGMENT_AUDIO_BITRATE,
           '-avoid_negative_ts', 'make_zero',
+          '-movflags', VIDEO_MOVFLAGS,
           '-y',
           segmentPath
         ], segmentPath, 100 * 1024); // Minimum 100KB for a 5s segment
@@ -528,7 +546,7 @@ export class VideoSegmentCompositor {
         }
         
         // Randomly select from available videos
-        const selected = availableVideos[Math.floor(Math.random() * availableVideos.length)];
+        const selected = availableVideos[Math.floor(this.getRandom() * availableVideos.length)];
         sourceFolder = selected.folder;
         selectedItem = selected.video;
         
@@ -575,8 +593,8 @@ export class VideoSegmentCompositor {
         
         // Determine transition type for this segment boundary (random: quick-cut or quick-fade)
         if (i < segmentsNeeded - 1) { // No transition after last segment
-          const useFade = Math.random() < 0.5; // 50% chance of fade
-          const fadeDuration = useFade ? 0.5 + Math.random() * 0.5 : 0; // 0.5-1.0s for fades
+          const useFade = this.getRandom() < 0.5; // 50% chance of fade
+          const fadeDuration = useFade ? 0.5 + this.getRandom() * 0.5 : 0; // 0.5-1.0s for fades
           transitionTypes.push({
             type: useFade ? 'fade' : 'cut',
             duration: fadeDuration
@@ -625,7 +643,7 @@ export class VideoSegmentCompositor {
         
         if (unusedVideos.length > 0) {
           // Randomly select from unused videos
-          const fallback = unusedVideos[Math.floor(Math.random() * unusedVideos.length)];
+          const fallback = unusedVideos[Math.floor(this.getRandom() * unusedVideos.length)];
           fallbackFolder = fallback.folder;
           
           if (hasFileReferences) {
@@ -644,7 +662,7 @@ export class VideoSegmentCompositor {
           attempts++;
           
           // Select a random unused video
-          const fallbackIndex = Math.floor(Math.random() * unusedVideos.length);
+          const fallbackIndex = Math.floor(this.getRandom() * unusedVideos.length);
           const fallback = unusedVideos[fallbackIndex];
           fallbackFolder = fallback.folder;
           
@@ -833,9 +851,11 @@ export class VideoSegmentCompositor {
         '-safe', '0',
         '-i', concatListPath,
         '-c:v', 'libx264',
-        '-preset', 'fast',
-        '-crf', '23',
+        '-preset', VIDEO_SEGMENT_PRESET,
+        '-crf', VIDEO_SEGMENT_CRF,
         '-pix_fmt', 'yuv420p',
+        '-r', VIDEO_FPS.toString(),
+        '-movflags', VIDEO_MOVFLAGS,
         '-t', targetDuration.toString(),
         '-y',
         outputPath
@@ -861,14 +881,14 @@ export class VideoSegmentCompositor {
 
       // Scale and normalize all segments first (with consistent frame rate and timebase for xfade)
       for (let i = 0; i < numSegments; i++) {
-        filterParts.push(`[${i}:v]scale=720:720:force_original_aspect_ratio=increase,crop=720:720,fps=30,format=yuv420p[v${i}]`);
+        filterParts.push(`[${i}:v]scale=720:720:force_original_aspect_ratio=increase,crop=720:720,fps=${VIDEO_FPS},format=yuv420p[v${i}]`);
       }
 
       // Chain segments with transitions
       for (let i = 0; i < numSegments; i++) {
         if (i === 0) {
           // First segment: normalize framerate and timebase
-          filterParts.push(`[v${i}]fps=30,setpts=PTS-STARTPTS[v${i}_start]`);
+          filterParts.push(`[v${i}]fps=${VIDEO_FPS},setpts=PTS-STARTPTS[v${i}_start]`);
           currentOutputLabel = `v${i}_start`;
         } else {
           const transition = transitionTypes[i - 1] || { type: 'cut', duration: 0 };
@@ -895,8 +915,8 @@ export class VideoSegmentCompositor {
             // xfade requires consistent timebase (1/30) and framerate (30fps)
             const normalizedCurrent = `v${i}_norm_prev`;
             const normalizedNext = `v${i}_norm_next`;
-            filterParts.push(`[${currentOutputLabel}]fps=30,setpts=PTS-STARTPTS[${normalizedCurrent}]`);
-            filterParts.push(`[v${i}]fps=30,setpts=PTS-STARTPTS[${normalizedNext}]`);
+            filterParts.push(`[${currentOutputLabel}]fps=${VIDEO_FPS},setpts=PTS-STARTPTS[${normalizedCurrent}]`);
+            filterParts.push(`[v${i}]fps=${VIDEO_FPS},setpts=PTS-STARTPTS[${normalizedNext}]`);
             
             const nextLabel = `v${i}_out`;
             filterParts.push(`[${normalizedCurrent}][${normalizedNext}]xfade=transition=fade:duration=${fadeDuration.toFixed(3)}:offset=${fadeOffset.toFixed(3)}[${nextLabel}]`);
@@ -922,21 +942,39 @@ export class VideoSegmentCompositor {
       
       console.log(`[VideoSegmentCompositor] Filter complex length: ${filterComplex.length} chars`);
       
+      let filterComplexFile = null;
       const command = [
         ffmpegPath,
         ...validSegments.flatMap(seg => ['-i', seg]),
-        '-filter_complex', filterComplex,
+      ];
+
+      if (VIDEO_EXPLAIN || filterComplex.length > 2000) {
+        filterComplexFile = path.join(this.tempDir, `filter_complex_segments_${Date.now()}.txt`);
+        await fs.writeFile(filterComplexFile, filterComplex, 'utf8');
+        console.log(`[VideoSegmentCompositor] Filter complex written to file: ${path.basename(filterComplexFile)}`);
+        command.push('-filter_complex_script', filterComplexFile);
+      } else {
+        command.push('-filter_complex', filterComplex);
+      }
+
+      command.push(
         '-map', finalOutput,
         '-c:v', 'libx264',
-        '-preset', 'fast',
-        '-crf', '23',
+        '-preset', VIDEO_SEGMENT_PRESET,
+        '-crf', VIDEO_SEGMENT_CRF,
         '-pix_fmt', 'yuv420p',
+        '-r', VIDEO_FPS.toString(),
+        '-movflags', VIDEO_MOVFLAGS,
         '-t', targetDuration.toString(),
         '-y',
         outputPath
-      ];
+      );
       
       await this.executeFFmpeg(command, outputPath, 2 * 1024 * 1024); // Minimum 2MB for 30s video (reduced for better reliability)
+
+      if (filterComplexFile && !VIDEO_EXPLAIN) {
+        await fs.remove(filterComplexFile).catch(() => {});
+      }
     }
 
     // Verify output (executeFFmpeg already validated size, but double-check)
@@ -972,9 +1010,11 @@ export class VideoSegmentCompositor {
             '-safe', '0',
             '-i', concatListPath,
             '-c:v', 'libx264',
-            '-preset', 'fast',
-            '-crf', '23',
+            '-preset', VIDEO_SEGMENT_PRESET,
+            '-crf', VIDEO_SEGMENT_CRF,
             '-pix_fmt', 'yuv420p',
+            '-r', VIDEO_FPS.toString(),
+            '-movflags', VIDEO_MOVFLAGS,
             '-t', targetDuration.toString(),
             '-y',
             outputPath
@@ -1250,7 +1290,7 @@ export class VideoSegmentCompositor {
     
     // Calculate random start time (ensure we have at least 5 seconds)
     const maxStartTime = Math.max(0, videoDuration - duration);
-    const startTime = Math.random() * maxStartTime;
+    const startTime = this.getRandom() * maxStartTime;
     
     console.log(`[VideoSegmentCompositor] Video: ${videoWidth}x${videoHeight}px, Duration: ${videoDuration.toFixed(2)}s, Extracting from ${startTime.toFixed(2)}s`);
     
@@ -1262,7 +1302,7 @@ export class VideoSegmentCompositor {
     const scaleFilter = `scale='if(gt(iw/ih,${canvasWidth}/${canvasHeight}),${canvasWidth},-1)':'if(gt(iw/ih,${canvasWidth}/${canvasHeight}),-1,${canvasHeight})'`;
     const padFilter = `pad=${canvasWidth}:${canvasHeight}:(ow-iw)/2:(oh-ih)/2:black`;
     
-    const command = `${ffmpegPath} -i "${videoPath}" -ss ${startTime} -t ${duration} -vf "${scaleFilter},${padFilter}" -c:v libx264 -preset fast -crf 23 -an "${outputPath}" -y`;
+      const command = `${ffmpegPath} -i "${videoPath}" -ss ${startTime} -t ${duration} -vf "${scaleFilter},${padFilter}" -c:v libx264 -preset ${VIDEO_SEGMENT_PRESET} -crf ${VIDEO_SEGMENT_CRF} -an "${outputPath}" -y`;
     
     try {
       execSync(command, { stdio: 'inherit' });
@@ -1303,4 +1343,3 @@ export class VideoSegmentCompositor {
     }
   }
 }
-
