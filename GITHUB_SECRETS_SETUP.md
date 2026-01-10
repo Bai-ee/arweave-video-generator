@@ -22,7 +22,7 @@ If the secret doesn't exist or needs to be updated:
 2. **Name:** `FIREBASE_SERVICE_ACCOUNT_KEY`
 3. **Secret:** Paste your **entire Firebase service account JSON** as a single string
 
-   **Important:** The value should be the complete JSON object from your Firebase service account.
+   **Important:** Paste the exact JSON object you downloaded from Firebase (with `\n` escape sequences, not literal line breaks). The Firebase helper now runs a direct `JSON.parse()` on this string, so any stray formatting, extra escaping, or invalid whitespace will cause initialization to fail.
    
    **⚠️ SECURITY NOTE:** Never commit the service account key to your repository. Only add it as a GitHub Secret.
 
@@ -65,4 +65,3 @@ If you see: `Firebase Admin initialization failed`
 - Check if the workflow file exists: `.github/workflows/process-videos.yml`
 - Make sure it's committed to the `main` branch
 - The workflow runs every minute automatically, or can be triggered manually
-
