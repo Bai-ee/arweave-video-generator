@@ -1014,9 +1014,9 @@ class ArweaveVideoGenerator {
             if (endTextOverlay) {
                 console.log(`[ArweaveVideoGenerator] Step 6.5: Adding end text overlay: "${endTextOverlay}"`);
                 
-                // Text appears during 5th segment and stays visible until the end (like end logo)
-                const textStartTime = duration - 10; // Start at 20 seconds (beginning of 5th segment)
-                const textDuration = 10; // Duration until end of video (stays visible through fade)
+                // Text appears after the master fade begins and fades in during the final 5 seconds
+                const textStartTime = duration - 5; // Start at 25 seconds (just before video ends)
+                const textDuration = 5; // Duration until end of video (includes fade-in)
                 
                 // Calculate centered position
                 const textFontSize = Math.round(height * 0.05); // Reduced font size, 5% of canvas height (1/3 of original 15%)
@@ -1033,7 +1033,7 @@ class ArweaveVideoGenerator {
                     350, // z-index (above background, below end logo if present)
                     1.0, // scale
                     null, // No custom font - use system font
-                    textStartTime, // start at 20 seconds
+                    textStartTime, // start at 25 seconds
                     textDuration // duration until end of video
                 );
                 endTextLayer.addAfterFade = true; // Mark to add after fade filter so it appears after fade-out (stays visible like end logo)
@@ -1041,7 +1041,7 @@ class ArweaveVideoGenerator {
                 endTextLayer.fontSize = textFontSize; // Store font size for VideoCompositor
                 layers.push(endTextLayer);
                 
-                console.log(`[ArweaveVideoGenerator] ✅ End text overlay added: "${endTextOverlay}" at (${textX}, ${textY}), size: ${textFontSize}px, timing: ${textStartTime}s-${duration}s (stays visible until end like end logo)`);
+                console.log(`[ArweaveVideoGenerator] ✅ End text overlay added: "${endTextOverlay}" at (${textX}, ${textY}), size: ${textFontSize}px, timing: ${textStartTime}s-${duration}s (fades in at 25s and stays until end)`);
             }
 
             // Step 7: Compose final video with all layers
