@@ -337,7 +337,7 @@ export class VideoSegmentCompositor {
    * @param {number} canvasHeight - Canvas height (default: 720)
    * @returns {Promise<string>} Path to concatenated video
    */
-  async createVideoFromSegments(videoPaths, targetDuration = 30, segmentDuration = 5, audioPath = null, endMediaUrl = null, endMediaType = null, canvasWidth = 720, canvasHeight = 720, videoOrder = null) {
+  async createVideoFromSegments(videoPaths, targetDuration = 30, segmentDuration = 5, audioPath = null, endMediaUrl = null, endMediaType = null, canvasWidth = 720, canvasHeight = 720, videoOrder = null, endMediaIsArtistImage = false) {
     // Handle grouped structure with any folder combination
     let folderMap = {}; // Dynamic folder map
     let isGrouped = false;
@@ -702,35 +702,32 @@ export class VideoSegmentCompositor {
 
     // If end media URL is provided, create two 5-second videos from it and add as 5th and 6th segments
     if (endMediaUrl) {
-      const mediaType = endMediaType || 'image'; // Default to image for backward compatibility
-      console.log(`[VideoSegmentCompositor] 🎬 Creating two 5-second videos from end media (${mediaType}): ${endMediaUrl}`);
+      const mediaType = endMediaType || 'image';
+      console.log(`[VideoSegmentCompositor] 🎬 Building end media (${mediaType}) segment(s): ${endMediaUrl}`);
       try {
-        let endMediaSegment1 = null;
-        let endMediaSegment2 = null;
-        
+        const mediaSegments = [];
         if (mediaType === 'video') {
-          // For video: download and extract 5-second segment
-          endMediaSegment1 = await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
-          endMediaSegment2 = await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
+          mediaSegments.push(await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight));
+          mediaSegments.push(await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight));
         } else {
-          // For image: use existing image-to-video conversion
-          endMediaSegment1 = await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
-          endMediaSegment2 = await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
+          mediaSegments.push(await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight));
+          mediaSegments.push(await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight));
         }
-        
-        if (endMediaSegment1 && await fs.pathExists(endMediaSegment1) && endMediaSegment2 && await fs.pathExists(endMediaSegment2)) {
-          const replaceCount = Math.min(2, segmentPaths.length);
-          if (replaceCount >= 2) {
-            const replaceIndex = segmentPaths.length - replaceCount;
-            const replacedSegments = segmentPaths.splice(replaceIndex, replaceCount, endMediaSegment1, endMediaSegment2);
-            for (const replaced of replacedSegments) {
-              try {
-                await fs.remove(replaced);
-              } catch (cleanupError) {
-                // Ignore if cleanup already happened
-              }
+
+        const validSegments = [];
+        for (const segment of mediaSegments) {
+          if (segment && await fs.pathExists(segment)) {
+            validSegments.push(segment);
+          }
+        }
+
+        if (endMediaIsArtistImage && validSegments.length >= 1) {
+          const replacement = validSegments[0];
+          if (segmentPaths.length > 0) {
+            const removed = segmentPaths.splice(segmentPaths.length - 1, 1, replacement);
+            for (const removedPath of removed) {
+              await fs.remove(removedPath).catch(() => {});
             }
-            // Optionally ensure final transition is a fade for a smoother handoff
             if (transitionTypes.length > 0) {
               transitionTypes[transitionTypes.length - 1] = {
                 type: 'fade',
@@ -738,12 +735,26 @@ export class VideoSegmentCompositor {
                 offset: Math.max(0, targetDuration - segmentDuration)
               };
             }
-            console.log(`[VideoSegmentCompositor] ✅ Replaced final ${replaceCount} segment(s) with end media (${mediaType})`);
+            console.log(`[VideoSegmentCompositor] ✅ Replaced last segment with artist image`);
           } else {
-            console.warn(`[VideoSegmentCompositor] ⚠️ Not enough segments to replace with end media - keeping originals`);
+            console.warn(`[VideoSegmentCompositor] ⚠️ No segments available to replace with artist image`);
           }
+        } else if (!endMediaIsArtistImage && validSegments.length >= 2) {
+          const replacementSegments = validSegments.slice(0, 2);
+          const removed = segmentPaths.splice(segmentPaths.length - 2, 2, ...replacementSegments);
+          for (const removedPath of removed) {
+            await fs.remove(removedPath).catch(() => {});
+          }
+          if (transitionTypes.length > 0) {
+            transitionTypes[transitionTypes.length - 1] = {
+              type: 'fade',
+              duration: 0.75,
+              offset: Math.max(0, targetDuration - segmentDuration)
+            };
+          }
+          console.log(`[VideoSegmentCompositor] ✅ Replaced final 2 segments with end media (${mediaType})`);
         } else {
-          console.warn(`[VideoSegmentCompositor] ⚠️  Failed to create end media segments, continuing without them`);
+          console.warn(`[VideoSegmentCompositor] ⚠️  Not enough valid end media segments (${validSegments.length}) for replacement`);
         }
       } catch (error) {
         console.error(`[VideoSegmentCompositor] ❌ Error creating end media segments: ${error.message}`);

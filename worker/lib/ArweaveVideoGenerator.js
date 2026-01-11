@@ -454,6 +454,8 @@ class ArweaveVideoGenerator {
                             width, // Canvas width
                             height, // Canvas height
                             videoOrder // Pass video order if provided
+                            ,
+                            !!artistImageUrl
                         );
                         
                         // Verify the video was actually created
@@ -514,6 +516,7 @@ class ArweaveVideoGenerator {
                         // Determine end media (custom media, artist image, or none)
                         let endMediaUrl = null;
                         let endMediaType = null; // 'image' or 'video'
+                        let endMediaIsArtistImage = false;
                         
                         if (customEndMedia) {
                             // Custom media mode: Download from Firebase Storage
@@ -564,6 +567,7 @@ class ArweaveVideoGenerator {
                                 if (selectedThumbnail.startsWith('http') && selectedThumbnail.includes('arweave.net')) {
                                     endMediaUrl = selectedThumbnail;
                                     endMediaType = 'image';
+                                    endMediaIsArtistImage = true;
                                     console.log(`[ArweaveVideoGenerator] 🖼️  Found artist Arweave thumbnail: ${selectedThumbnail} (${thumbnails.length} available)`);
                                 }
                             }
@@ -593,6 +597,8 @@ class ArweaveVideoGenerator {
                             width, // Canvas width
                             height, // Canvas height
                             videoOrder // Pass video order if provided
+                            ,
+                            endMediaIsArtistImage
                         );
                         
                         // Verify the video was actually created
