@@ -1245,19 +1245,21 @@ export class VideoSegmentCompositor {
     }
 
     const outputPath = path.join(this.tempDir, `image_segment_${Date.now()}.mp4`);
-    const totalFrames = Math.max(1, Math.round(duration * 30));
-    const zoomIncrement = 0.0006;
-    const maxZoom = 1.08;
+    const totalFrames = Math.max(2, Math.round(duration * 60));
+    const zoomTarget = 1.5;
+    const zoomExpression = `1+(${(zoomTarget - 1).toFixed(3)})*on/${totalFrames - 1}`;
 
     const filterChain = [
       `scale=${canvasWidth}:${canvasHeight}:force_original_aspect_ratio=increase`,
       `crop=${canvasWidth}:${canvasHeight}`,
-      `zoompan=z='min(zoom+${zoomIncrement},${maxZoom})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${canvasWidth}x${canvasHeight}:fps=30`
+      `zoompan=z='${zoomExpression}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${canvasWidth}x${canvasHeight}:fps=60`,
+      'fps=30'
     ].join(',');
 
     const command = [
       ffmpegPath,
       '-loop', '1',
+      '-framerate', '60',
       '-i', imagePath,
       '-vf', filterChain,
       '-t', duration.toString(),
