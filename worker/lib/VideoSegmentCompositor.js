@@ -725,10 +725,10 @@ export class VideoSegmentCompositor {
                 await fs.remove(replaced).catch(() => {});
               }
               if (transitionTypes.length > 0) {
+                // Keep the final segment fully visible; master fade handles the outro.
                 transitionTypes[transitionTypes.length - 1] = {
-                  type: 'fade',
-                  duration: 0.75,
-                  offset: Math.max(0, targetDuration - segmentDuration)
+                  type: 'cut',
+                  duration: 0
                 };
               }
               console.log(`[VideoSegmentCompositor] ✅ Artist thumbnail replaced the 6th segment`);
