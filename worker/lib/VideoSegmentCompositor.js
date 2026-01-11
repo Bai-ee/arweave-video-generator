@@ -721,9 +721,9 @@ export class VideoSegmentCompositor {
           }
         }
 
-        if (endMediaIsArtistImage && validSegments.length >= 1) {
-          const replacement = validSegments[0];
-          if (segmentPaths.length > 0) {
+        if (endMediaIsArtistImage) {
+          if (validSegments.length >= 1 && segmentPaths.length >= 1) {
+            const replacement = validSegments[0];
             const removed = segmentPaths.splice(segmentPaths.length - 1, 1, replacement);
             for (const removedPath of removed) {
               await fs.remove(removedPath).catch(() => {});
@@ -735,11 +735,11 @@ export class VideoSegmentCompositor {
                 offset: Math.max(0, targetDuration - segmentDuration)
               };
             }
-            console.log(`[VideoSegmentCompositor] ✅ Replaced last segment with artist image`);
+            console.log(`[VideoSegmentCompositor] ✅ Artist image replaced the 6th segment`);
           } else {
-            console.warn(`[VideoSegmentCompositor] ⚠️ No segments available to replace with artist image`);
+            console.warn(`[VideoSegmentCompositor] ⚠️ Unable to replace 6th segment with artist image`);
           }
-        } else if (!endMediaIsArtistImage && validSegments.length >= 2) {
+        } else if (validSegments.length >= 2) {
           const replacementSegments = validSegments.slice(0, 2);
           const removed = segmentPaths.splice(segmentPaths.length - 2, 2, ...replacementSegments);
           for (const removedPath of removed) {
@@ -754,11 +754,11 @@ export class VideoSegmentCompositor {
           }
           console.log(`[VideoSegmentCompositor] ✅ Replaced final 2 segments with end media (${mediaType})`);
         } else {
-          console.warn(`[VideoSegmentCompositor] ⚠️  Not enough valid end media segments (${validSegments.length}) for replacement`);
+          console.warn(`[VideoSegmentCompositor] ⚠️ Not enough valid end media segments (${validSegments.length})`);
         }
       } catch (error) {
         console.error(`[VideoSegmentCompositor] ❌ Error creating end media segments: ${error.message}`);
-        console.warn(`[VideoSegmentCompositor] ⚠️  Continuing without end media segments`);
+        console.warn(`[VideoSegmentCompositor] ⚠️ Continuing without end media segments`);
       }
     }
 
