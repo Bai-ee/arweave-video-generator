@@ -577,11 +577,11 @@ class ArweaveVideoGenerator {
                         
                         // If end media is available, create 4 segments (20s) + 2 end media segments (10s) = 30s
                         // Otherwise create 6 segments (30s)
-                        const videoDuration = endMediaUrl ? duration - 10 : duration;
+                        const videoDuration = duration;
                         const segmentsNeeded = Math.ceil(videoDuration / 5);
-                        
+
                         const endMediaDescription = endMediaUrl 
-                            ? ` + 10s ${endMediaType === 'video' ? 'custom video' : endMediaType === 'image' && customEndMedia ? 'custom image' : 'artist image'} (5th & 6th segments)`
+                            ? ` + 5s ${endMediaType === 'video' ? 'custom video' : endMediaType === 'image' && customEndMedia ? 'custom image' : 'artist image'} (6th segment)`
                             : '';
                         console.log(`[ArweaveVideoGenerator] Creating ${videoDuration}s video from ${segmentsNeeded} segments${endMediaDescription}...`);
                         
