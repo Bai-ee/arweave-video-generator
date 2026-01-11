@@ -245,7 +245,7 @@
                       class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
                       style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
                     >
-                      Upload Video
+                      Upload Media
                     </button>
                     <button 
                       id="uploadMixBtn" 
@@ -261,7 +261,7 @@
                       class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
                       style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
                     >
-                      Upload Image
+                      Upload Artist Thumbnail
                     </button>
                   </div>
                 </div>
@@ -987,7 +987,7 @@
     <div id="artistImageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
       <div style="background: radial-gradient(ellipse at center, rgba(20, 20, 30, 0.7) 0%, rgba(0, 0, 0, 0.6) 100%); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">UPLOAD IMAGE</h2>
+          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">UPLOAD ARTIST IMAGE</h2>
           <button onclick="hideArtistImageModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
         </div>
         
@@ -4864,33 +4864,55 @@
       const totalFiles = files.length;
       
       document.getElementById('imageProgressText').textContent = `Uploading ${totalFiles} file(s)...`;
-      
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const progress = Math.round(((i + 1) / totalFiles) * 100);
-        document.getElementById('imageProgressBar').style.width = `${progress}%`;
         document.getElementById('imageProgressText').textContent = `Uploading ${i + 1} of ${totalFiles}: ${file.name}`;
-        
+
         try {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('type', 'image');
-          formData.append('folder', folder);
-          formData.append('isNewFolder', isNewFolder.toString());
-          
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData
-          });
-          
-          const result = await response.json();
-          
-          if (result.success) {
-            successCount++;
+          const { storage, ref, uploadBytesResumable, getDownloadURL } = window.firebase;
+          const fileName = `user_upload_${Date.now()}_${i}_${file.name}`;
+
+          let storagePath;
+          if (folder === 'chicago-skyline-videos') {
+            storagePath = `assets/chicago-skyline-videos/${fileName}`;
           } else {
-            failCount++;
-            console.error(`Failed to upload ${file.name}:`, result.error);
+            storagePath = `${folder}/${fileName}`;
           }
+
+          const storageRef = ref(storage, storagePath);
+          const uploadTask = uploadBytesResumable(storageRef, file, {
+            contentType: file.type || 'image/jpeg',
+            customMetadata: {
+              originalName: file.name,
+              uploadedAt: new Date().toISOString()
+            }
+          });
+
+          await new Promise((resolve, reject) => {
+            uploadTask.on('state_changed',
+              (snapshot) => {
+                const perFileProgress = snapshot.totalBytes > 0
+                  ? snapshot.bytesTransferred / snapshot.totalBytes
+                  : 0;
+                const overall = Math.round(((i + perFileProgress) / totalFiles) * 100);
+                document.getElementById('imageProgressBar').style.width = `${overall}%`;
+              },
+              (error) => {
+                reject(error);
+              },
+              async () => {
+                try {
+                  await getDownloadURL(uploadTask.snapshot.ref);
+                } catch (error) {
+                  console.warn(`Could not fetch download URL for ${file.name}: ${error.message}`);
+                }
+                resolve();
+              }
+            );
+          });
+
+          successCount++;
         } catch (error) {
           failCount++;
           console.error(`Error uploading ${file.name}:`, error);
@@ -4927,6 +4949,26 @@
             Try Again
           </button>
         `;
+      }
+
+      if (isNewFolder && successCount > 0) {
+        const newFolderEntry = {
+          name: folder,
+          count: successCount,
+          displayName: folder.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          type: 'image'
+        };
+
+        const existingIndex = availableFolders.findIndex(f => f.name === folder);
+        if (existingIndex >= 0) {
+          availableFolders[existingIndex] = newFolderEntry;
+        } else {
+          availableFolders.push(newFolderEntry);
+        }
+
+        populateUploadFolderSelect();
+        await populateImageFolderSelect();
+        await loadAvailableFolders();
       }
       
       document.getElementById('imageUploadBtn').disabled = false;
