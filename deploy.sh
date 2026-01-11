@@ -2,6 +2,9 @@
 
 # Deployment script for Arweave Video Generator
 # This ensures both Vercel (frontend/API) and GitHub (worker code) are updated together
+# 
+# NOTE: Vercel is configured to auto-deploy on git push, so we skip manual deployment
+# to avoid double deployment which causes 500 errors and API downtime.
 
 set -e  # Exit on error
 
@@ -16,8 +19,11 @@ fi
 
 # Check for uncommitted changes
 if [ -z "$(git status --porcelain)" ]; then
-    echo "⚠️  No changes to commit. Proceeding with Vercel deployment only..."
+    echo "⚠️  No changes to commit."
+    echo "💡 If Vercel auto-deploy is enabled, it will deploy on git push."
+    echo "💡 If you need to redeploy manually, run: vercel --prod"
     echo ""
+    exit 0
 else
     echo "📝 Staging changes..."
     
@@ -28,6 +34,7 @@ else
     # Check if there are actually changes to commit
     if [ -z "$(git diff --cached --name-only)" ]; then
         echo "⚠️  No relevant changes staged. Skipping commit."
+        exit 0
     else
         echo "💾 Committing changes..."
         git commit -m "feat: Update video generation configuration
@@ -42,23 +49,17 @@ else
         echo "📤 Pushing to GitHub..."
         git push
         
-        echo "✅ Code pushed to GitHub (GitHub Actions will use updated worker code)"
         echo ""
+        echo "✅ Deployment complete!"
+        echo ""
+        echo "📊 Summary:"
+        echo "  - GitHub: Worker code updated (GitHub Actions will use new code)"
+        echo "  - Vercel: Auto-deploying from git push (check Vercel dashboard)"
+        echo ""
+        echo "💡 If Vercel auto-deploy is disabled, run 'vercel --prod' manually"
+        echo "💡 Next video generation will use the latest code from both sources."
     fi
 fi
-
-# Deploy to Vercel
-echo "🌐 Deploying to Vercel..."
-vercel --prod
-
-echo ""
-echo "✅ Deployment complete!"
-echo ""
-echo "📊 Summary:"
-echo "  - GitHub: Worker code updated (for GitHub Actions)"
-echo "  - Vercel: Frontend/API deployed"
-echo ""
-echo "💡 Next video generation will use the latest code from both sources."
 
 
 
