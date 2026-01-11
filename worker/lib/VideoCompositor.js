@@ -795,10 +795,9 @@ export class VideoCompositor {
       command.push('-loop', '1');
       command.push('-framerate', '30');
     } else if (isVideo) {
-      // For video backgrounds, we may need to loop it if it's shorter than duration
-      // FFmpeg will handle this with the loop filter in filter_complex
-      // Just ensure we read the full video
-      command.push('-stream_loop', '-1'); // Loop input video if needed
+      // For video backgrounds we rely on the concatenated segments matching the target duration,
+      // so we no longer loop the input to avoid replaying the first clip before the fade.
+      // This keeps the final video to exactly `config.duration`.
     }
     command.push('-i', config.baseVideo);
 
