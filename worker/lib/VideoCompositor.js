@@ -523,8 +523,8 @@ export class VideoCompositor {
     // Apply video fade to black (23.5-25 seconds: fade out over 1.5 seconds)
     // For 30 second video: 5th segment plays 20s-23.5s (3.5s visible), fade starts at 23.5s, duration 1.5s (ends at 25s)
     // 6th segment (25s-30s) should never appear - fade completes before it starts
-    const videoFadeStart = config.duration - 3; // Start fade at 27s to keep 6th segment visible longer
-    const videoFadeDuration = 1.0; // 1 second fade, ending at 28s so after-fade layers appear cleanly
+    const videoFadeStart = config.duration - 2; // Start fade at 28s so the 6th segment runs until text appears
+    const videoFadeDuration = 1.0; // 1 second fade (28-29s), providing a clean transition before after-fade layers
     let finalVideoLabel = currentInput; // Track final video label after fade
     const hasTextBeforeFade = allLayersBeforeFade.some(layer => layer.type === 'text');
     if (videoFadeStart > 0 && videoFadeDuration > 0) {
