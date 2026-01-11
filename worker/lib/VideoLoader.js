@@ -159,10 +159,12 @@ export class VideoLoader {
             const bucket = storage.bucket();
             
             // Log what folders are being requested
-            console.log(`[VideoLoader] 🔍 Loading video references with selectedFolders: [${selectedFolders.join(', ')}]`);
+            console.log(`[VideoLoader] 🔍 Loading media references with selectedFolders: [${selectedFolders.join(', ')}]`);
             
-            // Support multiple video formats
+            // Support multiple video and image formats
             const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
+            const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+            const mediaExtensions = [...videoExtensions, ...imageExtensions];
             
             // Normalize folder names for comparison (case-insensitive, trim whitespace, remove assets/ prefix)
             const normalize = (name) => {
@@ -264,23 +266,23 @@ export class VideoLoader {
                 // Get the Firebase Storage prefix path
                 const prefix = folderName + '/';
                 
-                console.log(`[VideoLoader] 📋 Getting video file references from ${folderName} folder (prefix: "${prefix}")...`);
+                console.log(`[VideoLoader] 📋 Getting media file references from ${folderName} folder (prefix: "${prefix}")...`);
                 const [fileList] = await bucket.getFiles({ prefix: prefix });
                 console.log(`[VideoLoader] 📁 Found ${fileList.length} total files in ${folderName} folder (before filtering)`);
                 
                 const filtered = fileList.filter(file => {
                     const fileName = file.name.toLowerCase();
-                    const isVideo = videoExtensions.some(ext => fileName.endsWith(ext));
+                    const isMedia = mediaExtensions.some(ext => fileName.endsWith(ext));
                     const isKeep = fileName.endsWith('.keep');
-                    if (!isVideo && !isKeep) {
-                        console.log(`[VideoLoader] ⚠️  Skipping non-video file: ${file.name}`);
+                    if (!isMedia && !isKeep) {
+                        console.log(`[VideoLoader] ⚠️  Skipping non-media file: ${file.name}`);
                     }
-                    return isVideo && !isKeep;
+                    return isMedia && !isKeep;
                 });
                 
-                console.log(`[VideoLoader] ✅ Found ${filtered.length} videos in ${folderName} folder`);
+                console.log(`[VideoLoader] ✅ Found ${filtered.length} media files in ${folderName} folder`);
                 if (filtered.length > 0) {
-                    console.log(`[VideoLoader] 📹 Video files: ${filtered.slice(0, 5).map(f => f.name).join(', ')}${filtered.length > 5 ? '...' : ''}`);
+                    console.log(`[VideoLoader] 📹 Media files: ${filtered.slice(0, 5).map(f => f.name).join(', ')}${filtered.length > 5 ? '...' : ''}`);
                 }
                 
                 // Add to grouped structure using normalized folder name as key
@@ -305,13 +307,13 @@ export class VideoLoader {
             console.log(`[VideoLoader] ✅ Found ${folderSummary} = ${total} total video references`);
 
             if (total === 0) {
-                console.warn(`[VideoLoader] ⚠️ No videos found in selected folders: [${selectedFolders.join(', ')}]`);
-                console.warn(`[VideoLoader] ⚠️ This will cause fallback to image background.`);
-                console.warn(`[VideoLoader] 💡 Check that:`);
-                console.warn(`[VideoLoader]    1. Folder names match exactly (case-insensitive)`);
-                console.warn(`[VideoLoader]    2. Videos exist in Firebase Storage in those folders`);
-                console.warn(`[VideoLoader]    3. Videos have valid extensions: ${videoExtensions.join(', ')}`);
-                return returnGrouped ? groupedFiles : [];
+            console.warn(`[VideoLoader] ⚠️ No media found in selected folders: [${selectedFolders.join(', ')}]`);
+            console.warn(`[VideoLoader] ⚠️ This will cause fallback to image background.`);
+            console.warn(`[VideoLoader] 💡 Check that:`);
+            console.warn(`[VideoLoader]    1. Folder names match exactly (case-insensitive)`);
+            console.warn(`[VideoLoader]    2. Media exists in Firebase Storage in those folders`);
+            console.warn(`[VideoLoader]    3. Files have valid extensions: ${mediaExtensions.join(', ')}`);
+            return returnGrouped ? groupedFiles : [];
             }
 
             // Return grouped structure with file references (not downloaded paths)
@@ -336,7 +338,7 @@ export class VideoLoader {
     async downloadVideoFile(fileRef, folderName) {
         try {
             const fileName = path.basename(fileRef.name);
-            const cacheKey = `${folderName}_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const cacheKey = `${folderName}_${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
             const cachedPath = path.join(this.cacheDir, cacheKey);
 
             // Check cache first
@@ -368,10 +370,12 @@ export class VideoLoader {
             const bucket = storage.bucket();
 
             // Log what folders are being requested
-            console.log(`[VideoLoader] 🔍 Loading videos with selectedFolders: [${selectedFolders.join(', ')}]`);
+            console.log(`[VideoLoader] 🔍 Loading media with selectedFolders: [${selectedFolders.join(', ')}]`);
 
-            // Support multiple video formats: .mp4, .mov, .m4v, .avi, .mkv, .webm
+            // Support multiple video and image formats
             const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
+            const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+            const mediaExtensions = [...videoExtensions, ...imageExtensions];
             
             // Normalize folder names for comparison (case-insensitive, trim whitespace, remove assets/ prefix)
             const normalize = (name) => {
@@ -473,31 +477,31 @@ export class VideoLoader {
                 // Get the Firebase Storage prefix path
                 const prefix = folderName + '/';
                 
-                console.log(`[VideoLoader] 📥 Loading videos from ${folderName} folder (prefix: "${prefix}")...`);
+                console.log(`[VideoLoader] 📥 Loading media from ${folderName} folder (prefix: "${prefix}")...`);
                 const [fileList] = await bucket.getFiles({ prefix: prefix });
                 console.log(`[VideoLoader] 📁 Found ${fileList.length} total files in ${folderName} folder (before filtering)`);
                 
                 const filtered = fileList.filter(file => {
                     const fileName = file.name.toLowerCase();
-                    const isVideo = videoExtensions.some(ext => fileName.endsWith(ext));
+                    const isMedia = mediaExtensions.some(ext => fileName.endsWith(ext));
                     const isKeep = fileName.endsWith('.keep');
-                    if (!isVideo && !isKeep) {
-                        console.log(`[VideoLoader] ⚠️  Skipping non-video file: ${file.name}`);
+                    if (!isMedia && !isKeep) {
+                        console.log(`[VideoLoader] ⚠️  Skipping non-media file: ${file.name}`);
                     }
-                    return isVideo && !isKeep;
+                    return isMedia && !isKeep;
                 });
                 
-                console.log(`[VideoLoader] ✅ Found ${filtered.length} videos in ${folderName} folder`);
+                console.log(`[VideoLoader] ✅ Found ${filtered.length} media files in ${folderName} folder`);
                 if (filtered.length > 0) {
-                    console.log(`[VideoLoader] 📹 Video files: ${filtered.slice(0, 5).map(f => f.name).join(', ')}${filtered.length > 5 ? '...' : ''}`);
+                    console.log(`[VideoLoader] 📹 Media files: ${filtered.slice(0, 5).map(f => f.name).join(', ')}${filtered.length > 5 ? '...' : ''}`);
                 }
                 
                 // Download and cache videos from this folder
                 const folderVideos = [];
                 for (const file of filtered) {
                     const fileName = path.basename(file.name);
-                    const safeFolderName = normalizedFolderName.replace(/[^a-zA-Z0-9]/g, '_');
-                    const cacheKey = `${safeFolderName}_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    const safeFolderName = normalizedFolderName.replace(/[^a-zA-Z0-9._-]/g, '_');
+                    const cacheKey = `${safeFolderName}_${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
                     const cachedPath = path.join(this.cacheDir, cacheKey);
 
                     // Check cache first
@@ -509,7 +513,7 @@ export class VideoLoader {
                     // Download from Firebase using Admin SDK (works with private files)
                     try {
                         const fileRef = bucket.file(file.name);
-                        console.log(`[VideoLoader] 📥 Downloading video from ${folderName}: ${fileName}`);
+                        console.log(`[VideoLoader] 📥 Downloading media from ${folderName}: ${fileName}`);
                         
                         // Use Admin SDK download method (works with private files)
                         await fileRef.download({ destination: cachedPath });
@@ -540,15 +544,15 @@ export class VideoLoader {
                 .filter(([_, arr]) => arr.length > 0)
                 .map(([name, arr]) => `${arr.length} ${name}`)
                 .join(' + ');
-            console.log(`[VideoLoader] ✅ Loaded ${folderSummary} = ${totalVideos} total videos`);
+            console.log(`[VideoLoader] ✅ Loaded ${folderSummary} = ${totalVideos} total media files`);
 
             if (totalVideos === 0) {
-                console.warn(`[VideoLoader] ⚠️ No videos found in selected folders: [${selectedFolders.join(', ')}]`);
+                console.warn(`[VideoLoader] ⚠️ No media found in selected folders: [${selectedFolders.join(', ')}]`);
                 console.warn(`[VideoLoader] ⚠️ This will cause fallback to image background.`);
                 console.warn(`[VideoLoader] 💡 Check that:`);
                 console.warn(`[VideoLoader]    1. Folder names match exactly (case-insensitive)`);
-                console.warn(`[VideoLoader]    2. Videos exist in Firebase Storage in those folders`);
-                console.warn(`[VideoLoader]    3. Videos have valid extensions: ${videoExtensions.join(', ')}`);
+                console.warn(`[VideoLoader]    2. Media exists in Firebase Storage in those folders`);
+                console.warn(`[VideoLoader]    3. Files have valid extensions: ${mediaExtensions.join(', ')}`);
                 return returnGrouped ? groupedVideos : [];
             }
 
@@ -695,5 +699,4 @@ export class VideoLoader {
         }
     }
 }
-
 

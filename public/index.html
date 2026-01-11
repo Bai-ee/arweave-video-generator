@@ -1205,25 +1205,25 @@
     <div id="uploadModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
       <div style="background: radial-gradient(ellipse at center, rgba(20, 20, 30, 0.7) 0%, rgba(0, 0, 0, 0.6) 100%); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">UPLOAD VIDEO</h2>
+          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">UPLOAD MEDIA</h2>
           <button onclick="hideUploadModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
         </div>
         
         <form id="uploadForm" onsubmit="handleVideoUpload(event)" style="display: flex; flex-direction: column; gap: 1rem;">
           <div>
             <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Select Video Files (.mov, .mp4, .m4v) - Multiple files supported
+              Select Media Files (Videos or Images) - Multiple files supported
             </label>
             <input 
               type="file" 
               id="videoFileInput" 
-              accept="video/*,.mov,.mp4,.m4v" 
+              accept="video/*,image/*,.mov,.mp4,.m4v,.avi,.mkv,.webm,.png,.jpg,.jpeg,.gif,.svg,.webp" 
               multiple
               required
               style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
             />
             <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
-              Max file size: 500MB per file. Videos will be optimized automatically. You can select multiple files at once.
+              Max file size: 500MB per video, 50MB per image. Videos will be optimized automatically. You can select multiple files at once.
             </p>
             <div id="selectedFilesList" style="margin-top: 0.75rem; display: none;">
               <p style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem; margin-bottom: 0.5rem;">
@@ -1309,7 +1309,7 @@
             </div>
             
             <p id="folderHelpText" style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
-              Select the folder where your video will be stored
+              Select the folder where your media will be stored
             </p>
           </div>
           
@@ -5468,7 +5468,7 @@
       const files = Array.from(fileInput.files);
       
       if (files.length === 0) {
-        showToast('Please select at least one video file', 'error');
+        showToast('Please select at least one file', 'error');
         return;
       }
       
@@ -5503,20 +5503,27 @@
 
       // Validate files based on folder type
       // Determine if this is an image folder or video folder
+      const videoExtensions = ['.mov', '.mp4', '.m4v', '.avi', '.mkv', '.webm'];
+      const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+      const imageExtensionsWithVector = [...imageExtensions, '.svg'];
       const isImageFolder = folder === 'logos' || folder === 'paper_backgrounds';
       const allowedTypes = isImageFolder 
-        ? ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'] 
-        : ['.mov', '.mp4', '.m4v', '.avi', '.mkv', '.webm'];
-      const maxSize = isImageFolder ? 50 * 1024 * 1024 : 500 * 1024 * 1024; // 50MB for images, 500MB for videos
+        ? imageExtensionsWithVector 
+        : [...videoExtensions, ...imageExtensions];
       const invalidFiles = [];
       
       files.forEach((file, index) => {
         const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+        const isImageFile = imageExtensionsWithVector.includes(fileExt);
+        const isVideoFile = videoExtensions.includes(fileExt);
         if (!allowedTypes.includes(fileExt)) {
-          invalidFiles.push(`${file.name} (invalid type - ${isImageFolder ? 'images only' : 'videos only'})`);
+          invalidFiles.push(`${file.name} (invalid type - ${isImageFolder ? 'images only' : 'videos or images only'})`);
         }
-        if (file.size > maxSize) {
-          invalidFiles.push(`${file.name} (exceeds ${isImageFolder ? '50MB' : '500MB'})`);
+        if (isImageFile && file.size > 50 * 1024 * 1024) {
+          invalidFiles.push(`${file.name} (exceeds 50MB image limit)`);
+        }
+        if (isVideoFile && file.size > 500 * 1024 * 1024) {
+          invalidFiles.push(`${file.name} (exceeds 500MB video limit)`);
         }
       });
 
@@ -5592,8 +5599,11 @@
           const storageRef = ref(storage, storagePath);
           
           // Create upload task
+          const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+          const isImageFile = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].includes(fileExt);
+          const fallbackContentType = isImageFile ? 'image/jpeg' : 'video/mp4';
           const uploadTask = uploadBytesResumable(storageRef, file, {
-            contentType: file.type || 'video/mp4',
+            contentType: file.type || fallbackContentType,
             customMetadata: {
               originalName: file.name,
               orientation: orientation,
@@ -7844,6 +7854,3 @@
 
 </body>
 </html>
-
-
-

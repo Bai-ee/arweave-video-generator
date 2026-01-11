@@ -325,6 +325,11 @@ export class VideoSegmentCompositor {
     }
   }
 
+  isImageFileName(fileName) {
+    const ext = path.extname(fileName || '').toLowerCase();
+    return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
+  }
+
   /**
    * Create a 30-second video from multiple 5-second segments with transitions and beat sync
    * @param {string[]|Object} videoPaths - Array of source video paths OR grouped object { skyline: [...], chicago: [...] }
@@ -438,6 +443,13 @@ export class VideoSegmentCompositor {
     const totalVideosAvailable = allVideosList.length;
     console.log(`[VideoSegmentCompositor] Total videos available: ${totalVideosAvailable}`);
 
+    const createSegmentFromSource = async (sourcePath, targetTime) => {
+      if (this.isImageFileName(sourcePath)) {
+        return this.createImageSegmentFromPath(sourcePath, segmentDuration, canvasWidth, canvasHeight);
+      }
+      return this.extractRandomSegment(sourcePath, segmentDuration, targetTime, beatPositions);
+    };
+
       // Check if we have file references (Firebase File objects) or paths (strings)
       // Check first non-empty folder array
       const firstFolderWithVideos = Object.values(folderMap).find(arr => arr.length > 0);
@@ -550,7 +562,7 @@ export class VideoSegmentCompositor {
       try {
         // Download video if we have a file reference
         if (hasFileReferences && selectedFileRef) {
-          console.log(`[VideoSegmentCompositor] Downloading video: ${selectedFileRef.name} from ${sourceFolder}...`);
+          console.log(`[VideoSegmentCompositor] Downloading media: ${selectedFileRef.name} from ${sourceFolder}...`);
           selectedVideo = await videoLoader.downloadVideoFile(selectedFileRef, sourceFolder);
           if (!selectedVideo || !await fs.pathExists(selectedVideo)) {
             throw new Error(`Downloaded video file not found: ${selectedVideo}`);
@@ -570,8 +582,8 @@ export class VideoSegmentCompositor {
         const segmentStartTime = i * segmentDuration;
         const targetTime = beatPositions.length > 0 ? segmentStartTime : null;
         
-        console.log(`[VideoSegmentCompositor] Extracting segment ${i + 1}/${segmentsNeeded} from ${path.basename(selectedVideo)}...`);
-        const segmentPath = await this.extractRandomSegment(selectedVideo, segmentDuration, targetTime, beatPositions);
+        console.log(`[VideoSegmentCompositor] Creating segment ${i + 1}/${segmentsNeeded} from ${path.basename(selectedVideo)}...`);
+        const segmentPath = await createSegmentFromSource(selectedVideo, targetTime);
         
         // Determine transition type for this segment boundary (random: quick-cut or quick-fade)
         if (i < segmentsNeeded - 1) { // No transition after last segment
@@ -599,6 +611,8 @@ export class VideoSegmentCompositor {
         segmentPaths.push(segmentPath);
         console.log(`[VideoSegmentCompositor] ✅ Segment ${i + 1}/${segmentsNeeded} extracted from ${sourceFolder} folder (${(segmentStats.size / 1024).toFixed(1)}KB)`);
       } catch (error) {
+        const segmentStartTime = i * segmentDuration;
+        const targetTime = beatPositions.length > 0 ? segmentStartTime : null;
         const videoName = hasFileReferences ? (selectedFileRef?.name || 'unknown') : path.basename(selectedVideo || 'unknown');
         console.error(`[VideoSegmentCompositor] ❌ Failed to extract segment from ${videoName}`);
         console.error(`[VideoSegmentCompositor] Error: ${error.message}`);
@@ -667,7 +681,7 @@ export class VideoSegmentCompositor {
               usedAllVideos.add(fallbackKey);
             }
             
-            const segmentPath = await this.extractRandomSegment(fallbackVideo, segmentDuration);
+            const segmentPath = await createSegmentFromSource(fallbackVideo, targetTime);
             
             // Validate segment
             const segmentStats = await fs.stat(segmentPath);
@@ -1214,6 +1228,62 @@ export class VideoSegmentCompositor {
     
     console.log(`[VideoSegmentCompositor] ✅ Created artist image video segment: ${path.basename(outputPath)} (${(stats.size / 1024).toFixed(1)}KB)`);
     
+    return outputPath;
+  }
+
+  /**
+   * Create a video segment from a local image with a slow zoom-in animation.
+   * @param {string} imagePath - Local image path
+   * @param {number} duration - Duration in seconds (default: 5)
+   * @param {number} canvasWidth - Canvas width (default: 720)
+   * @param {number} canvasHeight - Canvas height (default: 720)
+   * @returns {Promise<string>} Path to video segment
+   */
+  async createImageSegmentFromPath(imagePath, duration = 5, canvasWidth = 720, canvasHeight = 720) {
+    if (!await fs.pathExists(imagePath)) {
+      throw new Error(`Image file does not exist: ${imagePath}`);
+    }
+
+    const outputPath = path.join(this.tempDir, `image_segment_${Date.now()}.mp4`);
+    const totalFrames = Math.max(1, Math.round(duration * 30));
+    const zoomIncrement = 0.0006;
+    const maxZoom = 1.08;
+
+    const filterChain = [
+      `scale=${canvasWidth}:${canvasHeight}:force_original_aspect_ratio=increase`,
+      `crop=${canvasWidth}:${canvasHeight}`,
+      `zoompan=z='min(zoom+${zoomIncrement},${maxZoom})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${canvasWidth}x${canvasHeight}:fps=30`
+    ].join(',');
+
+    const command = [
+      ffmpegPath,
+      '-loop', '1',
+      '-i', imagePath,
+      '-vf', filterChain,
+      '-t', duration.toString(),
+      '-r', '30',
+      '-pix_fmt', 'yuv420p',
+      '-c:v', 'libx264',
+      '-preset', 'fast',
+      '-crf', '23',
+      '-y',
+      outputPath
+    ];
+
+    console.log(`[VideoSegmentCompositor] Creating ${duration}s zooming image segment from ${path.basename(imagePath)}...`);
+    await this.executeFFmpeg(command, outputPath, 100 * 1024);
+
+    if (!await fs.pathExists(outputPath)) {
+      throw new Error(`Image segment was not created: ${outputPath}`);
+    }
+
+    const stats = await fs.stat(outputPath);
+    if (stats.size < 10240) {
+      await fs.remove(outputPath).catch(() => {});
+      throw new Error(`Image segment is too small (${stats.size} bytes)`);
+    }
+
+    console.log(`[VideoSegmentCompositor] ✅ Created zooming image segment: ${path.basename(outputPath)} (${(stats.size / 1024).toFixed(1)}KB)`);
     return outputPath;
   }
 

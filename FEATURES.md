@@ -15,12 +15,12 @@ This document describes all features of the Arweave Video Generator system, thei
 
 **Status**: Verified and working
 
-**Description**: Generate music videos by combining audio from Arweave with video segments from selected Firebase Storage folders.
+**Description**: Generate music videos by combining audio from Arweave with video and image segments from selected Firebase Storage folders.
 
 **How It Works**:
 1. User selects audio source (MIXES or TRACKS)
 2. User selects one or more video folders (checkboxes)
-3. System extracts 5-second segments from videos in selected folders
+3. System extracts 5-second segments from videos or generates animated segments from images in selected folders
 4. Segments are concatenated into a background video
 5. Overlays (paper texture, logos, text) are applied
 6. Audio track is combined with video
@@ -58,6 +58,7 @@ This document describes all features of the Arweave Video Generator system, thei
 - **Processing**: GitHub Actions workflow runs every minute
 - **Output**: Video stored in `videos/` folder in Firebase Storage
 - **URL Format**: Signed URL (1 year expiry, CORS-compliant)
+- **Image Segments**: Images are converted into 5s clips with a slow zoom-in animation
 
 **Verification**:
 - ✅ Job creation in Firestore with `selectedFolders` array
@@ -110,12 +111,12 @@ This document describes all features of the Arweave Video Generator system, thei
 
 **Status**: Verified and working
 
-**Description**: Users can upload videos directly to Firebase Storage folders for use in video generation.
+**Description**: Users can upload videos or images directly to Firebase Storage folders for use in video generation.
 
 **How It Works**:
 1. User clicks "UPLOAD VIDEO" button
 2. Modal opens with file input and folder selector
-3. User selects files and destination folder
+3. User selects video or image files and destination folder
 4. Files upload directly to Firebase Storage (bypasses Vercel 10MB limit)
 5. Progress is shown for each file
 6. Files are automatically made public
@@ -123,7 +124,7 @@ This document describes all features of the Arweave Video Generator system, thei
 
 **Usage**:
 1. Click **UPLOAD VIDEO** button
-2. Select video files (.mov, .mp4, .m4v, etc.) - multiple files supported
+2. Select video or image files (.mov, .mp4, .m4v, .png, .jpg, etc.) - multiple files supported
 3. Select orientation (auto-detect, square, portrait, landscape)
 4. Select destination folder from dropdown
 5. Click **Upload**
@@ -605,5 +606,3 @@ Potential improvements (not yet implemented):
 - Video editing capabilities
 - Real-time collaboration
 - Video analytics
-
-
