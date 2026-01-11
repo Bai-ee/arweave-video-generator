@@ -703,30 +703,40 @@ export class VideoSegmentCompositor {
     // If end media URL is provided, create two 5-second videos from it and add as 5th and 6th segments
     if (endMediaUrl) {
       const mediaType = endMediaType || 'image';
-      console.log(`[VideoSegmentCompositor] 🎬 Building end media (${mediaType}) segment(s): ${endMediaUrl}`);
+      console.log(`[VideoSegmentCompositor] 🎬 Creating two 5-second videos from end media (${mediaType}): ${endMediaUrl}`);
       try {
-        const mediaSegments = [];
+        let endMediaSegment1 = null;
+        let endMediaSegment2 = null;
         if (mediaType === 'video') {
-          mediaSegments.push(await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight));
-          mediaSegments.push(await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight));
+          endMediaSegment1 = await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
+          endMediaSegment2 = await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
         } else {
-          mediaSegments.push(await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight));
-          mediaSegments.push(await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight));
+          endMediaSegment1 = await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
+          endMediaSegment2 = await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
         }
 
-        const validSegments = [];
-        for (const segment of mediaSegments) {
-          if (segment && await fs.pathExists(segment)) {
-            validSegments.push(segment);
-          }
-        }
-
-        if (endMediaIsArtistImage) {
-          if (validSegments.length >= 1 && segmentPaths.length >= 1) {
-            const replacement = validSegments[0];
-            const removed = segmentPaths.splice(segmentPaths.length - 1, 1, replacement);
-            for (const removedPath of removed) {
-              await fs.remove(removedPath).catch(() => {});
+        if (endMediaSegment1 && await fs.pathExists(endMediaSegment1)) {
+          if (endMediaIsArtistImage) {
+            if (segmentPaths.length >= 1) {
+              const removed = segmentPaths.splice(segmentPaths.length - 1, 1, endMediaSegment1);
+              for (const removedPath of removed) {
+                await fs.remove(removedPath).catch(() => {});
+              }
+              if (transitionTypes.length > 0) {
+                transitionTypes[transitionTypes.length - 1] = {
+                  type: 'fade',
+                  duration: 0.75,
+                  offset: Math.max(0, targetDuration - segmentDuration)
+                };
+              }
+              console.log(`[VideoSegmentCompositor] ✅ Artist image replaced the 6th segment`);
+            } else {
+              console.warn(`[VideoSegmentCompositor] ⚠️  No segments available to replace with artist image`);
+            }
+          } else if (endMediaSegment2 && await fs.pathExists(endMediaSegment2) && segmentPaths.length >= 2) {
+            const removed = segmentPaths.splice(segmentPaths.length - 2, 2, endMediaSegment1, endMediaSegment2);
+            for (const replaced of removed) {
+              await fs.remove(replaced).catch(() => {});
             }
             if (transitionTypes.length > 0) {
               transitionTypes[transitionTypes.length - 1] = {
@@ -735,30 +745,16 @@ export class VideoSegmentCompositor {
                 offset: Math.max(0, targetDuration - segmentDuration)
               };
             }
-            console.log(`[VideoSegmentCompositor] ✅ Artist image replaced the 6th segment`);
+            console.log(`[VideoSegmentCompositor] ✅ Replaced final 2 segments with end media (${mediaType})`);
           } else {
-            console.warn(`[VideoSegmentCompositor] ⚠️ Unable to replace 6th segment with artist image`);
+            console.warn(`[VideoSegmentCompositor] ⚠️  Not enough segments to replace with end media (${mediaType})`);
           }
-        } else if (validSegments.length >= 2) {
-          const replacementSegments = validSegments.slice(0, 2);
-          const removed = segmentPaths.splice(segmentPaths.length - 2, 2, ...replacementSegments);
-          for (const removedPath of removed) {
-            await fs.remove(removedPath).catch(() => {});
-          }
-          if (transitionTypes.length > 0) {
-            transitionTypes[transitionTypes.length - 1] = {
-              type: 'fade',
-              duration: 0.75,
-              offset: Math.max(0, targetDuration - segmentDuration)
-            };
-          }
-          console.log(`[VideoSegmentCompositor] ✅ Replaced final 2 segments with end media (${mediaType})`);
         } else {
-          console.warn(`[VideoSegmentCompositor] ⚠️ Not enough valid end media segments (${validSegments.length})`);
+          console.warn(`[VideoSegmentCompositor] ⚠️  Failed to create end media segment(s)`);
         }
       } catch (error) {
         console.error(`[VideoSegmentCompositor] ❌ Error creating end media segments: ${error.message}`);
-        console.warn(`[VideoSegmentCompositor] ⚠️ Continuing without end media segments`);
+        console.warn(`[VideoSegmentCompositor] ⚠️  Continuing without end media segments`);
       }
     }
 
