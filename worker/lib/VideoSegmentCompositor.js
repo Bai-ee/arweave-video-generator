@@ -719,13 +719,20 @@ export class VideoSegmentCompositor {
         }
         
         if (endMediaSegment1 && await fs.pathExists(endMediaSegment1)) {
+          const fadeDuration = 1.0; // Fade into artist image
+          transitionTypes.push({
+            type: 'fade',
+            duration: fadeDuration,
+            offset: targetDuration
+          });
           segmentPaths.push(endMediaSegment1);
           console.log(`[VideoSegmentCompositor] ✅ Added end media (${mediaType}) as 5th segment`);
         } else {
           console.warn(`[VideoSegmentCompositor] ⚠️  Failed to create first end media segment, continuing without it`);
         }
-        
+
         if (endMediaSegment2 && await fs.pathExists(endMediaSegment2)) {
+          transitionTypes.push({ type: 'cut', duration: 0 });
           segmentPaths.push(endMediaSegment2);
           console.log(`[VideoSegmentCompositor] ✅ Added end media (${mediaType}) as 6th segment`);
         } else {
@@ -875,22 +882,26 @@ export class VideoSegmentCompositor {
           
           if (transition.type === 'fade') {
             // Quick-fade: crossfade transition
-            // Normalize timebase first to avoid xfade errors
-            const fadeDuration = transition.duration;
-            const offset = Math.max(0, currentTime + segmentDuration - fadeDuration);
-            
+            const fadeDuration = transition.duration || 0.75;
+            const calculatedOffset = Math.max(0, currentTime + segmentDuration - fadeDuration);
+            let fadeOffset = transition.offset !== undefined ? transition.offset : calculatedOffset;
+            if (transition.offset !== undefined) {
+              console.log(`[VideoSegmentCompositor] 📍 Forced fade offset: ${fadeOffset.toFixed(3)}s`);
+            } else {
+              console.log(`[VideoSegmentCompositor] 📍 Calculated fade offset: ${fadeOffset.toFixed(3)}s`);
+            }
+
             // Align fade start to beat if possible (flexible sync)
-            let fadeOffset = offset;
             if (beatPositions.length > 0) {
               const originalOffset = fadeOffset;
-              fadeOffset = this.alignToBeat(offset, beatPositions, false);
+              fadeOffset = this.alignToBeat(fadeOffset, beatPositions, false);
               fadeOffset = Math.max(0, fadeOffset);
               const beatOffset = Math.abs(fadeOffset - originalOffset);
               if (beatOffset > 0.01) {
                 console.log(`[VideoSegmentCompositor] 🎵 Transition beat alignment: ${originalOffset.toFixed(3)}s → ${fadeOffset.toFixed(3)}s (offset: ${beatOffset.toFixed(3)}s)`);
               }
             }
-            
+
             // Normalize timebase and framerate for xfade compatibility
             // xfade requires consistent timebase (1/30) and framerate (30fps)
             const normalizedCurrent = `v${i}_norm_prev`;
@@ -1303,4 +1314,3 @@ export class VideoSegmentCompositor {
     }
   }
 }
-
