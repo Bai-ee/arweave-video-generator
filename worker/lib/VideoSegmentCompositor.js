@@ -702,25 +702,27 @@ export class VideoSegmentCompositor {
 
     // If end media URL is provided, create two 5-second videos from it and add as 5th and 6th segments
     if (endMediaUrl) {
-      const mediaType = endMediaType || 'image';
+      const mediaType = endMediaType || 'image'; // Default to image for backwards compatibility
       console.log(`[VideoSegmentCompositor] 🎬 Creating two 5-second videos from end media (${mediaType}): ${endMediaUrl}`);
       try {
         let endMediaSegment1 = null;
         let endMediaSegment2 = null;
         if (mediaType === 'video') {
+          // For video: download and extract 5-second segment
           endMediaSegment1 = await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
           endMediaSegment2 = await this.createVideoSegmentFromUrl(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
         } else {
+          // For image: use existing image-to-video conversion
           endMediaSegment1 = await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
           endMediaSegment2 = await this.createImageVideoSegment(endMediaUrl, segmentDuration, canvasWidth, canvasHeight);
         }
 
-        if (endMediaSegment1 && await fs.pathExists(endMediaSegment1)) {
+        if (endMediaSegment1 && await fs.pathExists(endMediaSegment1) && endMediaSegment2 && await fs.pathExists(endMediaSegment2)) {
           if (endMediaIsArtistImage) {
             if (segmentPaths.length >= 1) {
               const removed = segmentPaths.splice(segmentPaths.length - 1, 1, endMediaSegment1);
-              for (const removedPath of removed) {
-                await fs.remove(removedPath).catch(() => {});
+              for (const replaced of removed) {
+                await fs.remove(replaced).catch(() => {});
               }
               if (transitionTypes.length > 0) {
                 transitionTypes[transitionTypes.length - 1] = {
@@ -729,32 +731,36 @@ export class VideoSegmentCompositor {
                   offset: Math.max(0, targetDuration - segmentDuration)
                 };
               }
-              console.log(`[VideoSegmentCompositor] ✅ Artist image replaced the 6th segment`);
+              console.log(`[VideoSegmentCompositor] ✅ Artist thumbnail replaced the 6th segment`);
             } else {
-              console.warn(`[VideoSegmentCompositor] ⚠️  No segments available to replace with artist image`);
+              console.warn(`[VideoSegmentCompositor] ⚠️ Not enough segments to replace with artist thumbnail`);
             }
-          } else if (endMediaSegment2 && await fs.pathExists(endMediaSegment2) && segmentPaths.length >= 2) {
-            const removed = segmentPaths.splice(segmentPaths.length - 2, 2, endMediaSegment1, endMediaSegment2);
-            for (const replaced of removed) {
-              await fs.remove(replaced).catch(() => {});
-            }
-            if (transitionTypes.length > 0) {
-              transitionTypes[transitionTypes.length - 1] = {
-                type: 'fade',
-                duration: 0.75,
-                offset: Math.max(0, targetDuration - segmentDuration)
-              };
-            }
-            console.log(`[VideoSegmentCompositor] ✅ Replaced final 2 segments with end media (${mediaType})`);
           } else {
-            console.warn(`[VideoSegmentCompositor] ⚠️  Not enough segments to replace with end media (${mediaType})`);
+            const replaceCount = Math.min(2, segmentPaths.length);
+            if (replaceCount >= 2) {
+              const replaceIndex = segmentPaths.length - replaceCount;
+              const replacedSegments = segmentPaths.splice(replaceIndex, replaceCount, endMediaSegment1, endMediaSegment2);
+              for (const replaced of replacedSegments) {
+                await fs.remove(replaced).catch(() => {});
+              }
+              if (transitionTypes.length > 0) {
+                transitionTypes[transitionTypes.length - 1] = {
+                  type: 'fade',
+                  duration: 0.75,
+                  offset: Math.max(0, targetDuration - segmentDuration)
+                };
+              }
+              console.log(`[VideoSegmentCompositor] ✅ Replaced final ${replaceCount} segments with end media (${mediaType})`);
+            } else {
+              console.warn(`[VideoSegmentCompositor] ⚠️ Not enough segments to replace with end media (${mediaType})`);
+            }
           }
         } else {
-          console.warn(`[VideoSegmentCompositor] ⚠️  Failed to create end media segment(s)`);
+          console.warn(`[VideoSegmentCompositor] ⚠️ Failed to create end media segments, continuing without replacement`);
         }
       } catch (error) {
         console.error(`[VideoSegmentCompositor] ❌ Error creating end media segments: ${error.message}`);
-        console.warn(`[VideoSegmentCompositor] ⚠️  Continuing without end media segments`);
+        console.warn(`[VideoSegmentCompositor] ⚠️ Continuing without end media segments`);
       }
     }
 
