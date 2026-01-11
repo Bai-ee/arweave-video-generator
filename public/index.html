@@ -2859,17 +2859,20 @@
         
         if (!data.success || !data.videos) {
           console.error('Failed to load videos for order selection:', data.error);
-          selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center; grid-column: 1/-1;">Failed to load videos</p>';
+          selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center; grid-column: 1/-1;">Failed to load media</p>';
           return;
         }
         
-        // Filter to only videos (not images)
-        const videos = data.videos.filter(file => 
-          file.contentType && file.contentType.startsWith('video/')
-        );
+        const media = data.videos.filter(file => {
+          const name = (file.name || '').toLowerCase();
+          return name.endsWith('.mp4') || name.endsWith('.mov') || name.endsWith('.m4v') ||
+            name.endsWith('.avi') || name.endsWith('.mkv') || name.endsWith('.webm') ||
+            name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg') ||
+            name.endsWith('.gif') || name.endsWith('.webp');
+        });
         
-        if (videos.length === 0) {
-          selectsContainer.innerHTML = '<p style="color: var(--color-yellow-75); text-align: center; grid-column: 1/-1;">No videos found in this folder</p>';
+        if (media.length === 0) {
+          selectsContainer.innerHTML = '<p style="color: var(--color-yellow-75); text-align: center; grid-column: 1/-1;">No media found in this folder</p>';
           return;
         }
         
@@ -2884,13 +2887,13 @@
         selectsContainer.innerHTML = '';
         
         // Determine if we need lazy loading (more than 10 videos)
-        const needsLazyLoading = videos.length > 10;
+        const needsLazyLoading = media.length > 10;
         
         // Initialize videoOrder array with 6 empty slots
         videoOrder = Array.from({ length: 6 }, (_, i) => ({ segmentIndex: i, videoName: '' }));
         
         // Create video cards in a single grid (folder-style)
-        videos.forEach((video, videoIndex) => {
+        media.forEach((video, videoIndex) => {
           const videoCard = document.createElement('div');
           videoCard.className = 'folder-card-item'; // Use same class as folder selection
           videoCard.dataset.videoName = video.name;
@@ -2910,16 +2913,6 @@
           thumbnailContainer.style.overflow = 'hidden';
           thumbnailContainer.style.backgroundColor = '#0a0a0a';
           
-          // Create video element for thumbnail (square format)
-          const videoElement = document.createElement('video');
-          videoElement.style.width = '100%';
-          videoElement.style.height = '100%';
-          videoElement.style.objectFit = 'cover';
-          videoElement.style.display = 'block';
-          videoElement.style.pointerEvents = 'none';
-          videoElement.muted = true;
-          videoElement.playsInline = true;
-          
           // Segment badge (shown when video is selected)
           const segmentBadge = document.createElement('div');
           segmentBadge.style.position = 'absolute';
@@ -2936,26 +2929,25 @@
           segmentBadge.textContent = '1';
           
           // Lazy loading: only load first 10 immediately, rest load on scroll
+          const fileName = (video.name || '').toLowerCase();
+          const isImage = fileName.endsWith('.png') || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') ||
+            fileName.endsWith('.gif') || fileName.endsWith('.webp');
+          const isVideo = !isImage;
+          const filePath = video.fullPath || `${folderName}/${video.name}`;
+
           if (needsLazyLoading && videoIndex >= 10) {
-            videoElement.loading = 'lazy';
-            videoElement.preload = 'none';
-            // Use Intersection Observer for lazy loading
             const observer = new IntersectionObserver((entries) => {
               entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                  loadVideoThumbnail(videoElement, video, folderName, thumbnailContainer, storage, ref, getDownloadURL);
+                  loadMediaThumbnail(thumbnailContainer, video, filePath, isImage, isVideo, storage, ref, getDownloadURL);
                   observer.unobserve(entry.target);
                 }
               });
             }, { rootMargin: '50px' });
             observer.observe(videoCard);
           } else {
-            // Load immediately for first 10 videos
-            videoElement.preload = 'metadata';
-            loadVideoThumbnail(videoElement, video, folderName, thumbnailContainer, storage, ref, getDownloadURL);
+            loadMediaThumbnail(thumbnailContainer, video, filePath, isImage, isVideo, storage, ref, getDownloadURL);
           }
-          
-          thumbnailContainer.appendChild(videoElement);
           thumbnailContainer.appendChild(segmentBadge);
           
           // No video name div - just thumbnail like folder selection
@@ -3032,7 +3024,7 @@
         });
       } catch (error) {
         console.error('Error loading video order options:', error);
-        selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center; grid-column: 1/-1;">Error loading videos</p>';
+        selectsContainer.innerHTML = '<p style="color: #ef4444; text-align: center; grid-column: 1/-1;">Error loading media</p>';
       }
     };
     
@@ -3061,7 +3053,7 @@
         if (selectedVideos.length > 0) {
           statusList.textContent = selectedVideos.join(' • ');
         } else {
-          statusList.textContent = 'Click videos to assign them to segments 1-6';
+          statusList.textContent = 'Click media to assign them to segments 1-6';
         }
       }
     }
