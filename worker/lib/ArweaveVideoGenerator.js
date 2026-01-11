@@ -434,12 +434,11 @@ class ArweaveVideoGenerator {
                             console.log(`[ArweaveVideoGenerator] 🖼️  Artist image disabled by user - using 6 video segments`);
                         }
                         
-                        // If artist has image, create 4 segments (20s) + 2 image segments (10s) = 30s
-                        // Otherwise create 6 segments (30s)
-                        const videoDuration = artistImageUrl ? duration - 10 : duration;
+                        // Always create full 30s of video segments, then replace the 6th with artist image if enabled
+                        const videoDuration = duration;
                         const segmentsNeeded = Math.ceil(videoDuration / 5);
                         
-                        console.log(`[ArweaveVideoGenerator] Creating ${videoDuration}s video from ${segmentsNeeded} segments${artistImageUrl ? ' + 10s artist image (5th & 6th segments)' : ''}...`);
+                        console.log(`[ArweaveVideoGenerator] Creating ${videoDuration}s video from ${segmentsNeeded} segments${artistImageUrl ? ' + 5s artist image (6th segment)' : ''}...`);
                         
                         // Create video from random 5-second segments with equal distribution
                         // Videos will be downloaded on-demand in VideoSegmentCompositor
