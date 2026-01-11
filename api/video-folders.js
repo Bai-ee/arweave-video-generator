@@ -98,13 +98,14 @@ export default async function handler(req, res) {
       const folderPath = folder.endsWith('/') ? folder : `${folder}/`;
       const [files] = await bucket.getFiles({ prefix: folderPath });
 
-      // Filter for video and image files based on folder type
+      // Filter for media files based on folder type
       const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
       const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
+      const mediaExtensions = [...videoExtensions, ...imageExtensions];
       
       // Determine if this is an image folder or video folder
       const isImageFolder = folder === 'logos' || folder === 'paper_backgrounds';
-      const allowedExtensions = isImageFolder ? imageExtensions : videoExtensions;
+      const allowedExtensions = isImageFolder ? imageExtensions : mediaExtensions;
       
       const filteredFiles = files.filter(file => {
         const fileName = file.name.toLowerCase();
@@ -159,7 +160,8 @@ export default async function handler(req, res) {
           const isImageFolder = folderName === 'logos' || folderName === 'paper_backgrounds';
           const videoExtensions = ['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm'];
           const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
-          const allowedExtensions = isImageFolder ? imageExtensions : videoExtensions;
+          const mediaExtensions = [...videoExtensions, ...imageExtensions];
+          const allowedExtensions = isImageFolder ? imageExtensions : mediaExtensions;
           
           const fileCount = files.filter(file => {
             const fileName = file.name.toLowerCase();
@@ -189,4 +191,3 @@ export default async function handler(req, res) {
     });
   }
 }
-
