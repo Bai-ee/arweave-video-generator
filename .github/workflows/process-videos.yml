@@ -25,26 +25,27 @@ jobs:
         working-directory: ./worker
         run: npm install
 
-      # Pin ffmpeg 6.1 (same series as March's apt 6.1.1). Two environmental regressions
-      # made the old setup fail: (1) the Azure apt mirror started stalling apt-get for 25+ min,
-      # and (2) the only readily-available static builds (npm ffmpeg-static on Linux, and
-      # setup-ffmpeg) are johnvansickle 7.0.2, which SEGFAULTS reading Arweave streams.
-      # ffmpeg 6.x does not. Fetch the 6.1 static build from a reliable source (not the apt
-      # mirror) and use it for BOTH the bare `ffmpeg` execSync calls (/usr/local/bin) and
-      # fluent-ffmpeg's setFfmpegPath(ffmpeg-static). No render-logic change.
-      - name: Pin ffmpeg 6.1 (7.0.2 segfaults on Arweave seeks)
+      # Install the DYNAMICALLY-linked apt ffmpeg (6.1.x) — exactly what worked in March.
+      # The static johnvansickle builds (npm ffmpeg-static on Linux, setup-ffmpeg) SEGFAULT
+      # reading Arweave HTTPS streams in the audio path (confirmed on both 6.1 and 7.0.2).
+      # The only reason apt broke was GitHub's default azure.archive.ubuntu.com mirror
+      # stalling for 25+ min, so swap to the canonical mirror and add retries.
+      - name: Install ffmpeg (apt, dynamic)
+        timeout-minutes: 8
         working-directory: ./worker
         run: |
-          curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-6.1-amd64-static.tar.xz -o /tmp/ffmpeg.tar.xz
-          tar xf /tmp/ffmpeg.tar.xz -C /tmp
-          cp /tmp/ffmpeg-6.1-amd64-static/ffmpeg node_modules/ffmpeg-static/ffmpeg
-          cp /tmp/ffmpeg-6.1-amd64-static/ffprobe node_modules/ffmpeg-static/ffprobe || true
-          chmod +x node_modules/ffmpeg-static/ffmpeg
-          sudo ln -sf "$(pwd)/node_modules/ffmpeg-static/ffmpeg" /usr/local/bin/ffmpeg
-          sudo ln -sf "$(pwd)/node_modules/ffmpeg-static/ffprobe" /usr/local/bin/ffprobe || true
+          sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+          sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/sources.list 2>/dev/null || true
+          sudo apt-get -o Acquire::Retries=5 update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -y --no-install-recommends ffmpeg
+          # Force every ffmpeg entrypoint to the dynamic apt build: bare `ffmpeg` (execSync,
+          # audio HTTPS) and fluent-ffmpeg's setFfmpegPath(ffmpeg-static). Static builds segfault.
+          sudo ln -sf /usr/bin/ffmpeg /usr/local/bin/ffmpeg
+          ln -sf /usr/bin/ffmpeg node_modules/ffmpeg-static/ffmpeg
           hash -r
           echo "which ffmpeg: $(which ffmpeg)"
           ffmpeg -version | head -1
+          echo "linkage:" && (ldd /usr/bin/ffmpeg | head -1 || true)
 
       - name: Process video jobs
         working-directory: ./worker
