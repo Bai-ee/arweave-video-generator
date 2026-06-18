@@ -10,7 +10,7 @@ on:
 jobs:
   process-videos:
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Increased from 5 to 15 minutes for video processing
+    timeout-minutes: 30
     
     steps:
       - name: Checkout code
@@ -21,10 +21,8 @@ jobs:
         with:
           node-version: '18'
       
-      - name: Install FFmpeg and ImageMagick
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg imagemagick
+      - name: Install ImageMagick
+        run: sudo apt-get install -y --no-install-recommends imagemagick
       
       - name: Install dependencies
         working-directory: ./worker

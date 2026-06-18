@@ -17,7 +17,10 @@ export function initializeFirebaseAdmin() {
 
   try {
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+      let raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY.trim();
+      if (raw.startsWith('"') && raw.endsWith('"')) raw = raw.slice(1, -1);
+      raw = raw.replace(/\n/g, '\\n');
+      const serviceAccount = JSON.parse(raw);
       
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),

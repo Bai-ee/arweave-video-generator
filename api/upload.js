@@ -33,28 +33,12 @@ const require = createRequire(import.meta.url);
 // Body parsing is handled automatically based on Content-Type
 
 export default async function handler(req, res) {
-  // CRITICAL: Log immediately - even before try/catch
-  console.error('[Upload] ============================================');
-  console.error('[Upload] FUNCTION CALLED - Request received!');
-  console.error('[Upload] Method:', req.method);
-  console.error('[Upload] URL:', req.url);
-  console.error('[Upload] Timestamp:', new Date().toISOString());
-  
-  // Wrapper to ensure all errors return JSON
   try {
     // Set CORS headers early - BEFORE any processing
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS,GET');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Content-Length, Content-Disposition');
-    
-    // Log the incoming request immediately
-    console.log('[Upload] ============================================');
-    console.log('[Upload] Request received!');
-    console.log('[Upload] Method:', req.method);
-    console.log('[Upload] URL:', req.url);
-    console.log('[Upload] Headers:', JSON.stringify(req.headers, null, 2));
-    console.log('[Upload] Content-Type:', req.headers['content-type']);
     
     // Set JSON content type for responses (but allow multipart for requests)
     res.setHeader('Content-Type', 'application/json');
