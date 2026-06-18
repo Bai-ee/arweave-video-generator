@@ -25,14 +25,21 @@ jobs:
         working-directory: ./worker
         run: npm install
 
-      # Put the npm ffmpeg-static binary (already a worker dependency) on PATH for the bare
-      # `ffmpeg` execSync calls. The static binary is safe now because the worker downloads
-      # all media (audio AND video) to LOCAL files before invoking ffmpeg — ffmpeg never reads
-      # HTTPS, which is what made the static build segfault. No apt mirror dependency.
-      - name: Link ffmpeg-static onto PATH
+      # Pin ffmpeg 6.1 (same series as March's apt 6.1.1). The johnvansickle 7.0.2 static
+      # binary — what npm ffmpeg-static ships on Linux — fails two ways: it segfaults reading
+      # HTTPS, AND it fails libx264/xfade encoding of variable-frame-rate iPhone .mov clips
+      # ("current rate 1/0 is invalid"). ffmpeg 6.x handles both (proven: macOS ffmpeg-static
+      # 6.0 renders these locally). Audio already reads LOCAL files (download-to-local), so
+      # 6.1 never touches HTTPS. Use 6.1 for bare `ffmpeg` and fluent's setFfmpegPath. No apt.
+      - name: Pin ffmpeg 6.1
         working-directory: ./worker
         run: |
+          curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-6.1-amd64-static.tar.xz -o /tmp/ffmpeg.tar.xz
+          tar xf /tmp/ffmpeg.tar.xz -C /tmp
+          cp /tmp/ffmpeg-6.1-amd64-static/ffmpeg node_modules/ffmpeg-static/ffmpeg
+          chmod +x node_modules/ffmpeg-static/ffmpeg
           sudo ln -sf "$(pwd)/node_modules/ffmpeg-static/ffmpeg" /usr/local/bin/ffmpeg
+          hash -r
           ffmpeg -version | head -1
 
       - name: Process video jobs
