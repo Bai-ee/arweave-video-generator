@@ -355,11 +355,11 @@ class ArweaveAudioClient {
     if (process.env.GITHUB_ACTIONS === 'true') {
       console.log('[ArweaveAudioClient] Using direct FFmpeg execSync for GitHub Actions');
       try {
-        // Output seeking (-ss AFTER -i) — input seeking (-ss before -i) crashes the static
-        // ffmpeg binary on large network-stream offsets. This matches the seek mode used by
-        // the local fluent-ffmpeg path (.setStartTime), which renders successfully at the same
-        // offsets. Reconnect flags handle Arweave gateway drops on long streams.
-        const ffmpegCommand = `ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${url}" -ss ${startTime} -t ${duration} -vn -map 0:a -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
+        // Input seeking (-ss BEFORE -i) — efficient HTTP range requests, fetches only the
+        // needed segment. This is the command that worked in March with ffmpeg 6.x. (The
+        // johnvansickle 7.0.2 static binary segfaulted on it; the workflow now pins ffmpeg 6.1.)
+        // Reconnect flags handle Arweave gateway drops; stderr surfaced for diagnostics.
+        const ffmpegCommand = `ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss ${startTime} -i "${url}" -t ${duration} -vn -map 0:a -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
         console.log(`[ArweaveAudioClient] FFmpeg command: ${ffmpegCommand.substring(0, 150)}...`);
         try {
           execSync(ffmpegCommand, { stdio: 'pipe', timeout: 180000 });

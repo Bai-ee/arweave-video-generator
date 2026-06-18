@@ -25,14 +25,25 @@ jobs:
         working-directory: ./worker
         run: npm install
 
-      # The npm ffmpeg-static package (v6.0) ships a working static binary and is
-      # already a worker dependency. Linking it onto PATH avoids the flaky Azure apt
-      # mirror that was stalling `apt-get install ffmpeg` for 25+ min. This is the same
-      # binary that renders correctly locally and via fluent-ffmpeg's setFfmpegPath.
-      - name: Link ffmpeg onto PATH
+      # Pin ffmpeg 6.1 (same series as March's apt 6.1.1). Two environmental regressions
+      # made the old setup fail: (1) the Azure apt mirror started stalling apt-get for 25+ min,
+      # and (2) the only readily-available static builds (npm ffmpeg-static on Linux, and
+      # setup-ffmpeg) are johnvansickle 7.0.2, which SEGFAULTS reading Arweave streams.
+      # ffmpeg 6.x does not. Fetch the 6.1 static build from a reliable source (not the apt
+      # mirror) and use it for BOTH the bare `ffmpeg` execSync calls (/usr/local/bin) and
+      # fluent-ffmpeg's setFfmpegPath(ffmpeg-static). No render-logic change.
+      - name: Pin ffmpeg 6.1 (7.0.2 segfaults on Arweave seeks)
         working-directory: ./worker
         run: |
+          curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-6.1-amd64-static.tar.xz -o /tmp/ffmpeg.tar.xz
+          tar xf /tmp/ffmpeg.tar.xz -C /tmp
+          cp /tmp/ffmpeg-6.1-amd64-static/ffmpeg node_modules/ffmpeg-static/ffmpeg
+          cp /tmp/ffmpeg-6.1-amd64-static/ffprobe node_modules/ffmpeg-static/ffprobe || true
+          chmod +x node_modules/ffmpeg-static/ffmpeg
           sudo ln -sf "$(pwd)/node_modules/ffmpeg-static/ffmpeg" /usr/local/bin/ffmpeg
+          sudo ln -sf "$(pwd)/node_modules/ffmpeg-static/ffprobe" /usr/local/bin/ffprobe || true
+          hash -r
+          echo "which ffmpeg: $(which ffmpeg)"
           ffmpeg -version | head -1
 
       - name: Process video jobs
