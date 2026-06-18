@@ -25,27 +25,15 @@ jobs:
         working-directory: ./worker
         run: npm install
 
-      # Install the DYNAMICALLY-linked apt ffmpeg (6.1.x) — exactly what worked in March.
-      # The static johnvansickle builds (npm ffmpeg-static on Linux, setup-ffmpeg) SEGFAULT
-      # reading Arweave HTTPS streams in the audio path (confirmed on both 6.1 and 7.0.2).
-      # The only reason apt broke was GitHub's default azure.archive.ubuntu.com mirror
-      # stalling for 25+ min, so swap to the canonical mirror and add retries.
-      - name: Install ffmpeg (apt, dynamic)
-        timeout-minutes: 8
+      # Put the npm ffmpeg-static binary (already a worker dependency) on PATH for the bare
+      # `ffmpeg` execSync calls. The static binary is safe now because the worker downloads
+      # all media (audio AND video) to LOCAL files before invoking ffmpeg — ffmpeg never reads
+      # HTTPS, which is what made the static build segfault. No apt mirror dependency.
+      - name: Link ffmpeg-static onto PATH
         working-directory: ./worker
         run: |
-          sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/sources.list.d/*.sources 2>/dev/null || true
-          sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/sources.list 2>/dev/null || true
-          sudo apt-get -o Acquire::Retries=5 update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -y --no-install-recommends ffmpeg
-          # Force every ffmpeg entrypoint to the dynamic apt build: bare `ffmpeg` (execSync,
-          # audio HTTPS) and fluent-ffmpeg's setFfmpegPath(ffmpeg-static). Static builds segfault.
-          sudo ln -sf /usr/bin/ffmpeg /usr/local/bin/ffmpeg
-          ln -sf /usr/bin/ffmpeg node_modules/ffmpeg-static/ffmpeg
-          hash -r
-          echo "which ffmpeg: $(which ffmpeg)"
+          sudo ln -sf "$(pwd)/node_modules/ffmpeg-static/ffmpeg" /usr/local/bin/ffmpeg
           ffmpeg -version | head -1
-          echo "linkage:" && (ldd /usr/bin/ffmpeg | head -1 || true)
 
       - name: Process video jobs
         working-directory: ./worker

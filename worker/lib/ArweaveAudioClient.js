@@ -354,12 +354,39 @@ class ArweaveAudioClient {
     // Use direct execSync for GitHub Actions to avoid SIGSEGV crashes
     if (process.env.GITHUB_ACTIONS === 'true') {
       console.log('[ArweaveAudioClient] Using direct FFmpeg execSync for GitHub Actions');
+      // The static ffmpeg available on the runner SEGFAULTS when reading an HTTPS stream
+      // directly (confirmed on johnvansickle 6.1 and 7.0.2). apt's dynamic ffmpeg would be
+      // fine but GitHub's apt mirror is currently unreliable (stalls past timeout). So
+      // download the source to a LOCAL file with curl first, then let ffmpeg seek/transcode
+      // locally — ffmpeg never touches the network, so the crash cannot occur.
+      const srcPath = `${outputPath}.src`;
       try {
-        // Input seeking (-ss BEFORE -i) — efficient HTTP range requests, fetches only the
-        // needed segment. This is the command that worked in March with ffmpeg 6.x. (The
-        // johnvansickle 7.0.2 static binary segfaulted on it; the workflow now pins ffmpeg 6.1.)
-        // Reconnect flags handle Arweave gateway drops; stderr surfaced for diagnostics.
-        const ffmpegCommand = `ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss ${startTime} -i "${url}" -t ${duration} -vn -map 0:a -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
+        console.log(`[ArweaveAudioClient] Downloading source audio to local file (curl)...`);
+        execSync(`curl -fsSL --retry 3 --retry-delay 2 --max-time 300 -o "${srcPath}" "${url}"`, { stdio: 'pipe', timeout: 320000 });
+
+        // The mix metadata duration is sometimes longer than the actual audio, which places
+        // the seek offset past the end and yields a near-silent ~1KB clip. Now that the file
+        // is local, probe its REAL duration (via ffmpeg's banner — ffmpeg-static has no
+        // ffprobe) and clamp the offset so we always land inside real audio.
+        let effectiveStart = startTime;
+        try {
+          let probe = '';
+          try { execSync(`ffmpeg -i "${srcPath}"`, { stdio: 'pipe', timeout: 30000 }); }
+          catch (e) { probe = e.stderr ? e.stderr.toString() : ''; }
+          const m = probe.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+          if (m) {
+            const realDur = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
+            if (startTime + duration > realDur) {
+              effectiveStart = Math.max(0, Math.floor(realDur - duration - 1));
+              console.warn(`[ArweaveAudioClient] ⚠️ Offset ${startTime}s past real audio ${realDur.toFixed(0)}s — clamping to ${effectiveStart}s`);
+            }
+          }
+        } catch (probeErr) {
+          console.warn('[ArweaveAudioClient] Duration probe failed, using original offset:', probeErr.message);
+        }
+
+        // Input seeking on a LOCAL file is fast and crash-free.
+        const ffmpegCommand = `ffmpeg -ss ${effectiveStart} -i "${srcPath}" -t ${duration} -vn -map 0:a -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
         console.log(`[ArweaveAudioClient] FFmpeg command: ${ffmpegCommand.substring(0, 150)}...`);
         try {
           execSync(ffmpegCommand, { stdio: 'pipe', timeout: 180000 });
@@ -374,6 +401,8 @@ class ArweaveAudioClient {
       } catch (error) {
         console.error(`[ArweaveAudioClient] Direct FFmpeg execSync failed:`, error.message);
         throw error;
+      } finally {
+        try { fs.removeSync(srcPath); } catch (e) { /* ignore */ }
       }
     }
 
