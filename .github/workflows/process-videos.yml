@@ -21,11 +21,17 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install FFmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Cache apt packages
+        id: cache-apt
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: apt-ffmpeg-imagemagick-${{ runner.os }}
 
-      - name: Install ImageMagick
-        run: sudo apt-get install -y --no-install-recommends imagemagick
+      - name: Install FFmpeg and ImageMagick
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg imagemagick
 
       - name: Install dependencies
         working-directory: ./worker
