@@ -355,12 +355,11 @@ class ArweaveAudioClient {
     if (process.env.GITHUB_ACTIONS === 'true') {
       console.log('[ArweaveAudioClient] Using direct FFmpeg execSync for GitHub Actions');
       try {
-        // Simple direct command - -ss before -i enables HTTP range requests
-        // -vn disables video (ignores embedded cover art)
-        // -map 0:a maps only audio stream
-        const ffmpegCommand = `ffmpeg -ss ${startTime} -i "${url}" -t ${duration} -vn -map 0:a -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
+        // Output seeking (-ss after -i) avoids segfaults from static ffmpeg on large seek offsets.
+        // Reconnect flags handle Arweave gateway drops on long streams.
+        const ffmpegCommand = `ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${url}" -ss ${startTime} -t ${duration} -vn -map 0:a -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
         console.log(`[ArweaveAudioClient] FFmpeg command: ${ffmpegCommand.substring(0, 150)}...`);
-        execSync(ffmpegCommand, { stdio: 'pipe' });
+        execSync(ffmpegCommand, { stdio: 'pipe', timeout: 120000 });
         console.log(`[ArweaveAudioClient] Segment download completed: ${path.basename(outputPath)}`);
         return outputPath;
       } catch (error) {

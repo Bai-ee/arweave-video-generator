@@ -21,11 +21,11 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Cache apt packages
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: ffmpeg imagemagick
-          version: 1.0
+      - name: Install FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+
+      - name: Install ImageMagick
+        run: sudo apt-get install -y --no-install-recommends imagemagick
 
       - name: Install dependencies
         working-directory: ./worker
