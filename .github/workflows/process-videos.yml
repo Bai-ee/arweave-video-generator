@@ -21,8 +21,8 @@ jobs:
         with:
           node-version: '18'
       
-      - name: Install ImageMagick
-        run: sudo apt-get install -y --no-install-recommends imagemagick
+      - name: Install FFmpeg and ImageMagick
+        run: sudo apt-get install -y --no-install-recommends ffmpeg imagemagick
       
       - name: Install dependencies
         working-directory: ./worker
