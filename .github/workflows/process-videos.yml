@@ -25,22 +25,26 @@ jobs:
         working-directory: ./worker
         run: npm install
 
-      # Pin ffmpeg 6.1 (same series as March's apt 6.1.1). The johnvansickle 7.0.2 static
-      # binary — what npm ffmpeg-static ships on Linux — fails two ways: it segfaults reading
-      # HTTPS, AND it fails libx264/xfade encoding of variable-frame-rate iPhone .mov clips
-      # ("current rate 1/0 is invalid"). ffmpeg 6.x handles both (proven: macOS ffmpeg-static
-      # 6.0 renders these locally). Audio already reads LOCAL files (download-to-local), so
-      # 6.1 never touches HTTPS. Use 6.1 for bare `ffmpeg` and fluent's setFfmpegPath. No apt.
-      - name: Pin ffmpeg 6.1
+      # Pin ffmpeg 6.1.3 (BtbN full GPL build). This single binary fixes every failure mode
+      # hit while the apt mirror is down and npm ffmpeg-static ships johnvansickle 7.0.2:
+      #   - 6.x (not 7.0.2) encodes variable-frame-rate iPhone .mov clips (xfade/libx264)
+      #   - full build includes the drawtext filter (--enable-libfreetype/libass) for text overlays
+      #   - GitHub-hosted release = reliable download, no apt mirror dependency
+      # Audio reads LOCAL files (download-to-local), so ffmpeg never touches HTTPS. drawtext
+      # presence verified via `strings`. Used for both bare `ffmpeg` and fluent setFfmpegPath.
+      - name: Pin ffmpeg 6.1.3 (full build, drawtext)
         working-directory: ./worker
         run: |
-          curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-6.1-amd64-static.tar.xz -o /tmp/ffmpeg.tar.xz
+          curl -fsSL "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-08-31-13-00/ffmpeg-n6.1.3-linux64-gpl-6.1.tar.xz" -o /tmp/ffmpeg.tar.xz
           tar xf /tmp/ffmpeg.tar.xz -C /tmp
-          cp /tmp/ffmpeg-6.1-amd64-static/ffmpeg node_modules/ffmpeg-static/ffmpeg
+          BIN="/tmp/ffmpeg-n6.1.3-linux64-gpl-6.1/bin"
+          cp "$BIN/ffmpeg" node_modules/ffmpeg-static/ffmpeg
           chmod +x node_modules/ffmpeg-static/ffmpeg
-          sudo ln -sf "$(pwd)/node_modules/ffmpeg-static/ffmpeg" /usr/local/bin/ffmpeg
+          sudo cp "$BIN/ffmpeg" /usr/local/bin/ffmpeg
+          sudo cp "$BIN/ffprobe" /usr/local/bin/ffprobe
           hash -r
           ffmpeg -version | head -1
+          ffmpeg -hide_banner -filters 2>/dev/null | grep -q ' drawtext ' && echo "drawtext: OK" || echo "drawtext: MISSING"
 
       - name: Process video jobs
         working-directory: ./worker
