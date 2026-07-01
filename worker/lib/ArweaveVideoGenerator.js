@@ -977,14 +977,15 @@ class ArweaveVideoGenerator {
                     // Download and cache logo using Firebase Admin SDK (works with private files)
                     await selectedLogo.download({ destination: logoCachePath });
                     
-                    // Calculate logo size: 35% of width, maintain aspect ratio
-                    const logoWidth = Math.round(width * 0.35);
+                    // Calculate logo size: ~72% of width (was 35%) — end logo fills much
+                    // more of the frame (~2x bigger), maintain aspect ratio.
+                    const logoWidth = Math.round(width * 0.72);
                     const logoHeight = Math.round(logoWidth * 1.0); // Will be adjusted by aspect ratio
-                    
-                    // Center position (horizontally and vertically) - use canvas center
+
+                    // Centered horizontally; nudged slightly BELOW center vertically.
                     // FFmpeg overlay uses top-left corner, so center = (width - logoWidth) / 2
                     const logoX = Math.round((width - logoWidth) / 2);
-                    const logoY = Math.round((height - logoHeight) / 2);
+                    const logoY = Math.round((height - logoHeight) / 2 + height * 0.06);
                     
                     console.log(`[ArweaveVideoGenerator] ✅ Logo downloaded: ${logoFileName}`);
                     console.log(`[ArweaveVideoGenerator] Logo size: ${logoWidth}x${logoHeight}, position: (${logoX}, ${logoY})`);
