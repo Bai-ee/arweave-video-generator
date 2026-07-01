@@ -89,6 +89,42 @@ function applyFilterIntensity(filterString, intensity = 0.4) {
 }
 
 export const VIDEO_FILTERS = {
+  // --- Phase 1 additive looks (2026-07-01) --------------------------------
+  // Built ONLY from primitives already proven in production (scale/pad/eq/
+  // curves/unsharp) so ffmpeg 6.1.3 in the worker handles them like the looks
+  // below. All additive; deleting these five entries fully reverts them.
+  'look_original': {
+    name: 'No Filter (Original)',
+    description: 'No color grade — source shown as-is, only fit to the square frame',
+    // Scale/pad ONLY. Must stay a non-empty filter string: a null/empty filter
+    // makes VideoCompositor apply its default black & white (hue=s=0).
+    baseFilter: 'scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black',
+    getFilter: (intensity = 0.4) => applyFilterIntensity('scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black', intensity)
+  },
+  'look_bright_airy': {
+    name: 'Bright & Airy (Hawaii)',
+    description: 'Fresh, bright, clean — lifted shadows, airy highlights, crisp',
+    baseFilter: 'scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.04:brightness=0.03:saturation=1.08:gamma=1.05,curves=all=\'0/0.05 0.25/0.32 0.5/0.57 0.75/0.82 1/1\':b=\'0/0.04 0.5/0.52 1/0.98\',unsharp=5:5:0.5:5:5:0.0',
+    getFilter: (intensity = 0.4) => applyFilterIntensity('scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.04:brightness=0.03:saturation=1.08:gamma=1.05,curves=all=\'0/0.05 0.25/0.32 0.5/0.57 0.75/0.82 1/1\':b=\'0/0.04 0.5/0.52 1/0.98\',unsharp=5:5:0.5:5:5:0.0', intensity)
+  },
+  'look_crisp_enhance': {
+    name: 'Crisp Enhance',
+    description: 'Clean HD-style pop — neutral color, micro-contrast, sharpened',
+    baseFilter: 'scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.05:saturation=1.06,curves=all=\'0/0 0.25/0.24 0.5/0.5 0.75/0.78 1/1\',unsharp=5:5:0.8:5:5:0.2',
+    getFilter: (intensity = 0.4) => applyFilterIntensity('scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.05:saturation=1.06,curves=all=\'0/0 0.25/0.24 0.5/0.5 0.75/0.78 1/1\',unsharp=5:5:0.8:5:5:0.2', intensity)
+  },
+  'look_golden_warm': {
+    name: 'Golden Warm',
+    description: 'Warm cinematic glow — lifted reds, softened blues, gentle sharpen',
+    baseFilter: 'scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.06:brightness=0.01:saturation=1.1,curves=r=\'0/0.02 0.5/0.56 1/1\':b=\'0/0 0.5/0.44 1/0.92\',unsharp=5:5:0.4:5:5:0.0',
+    getFilter: (intensity = 0.4) => applyFilterIntensity('scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.06:brightness=0.01:saturation=1.1,curves=r=\'0/0.02 0.5/0.56 1/1\':b=\'0/0 0.5/0.44 1/0.92\',unsharp=5:5:0.4:5:5:0.0', intensity)
+  },
+  'look_vivid_pop': {
+    name: 'Vivid Pop',
+    description: 'Punchy, clean saturation and contrast — no grain, no vignette',
+    baseFilter: 'scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.08:brightness=-0.01:saturation=1.18,curves=all=\'0/0 0.25/0.2 0.5/0.5 0.75/0.8 1/1\',unsharp=5:5:0.5:5:5:0.0',
+    getFilter: (intensity = 0.4) => applyFilterIntensity('scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(720-iw)/2:(720-ih)/2:black,eq=contrast=1.08:brightness=-0.01:saturation=1.18,curves=all=\'0/0 0.25/0.2 0.5/0.5 0.75/0.8 1/1\',unsharp=5:5:0.5:5:5:0.0', intensity)
+  },
   'look_gritty_neon_club': {
     name: 'Gritty Neon Club',
     description: 'Punchy contrast, slight neon saturation, dirty grain',
