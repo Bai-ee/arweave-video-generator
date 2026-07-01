@@ -982,10 +982,10 @@ class ArweaveVideoGenerator {
                     const logoWidth = Math.round(width * 0.72);
                     const logoHeight = Math.round(logoWidth * 1.0); // Will be adjusted by aspect ratio
 
-                    // Centered horizontally; nudged slightly BELOW center vertically.
+                    // Centered horizontally and vertically.
                     // FFmpeg overlay uses top-left corner, so center = (width - logoWidth) / 2
                     const logoX = Math.round((width - logoWidth) / 2);
-                    const logoY = Math.round((height - logoHeight) / 2 + height * 0.06);
+                    const logoY = Math.round((height - logoHeight) / 2);
                     
                     console.log(`[ArweaveVideoGenerator] ✅ Logo downloaded: ${logoFileName}`);
                     console.log(`[ArweaveVideoGenerator] Logo size: ${logoWidth}x${logoHeight}, position: (${logoX}, ${logoY})`);
