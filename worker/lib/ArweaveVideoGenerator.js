@@ -648,7 +648,7 @@ class ArweaveVideoGenerator {
                 backgroundPath = await this.generateBackgroundImage(audioArtist, prompt, width, height);
             }
 
-            // Step 3: Load top logo (ue_barcode_black.png as default, or custom selected logo)
+            // Step 3: Load top logo (ue_barcode_white.png as default, or custom selected logo)
             // Top logo: Always appears at top, runs entire length, fades out at end with everything else
             console.log('[ArweaveVideoGenerator] Step 3: Loading top logo from Firebase...');
             const layers = [];
@@ -660,7 +660,7 @@ class ArweaveVideoGenerator {
                 const bucket = storage.bucket();
                 
                 let logoToLoad = null;
-                let logoFileName = 'ue_barcode_black.png'; // Default top logo
+                let logoFileName = 'ue_barcode_white.png'; // Default top logo
                 
                 if (topLogo && topLogo.trim() !== '') {
                     // Custom top logo selected - load it
@@ -685,15 +685,19 @@ class ArweaveVideoGenerator {
                         logoFileName = path.basename(logoToLoad.name);
                         console.log(`[ArweaveVideoGenerator] ✅ Found custom top logo: ${logoFileName}`);
                     } else {
-                        console.warn(`[ArweaveVideoGenerator] ⚠️ Custom top logo "${topLogo}" not found, falling back to default ue_barcode_black.png`);
-                        logoToLoad = bucket.file('logos/ue_barcode_black.png');
+                        console.warn(`[ArweaveVideoGenerator] ⚠️ Custom top logo "${topLogo}" not found, falling back to default ue_barcode_white.png`);
+                        logoToLoad = bucket.file('logos/ue_barcode_white.png');
                     }
                 } else {
-                    // No custom top logo - use ue_barcode_black.png as default
-                    console.log(`[ArweaveVideoGenerator] No custom top logo selected, using ue_barcode_black.png (default)`);
-                    logoToLoad = bucket.file('logos/ue_barcode_black.png');
+                    // No top logo selected → render NOTHING (skip the default barcode).
+                    // "None" in the UI must mean no logo, not a default brand mark.
+                    console.log(`[ArweaveVideoGenerator] No top logo selected — skipping (no default logo).`);
+                    logoToLoad = null;
                 }
                 
+                // Only load + composite a top logo when one resolved. "None" leaves
+                // logoToLoad null → no top-logo layer (the default barcode is gone).
+                if (logoToLoad) {
                 // Download and cache logo using Firebase Admin SDK (works with private files)
                 serialLogoCachePath = path.join(this.cacheDir, `serial_logo_${Date.now()}.png`);
                 await logoToLoad.download({ destination: serialLogoCachePath });
@@ -720,6 +724,9 @@ class ArweaveVideoGenerator {
                 ));
                 
                 console.log(`[ArweaveVideoGenerator] Top logo: ${logoWidth}x${logoHeight} (100% width), centered, appears from start, fades out at end`);
+                } else {
+                    console.log(`[ArweaveVideoGenerator] Top logo: none selected — no logo layer added.`);
+                }
             } catch (error) {
                 console.warn(`[ArweaveVideoGenerator] ⚠️ Failed to load top logo:`, error.message);
                 serialLogoCachePath = null; // Clear if failed
@@ -923,7 +930,7 @@ class ArweaveVideoGenerator {
                 // For random selection, exclude top logo defaults
                 const validLogosForRandom = allLogos.filter(file => {
                     const fileName = path.basename(file.name);
-                    return fileName !== 'serial_logo.png' && fileName !== 'ue_barcode_black.png';
+                    return fileName !== 'serial_logo.png' && fileName !== 'ue_barcode_black.png' && fileName !== 'ue_barcode_white.png';
                 });
                 
                 if (allLogos.length > 0) {

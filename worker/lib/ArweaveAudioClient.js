@@ -235,7 +235,7 @@ class ArweaveAudioClient {
     
     // Fallback to random artist if not found
     if (!selectedArtist) {
-      selectedArtist = this.artistsData[Math.floor(Math.random() * this.artistsData.length)];
+      selectedArtist = this.artistsData[0]; // pinned: first artist for repeatability (was random when unset)
     }
     
     // Get random mix from that artist
@@ -269,11 +269,11 @@ class ArweaveAudioClient {
         console.log(`[ArweaveAudioClient] Found specific mix: ${selectedMix.mixTitle}`);
       } else {
         console.warn(`[ArweaveAudioClient] Mix "${mixTitle}" not found for artist "${selectedArtist.artistName}", using random selection`);
-        selectedMix = validMixes[Math.floor(Math.random() * validMixes.length)];
+        selectedMix = validMixes[0]; // pinned: first valid mix for repeatability (was random when unset)
       }
     } else {
       // Random mix selection
-      selectedMix = validMixes[Math.floor(Math.random() * validMixes.length)];
+      selectedMix = validMixes[0]; // pinned: first valid mix for repeatability (was random when unset)
     }
     
     console.log(`[ArweaveAudioClient] Selected mix: ${selectedMix.mixTitle} (${validMixes.length} valid mixes available)`);
@@ -310,7 +310,7 @@ class ArweaveAudioClient {
     
     // Fallback to random artist if not found
     if (!selectedArtist) {
-      selectedArtist = this.artistsData[Math.floor(Math.random() * this.artistsData.length)];
+      selectedArtist = this.artistsData[0]; // pinned: first artist for repeatability (was random when unset)
     }
     
     // Get random track from that artist
@@ -329,7 +329,7 @@ class ArweaveAudioClient {
       throw new Error(`Artist ${selectedArtist.artistName} has no trax with valid URLs`);
     }
     
-    const randomTrack = validTrax[Math.floor(Math.random() * validTrax.length)];
+    const randomTrack = validTrax[0]; // pinned: first valid track for repeatability (was random)
     
     console.log(`[ArweaveAudioClient] Selected track: ${randomTrack.trackTitle} (${validTrax.length} valid trax available)`);
     
