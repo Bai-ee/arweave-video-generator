@@ -230,6 +230,22 @@ This document provides an index of all documentation files in the Arweave Video 
 
 ---
 
+### 12b. [MIX_AUDIO_SCRUBBING.md](./MIX_AUDIO_SCRUBBING.md)
+
+**Purpose**: Why mixes play but can't forward-scrub, and how to actually fix it
+
+**Contents**:
+- Root cause: large bundled data-items + gateway Range behavior
+- Verified gateway matrix (arweave.net plays/no-range; ar-io.dev 402s playback)
+- What NOT to do (don't route mix URLs through ar-io.dev)
+- Option B: range-proxy (Cloudflare Worker) — real scrub, mixes stay on Arweave
+
+**Audience**: Anyone touching mix playback URLs or the audio player
+
+**When to Read**: BEFORE changing mix `mixArweaveURL` gateways or the player
+
+---
+
 ### 13. [HOW_TO_VIEW_VERCEL_LOGS.md](./HOW_TO_VIEW_VERCEL_LOGS.md)
 
 **Purpose**: How to view and analyze Vercel logs
