@@ -1,0 +1,15 @@
+{
+  "name": "ue-mix-range-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloudflare Worker range proxy so Arweave-hosted mixes are scrubbable",
+  "type": "module",
+  "scripts": {
+    "test": "node test.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

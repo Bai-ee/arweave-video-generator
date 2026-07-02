@@ -1,0 +1,6 @@
+name = "ue-mix-range-proxy"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Deploys to https://ue-mix-range-proxy.<your-account>.workers.dev (free workers.dev subdomain).
+# No custom domain or DNS needed for a first cut.
