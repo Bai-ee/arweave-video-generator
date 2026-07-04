@@ -283,8 +283,8 @@ export class VideoCompositor {
         const borderWidth = actualFontSize < 30 ? 1 : 2; // Thinner border for small text
         
         // Build drawtext parameters using textfile= for proper newline support
-        // Add lineheight for line spacing (0.75x font size - half of previous 1.5x)
-        const lineHeight = Math.round(actualFontSize * 0.75);
+        // Per-layer lineSpacing wins; default 0.75x font size (half of previous 1.5x)
+        const lineHeight = Number.isFinite(layer.lineSpacing) ? layer.lineSpacing : Math.round(actualFontSize * 0.75);
         const drawtextParams = [
           `textfile='${textFilePath}'`, // Use textfile= for multi-line text support
           `fontsize=${actualFontSize}`,
@@ -578,7 +578,8 @@ export class VideoCompositor {
           const borderWidth = actualFontSize < 30 ? 1 : 2;
           
           // Build drawtext parameters using textfile= for proper newline support
-          const lineHeight = Math.round(actualFontSize * 0.75);
+          // Per-layer lineSpacing wins; default 0.75x font size
+          const lineHeight = Number.isFinite(layer.lineSpacing) ? layer.lineSpacing : Math.round(actualFontSize * 0.75);
           const drawtextParams = [
             `textfile='${textFilePath}'`, // Use textfile= for multi-line text support
             `fontsize=${actualFontSize}`,

@@ -738,15 +738,14 @@ class ArweaveVideoGenerator {
             const textStartTime = 10; // Fade in at 10 seconds
             const textWidthPercent = 0.15; // 15% of screen width
             const textWidth = Math.round(width * textWidthPercent);
-            const textFontSize = Math.round(height * 0.03); // Small font (3% of height)
-            
+            const textFontSize = Math.round(height * 0.035); // 3.5% of height (was 3%)
+            // Tight line spacing for this block only — compositor default stays 0.75x for other text layers
+            const textLineSpacing = Math.round(textFontSize * 0.3);
+
             // Position at bottom left corner
-            // With reduced line spacing (0.75x instead of 1.5x), text takes less vertical space
-            // Adjust Y position to move text up: reduce the height calculation since lines are closer together
             const textX = 10; // Small margin from left edge
-            // Move text up significantly: 3 lines with 0.75x spacing need more clearance from bottom
-            // Using 3.5x font size + 30px margin to ensure all 3 lines are fully visible
-            const textY = height - (textFontSize * 3.5) - 30; // Moved up significantly: 3.5x font size + 30px margin
+            // 3 lines ≈ 3*fontSize + 2*lineSpacing; 4.5x font size + 40px keeps clear space below the block
+            const textY = height - Math.round(textFontSize * 4.5) - 40;
             
             // Build text content: Artist (line break) Mix Title (line break) UndergroundExistence.info
             // Sanitize text to replace placeholder characters and ensure clean display
@@ -787,6 +786,7 @@ class ArweaveVideoGenerator {
             // Store text color in layer config (we'll need to add this to LayerConfig)
             textLayer.textColor = '0xFFFFFF'; // White text
             textLayer.fontSize = textFontSize; // Store font size
+            textLayer.lineSpacing = textLineSpacing; // Per-layer line spacing (VideoCompositor honors it)
             layers.push(textLayer);
 
             // Step 5.5: Add random video overlays from ONE selected folder, switching every 10 seconds
