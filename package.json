@@ -9,6 +9,7 @@
   "dependencies": {
     "@ar.io/sdk": "^3.8.4",
     "@ardrive/turbo-sdk": "^1.29.0",
+    "adm-zip": "^0.5.18",
     "ardrive-core-js": "^1.18.0",
     "arweave": "^1.15.0",
     "axios": "^1.6.0",

@@ -54,6 +54,10 @@
       "dest": "/api/manage-artists.js"
     },
     {
+      "src": "/api/deploy-external-site",
+      "dest": "/api/deploy-external-site.js"
+    },
+    {
       "src": "/api/deploy-website",
       "dest": "/api/deploy-website.js"
     },
@@ -116,6 +120,9 @@
     },
     "api/usage.js": {
       "maxDuration": 10
+    },
+    "api/deploy-external-site.js": {
+      "maxDuration": 300
     }
   }
 }
