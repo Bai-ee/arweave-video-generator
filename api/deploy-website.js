@@ -11,8 +11,17 @@ import { initializeFirebaseAdmin, getFirestore, getStorage } from '../lib/fireba
 import { syncFirebaseToWebsiteJSON } from '../lib/WebsiteSync.js';
 import { updateArNSRecord } from '../lib/ArNSUpdater.js';
 import path from 'path';
+import os from 'os';
 import fs from 'fs-extra';
+import AdmZip from 'adm-zip';
 import { createRequire } from 'module';
+
+// External-site deploys (HITLOOP Site Recreate): zips may only come from
+// HITLOOP's Firebase Storage — this endpoint spends wallet funds.
+const EXTERNAL_ZIP_HOSTS = new Set([
+  'firebasestorage.googleapis.com',
+  'storage.googleapis.com',
+]);
 
 const require = createRequire(import.meta.url);
 
@@ -146,6 +155,59 @@ export default async function handler(req, res) {
   }
 
   try {
+    // ── External-site mode (HITLOOP Site Recreate) ──────────────────────
+    // Body carries zipUrl → download an allowlisted static-site zip, unpack
+    // to /tmp, full (non-incremental, db=null) wallet-funded upload + path
+    // manifest. Folded into this function because the Hobby plan caps
+    // deployments at 12 serverless functions. The `external: true` response
+    // marker lets the HITLOOP bridge detect a stale deployment that would
+    // otherwise silently deploy OUR microsite instead.
+    if (req.body?.zipUrl) {
+      const { zipUrl, siteId } = req.body;
+      let parsedZipUrl;
+      try {
+        parsedZipUrl = new URL(zipUrl);
+      } catch {
+        return res.status(400).json({ success: false, external: true, error: 'zipUrl is not a valid URL' });
+      }
+      if (parsedZipUrl.protocol !== 'https:' || !EXTERNAL_ZIP_HOSTS.has(parsedZipUrl.hostname)) {
+        return res.status(400).json({ success: false, external: true, error: `zip host not allowed: ${parsedZipUrl.hostname}` });
+      }
+      const safeId = String(siteId || `ext-${Date.now()}`).replace(/[^a-zA-Z0-9_-]+/g, '_');
+      const workDir = path.join(os.tmpdir(), `external-site-${safeId}`);
+      await fs.remove(workDir);
+      await fs.ensureDir(workDir);
+      console.log(`[Deploy External Site] Downloading ${zipUrl}`);
+      const zipRes = await fetch(zipUrl);
+      if (!zipRes.ok) {
+        return res.status(400).json({ success: false, external: true, error: `zip download failed (${zipRes.status})` });
+      }
+      const zipBuffer = Buffer.from(await zipRes.arrayBuffer());
+      console.log(`[Deploy External Site] Extracting ${zipBuffer.length} bytes…`);
+      new AdmZip(zipBuffer).extractAllTo(workDir, true);
+      if (!(await fs.pathExists(path.join(workDir, 'index.html')))) {
+        await fs.remove(workDir).catch(() => {});
+        return res.status(400).json({ success: false, external: true, error: 'zip has no index.html at its root' });
+      }
+      console.log(`[Deploy External Site] Deploying ${safeId} to Arweave…`);
+      const extResult = await deployWebsiteToArweave(workDir, null);
+      await fs.remove(workDir).catch(() => {});
+      if (!extResult.success) {
+        return res.status(500).json({ success: false, external: true, error: extResult.error || 'deploy failed' });
+      }
+      return res.status(200).json({
+        success: true,
+        external: true,
+        siteId: safeId,
+        manifestId: extResult.manifestId,
+        arweaveUrl: extResult.manifestUrl,
+        websiteUrl: extResult.websiteUrl,
+        fileCount: extResult.totalFiles,
+        filesUploaded: extResult.filesUploaded,
+        sizeBytes: zipBuffer.length,
+      });
+    }
+
     console.log('[Deploy Website] Starting website deployment...');
 
     // Initialize Firebase
@@ -255,11 +317,15 @@ export default async function handler(req, res) {
     if (isVercelProduction) {
       console.log('[Deploy Website] Vercel production detected - using /tmp for sync/regeneration');
       
-      // Verify source files exist before copying
-      // Note: Font file is excluded - it's handled separately if needed
+      // Verify source files exist before copying — all committed in website/
+      // (fonts/css/js ship with the repo; nothing is fetched from Firebase)
       const criticalFiles = [
-        'img/covers/ue_banner.jpg',
-        'img/loge_horiz.png'
+        'css/site.css',
+        'js/player.js',
+        'fonts/ibm-plex-mono-v20-latin-regular.woff2',
+        'fonts/special-elite-v20-latin-regular.woff2',
+        'fonts/mr-dafoe-v15-latin-regular.woff2',
+        'templates/index.html'
       ];
       console.log(`[Deploy Website] Checking source files in ${sourceWebsiteRoot}...`);
       for (const criticalFile of criticalFiles) {
@@ -301,16 +367,10 @@ export default async function handler(req, res) {
           const storage = getStorage();
           const bucket = storage.bucket();
           
-          // Map critical files to their Firebase Storage paths
-          // Both images are stored in the logos/ folder in Firebase Storage
-          const fileMappings = {
-            'img/covers/ue_banner.jpg': [
-              'logos/ue_banner.jpg'  // Stored in logos/ folder
-            ],
-            'img/loge_horiz.png': [
-              'logos/loge_horiz.png'  // Stored in logos/ folder
-            ]
-          };
+          // Map critical files to their Firebase Storage paths. Redesign
+          // assets are all committed in website/, so this map is normally
+          // empty — the fallback tries the same path in Storage.
+          const fileMappings = {};
           
           for (const criticalFile of missingFiles) {
             const destPath = path.join(tempWebsiteRoot, criticalFile);
