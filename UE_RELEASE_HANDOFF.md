@@ -735,3 +735,16 @@ https://arweave.net/4R6eLhJ1PtAncF3Zu_vIehynWCWQYde_VCW0R-wO4WQ/index.html
 Set `"treatmentVersion": 1` in `config/skyline-thumbnail-treatment.json` and re-run
 `--rerender --apply`; records repoint to the untouched v1 assets' look. The v1 objects
 themselves were never modified.
+
+---
+
+## 18. Continuing this work
+
+The CSS/UI layer is being taken forward in a separate thread. Its entry point is
+[`UE_CSS_UI_HANDOFF.md`](UE_CSS_UI_HANDOFF.md) — file map, template/generator split, design tokens,
+the runtime-injected UI that is *not* in `site.css`, the host-agnostic path constraints, the working
+loop, and a list of known UI issues (the inert motion layer, the banner that does not auto-clear,
+untested real-device mobile).
+
+Two owner actions remain open and are not UI work: rotating the exposed Arweave wallet (§1a) and
+repointing the GoDaddy forward (§12).
