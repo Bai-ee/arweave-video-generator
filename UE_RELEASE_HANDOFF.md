@@ -3,8 +3,8 @@
 **Release:** redesigned site + audio reliability/seeking/warming + Media Session/deep links/share/resume
 + skyline thumbnail system, published as a new Arweave path manifest.
 
-**Status:** IN PROGRESS. This document is written at each gate as evidence accrues. Sections marked
-`PENDING` have not happened yet — do not read them as done.
+**Status:** SHIPPED to Arweave. One step remains and it is not mine to take: the GoDaddy
+domain forward still points at the old manifest (§12).
 
 ---
 
@@ -55,22 +55,37 @@ Actions secrets and `.env.local` → `git rm --cached .env.local` → purge hist
 (`git filter-repo`) or, more realistically for a public repo of this age, treat the old key as
 permanently burned and never reuse it.
 
-### 1b. Firebase service-account key exposed in a session transcript — ROTATION: PENDING
+### 1b. Firebase service-account key exposed in a session transcript — ROTATED ✅
 
 During this session a hand-rolled `.env.local` parser mis-split the value and Node echoed the full
 `FIREBASE_SERVICE_ACCOUNT_KEY` — including the RSA private key — into the transcript. Affected
 principal: `firebase-adminsdk-fbsvc@editvideos-63486.iam.gserviceaccount.com`, key id
 `07937fff3dd8d24b7e94cf4cf5a8b265a565272d` (USER_MANAGED, no expiry).
 
-All tooling in this release now loads env through `outputs/release-tmp/env.mjs`, which replicates
-dotenv semantics and never prints values.
+All tooling in this release now loads env through a loader that replicates dotenv semantics and
+never prints values.
 
-Consumers that must be updated together: local `.env.local`, the Vercel project env, and the GitHub
-Actions secret `FIREBASE_SERVICE_ACCOUNT_KEY` (`.github/workflows/process-videos.yml:52`).
+**Rotation performed, in this order:**
 
-Rotation is scheduled **after the thumbnail backfill and before the Arweave deploy**, so the
-in-flight Firebase reads are not interrupted. Old key will be **disabled** (reversible), not
-deleted, until the new key is proven in all three consumers.
+1. Minted a new user-managed key `ea0fbf7b2631ad450d1eb3f7bda07134796c9def` into a `0600` temp file.
+   (`iam.disableServiceAccountKeyCreation` checked first — effective policy `booleanPolicy: {}`,
+   i.e. not enforced; the operator holds `roles/owner`.)
+2. **Proved the new key works before swapping anything** — Firestore read (18 artists) and Storage
+   list, using only the new credential.
+3. Updated all three consumers: local `.env.local` (in-place line replacement, other 12 lines
+   untouched), **Vercel Production** (`env rm` + `env add`), and the **GitHub Actions secret**
+   (`gh secret set`, timestamp now `2026-09-13T02:10:32Z`).
+4. Re-verified the app end-to-end on the rotated key (`mixStates={"generated":32,"uploaded":13}`).
+5. **Disabled** the exposed key — `disabled=True`, confirmed by reading it back. Disabled rather
+   than deleted, so it is reversible if some unknown consumer surfaces.
+6. Shredded the temp key files and removed the helper script.
+
+⚠️ Two other USER_MANAGED keys remain enabled and were left alone: `a22436c0cf4cb240926fb19ddf41a57f3577ea72`
+(2025-12-01) and `aba8294814dd68fe9db372dfd02e25950740bfee` (2026-01-11). Key values are write-only
+in Vercel/GitHub so it is not knowable which consumer held which; neither was exposed. Reported
+rather than guessed at — if they are unused, an owner should delete them.
+
+**No secret value was printed at any point during the rotation.**
 
 ---
 
@@ -141,17 +156,17 @@ the legacy placeholder `website/artist.html`, which is already live and already 
 |---|---|
 | G0 Baseline tests + repo recon | ✅ 623/623 |
 | G1 Thumbnail style + persistent cross-run uniqueness | ✅ see §7 |
-| G2 Source catalog curation (140 sources reviewed) | PENDING |
+| G2 Source catalog curation (140 sources reviewed) | ✅ see §10 |
 | G3 Release audit (manifest coverage, runtime, secrets, file isolation) | ✅ see §5 |
-| G4 Clean dry run over all eligible art-less mixes + visual contact-sheet review | PENDING |
-| G5 Staging batch of exactly 3 mixes applied + rendered-page inspection | PENDING |
-| G6 Full art-less backfill | PENDING |
-| G7 `SKYLINE_THUMBNAILS_ENABLED` on for future uploads | PENDING |
-| G8 Page regeneration + full test suite + browser smoke | PENDING |
-| G9 Credential rotation (1b) | PENDING |
-| G10 Release commit boundary | PENDING |
-| G11 Arweave deploy → new manifest | PENDING |
-| G12 Public verification + GoDaddy forward update | PENDING |
+| G4 Clean dry run over all eligible art-less mixes + visual contact-sheet review | ✅ 4 passes, §10 |
+| G5 Staging batch of exactly 3 mixes applied + rendered-page inspection | ✅ see §11 |
+| G6 Full art-less backfill | ✅ 29 applied, 0 failures |
+| G7 `SKYLINE_THUMBNAILS_ENABLED` on for future uploads | ✅ Vercel prod + local |
+| G8 Page regeneration + full test suite + browser smoke | ✅ 688/688, §13 |
+| G9 Credential rotation | ✅ see §1b |
+| G10 Release commit boundary | ✅ `bce0b26`, 239 files |
+| G11 Arweave deploy → new manifest | ✅ `sEIIpqWb7OIARUdcaukBIp6r1mT6GBmVbHCPrJ3BoDw` |
+| G12 Public verification + GoDaddy forward update | ⛔ BLOCKED on GoDaddy access, §12 |
 
 ---
 
@@ -418,3 +433,215 @@ The other two are left alone and reported as unknown-usage rather than guessed a
 - **Site:** the previous manifest `Mgsqk3g6UhlE7risYYCmLdVozv1hXAmYDaYP5Eiq5Xc` stays live on
   Arweave forever. Rollback = point the GoDaddy forward back at it. Nothing is destroyed by a
   deploy.
+
+---
+
+## 10. G2/G4 — source curation and the dry-run gate
+
+**Agent 2** downloaded all 140 sources, pulled a representative frame from each (plus early/late
+frames for 8 ambiguous ones), reviewed them in labelled sheets, then — crucially — ran the real
+non-mutating CLI four times and inspected every *actually selected* candidate at full resolution.
+That second loop caught **14 sources whose sampled frame looked clean but whose drawn frame was
+not**: a CTA bus, a tunnel with a car, highway gantry signage, Salesforce Tower branding with
+pedestrians, an ARIES charter bus. Rounds 3–4 produced zero further corrections. Result: 27 enabled.
+
+Rejection reasons (113): not skyline/architecture 29 · storefront/street brand signage 19 · motion
+blur/too dark 18 · highway signage 11 · buses & transit 10 · people as subject 9 · dashcam 6 ·
+tunnels 5 · police vehicles 3 · construction crane 1.
+
+**The lead then ran the gate independently and found more.** Four further dry-run passes, inspecting
+every one of the 31 proposals at full size each time:
+
+| Pass | Finding | Action |
+|---|---|---|
+| 1 | `skyline-6765fa89` drew a rail yard with construction trucks at t=0.64 — the clip only becomes an iconic Willis Tower vista from ~2.6 s | `excludeRanges [[0, 2.2]]` |
+| 1 | `skyline-72891dac` — a dashcam drive down Lower/Upper Wacker: green road signage, underpasses, cars and a SPEED LIMIT 20 sign in **all six** sampled frames | disabled |
+| 2 | `skyline-e490660f` excellent in 5 of 6 frames; at t=4.71 an overpass girder sweeps the frame | `excludeRanges [[4.2, 5.3]]` |
+| 2 | `skyline-af25f2b7` — through-window drive-by, car A-pillar intrudes at f=0.25/0.55/0.85 | disabled |
+| 3 | `skyline-9f90f277` — another through-window drive-by, pillar across 4 of 6 frames | disabled |
+| 3 | Two proposals were near-duplicate river-with-boat frames from one near-static clip (`skyline-49aee0b6`), min dHash distance **7** against a threshold of 6 | raised `maxDHashHammingForDuplicate` 6 → **12** |
+
+Each source was verified by pulling **all six** of its sampled frames and looking at them, rather
+than judging from the one frame that happened to be drawn.
+
+**Final catalog: 24 enabled / 116 disabled** (6 Veo renders + 18 uploads), 2 with `excludeRanges`.
+
+**Final dry run (the gate that was approved):**
+
+```
+proposed=31  uniqueCandidates=31  uniqueDHashes=31  distinctSources=19
+fromDisabledSources=0  minPairwiseDHashHamming=13  applied=0  mode=dry-run
+statuses={"proposed":31,"not-targeted":13,"proposed-shared-key":1}
+```
+
+Min pairwise distance rose 7 → 13, i.e. comfortably distinct rather than borderline. Every one of
+the 31 was reviewed at tile size and the questionable ones at full size. Accepted after inspection:
+the elevated L-track night frames (iconic Chicago structure, not clutter) and the darkest tiles —
+measured mean-of-means 56/255, and the three darkest were opened full size to confirm they read as
+moody night stills with legible architecture, not black squares.
+
+---
+
+## 11. G5 — three-mix staging batch
+
+Applied as three separate `--mix-key` runs, each requiring both gates. Chosen for coverage rather
+than convenience: three different artists, both transition types, and all three visible on
+**homepage, archive and their own artist page**.
+
+| Mix | Artist | Before | Source |
+|---|---|---|---|
+| Lorelei Live at Podlasie 7/18/25 | LORELEI | `missing` (no image at all) | `skyline-45a9a7b1` @ 5.55 |
+| Love Manifesto 3 | BAI-EE | `missing` | `skyline-fd456554` @ 4.79 |
+| ...Head Ass!!! | AKILA | `legacy-artist-image` (showed AKILA's portrait) | `skyline-fd456554` @ 7.64 |
+
+**Cross-run uniqueness proved itself in production here**: the three runs seeded the used-index with
+0, then 1, then 2 prior candidates — separate processes, persisted state, no collisions.
+
+Verified after apply: 3 records written, `960x960`, `locked=false`, `previousMixImageFilename`
+recorded only where one existed; 3 `skyline_assignment_index` docs; 3 audit docs; all three URLs
+**HTTP 200 `image/webp`**; and the three thumbnails rendered in the regenerated homepage, archive
+and artist pages while neighbouring mixes kept their original artwork.
+
+---
+
+## 12. ⛔ REMAINING STEP — the public domain still points at the old manifest
+
+**This is the one thing I could not do, and it is a credential boundary, not a technical one.**
+
+`undergroundexistence.info` is a **GoDaddy domain forward** (nameservers `ns55.domaincontrol.com` /
+`ns56.domaincontrol.com`). Both apex and `www` currently answer:
+
+```
+HTTP/2 302
+location: https://gifsve3yhjjbsrhoxcwgdafgfxkwrtx5mfoatganuyh6isfk4v3q.arweave.net/Mgsqk3g6UhlE7risYYCmLdVozv1hXAmYDaYP5Eiq5Xc/index.html
+```
+
+That is the **old** manifest. The forward target must be changed to:
+
+```
+https://arweave.net/sEIIpqWb7OIARUdcaukBIp6r1mT6GBmVbHCPrJ3BoDw/index.html
+```
+
+There are no GoDaddy credentials in the environment (checked `.env.local`; nothing matching
+`godaddy`/`gd_`/`domain`), and the GoDaddy MCP connector is unauthenticated — it returns
+*"Ask the user to run /mcp and select 'claude.ai GoDaddy' to authenticate."* I did not attempt the
+change through a logged-in browser session: repointing a live domain is an account-level,
+outward-facing change and was not authorised.
+
+**Two ways to finish:** authenticate the GoDaddy connector (`/mcp`) and ask me to repoint it, or
+change the forward manually in GoDaddy → Domain → Forwarding.
+
+Until then the deployed site is fully live and verified at the manifest URL; the public domain
+simply still serves the previous release. **This is also the rollback switch** — pointing the
+forward back at `Mgsqk3g6…` restores the old site instantly.
+
+**ArNS is dead and was not repaired** (out of scope, reported): `undergroundexistence.ar.io` 404s,
+and the ANT `tUsH8_qpoBcwPy6Lr2yCc7_jL9DzMdx-u5oSs7KASsw` is unreadable —
+`Forbidden, process not whitelisted`. The deploy's ArNS step ran and failed non-blockingly, exactly
+as predicted. The public domain has never depended on it.
+
+---
+
+## 13. G11/G8 — deploy and live verification
+
+**New manifest: `sEIIpqWb7OIARUdcaukBIp6r1mT6GBmVbHCPrJ3BoDw`**
+
+- Manifest: `https://arweave.net/sEIIpqWb7OIARUdcaukBIp6r1mT6GBmVbHCPrJ3BoDw`
+- Index: `https://arweave.net/sEIIpqWb7OIARUdcaukBIp6r1mT6GBmVbHCPrJ3BoDw/index.html`
+- 52 files (34 uploaded, 18 transaction IDs reused), previous manifest 44 files
+- `✅ All 23 required resources present in the upload set` — the new hard gate passed
+- Cost: ~978 KB, **0.000096 AR**
+
+Manifest contents fetched back from `arweave.net/raw/` and checked against
+`REQUIRED_MANIFEST_PATHS`: **missing = NONE**. Contains all 9 `js/` files
+(`boot`, `player-core`, `player`, `ue-warm`, `ue-host-pref`, `ue-links`, `ue-resume`,
+`ue-mediasession`, `gsap`), `css/site.css`, 6 fonts, 12 images, 1 icon, 22 HTML pages,
+`artists.json`. The dead `artist.html` is gone.
+
+**Browser smoke test on the live manifest** (not localhost):
+
+| Check | Result |
+|---|---|
+| Homepage | renders; 10/10 images loaded, **0 broken**; 6 generated thumbnails at 960×960 |
+| Archive | 45 rows, 32 generated + 5 `/img/covers/` uploaded; **48/48 images loaded, 0 broken** |
+| Artist page `baiee.html` | 15 rows = 10 generated + 5 uploaded covers side by side; 20/20 loaded |
+| Artist page `akila.html` | 2 generated; 0 broken |
+| Existing uploaded cover | Acidman "Live @ Smartbar" → `arweave.net/u0XiF…/img/covers/acidtest.jpg` loads 780×780, untouched |
+| All 8 runtime modules | present on every page, single `js/boot.js` entry tag |
+| Play | "Love Manifesto 3" ran 6.8 s → 36.9 s continuously, `readyState 4`, on `fllstck.dev` |
+| Seek | `seek(1800)` → 1809.3 s; `seekBy(-300)` → 1516.5 s; still playing |
+| Share | `navigator.share` called with a correct host-relative `…/baiee.html?mix=<43-char txid>` |
+| Deep link | `?mix=…&t=90` → banner "Shared mix: ...Head Ass!!! — AKILA" + **Play from 1:30**, **nothing autoplayed** |
+| Play-from | started at 90 s, advanced to 103 s; `replaceState` dropped `&t=` |
+| Resume | prompt appeared from a stored record; playback continued after Dismiss |
+| Hostile deep link | `?mix=<img src=x onerror=alert(1)>&t=abc` → `{mix:null, t:null}`, nothing rendered, nothing played |
+| Console errors | **none**, across homepage, archive and both artist pages, through load/play/seek/share |
+
+Two observations worth recording honestly:
+
+- **The banner does not auto-clear after "Play from"** (`ue-links-banner-text` stays visible).
+  `UE_PLAYABILITY_HANDOFF.md` §5 claims it clears. Dismiss works and playback is unaffected, so this
+  is a cosmetic deviation from the documented behaviour, not a functional fault. Not fixed — it is
+  outside this release's scope and I did not want a late untested edit to the links module.
+- A 0.65-scale page screenshot made archive thumbnails *look* blank. They are not: zooming in shows
+  the images, and the DOM reports `naturalWidth 960`, `opacity 1`. The thumbnails are deliberately
+  very dark and JPEG-flatten against the near-black rows at reduced scale.
+
+---
+
+## 14. Final numbers
+
+| | |
+|---|---|
+| Thumbnails applied | **32 mix records / 31 unique assets** (Chicago Skyway's duplicate "For Hakim" shares one by design) |
+| Existing artwork preserved | **13**, byte-identical — `protectedChanged=0` |
+| Audio / title / duration / year fields mutated | **0** |
+| Artist images changed | **0** (all 18 already had art; zero targets) |
+| Sources enabled / disabled | 24 / 116 of 140 |
+| Min pairwise dHash distance | 13 (threshold 12) |
+| Thumbnails publicly fetchable | **31 / 31 → HTTP 200** |
+| Tests | **688 pass, 0 fail** (from 623; +65 new) |
+| Release commit | `bce0b26` — 239 files, +37,466 / −47,943 |
+| Manifest | `sEIIpqWb7OIARUdcaukBIp6r1mT6GBmVbHCPrJ3BoDw` |
+
+**Not pushed.** The release commit is local. The repo is public and its history contains the live
+wallet key (§1a); whether to push, and in what order relative to that remediation, is an owner
+decision, so I left it. `git push origin main` when ready.
+
+**Excluded from the commit deliberately:** `design-refs/`, `docs/audits/**` and `scripts/audit/**`
+(an unrelated wallet/reviews cross-reference workstream), plus `outputs/` and `backups/` which are
+now ignored.
+
+## 15. Rollback
+
+1. **Domain** — point the GoDaddy forward back at `Mgsqk3g6UhlE7risYYCmLdVozv1hXAmYDaYP5Eiq5Xc`.
+   Instant, total, and the old manifest is permanent on Arweave.
+2. **Thumbnails** — `previousMixImageFilename` holds the pre-pipeline value for every overwritten
+   record; `store.restore()` (admin `restoreThumbnail`) reverts one and works with the flag off.
+   Every run wrote an audit doc to `skyline_thumbnail_runs` (4 docs). Generated Storage objects are
+   retained on rollback, never deleted. A full pre-backfill snapshot of `system/artists` was taken
+   before the first write.
+3. **Future uploads** — set `SKYLINE_THUMBNAILS_ENABLED=false` (or remove it) in Vercel to stop
+   generating thumbnails for new art-less uploads.
+4. **Credential** — re-enable key `07937fff…` with `gcloud iam service-accounts keys enable` if some
+   unknown consumer turns out to have depended on it.
+
+## 16. Caveats and what was not verified
+
+- **Real devices.** Everything was verified in desktop Chrome. No physical phone, no real
+  lock-screen / Bluetooth Media Session UI, no OS share sheet — `navigator.share` was verified by
+  intercepting the call, not by opening the system dialog.
+- **Gateway dependence.** Playback was verified with both range gateways healthy
+  (`fllstck.dev` and `frostor.xyz` each 206 in ~1.3 s). Playability on the live site is contingent on
+  at least one staying healthy; the player fails over between them and never falls back to raw
+  `arweave.net`, which ignores Range.
+- **Arweave propagation took ~8 minutes** for the new manifest to resolve on `arweave.net` after
+  upload. A freshly deployed manifest 404s briefly; that is normal, not a failed deploy.
+- **8 of the enabled sources** were drawn as a real candidate in only one verification pass. Each
+  looked clean when inspected, but has less repeat confirmation than the rest.
+- **Per-candidate content filtering does not exist.** Source-level enable/disable plus
+  `excludeRanges` is a blunt instrument for clips that pan from a good subject onto a bad one. Robust
+  filtering would need OCR/object detection and a new dependency, which was out of scope. Residual
+  risk is judged low after eight independent inspection passes, but it is not zero.
+- **Vercel-run deploys were not exercised.** The deploy ran the real handler locally. The required
+  fonts/images are now tracked so a Vercel-packaged deploy should work, but that path is untested.
