@@ -1,0 +1,77 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- UE gateway connection warming (gateway-warming phase, connection-hints deliverable).
+     The two APPROVED range-capable Arweave gateways for mix audio are
+     arweave.fllstck.dev and frostor.xyz (website/js/player-core.js RANGE_HOSTS;
+     see MIX_AUDIO_SCRUBBING.md for the measured evidence). This origin issues
+     TWO different request types at each host, and Chrome/Firefox key a
+     preconnected socket by (origin, credentials-mode) — so a `preconnect`
+     WITHOUT `crossorigin` and one WITH `crossorigin` open two DIFFERENT
+     connection pools:
+       1) the <audio> element's own media load (player.js sets `audio.src`
+          directly; no `crossorigin` attribute is ever set on it anywhere in
+          this codebase) — a credentialed, no-CORS request;
+       2) the background Range-header probe (`fetch(url, {headers:{Range:
+          'bytes=0-127'}}, ...)` in player.js) — a CORS-mode fetch, answered
+          with `Access-Control-Allow-Origin: *` per MIX_AUDIO_SCRUBBING.md.
+     Both requests happen close together on a real play (setSrc+play fires
+     synchronously on the user gesture while both candidates are probed in
+     the background), so both pools are genuinely used here — this is a
+     deliberate "both" per host, not a guess at which one is needed.
+     `dns-prefetch` is included alongside `preconnect` (not just as legacy
+     fallback): these are third-party ar.io nodes whose DNS and availability
+     have been observed to fluctuate within a single day (a 30s cold
+     timeout, a 404 carrying plausible-looking headers, and a total local
+     DNS resolution failure for arweave.fllstck.dev have all been observed).
+     Resolving early surfaces a dead host sooner so the player's existing
+     verified-failover (player-core.js) can move on faster; a host that
+     fails to resolve makes the hint a silent, harmless no-op — no error, no
+     console noise, no effect on page load.
+     LIMITATION (verified 2026-09-08 via curl): both hosts 302-redirect
+     EVERY request — including these apex requests — to a per-transaction
+     sandbox subdomain (e.g. https://<43-char-base32>.arweave.fllstck.dev/
+     <txid>), so this apex preconnect does NOT pre-open the socket that
+     actually serves the mix bytes; that socket is per-mix and cannot be
+     hinted statically. This only shaves the DNS+TCP+TLS cost of the
+     mandatory first hop (the 302 itself), nothing more.
+     WHY ONLY dns-prefetch IS STATIC: this partial is shared by EVERY
+     generated page, including about.html and residents.html, which contain
+     zero playable mixes and will never load audio. A `preconnect` costs a
+     real DNS+TCP+TLS handshake and holds a socket, and — per the LIMITATION
+     above — an apex preconnect only saves the mandatory 302 hop anyway;
+     spending four of them on a page that will never play a mix is waste.
+     `dns-prefetch` is close to free and its benefit (surfacing a dead
+     gateway sooner, so failover starts sooner) is page-independent, so it
+     stays static. The expensive `preconnect` — including the `crossorigin`
+     variant needed for the CORS probe/warm pool described above — is
+     injected at RUNTIME by website/js/ue-warm.js, and only on pages that
+     actually have playable mixes to warm. -->
+<link rel="dns-prefetch" href="https://arweave.fllstck.dev">
+<link rel="dns-prefetch" href="https://frostor.xyz">
+<!-- arweave.net apex is NEVER an interactive playback source — raw
+     arweave.net ignores Range on these bundled items (MIX_AUDIO_SCRUBBING.md)
+     and player-core.js's buildCandidates() never emits it as a candidate by
+     construction. This hint exists ONLY for the artwork <img> tags (og:image,
+     mix/artist thumbnails — none carry a `crossorigin` attribute anywhere in
+     the generated markup, so only the no-CORS pool is needed) and the
+     canonical download links, both of which point at arweave.net on nearly
+     every generated page (residents.html alone: 18 artist-avatar images).
+     Same sandbox-subdomain redirect limitation applies here too (verified
+     2026-09-08 via curl: arweave.net apex also 302s every request to a
+     per-content sandbox subdomain) — this only warms the apex hop before
+     that redirect, not the final image/download host. -->
+<link rel="preconnect" href="https://arweave.net">
+<title>{{PAGE_TITLE}}</title>
+<meta name="description" content="{{PAGE_DESC}}">
+<meta name="theme-color" content="#0a0606">
+<link rel="icon" type="image/png" href="icon/favicon-32x32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icon/favicon-32x32.png">
+<meta property="og:title" content="{{PAGE_TITLE}}">
+<meta property="og:description" content="{{PAGE_DESC}}">
+<meta property="og:image" content="{{OG_IMAGE}}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://undergroundexistence.info/{{PAGE_PATH}}">
+<link rel="canonical" href="https://undergroundexistence.info/{{PAGE_PATH}}">
+<link rel="preload" as="image" href="img/digging-hero.webp" type="image/webp" fetchpriority="high">
+<link rel="preload" as="font" href="fonts/rationale-v1-regular.woff2" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/site.css">

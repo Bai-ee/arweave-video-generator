@@ -1,0 +1,11 @@
+{
+  "treatmentVersion": 1,
+  "monochrome": true,
+  "contrast": 1.3,
+  "brightness": -0.03,
+  "gamma": 0.95,
+  "unsharpAmount": 0.55,
+  "grainStrength": 16,
+  "vignetteStrength": 0.3,
+  "encodeQuality": 82
+}

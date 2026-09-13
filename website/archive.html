@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- UE gateway connection warming (gateway-warming phase, connection-hints deliverable).
+     The two APPROVED range-capable Arweave gateways for mix audio are
+     arweave.fllstck.dev and frostor.xyz (website/js/player-core.js RANGE_HOSTS;
+     see MIX_AUDIO_SCRUBBING.md for the measured evidence). This origin issues
+     TWO different request types at each host, and Chrome/Firefox key a
+     preconnected socket by (origin, credentials-mode) — so a `preconnect`
+     WITHOUT `crossorigin` and one WITH `crossorigin` open two DIFFERENT
+     connection pools:
+       1) the <audio> element's own media load (player.js sets `audio.src`
+          directly; no `crossorigin` attribute is ever set on it anywhere in
+          this codebase) — a credentialed, no-CORS request;
+       2) the background Range-header probe (`fetch(url, {headers:{Range:
+          'bytes=0-127'}}, ...)` in player.js) — a CORS-mode fetch, answered
+          with `Access-Control-Allow-Origin: *` per MIX_AUDIO_SCRUBBING.md.
+     Both requests happen close together on a real play (setSrc+play fires
+     synchronously on the user gesture while both candidates are probed in
+     the background), so both pools are genuinely used here — this is a
+     deliberate "both" per host, not a guess at which one is needed.
+     `dns-prefetch` is included alongside `preconnect` (not just as legacy
+     fallback): these are third-party ar.io nodes whose DNS and availability
+     have been observed to fluctuate within a single day (a 30s cold
+     timeout, a 404 carrying plausible-looking headers, and a total local
+     DNS resolution failure for arweave.fllstck.dev have all been observed).
+     Resolving early surfaces a dead host sooner so the player's existing
+     verified-failover (player-core.js) can move on faster; a host that
+     fails to resolve makes the hint a silent, harmless no-op — no error, no
+     console noise, no effect on page load.
+     LIMITATION (verified 2026-09-08 via curl): both hosts 302-redirect
+     EVERY request — including these apex requests — to a per-transaction
+     sandbox subdomain (e.g. https://<43-char-base32>.arweave.fllstck.dev/
+     <txid>), so this apex preconnect does NOT pre-open the socket that
+     actually serves the mix bytes; that socket is per-mix and cannot be
+     hinted statically. This only shaves the DNS+TCP+TLS cost of the
+     mandatory first hop (the 302 itself), nothing more.
+     WHY ONLY dns-prefetch IS STATIC: this partial is shared by EVERY
+     generated page, including about.html and residents.html, which contain
+     zero playable mixes and will never load audio. A `preconnect` costs a
+     real DNS+TCP+TLS handshake and holds a socket, and — per the LIMITATION
+     above — an apex preconnect only saves the mandatory 302 hop anyway;
+     spending four of them on a page that will never play a mix is waste.
+     `dns-prefetch` is close to free and its benefit (surfacing a dead
+     gateway sooner, so failover starts sooner) is page-independent, so it
+     stays static. The expensive `preconnect` — including the `crossorigin`
+     variant needed for the CORS probe/warm pool described above — is
+     injected at RUNTIME by website/js/ue-warm.js, and only on pages that
+     actually have playable mixes to warm. -->
+<link rel="dns-prefetch" href="https://arweave.fllstck.dev">
+<link rel="dns-prefetch" href="https://frostor.xyz">
+<!-- arweave.net apex is NEVER an interactive playback source — raw
+     arweave.net ignores Range on these bundled items (MIX_AUDIO_SCRUBBING.md)
+     and player-core.js's buildCandidates() never emits it as a candidate by
+     construction. This hint exists ONLY for the artwork <img> tags (og:image,
+     mix/artist thumbnails — none carry a `crossorigin` attribute anywhere in
+     the generated markup, so only the no-CORS pool is needed) and the
+     canonical download links, both of which point at arweave.net on nearly
+     every generated page (residents.html alone: 18 artist-avatar images).
+     Same sandbox-subdomain redirect limitation applies here too (verified
+     2026-09-08 via curl: arweave.net apex also 302s every request to a
+     per-content sandbox subdomain) — this only warms the apex hop before
+     that redirect, not the final image/download host. -->
+<link rel="preconnect" href="https://arweave.net">
+<title>Archive — Underground Existence</title>
+<meta name="description" content="The full Underground Existence catalog — 45 Chicago house & techno mixes on the permaweb.">
+<meta name="theme-color" content="#0a0606">
+<link rel="icon" type="image/png" href="icon/favicon-32x32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icon/favicon-32x32.png">
+<meta property="og:title" content="Archive — Underground Existence">
+<meta property="og:description" content="The full Underground Existence catalog — 45 Chicago house & techno mixes on the permaweb.">
+<meta property="og:image" content="https://qsuabitorscosrihu75wohtwfefwghlrqmyssgdfbr5lcydx3svq.arweave.net/hKgAom6MhOlFB6f7Zx52KQtjHXGDMSkYZQx6sWB33Ks">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://undergroundexistence.info/archive.html">
+<link rel="canonical" href="https://undergroundexistence.info/archive.html">
+<link rel="preload" as="image" href="img/digging-hero.webp" type="image/webp" fetchpriority="high">
+<link rel="preload" as="font" href="fonts/rationale-v1-regular.woff2" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/site.css">
+
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.14v13.72c0 .96 1.05 1.55 1.87 1.05l11.03-6.86a1.23 1.23 0 0 0 0-2.1L9.87 4.09C9.05 3.59 8 4.18 8 5.14Z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 4.5h3.4v15H7zM13.6 4.5H17v15h-3.4z"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6 5h2.4v14H6zM18.8 5.9v12.2c0 .9-1 1.4-1.7 1L8.9 13a1.16 1.16 0 0 1 0-2l8.2-6.1c.7-.5 1.7 0 1.7 1Z"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M15.6 5H18v14h-2.4zM5.2 5.9v12.2c0 .9 1 1.4 1.7 1L15.1 13a1.16 1.16 0 0 0 0-2L6.9 4.9c-.7-.5-1.7 0-1.7 1Z"/></symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M17.6 14.6l2.9 2.9-2.9 2.9v-1.9h-1.4c-1.9 0-3.6-.9-4.7-2.4l.9-1.6c.8 1.3 2.2 2 3.8 2h1.4v-1.9ZM3.5 6h3.1c1.9 0 3.6.9 4.7 2.4l-.9 1.6c-.8-1.3-2.2-2-3.8-2H3.5V6Zm14.1 1.9V6l2.9 2.9-2.9 2.9V9.9h-1.4c-1.6 0-3 .8-3.8 2l-2 3.6C9.3 17.1 7.6 18 5.7 18H3.5v-2h2.2c1.6 0 3-.8 3.8-2l2-3.6c1.1-1.5 2.8-2.4 4.7-2.4h1.4Z"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M6.5 8h9V5.5L19.4 9l-3.9 3.5V10h-9c-.6 0-1 .4-1 1v2.5h-2V11c0-1.7 1.3-3 3-3Zm11 8h-9v2.5L4.6 15l3.9-3.5V14h9c.6 0 1-.4 1-1v-2.5h2V13c0 1.7-1.3 3-3 3Z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm1-13h-2v6l4.7 2.8 1-1.7-3.7-2.2V7Z"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><path d="M18 4h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V2h2v2h8V2h2v2ZM5 9v10h14V9H5Z"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9v6h3.6L13 20V4L7.6 9H4Zm12.2 3a3.6 3.6 0 0 0-2-3.2v6.4a3.6 3.6 0 0 0 2-3.2Zm-2-8.4v2.1a6.4 6.4 0 0 1 0 12.6v2.1a8.5 8.5 0 0 0 0-16.8Z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><path d="M15.9 14.5h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9Z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z"/></symbol>
+  <symbol id="i-kebab" viewBox="0 0 24 24"><path d="M12 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm7.9 9h-3a15.6 15.6 0 0 0-1.4-6.2A8 8 0 0 1 19.9 11ZM12 4.1c.9 1.2 2 3.5 2.2 6.9H9.8c.2-3.4 1.3-5.7 2.2-6.9ZM8.5 4.8A15.6 15.6 0 0 0 7.1 11h-3a8 8 0 0 1 4.4-6.2ZM4.1 13h3c.2 2.4.7 4.5 1.4 6.2A8 8 0 0 1 4.1 13Zm5.7 0h4.4c-.2 3.4-1.3 5.7-2.2 6.9-.9-1.2-2-3.5-2.2-6.9Zm5.7 6.2c.7-1.7 1.2-3.8 1.4-6.2h3a8 8 0 0 1-4.4 6.2Z"/></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24"><path d="M3 10h2v4H3zM7 7h2v10H7zM11 4h2v16h-2zM15 8h2v8h-2zM19 10h2v4h-2z"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M9 5.5 15.5 12 9 18.5l-1.4-1.4 5.1-5.1-5.1-5.1L9 5.5Z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M11 3h2v9.2l3.1-3.1 1.4 1.4L12 16 6.5 10.5l1.4-1.4L11 12.2V3ZM4 18h16v2H4v-2Z"/></symbol>
+</svg>
+
+<header id="site-header">
+  <div id="site-header-inner">
+    <a id="site-wordmark" href="index.html"><img id="site-wordmark-logo" src="img/ue-logo-horiz.png" alt="Underground Existence"></a>
+    <nav id="primary-nav" aria-label="Primary">
+      <a class="primary-nav-link" href="index.html">Mixes</a>
+      <a class="primary-nav-link" href="residents.html">Selectors</a>
+      <a class="primary-nav-link is-active" href="archive.html">Archive</a>
+      <a class="primary-nav-link" href="about.html">About</a>
+    </nav>
+    <div id="nav-desktop-actions">
+      <span id="nav-search-divider"></span>
+      <button id="nav-search-toggle" type="button" aria-label="Search">
+        <svg class="icon-svg"><use href="#i-search"></use></svg>
+        <span>Search</span>
+      </button>
+    </div>
+    <div id="mobile-nav-actions">
+      <button id="mobile-search-toggle" type="button" aria-label="Search">
+        <svg class="icon-svg" style="width:20px;height:20px"><use href="#i-search"></use></svg>
+      </button>
+      <button id="mobile-menu-toggle" type="button" aria-label="Menu">
+        <svg class="icon-svg" style="width:22px;height:22px"><use href="#i-menu"></use></svg>
+      </button>
+    </div>
+  </div>
+  <div id="mobile-menu">
+    <a class="mobile-menu-link" href="index.html">Mixes</a>
+    <a class="mobile-menu-link" href="residents.html">Selectors</a>
+    <a class="mobile-menu-link is-active" href="archive.html">Archive</a>
+    <a class="mobile-menu-link" href="about.html">About</a>
+  </div>
+</header>
+
+
+<main class="page-shell">
+  <section class="page-title-block" data-section="archive-header">
+    <span class="section-eyebrow">Archive</span>
+    <h1>Full Catalog</h1>
+    <p class="page-title-sub">Every mix in the Underground Existence archive — 45 recordings, numbered oldest to newest, hosted permanently on Arweave.</p>
+  </section>
+
+  <section data-section="archive-catalog">
+    <div id="archive-catalog-list" class="catalog-list">
+
+<div class="catalog-row" data-mix-number="045">
+  <span class="catalog-row-number">045</span>
+  <a class="catalog-row-cover" data-playlist data-title="Lorelei Live at Podlasie 7/18/25" data-artist="LORELEI" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1.webp" data-duration-sec="0" href="https://arweave.net/Y5DfJ54VC_2-gKJ90Ts_RJZhhDKsV869SdsYB0n9GqM" aria-label="Play Lorelei Live at Podlasie 7/18/25"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1.webp" alt="LORELEI — Lorelei Live at Podlasie 7/18/25" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="L"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="lorelei.html">Lorelei Live at Podlasie 7/18/25</a></h3>
+    <a class="catalog-row-artist" href="lorelei.html">LORELEI</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> JUL 18, 2025</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> JUL 18, 2025</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/Y5DfJ54VC_2-gKJ90Ts_RJZhhDKsV869SdsYB0n9GqM" data-filename="LORELEI - Lorelei Live at Podlasie 7/18/25" aria-label="Download Lorelei Live at Podlasie 7/18/25"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="044">
+  <span class="catalog-row-number">044</span>
+  <a class="catalog-row-cover" data-playlist data-title="Love Manifesto 3" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/7cafda6fb931e2ab-v1.webp" data-duration-sec="3600" href="https://arweave.net/obNw2Z8Iqiyb20nWRLGzLD0zeHQyoyPVkM7J7KpEGRc" aria-label="Play Love Manifesto 3"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/7cafda6fb931e2ab-v1.webp" alt="BAI-EE — Love Manifesto 3" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Love Manifesto 3</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2025</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2025</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/obNw2Z8Iqiyb20nWRLGzLD0zeHQyoyPVkM7J7KpEGRc" data-filename="BAI-EE - Love Manifesto 3" aria-label="Download Love Manifesto 3"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="043">
+  <span class="catalog-row-number">043</span>
+  <a class="catalog-row-cover" data-playlist data-title="Love Manifesto #3" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/7374d46d7a99ae15-v1.webp" data-duration-sec="0" href="https://arweave.net/Ex1n-m0Pdea7Kfm3a0F9IkT875idE2tyyE1LtXbxZSs" aria-label="Play Love Manifesto #3"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/7374d46d7a99ae15-v1.webp" alt="BAI-EE — Love Manifesto #3" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Love Manifesto #3</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2025</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2025</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/Ex1n-m0Pdea7Kfm3a0F9IkT875idE2tyyE1LtXbxZSs" data-filename="BAI-EE - Love Manifesto #3" aria-label="Download Love Manifesto #3"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="042">
+  <span class="catalog-row-number">042</span>
+  <a class="catalog-row-cover" data-playlist data-title="...Head Ass!!!" data-artist="AKILA" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/0969e007a5dc1ae3-v1.webp" data-duration-sec="3600" href="https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg" aria-label="Play ...Head Ass!!!"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/0969e007a5dc1ae3-v1.webp" alt="AKILA — ...Head Ass!!!" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="A"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="akila.html">...Head Ass!!!</a></h3>
+    <a class="catalog-row-artist" href="akila.html">AKILA</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> JUN 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> JUN 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg" data-filename="AKILA - ...Head Ass!!!" aria-label="Download ...Head Ass!!!"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="041">
+  <span class="catalog-row-number">041</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="VIVA ACID" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/61239f57a030e6d5-v1.webp" data-duration-sec="7200" href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" aria-label="Play Live @ Viva Acid &#39;24"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/61239f57a030e6d5-v1.webp" alt="VIVA ACID — Live @ Viva Acid &#39;24" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="VA"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="vivaacid.html">Live @ Viva Acid &#39;24</a></h3>
+    <a class="catalog-row-artist" href="vivaacid.html">VIVA ACID</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" data-filename="VIVA ACID - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="040">
+  <span class="catalog-row-number">040</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="VIVA ACID" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/063fc964a155ede8-v1.webp" data-duration-sec="7200" href="https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0" aria-label="Play Live @ Viva Acid &#39;24"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/063fc964a155ede8-v1.webp" alt="VIVA ACID — Live @ Viva Acid &#39;24" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="VA"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="vivaacid.html">Live @ Viva Acid &#39;24</a></h3>
+    <a class="catalog-row-artist" href="vivaacid.html">VIVA ACID</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0" data-filename="VIVA ACID - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="039">
+  <span class="catalog-row-number">039</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="VIVA ACID" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e8d8fe5fa505d76d-v1.webp" data-duration-sec="7200" href="https://nbdlqhjegffe2b43r4pz5db2nnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU" aria-label="Play Live @ Viva Acid &#39;24"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e8d8fe5fa505d76d-v1.webp" alt="VIVA ACID — Live @ Viva Acid &#39;24" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="VA"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="vivaacid.html">Live @ Viva Acid &#39;24</a></h3>
+    <a class="catalog-row-artist" href="vivaacid.html">VIVA ACID</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://nbdlqhjegffe2b43r4pz5db2nnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU" data-filename="VIVA ACID - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="038">
+  <span class="catalog-row-number">038</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="VIVA ACID" data-img="https://arweave.net/uqBNvxk9bd-LETdZOD_O-QaKPiP6TYWi-9aP1zQZ4nY" data-duration-sec="3600" href="https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg" aria-label="Play Live @ Viva Acid &#39;24"><img src="https://arweave.net/uqBNvxk9bd-LETdZOD_O-QaKPiP6TYWi-9aP1zQZ4nY" alt="VIVA ACID — Live @ Viva Acid &#39;24" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="VA"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="vivaacid.html">Live @ Viva Acid &#39;24</a></h3>
+    <a class="catalog-row-artist" href="vivaacid.html">VIVA ACID</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg" data-filename="VIVA ACID - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="037">
+  <span class="catalog-row-number">037</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live at Podlasie" data-artist="TYREL WILLIAMS" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a6ac343e51e3a993-v1.webp" data-duration-sec="7200" href="https://nbdlqhjegffe2b43r4pz5dbnnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU" aria-label="Play Live at Podlasie"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a6ac343e51e3a993-v1.webp" alt="TYREL WILLIAMS — Live at Podlasie" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="TW"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="tyrel.html">Live at Podlasie</a></h3>
+    <a class="catalog-row-artist" href="tyrel.html">TYREL WILLIAMS</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://nbdlqhjegffe2b43r4pz5dbnnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU" data-filename="TYREL WILLIAMS - Live at Podlasie" aria-label="Download Live at Podlasie"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="036">
+  <span class="catalog-row-number">036</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live at Podlasie" data-artist="SASSMOUTH" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1734d1b4ae911269-v1.webp" data-duration-sec="7200" href="https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0" aria-label="Play Live at Podlasie"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1734d1b4ae911269-v1.webp" alt="SASSMOUTH — Live at Podlasie" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="S"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="sassmouth.html">Live at Podlasie</a></h3>
+    <a class="catalog-row-artist" href="sassmouth.html">SASSMOUTH</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0" data-filename="SASSMOUTH - Live at Podlasie" aria-label="Download Live at Podlasie"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="035">
+  <span class="catalog-row-number">035</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="RED EYE" data-img="https://arweave.net/xuaroc0oIIAuIuokRn3LJwg0a-UgpVLtv-jcKm1NS18" data-duration-sec="7200" href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" aria-label="Play Live @ Viva Acid &#39;24"><img src="https://arweave.net/xuaroc0oIIAuIuokRn3LJwg0a-UgpVLtv-jcKm1NS18" alt="RED EYE — Live @ Viva Acid &#39;24" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="RE"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="redeye.html">Live @ Viva Acid &#39;24</a></h3>
+    <a class="catalog-row-artist" href="redeye.html">RED EYE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" data-filename="RED EYE - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="034">
+  <span class="catalog-row-number">034</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live at Studio409 New York (2024)" data-artist="BLUE JAY (AKA Josh Zeitler)" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/6f647a005d6fcce2-v1.webp" data-duration-sec="10680" href="https://uzh5clhxybxsww3li3gmcodyxok7dwa46vfq7etzn6owprhujdea.arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg" aria-label="Play Live at Studio409 New York (2024)"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/6f647a005d6fcce2-v1.webp" alt="BLUE JAY (AKA Josh Zeitler) — Live at Studio409 New York (2024)" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="BJ"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="zeitler.html">Live at Studio409 New York (2024)</a></h3>
+    <a class="catalog-row-artist" href="zeitler.html">BLUE JAY (AKA Josh Zeitler)</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 178 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 178 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://uzh5clhxybxsww3li3gmcodyxok7dwa46vfq7etzn6owprhujdea.arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg" data-filename="BLUE JAY (AKA Josh Zeitler) - Live at Studio409 New York (2024)" aria-label="Download Live at Studio409 New York (2024)"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="033">
+  <span class="catalog-row-number">033</span>
+  <a class="catalog-row-cover" data-playlist data-title="Blue Jay Live at Hush 2024 in San Francisco" data-artist="BLUE JAY (AKA Josh Zeitler)" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/881d529d4cde69ae-v1.webp" data-duration-sec="3600" href="https://icvl3qhmdkbyqm626rqj44qeu32iyswsx5s4pndqrfao46bw4iuq.arweave.net/QKq9wOwag4gz2vRgnnIEpvSMStK_Zce0cIlA7ng24ik" aria-label="Play Blue Jay Live at Hush 2024 in San Francisco"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/881d529d4cde69ae-v1.webp" alt="BLUE JAY (AKA Josh Zeitler) — Blue Jay Live at Hush 2024 in San Francisco" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="BJ"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="zeitler.html">Blue Jay Live at Hush 2024 in San Francisco</a></h3>
+    <a class="catalog-row-artist" href="zeitler.html">BLUE JAY (AKA Josh Zeitler)</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://icvl3qhmdkbyqm626rqj44qeu32iyswsx5s4pndqrfao46bw4iuq.arweave.net/QKq9wOwag4gz2vRgnnIEpvSMStK_Zce0cIlA7ng24ik" data-filename="BLUE JAY (AKA Josh Zeitler) - Blue Jay Live at Hush 2024 in San Francisco" aria-label="Download Blue Jay Live at Hush 2024 in San Francisco"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="032">
+  <span class="catalog-row-number">032</span>
+  <a class="catalog-row-cover" data-playlist data-title="Love Manifesto (2) V-Day Mix" data-artist="BAI-EE" data-img="https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/lovemanifesto2.jpg" data-duration-sec="4320" href="https://avbaf4pajrqslakfjysssiaqk266x6wkmjm3fnf3cz4yhoxf6aoa.arweave.net/BUIC8eBMYSWBRU4lKSAQVr3r-spiWbK0uxZ5g7rl8Bw" aria-label="Play Love Manifesto (2) V-Day Mix"><img src="https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/lovemanifesto2.jpg" alt="BAI-EE — Love Manifesto (2) V-Day Mix" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Love Manifesto (2) V-Day Mix</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 72 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 72 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://avbaf4pajrqslakfjysssiaqk266x6wkmjm3fnf3cz4yhoxf6aoa.arweave.net/BUIC8eBMYSWBRU4lKSAQVr3r-spiWbK0uxZ5g7rl8Bw" data-filename="BAI-EE - Love Manifesto (2) V-Day Mix" aria-label="Download Love Manifesto (2) V-Day Mix"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="031">
+  <span class="catalog-row-number">031</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="BAI-EE" data-img="https://arweave.net/uqBNvxk9bd-LETdZOD_O-QaKPiP6TYWi-9aP1zQZ4nY" data-duration-sec="3600" href="https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg" aria-label="Play Live @ Viva Acid &#39;24"><img src="https://arweave.net/uqBNvxk9bd-LETdZOD_O-QaKPiP6TYWi-9aP1zQZ4nY" alt="BAI-EE — Live @ Viva Acid &#39;24" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Live @ Viva Acid &#39;24</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg" data-filename="BAI-EE - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="030">
+  <span class="catalog-row-number">030</span>
+  <a class="catalog-row-cover" data-playlist data-title="Fathers Day Jazz Mix" data-artist="BAI-EE" data-img="https://73wboszzo3ctg377phl52yzv5wdmtm2sr4yjgjeyfybtssfnpsqq.arweave.net/_uwXSzl2xTNv_3nX3WM17YbJs1KPMJMkmC4DOUitfKE" data-duration-sec="3660" href="https://tote4rvkmrw7hor2y3utj4nmyi2akuth7mzitqkelabv2wgipdca.arweave.net/m6ZORqpkbfO6OsbpNPGswjQFUmf7MonBRFgDXVjIeMQ" aria-label="Play Fathers Day Jazz Mix"><img src="https://73wboszzo3ctg377phl52yzv5wdmtm2sr4yjgjeyfybtssfnpsqq.arweave.net/_uwXSzl2xTNv_3nX3WM17YbJs1KPMJMkmC4DOUitfKE" alt="BAI-EE — Fathers Day Jazz Mix" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Fathers Day Jazz Mix</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 61 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 61 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://tote4rvkmrw7hor2y3utj4nmyi2akuth7mzitqkelabv2wgipdca.arweave.net/m6ZORqpkbfO6OsbpNPGswjQFUmf7MonBRFgDXVjIeMQ" data-filename="BAI-EE - Fathers Day Jazz Mix" aria-label="Download Fathers Day Jazz Mix"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="029">
+  <span class="catalog-row-number">029</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="ANDREW EMIL" data-img="https://arweave.net/xuaroc0oIIAuIuokRn3LJwg0a-UgpVLtv-jcKm1NS18" data-duration-sec="7200" href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" aria-label="Play Live @ Viva Acid &#39;24"><img src="https://arweave.net/xuaroc0oIIAuIuokRn3LJwg0a-UgpVLtv-jcKm1NS18" alt="ANDREW EMIL — Live @ Viva Acid &#39;24" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="AE"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="andrewemil.html">Live @ Viva Acid &#39;24</a></h3>
+    <a class="catalog-row-artist" href="andrewemil.html">ANDREW EMIL</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" data-filename="ANDREW EMIL - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="028">
+  <span class="catalog-row-number">028</span>
+  <a class="catalog-row-cover" data-playlist data-title="A drink and a smoke on the veranda" data-artist="AKILA" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e6e5bf3efc53b4c9-v1.webp" data-duration-sec="3600" href="https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg" aria-label="Play A drink and a smoke on the veranda"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e6e5bf3efc53b4c9-v1.webp" alt="AKILA — A drink and a smoke on the veranda" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="A"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="akila.html">A drink and a smoke on the veranda</a></h3>
+    <a class="catalog-row-artist" href="akila.html">AKILA</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg" data-filename="AKILA - A drink and a smoke on the veranda" aria-label="Download A drink and a smoke on the veranda"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="027">
+  <span class="catalog-row-number">027</span>
+  <a class="catalog-row-cover" data-playlist data-title="Love Manifesto V-Day Mix" data-artist="BAI-EE" data-img="https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/lovemanifesto.jpg" data-duration-sec="4980" href="https://p4oglbpmdcjtobggvj7xgpeoo7nhllg43pmqlaqxs2sbtb5dnxwa.arweave.net/fxxlhewYkzcExqp_czyOd9p1rNzb2QWCF5akGYejbew" aria-label="Play Love Manifesto V-Day Mix"><img src="https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/lovemanifesto.jpg" alt="BAI-EE — Love Manifesto V-Day Mix" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Love Manifesto V-Day Mix</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 83 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2023</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 83 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2023</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://p4oglbpmdcjtobggvj7xgpeoo7nhllg43pmqlaqxs2sbtb5dnxwa.arweave.net/fxxlhewYkzcExqp_czyOd9p1rNzb2QWCF5akGYejbew" data-filename="BAI-EE - Love Manifesto V-Day Mix" aria-label="Download Love Manifesto V-Day Mix"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="026">
+  <span class="catalog-row-number">026</span>
+  <a class="catalog-row-cover" data-playlist data-title="Sounds From the Divide Mix 18" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/cdfb3ebadd9f5354-v1.webp" data-duration-sec="0" href="https://arweave.net/y-Lik8vT2L8XUxjPrUEd6METNjYXJfDY52DspUNEJf0" aria-label="Play Sounds From the Divide Mix 18"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/cdfb3ebadd9f5354-v1.webp" alt="BAI-EE — Sounds From the Divide Mix 18" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Sounds From the Divide Mix 18</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2022</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2022</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/y-Lik8vT2L8XUxjPrUEd6METNjYXJfDY52DspUNEJf0" data-filename="BAI-EE - Sounds From the Divide Mix 18" aria-label="Download Sounds From the Divide Mix 18"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="025">
+  <span class="catalog-row-number">025</span>
+  <a class="catalog-row-cover" data-playlist data-title="Naree Bday Mix" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/44010795424ffcd7-v1.webp" data-duration-sec="0" href="https://arweave.net/lcEj4KEz6SbHL8f3veGO4DJJmz4ECsItIwaJ3XMAiDo" aria-label="Play Naree Bday Mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/44010795424ffcd7-v1.webp" alt="BAI-EE — Naree Bday Mix" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Naree Bday Mix</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2022</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2022</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/lcEj4KEz6SbHL8f3veGO4DJJmz4ECsItIwaJ3XMAiDo" data-filename="BAI-EE - Naree Bday Mix" aria-label="Download Naree Bday Mix"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row is-unplayable" data-mix-number="024">
+  <span class="catalog-row-number">024</span>
+  <a class="catalog-row-cover" data-playlist data-title="HPIT Promo Mix" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/191e77c184347e9c-v1.webp" data-duration-sec="3600" data-unplayable="true" href="https://arweave.net/neH-PrcWXd71JCZayTX" aria-label="Play HPIT Promo Mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/191e77c184347e9c-v1.webp" alt="BAI-EE — HPIT Promo Mix" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">HPIT Promo Mix</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2022</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2022</span></div>
+  <span class="unplayable-note">Offline</span>
+</div>
+
+<div class="catalog-row" data-mix-number="023">
+  <span class="catalog-row-number">023</span>
+  <a class="catalog-row-cover" data-playlist data-title="Sounds From the Divide Mix 19" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/3779e09b5bc87f4e-v1.webp" data-duration-sec="0" href="https://arweave.net/M-3TZEkPlLTvsI7NVHsqYZFuBZXcJQCm1tMkaj_f_v4" aria-label="Play Sounds From the Divide Mix 19"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/3779e09b5bc87f4e-v1.webp" alt="BAI-EE — Sounds From the Divide Mix 19" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Sounds From the Divide Mix 19</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2019</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2019</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/M-3TZEkPlLTvsI7NVHsqYZFuBZXcJQCm1tMkaj_f_v4" data-filename="BAI-EE - Sounds From the Divide Mix 19" aria-label="Download Sounds From the Divide Mix 19"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="022">
+  <span class="catalog-row-number">022</span>
+  <a class="catalog-row-cover" data-playlist data-title="12 Step Music Mix" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/68a7fd1dffd09adb-v1.webp" data-duration-sec="0" href="https://arweave.net/uOXdDRYvNv2OUm6tdEuyZvL1_1O8FtL7KvYBisNEg2o" aria-label="Play 12 Step Music Mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/68a7fd1dffd09adb-v1.webp" alt="BAI-EE — 12 Step Music Mix" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">12 Step Music Mix</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2019</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2019</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/uOXdDRYvNv2OUm6tdEuyZvL1_1O8FtL7KvYBisNEg2o" data-filename="BAI-EE - 12 Step Music Mix" aria-label="Download 12 Step Music Mix"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="021">
+  <span class="catalog-row-number">021</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live @ Flammable &#39;19" data-artist="ANDREW EMIL" data-img="https://arweave.net/ADJklMqtq8c_YoKnyYZ2JHBfWrsZTkjDgQZ-4KuywGg" data-duration-sec="7200" href="https://i3iyj63muibfla4rgtxiuis72fy6iwbg3rcz7vda2try7xr3kzia.arweave.net/RtGE-2yiAlWDkTTuiiJf0XHkWCbcRZ_UYNTjj947VlA" aria-label="Play Live @ Flammable &#39;19"><img src="https://arweave.net/ADJklMqtq8c_YoKnyYZ2JHBfWrsZTkjDgQZ-4KuywGg" alt="ANDREW EMIL — Live @ Flammable &#39;19" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="AE"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="andrewemil.html">Live @ Flammable &#39;19</a></h3>
+    <a class="catalog-row-artist" href="andrewemil.html">ANDREW EMIL</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2019</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2019</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://i3iyj63muibfla4rgtxiuis72fy6iwbg3rcz7vda2try7xr3kzia.arweave.net/RtGE-2yiAlWDkTTuiiJf0XHkWCbcRZ_UYNTjj947VlA" data-filename="ANDREW EMIL - Live @ Flammable &#39;19" aria-label="Download Live @ Flammable &#39;19"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="020">
+  <span class="catalog-row-number">020</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live Performance" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a7f29497b2bb5b2f-v1.webp" data-duration-sec="0" href="https://arweave.net/e7vfpyZKSyUOv_oro5FnO8Wuyf1wIKq9S4EhlvV8o18" aria-label="Play Live Performance"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a7f29497b2bb5b2f-v1.webp" alt="BAI-EE — Live Performance" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Live Performance</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2018</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2018</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/e7vfpyZKSyUOv_oro5FnO8Wuyf1wIKq9S4EhlvV8o18" data-filename="BAI-EE - Live Performance" aria-label="Download Live Performance"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="019">
+  <span class="catalog-row-number">019</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live in Hawaii (Asylum)" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/3fa96fb8957c4ef0-v1.webp" data-duration-sec="3600" href="https://arweave.net/9LUIqtUo6qbpnVKJWQc87xQ5iROjWVVJao-8nhasndU" aria-label="Play Live in Hawaii (Asylum)"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/3fa96fb8957c4ef0-v1.webp" alt="BAI-EE — Live in Hawaii (Asylum)" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Live in Hawaii (Asylum)</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2018</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2018</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/9LUIqtUo6qbpnVKJWQc87xQ5iROjWVVJao-8nhasndU" data-filename="BAI-EE - Live in Hawaii (Asylum)" aria-label="Download Live in Hawaii (Asylum)"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="018">
+  <span class="catalog-row-number">018</span>
+  <a class="catalog-row-cover" data-playlist data-title="Rough Times" data-artist="BAI-EE" data-img="https://arweave.net/OsLJiW54iwyNfzAcR6w0pGd9pTcYn5rd3NA10cVFFYU" data-duration-sec="3660" href="https://ynfuoawcqrbjqsood6erdnboyvcy7p7ndipmphftwtehjy2to5xq.arweave.net/w0tHAsKEQphJzh-JEbQuxUWPv-0aHsecs7TIdONTd28" aria-label="Play Rough Times"><img src="https://arweave.net/OsLJiW54iwyNfzAcR6w0pGd9pTcYn5rd3NA10cVFFYU" alt="BAI-EE — Rough Times" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Rough Times</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 61 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2016</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 61 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2016</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://ynfuoawcqrbjqsood6erdnboyvcy7p7ndipmphftwtehjy2to5xq.arweave.net/w0tHAsKEQphJzh-JEbQuxUWPv-0aHsecs7TIdONTd28" data-filename="BAI-EE - Rough Times" aria-label="Download Rough Times"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="017">
+  <span class="catalog-row-number">017</span>
+  <a class="catalog-row-cover" data-playlist data-title="WWFM" data-artist="Chicago Skyway" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/549a02fd799e97cc-v1.webp" data-duration-sec="0" href="https://2pgnqqeqgn7ric25tb3jy3lbmo4jfnjn4ljyhjmx7xaybtt35qvq.arweave.net/08zYQJAzfxQLXZh2nG1hY7iStS3i04Oll_3BgM577Cs" aria-label="Play WWFM"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/549a02fd799e97cc-v1.webp" alt="Chicago Skyway — WWFM" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="CS"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="chicagoskyway.html">WWFM</a></h3>
+    <a class="catalog-row-artist" href="chicagoskyway.html">Chicago Skyway</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2011</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2011</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://2pgnqqeqgn7ric25tb3jy3lbmo4jfnjn4ljyhjmx7xaybtt35qvq.arweave.net/08zYQJAzfxQLXZh2nG1hY7iStS3i04Oll_3BgM577Cs" data-filename="Chicago Skyway - WWFM" aria-label="Download WWFM"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="016">
+  <span class="catalog-row-number">016</span>
+  <a class="catalog-row-cover" data-playlist data-title="Music Mix" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/5c5ef3b4b81982c9-v1.webp" data-duration-sec="0" href="https://arweave.net/qmOWTuGHuf7-ed5jb9KD8NFE2ARXCZFGG6bk5Na-ZJ8" aria-label="Play Music Mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/5c5ef3b4b81982c9-v1.webp" alt="BAI-EE — Music Mix" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="baiee.html">Music Mix</a></h3>
+    <a class="catalog-row-artist" href="baiee.html">BAI-EE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2011</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2011</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/qmOWTuGHuf7-ed5jb9KD8NFE2ARXCZFGG6bk5Na-ZJ8" data-filename="BAI-EE - Music Mix" aria-label="Download Music Mix"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="015">
+  <span class="catalog-row-number">015</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live @ Smartbar" data-artist="ACIDMAN" data-img="https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/acidtest.jpg" data-duration-sec="4320" href="https://tsksz4eeemr4tlq46gvx2j3ikuv2xvzv7pzxft4dcc76qn3g3frq.arweave.net/nJUs8IQjI8muHPGrfSdoVSur1zX783LPgxC_6Ddm2WM" aria-label="Play Live @ Smartbar"><img src="https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/acidtest.jpg" alt="ACIDMAN — Live @ Smartbar" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="A"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="acidman.html">Live @ Smartbar</a></h3>
+    <a class="catalog-row-artist" href="acidman.html">ACIDMAN</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 72 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2011</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 72 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2011</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://tsksz4eeemr4tlq46gvx2j3ikuv2xvzv7pzxft4dcc76qn3g3frq.arweave.net/nJUs8IQjI8muHPGrfSdoVSur1zX783LPgxC_6Ddm2WM" data-filename="ACIDMAN - Live @ Smartbar" aria-label="Download Live @ Smartbar"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="014">
+  <span class="catalog-row-number">014</span>
+  <a class="catalog-row-cover" data-playlist data-title="Martians Mixtape" data-artist="SEAN SMITH" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/2ba89fdd3ef068c7-v1.webp" data-duration-sec="7200" href="https://bzihmbcqda77zu2zf6xgurrcwke37xbcewvg5xovs45znnt5bnda.arweave.net/DlB2BFAYP_zTWS-uakYisom_3CIlqm7d1Zc7lrZ9C0Y" aria-label="Play Martians Mixtape"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/2ba89fdd3ef068c7-v1.webp" alt="SEAN SMITH — Martians Mixtape" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="SS"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="seansmith.html">Martians Mixtape</a></h3>
+    <a class="catalog-row-artist" href="seansmith.html">SEAN SMITH</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">OTHER</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> CIRCA 2009</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">OTHER</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> CIRCA 2009</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://bzihmbcqda77zu2zf6xgurrcwke37xbcewvg5xovs45znnt5bnda.arweave.net/DlB2BFAYP_zTWS-uakYisom_3CIlqm7d1Zc7lrZ9C0Y" data-filename="SEAN SMITH - Martians Mixtape" aria-label="Download Martians Mixtape"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="013">
+  <span class="catalog-row-number">013</span>
+  <a class="catalog-row-cover" data-playlist data-title="Stargazers vs Sunbathers" data-artist="ACIDMAN" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1f7227fc861d2d09-v1.webp" data-duration-sec="3600" href="https://pq4y62fmg2rlmdprylwbzvhf6weeg265x6wpdoknwfosey3pb7ua.arweave.net/fDmPaKw2orYN8cLsHNTl9YhDa92_rPG5TbFdImNvD-g" aria-label="Play Stargazers vs Sunbathers"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1f7227fc861d2d09-v1.webp" alt="ACIDMAN — Stargazers vs Sunbathers" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="A"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="acidman.html">Stargazers vs Sunbathers</a></h3>
+    <a class="catalog-row-artist" href="acidman.html">ACIDMAN</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2009</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2009</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://pq4y62fmg2rlmdprylwbzvhf6weeg265x6wpdoknwfosey3pb7ua.arweave.net/fDmPaKw2orYN8cLsHNTl9YhDa92_rPG5TbFdImNvD-g" data-filename="ACIDMAN - Stargazers vs Sunbathers" aria-label="Download Stargazers vs Sunbathers"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="012">
+  <span class="catalog-row-number">012</span>
+  <a class="catalog-row-cover" data-playlist data-title="Loft Livin" data-artist="ACIDMAN" data-img="https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/loftlivin.jpg" data-duration-sec="4320" href="https://2a3ilgvxa3h3qnbgs5kcfr3tclfsuf6w2qztps4igikcwczf2uba.arweave.net/0DaFmrcGz7g0JpdUIsdzEssqF9bUMzfLiDIUKwsl1QI" aria-label="Play Loft Livin"><img src="https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/loftlivin.jpg" alt="ACIDMAN — Loft Livin" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="A"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="acidman.html">Loft Livin</a></h3>
+    <a class="catalog-row-artist" href="acidman.html">ACIDMAN</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 72 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2005</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 72 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2005</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://2a3ilgvxa3h3qnbgs5kcfr3tclfsuf6w2qztps4igikcwczf2uba.arweave.net/0DaFmrcGz7g0JpdUIsdzEssqF9bUMzfLiDIUKwsl1QI" data-filename="ACIDMAN - Loft Livin" aria-label="Download Loft Livin"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="011">
+  <span class="catalog-row-number">011</span>
+  <a class="catalog-row-cover" data-playlist data-title="Let Yourself Go" data-artist="CESAR RAMIREZ" data-img="https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/letyourselfgo.jpg" data-duration-sec="5580" href="https://wqyhof73vki2hs5mwj6tm4godenmlg7b24jik2ovjtnfhzosizbq.arweave.net/tDB3F_uqkaPLrLJ9NnDOGRrFm-HXEoVp1UzaU-XSRkM" aria-label="Play Let Yourself Go"><img src="https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/letyourselfgo.jpg" alt="CESAR RAMIREZ — Let Yourself Go" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="CR"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="cesarramirez.html">Let Yourself Go</a></h3>
+    <a class="catalog-row-artist" href="cesarramirez.html">CESAR RAMIREZ</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 93 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2001</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 93 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2001</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://wqyhof73vki2hs5mwj6tm4godenmlg7b24jik2ovjtnfhzosizbq.arweave.net/tDB3F_uqkaPLrLJ9NnDOGRrFm-HXEoVp1UzaU-XSRkM" data-filename="CESAR RAMIREZ - Let Yourself Go" aria-label="Download Let Yourself Go"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="010">
+  <span class="catalog-row-number">010</span>
+  <a class="catalog-row-cover" data-playlist data-title="Mix Tape" data-artist="STAR TRAXX" data-img="https://arweave.net/_RZiEh4ns9t2kqWwYLg4cjaUz3MFiP1uUhlEY-frQYc" data-duration-sec="1800" href="https://3t4xoq2sswghgedqxsojzckllnq4oay6p4xrte7tl5mfm5ia7cka.arweave.net/3Pl3Q1KVjHMQcLycnIlLW2HHAx5_LxmT819YVnUA-JQ" aria-label="Play Mix Tape"><img src="https://arweave.net/_RZiEh4ns9t2kqWwYLg4cjaUz3MFiP1uUhlEY-frQYc" alt="STAR TRAXX — Mix Tape" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="ST"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="Startraxx.html">Mix Tape</a></h3>
+    <a class="catalog-row-artist" href="Startraxx.html">STAR TRAXX</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">OTHER</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 30 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> CIRCA 1995</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">OTHER</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 30 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> CIRCA 1995</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://3t4xoq2sswghgedqxsojzckllnq4oay6p4xrte7tl5mfm5ia7cka.arweave.net/3Pl3Q1KVjHMQcLycnIlLW2HHAx5_LxmT819YVnUA-JQ" data-filename="STAR TRAXX - Mix Tape" aria-label="Download Mix Tape"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="009">
+  <span class="catalog-row-number">009</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live @ UE.info ??" data-artist="JOHN SIMMONS" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/c8ac39e7b9dd1fa4-v1.webp" data-duration-sec="7200" href="https://us52zeiw62ei2egubws4huywpyw4nzvjxueism7pkt32pcjyoizq.arweave.net/pLuskRb2iI0Q1A2lw9MWfi3G5qm9CIkz71T3p4k4cjM" aria-label="Play Live @ UE.info ??"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/c8ac39e7b9dd1fa4-v1.webp" alt="JOHN SIMMONS — Live @ UE.info ??" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="JS"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="johnsimmons.html">Live @ UE.info ??</a></h3>
+    <a class="catalog-row-artist" href="johnsimmons.html">JOHN SIMMONS</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">TECHNO</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 120 MIN</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://us52zeiw62ei2egubws4huywpyw4nzvjxueism7pkt32pcjyoizq.arweave.net/pLuskRb2iI0Q1A2lw9MWfi3G5qm9CIkz71T3p4k4cjM" data-filename="JOHN SIMMONS - Live @ UE.info ??" aria-label="Download Live @ UE.info ??"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="008">
+  <span class="catalog-row-number">008</span>
+  <a class="catalog-row-cover" data-playlist data-title="Frankie Vega B2B Jevon Jackson" data-artist="JEVON JACKSON" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/f2bc27ba45e5c85a-v1.webp" data-duration-sec="0" href="https://arweave.net/26lgzySQrL0NGDnPiHvpA89UFK15x4JxF_YLo0jDI1Y" aria-label="Play Frankie Vega B2B Jevon Jackson"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/f2bc27ba45e5c85a-v1.webp" alt="JEVON JACKSON — Frankie Vega B2B Jevon Jackson" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="JJ"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="jevonjackson.html">Frankie Vega B2B Jevon Jackson</a></h3>
+    <a class="catalog-row-artist" href="jevonjackson.html">JEVON JACKSON</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/26lgzySQrL0NGDnPiHvpA89UFK15x4JxF_YLo0jDI1Y" data-filename="JEVON JACKSON - Frankie Vega B2B Jevon Jackson" aria-label="Download Frankie Vega B2B Jevon Jackson"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="007">
+  <span class="catalog-row-number">007</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live @ UE.info ??" data-artist="DJ RELEASE AKA IKE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1b1ce66a9c30e98a-v1.webp" data-duration-sec="3600" href="https://embbv2sphugsxwzrx222jkjpcqbj2unqbn5yaiqh4rgoacvigycq.arweave.net/IwIa6k89DSvbMb61pKkvFAKdUbALe4AiB-RM4AqoNgU" aria-label="Play Live @ UE.info ??"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1b1ce66a9c30e98a-v1.webp" alt="DJ RELEASE AKA IKE — Live @ UE.info ??" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="DR"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="release.html">Live @ UE.info ??</a></h3>
+    <a class="catalog-row-artist" href="release.html">DJ RELEASE AKA IKE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://embbv2sphugsxwzrx222jkjpcqbj2unqbn5yaiqh4rgoacvigycq.arweave.net/IwIa6k89DSvbMb61pKkvFAKdUbALe4AiB-RM4AqoNgU" data-filename="DJ RELEASE AKA IKE - Live @ UE.info ??" aria-label="Download Live @ UE.info ??"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="006">
+  <span class="catalog-row-number">006</span>
+  <a class="catalog-row-cover" data-playlist data-title="Playing to the Wall" data-artist="Chicago Skyway" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/bd7d5063b27e1d82-v1.webp" data-duration-sec="0" href="https://gdzput7zxnda3rncbjctigt424v2sza3chbo5e4tltdfs53tjm5a.arweave.net/MPL6T_m7Rg3FogpFNBp81yupZBsRwu6Tk1zGWXdzSzo" aria-label="Play Playing to the Wall"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/bd7d5063b27e1d82-v1.webp" alt="Chicago Skyway — Playing to the Wall" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="CS"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="chicagoskyway.html">Playing to the Wall</a></h3>
+    <a class="catalog-row-artist" href="chicagoskyway.html">Chicago Skyway</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://gdzput7zxnda3rncbjctigt424v2sza3chbo5e4tltdfs53tjm5a.arweave.net/MPL6T_m7Rg3FogpFNBp81yupZBsRwu6Tk1zGWXdzSzo" data-filename="Chicago Skyway - Playing to the Wall" aria-label="Download Playing to the Wall"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="005">
+  <span class="catalog-row-number">005</span>
+  <a class="catalog-row-cover" data-playlist data-title="Little White Earbuds Mix" data-artist="Chicago Skyway" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/9710af8b39671656-v1.webp" data-duration-sec="0" href="https://4zj2ozjipdt4lqx3be24koilrjqt4l7igs7hfhumrha7g7qvabaa.arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA" aria-label="Play Little White Earbuds Mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/9710af8b39671656-v1.webp" alt="Chicago Skyway — Little White Earbuds Mix" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="CS"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="chicagoskyway.html">Little White Earbuds Mix</a></h3>
+    <a class="catalog-row-artist" href="chicagoskyway.html">Chicago Skyway</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://4zj2ozjipdt4lqx3be24koilrjqt4l7igs7hfhumrha7g7qvabaa.arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA" data-filename="Chicago Skyway - Little White Earbuds Mix" aria-label="Download Little White Earbuds Mix"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="004">
+  <span class="catalog-row-number">004</span>
+  <a class="catalog-row-cover" data-playlist data-title="For Hakim" data-artist="Chicago Skyway" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a5ffe359b0e48cee-v1.webp" data-duration-sec="0" href="https://arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA" aria-label="Play For Hakim"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a5ffe359b0e48cee-v1.webp" alt="Chicago Skyway — For Hakim" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="CS"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="chicagoskyway.html">For Hakim</a></h3>
+    <a class="catalog-row-artist" href="chicagoskyway.html">Chicago Skyway</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA" data-filename="Chicago Skyway - For Hakim" aria-label="Download For Hakim"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="003">
+  <span class="catalog-row-number">003</span>
+  <a class="catalog-row-cover" data-playlist data-title="For Hakim" data-artist="Chicago Skyway" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a5ffe359b0e48cee-v1.webp" data-duration-sec="0" href="https://4zj2ozjipdt4lqx3be24koilrjqt4l7igs7hfhumrha7g7qvabaa.arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA" aria-label="Play For Hakim"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a5ffe359b0e48cee-v1.webp" alt="Chicago Skyway — For Hakim" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="CS"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="chicagoskyway.html">For Hakim</a></h3>
+    <a class="catalog-row-artist" href="chicagoskyway.html">Chicago Skyway</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://4zj2ozjipdt4lqx3be24koilrjqt4l7igs7hfhumrha7g7qvabaa.arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA" data-filename="Chicago Skyway - For Hakim" aria-label="Download For Hakim"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="002">
+  <span class="catalog-row-number">002</span>
+  <a class="catalog-row-cover" data-playlist data-title="Chubby Podcast" data-artist="Chicago Skyway" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/11d106493e3bfcec-v1.webp" data-duration-sec="0" href="https://zcxekfuulha26hweqntyez4egu4baliajqdrfcu7xc2wvtnuef4q.arweave.net/yK5FFpRZwa8exINngmeENTgQLQBMBxKKn7i1as20IXk" aria-label="Play Chubby Podcast"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/11d106493e3bfcec-v1.webp" alt="Chicago Skyway — Chubby Podcast" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="CS"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="chicagoskyway.html">Chubby Podcast</a></h3>
+    <a class="catalog-row-artist" href="chicagoskyway.html">Chicago Skyway</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://zcxekfuulha26hweqntyez4egu4baliajqdrfcu7xc2wvtnuef4q.arweave.net/yK5FFpRZwa8exINngmeENTgQLQBMBxKKn7i1as20IXk" data-filename="Chicago Skyway - Chubby Podcast" aria-label="Download Chubby Podcast"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+
+<div class="catalog-row" data-mix-number="001">
+  <span class="catalog-row-number">001</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live at UE (B2B Sean Smith)" data-artist="BERNARD BADIE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/38c7dbfa896f8a89-v1.webp" data-duration-sec="0" href="https://arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg" aria-label="Play Live at UE (B2B Sean Smith)"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/38c7dbfa896f8a89-v1.webp" alt="BERNARD BADIE — Live at UE (B2B Sean Smith)" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="BB"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="bernardbadie.html">Live at UE (B2B Sean Smith)</a></h3>
+    <a class="catalog-row-artist" href="bernardbadie.html">BERNARD BADIE</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">HOUSE</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">HOUSE</span></div>
+  <div class="catalog-row-actions">
+    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+    <a class="download-btn" data-download href="https://arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg" data-filename="BERNARD BADIE - Live at UE (B2B Sean Smith)" aria-label="Download Live at UE (B2B Sean Smith)"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+    </div>
+  </section>
+</main>
+
+<footer id="site-footer">
+  <div id="site-footer-inner">
+    <div id="footer-brand-block">
+      <img class="footer-wordmark" src="img/ue-white-horiz.png" alt="Underground Existence">
+      <div class="footer-tagline">
+        <svg class="icon-svg"><use href="#i-globe"></use></svg>
+        <span>Hosted on Arweave &middot; Est. 2007</span>
+      </div>
+    </div>
+    <div class="footer-links">
+      <a href="index.html">Mixes</a>
+      <a href="residents.html">Selectors</a>
+      <a href="archive.html">Archive</a>
+      <a href="about.html">About</a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSfnuTItd-QSZkgPwIy9baGBZ8nyC_6Y3JxsXLSLywJfuwrXYw/viewform?usp=sf_link" target="_blank" rel="noopener">Contribute</a>
+    </div>
+  </div>
+</footer>
+
+<div id="persistent-player-bar" class="is-idle">
+  <div id="player-bar-now-playing">
+    <div id="player-bar-thumb"><img class="cover-fallback" src="img/square-ue.png" alt=""></div>
+    <div id="player-bar-track-meta">
+      <div id="player-bar-title">Select a mix to play</div>
+      <div id="player-bar-artist"></div>
+    </div>
+  </div>
+  <div id="player-bar-transport">
+    <button class="transport-btn" id="player-bar-shuffle" type="button" aria-label="Shuffle">
+      <svg class="icon-svg"><use href="#i-shuffle"></use></svg>
+    </button>
+    <button class="transport-btn" id="player-bar-prev" type="button" aria-label="Previous">
+      <svg class="icon-svg"><use href="#i-prev"></use></svg>
+    </button>
+    <button class="play-circle play-circle--sm" id="player-bar-play" type="button" aria-label="Play or pause">
+      <svg class="icon-svg icon-play"><use href="#i-play"></use></svg>
+      <svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg>
+    </button>
+    <button class="transport-btn" id="player-bar-next" type="button" aria-label="Next">
+      <svg class="icon-svg"><use href="#i-next"></use></svg>
+    </button>
+    <button class="transport-btn" id="player-bar-repeat" type="button" aria-label="Repeat">
+      <svg class="icon-svg"><use href="#i-repeat"></use></svg>
+    </button>
+  </div>
+  <div id="player-bar-wave-wrap">
+    <span class="player-bar-time time-current" id="player-bar-time-current">0:00</span>
+    <div id="player-bar-waveform" aria-hidden="true"></div>
+    <span class="player-bar-time time-total" id="player-bar-time-total">--:--</span>
+  </div>
+  <div id="player-bar-volume">
+    <svg class="icon-svg"><use href="#i-volume"></use></svg>
+    <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+  </div>
+  <button id="player-bar-menu-btn" type="button" aria-label="More">
+    <svg class="icon-svg"><use href="#i-kebab"></use></svg>
+  </button>
+</div>
+
+<div id="search-overlay" role="dialog" aria-label="Search">
+  <button id="search-overlay-close" type="button">Close</button>
+  <div id="search-overlay-inner">
+    <input id="search-input" type="text" placeholder="Search mixes &amp; residents&hellip;" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+</div>
+
+<script src="js/boot.js" defer></script>
+</body>
+</html>

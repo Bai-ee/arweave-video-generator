@@ -1,0 +1,39 @@
+<div id="persistent-player-bar" class="is-idle">
+  <div id="player-bar-now-playing">
+    <div id="player-bar-thumb"><img class="cover-fallback" src="img/square-ue.png" alt=""></div>
+    <div id="player-bar-track-meta">
+      <div id="player-bar-title">Select a mix to play</div>
+      <div id="player-bar-artist"></div>
+    </div>
+  </div>
+  <div id="player-bar-transport">
+    <button class="transport-btn" id="player-bar-shuffle" type="button" aria-label="Shuffle">
+      <svg class="icon-svg"><use href="#i-shuffle"></use></svg>
+    </button>
+    <button class="transport-btn" id="player-bar-prev" type="button" aria-label="Previous">
+      <svg class="icon-svg"><use href="#i-prev"></use></svg>
+    </button>
+    <button class="play-circle play-circle--sm" id="player-bar-play" type="button" aria-label="Play or pause">
+      <svg class="icon-svg icon-play"><use href="#i-play"></use></svg>
+      <svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg>
+    </button>
+    <button class="transport-btn" id="player-bar-next" type="button" aria-label="Next">
+      <svg class="icon-svg"><use href="#i-next"></use></svg>
+    </button>
+    <button class="transport-btn" id="player-bar-repeat" type="button" aria-label="Repeat">
+      <svg class="icon-svg"><use href="#i-repeat"></use></svg>
+    </button>
+  </div>
+  <div id="player-bar-wave-wrap">
+    <span class="player-bar-time time-current" id="player-bar-time-current">0:00</span>
+    <div id="player-bar-waveform" aria-hidden="true"></div>
+    <span class="player-bar-time time-total" id="player-bar-time-total">--:--</span>
+  </div>
+  <div id="player-bar-volume">
+    <svg class="icon-svg"><use href="#i-volume"></use></svg>
+    <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+  </div>
+  <button id="player-bar-menu-btn" type="button" aria-label="More">
+    <svg class="icon-svg"><use href="#i-kebab"></use></svg>
+  </button>
+</div>

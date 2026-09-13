@@ -76,6 +76,15 @@ wallet-export/
 !tsconfig.json
 !vercel.json
 
+# Skyline thumbnail pipeline: these two ARE source, not generated output, and the
+# blanket *.json rule above would otherwise silently exclude them from the repo
+# (the catalog is the pipeline's durable, versioned source-of-truth, and the
+# fixtures are required by tests/website-sync-skyline-meta.test.mjs).
+!config/skyline-thumbnail-sources.json
+!tests/fixtures/*.json
+# Skyline thumbnail visual treatment (source, not generated output).
+!config/skyline-thumbnail-treatment.json
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -88,3 +97,35 @@ Thumbs.db
 *~
 
 .env.production
+.env*.local
+
+# local AI/editor workflow files
+.agents/
+
+# Skyline thumbnail pipeline dry-run reports (local review artifacts only)
+outputs/skyline-dryrun/
+
+# Local scratch, caches and agent working dirs — never release source.
+outputs/
+backups/
+
+# Required site assets. The blanket website/img + website/fonts ignores above are
+# there to keep bulk media out of the repo, but these specific files are part of
+# REQUIRED_MANIFEST_PATHS (lib/WebsiteDeployer.js): without them a Vercel-run
+# deploy packages a site with no fonts and no header logo. ~220 KB total.
+!website/fonts/gately-v1-regular.woff2
+!website/fonts/rationale-v1-regular.woff2
+!website/fonts/special-elite-v20-latin-regular.woff2
+!website/fonts/ibm-plex-mono-v20-latin-regular.woff2
+!website/fonts/ibm-plex-mono-v20-latin-500.woff2
+!website/fonts/ibm-plex-mono-v20-latin-700.woff2
+!website/img/ue-logo-horiz.png
+!website/img/ue-white-horiz.png
+!website/img/square-ue.png
+!website/img/digging-hero.jpg
+!website/icon/favicon-32x32.png
+!website/img/flyers/flyer1.jpg
+!website/img/flyers/flyer2.jpg
+
+# Never track the local secrets file (wallet JWK + service account key).
+.env.local

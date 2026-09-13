@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{> head}}
+</head>
+<body>
+{{> icons}}
+{{> nav}}
+
+<main class="page-shell">
+  <section id="featured-mix-hero" data-section="featured-hero">
+    <div id="hero-collage-frame">
+      <div class="hero-image-clip">
+        {{FEATURED_IMAGE}}
+      </div>
+    </div>
+    <div id="featured-mix-content">
+      <span class="section-eyebrow">Featured Mix</span>
+      <h1 id="featured-mix-title">{{FEATURED_TITLE}}</h1>
+      <a id="featured-artist-signature" href="{{FEATURED_ARTIST_PAGE}}">{{FEATURED_ARTIST}}</a>
+      <div id="featured-meta-row">
+        <span class="meta-chip"><svg class="icon-svg"><use href="#i-wave"></use></svg> {{FEATURED_GENRE}}</span>
+        {{FEATURED_DURATION_CHIP}}
+        {{FEATURED_DATE_CHIP}}
+      </div>
+      <div id="featured-player-row">
+        <a id="featured-play-button" class="play-circle play-circle--lg" data-featured-mix data-playlist data-title="{{FEATURED_TITLE_ATTR}}" data-artist="{{FEATURED_ARTIST_ATTR}}" data-img="{{FEATURED_IMG_URL}}" data-duration-sec="{{FEATURED_DURATION_SEC}}" href="{{FEATURED_AUDIO_URL}}" aria-label="Play featured mix">
+          <svg class="icon-svg icon-play"><use href="#i-play"></use></svg>
+          <svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg>
+        </a>
+        <a id="featured-download-button" class="download-btn" data-download data-filename="{{FEATURED_ARTIST_ATTR}} - {{FEATURED_TITLE_ATTR}}" href="{{FEATURED_AUDIO_URL}}" aria-label="Download featured mix">
+          <svg class="icon-svg"><use href="#i-download"></use></svg>
+        </a>
+        <div id="featured-waveform">
+          <div class="waveform-track"></div>
+          <div class="waveform-progress-line">
+            <div class="progress-fill"></div>
+            <div class="progress-dot"></div>
+          </div>
+          <div class="waveform-time-row">
+            <span class="time-current">0:00</span>
+            <span class="time-total">{{FEATURED_DURATION_DISPLAY}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="latest-mixes-section" data-section="latest-mixes">
+    <div class="section-header-row">
+      <span class="section-eyebrow section-eyebrow--plain">Latest Mixes</span>
+      <a class="section-view-all" href="archive.html">View All Mixes <svg class="icon-svg"><use href="#i-arrow-right"></use></svg></a>
+    </div>
+    <div id="latest-mixes-grid" class="mix-card-grid">
+{{LATEST_MIX_CARDS}}
+    </div>
+  </section>
+</main>
+
+{{> footer}}
+{{> player-bar}}
+{{> search-overlay}}
+<script src="js/boot.js" defer></script>
+</body>
+</html>

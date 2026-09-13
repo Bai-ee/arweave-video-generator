@@ -2,7 +2,7 @@
   {
     "artistName": "ACIDMAN",
     "artistFilename": "acidman.html",
-    "artistImageFilename": "img/artists/acidman.jpg",
+    "artistImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/acidman.jpg",
     "artistGenre": "acid",
     "mixes": [
       {
@@ -10,28 +10,46 @@
         "mixArweaveURL": "https://pq4y62fmg2rlmdprylwbzvhf6weeg265x6wpdoknwfosey3pb7ua.arweave.net/fDmPaKw2orYN8cLsHNTl9YhDa92_rPG5TbFdImNvD-g",
         "mixDateYear": "'09",
         "mixDuration": "60:00",
-        "mixImageFilename": "img/artists/acidman.jpg"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1f7227fc861d2d09-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-01baa7aa",
+          "sourceTimeSec": 1.1,
+          "candidateId": "skyline-01baa7aa@1.10",
+          "dHash": "4f4f4e66674767e6",
+          "generatedAt": "2026-09-13T02:07:32.206Z",
+          "contentHash": "c3258199a8da3c9b21b74bf9d6970e6ad0b2a15d2f6626171b60a5dc54fd6b50",
+          "storagePath": "website/generated-thumbnails/v1/mix/1f7227fc861d2d09-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 94992,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:1f7227fc861d2d09:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/acidman.jpg"
       },
       {
         "mixTitle": "Live @ Smartbar",
         "mixArweaveURL": "https://tsksz4eeemr4tlq46gvx2j3ikuv2xvzv7pzxft4dcc76qn3g3frq.arweave.net/nJUs8IQjI8muHPGrfSdoVSur1zX783LPgxC_6Ddm2WM",
         "mixDateYear": "'11",
-        "mixDuration": "72 Min",
-        "mixImageFilename": "img/covers/acidtest.jpg"
+        "mixDuration": "72:00",
+        "mixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/acidtest.jpg"
       },
       {
         "mixTitle": "Loft Livin",
         "mixArweaveURL": "https://2a3ilgvxa3h3qnbgs5kcfr3tclfsuf6w2qztps4igikcwczf2uba.arweave.net/0DaFmrcGz7g0JpdUIsdzEssqF9bUMzfLiDIUKwsl1QI",
         "mixDateYear": "'05",
-        "mixDuration": "72 Min",
-        "mixImageFilename": "img/covers/loftlivin.jpg"
+        "mixDuration": "72:00",
+        "mixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/loftlivin.jpg"
       }
     ]
   },
   {
     "artistName": "AKILA",
     "artistFilename": "akila.html",
-    "artistImageFilename": "img/artists/akila.jpg",
+    "artistImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/akila.jpg",
     "artistGenre": "house",
     "mixes": [
       {
@@ -39,21 +57,57 @@
         "mixArweaveURL": "https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg",
         "mixDateYear": "6/24",
         "mixDuration": "60:00",
-        "mixImageFilename": "img/artists/akila.jpg"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/0969e007a5dc1ae3-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-fd456554",
+          "sourceTimeSec": 7.64,
+          "candidateId": "skyline-fd456554@7.64",
+          "dHash": "dddd9d9f1f8fcb56",
+          "generatedAt": "2026-09-13T02:03:14.877Z",
+          "contentHash": "4033a8da6cdffe32cae8153b9da19a3875c64f3f6579de97f67b345ecba63e00",
+          "storagePath": "website/generated-thumbnails/v1/mix/0969e007a5dc1ae3-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 81868,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:0969e007a5dc1ae3:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/akila.jpg"
       },
       {
         "mixTitle": "A drink and a smoke on the veranda",
         "mixArweaveURL": "https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg",
         "mixDateYear": "'24",
         "mixDuration": "60:00",
-        "mixImageFilename": "img/artists/akila.jpg"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e6e5bf3efc53b4c9-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-a0d513a9",
+          "sourceTimeSec": 4.89,
+          "candidateId": "skyline-a0d513a9@4.89",
+          "dHash": "e8506b4bdada5bea",
+          "generatedAt": "2026-09-13T02:07:33.782Z",
+          "contentHash": "10c2ee82b4a3d5a2db464827ca20a88c4ccc972026bb1ac9b89d370f788b5385",
+          "storagePath": "website/generated-thumbnails/v1/mix/e6e5bf3efc53b4c9-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 91892,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:e6e5bf3efc53b4c9:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/akila.jpg"
       }
     ]
   },
   {
     "artistName": "ANDREW EMIL",
     "artistFilename": "andrewemil.html",
-    "artistImageFilename": "img/artists/andrew_emil.jpg",
+    "artistImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/andrew_emil.jpg",
     "artistGenre": "techno",
     "mixes": [
       {
@@ -61,36 +115,29 @@
         "mixArweaveURL": "https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM",
         "mixDateYear": "'24",
         "mixDuration": "120:00",
-        "mixImageFilename": "img/covers/andrewb2bredeye.png"
+        "mixImageFilename": "https://arweave.net/xuaroc0oIIAuIuokRn3LJwg0a-UgpVLtv-jcKm1NS18"
       },
       {
         "mixTitle": "Live @ Flammable '19",
         "mixArweaveURL": "https://i3iyj63muibfla4rgtxiuis72fy6iwbg3rcz7vda2try7xr3kzia.arweave.net/RtGE-2yiAlWDkTTuiiJf0XHkWCbcRZ_UYNTjj947VlA",
         "mixDateYear": "'19",
         "mixDuration": "120:00",
-        "mixImageFilename": "img/covers/andrewemilflammable.png"
+        "mixImageFilename": "https://arweave.net/ADJklMqtq8c_YoKnyYZ2JHBfWrsZTkjDgQZ-4KuywGg"
       }
     ]
   },
   {
     "artistName": "BAI-EE",
     "artistFilename": "baiee.html",
-    "artistImageFilename": "img/artists/bai-ee2.jpg",
+    "artistImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/bai-ee2.jpg",
     "artistGenre": "acid",
     "mixes": [
-      {
-        "mixTitle": "Josh Z & Bai-ee B2B Podlasie 7/18/25",
-        "mixArweaveURL": "https://v5pcq77sqiqhc2xkg4xxetpezy3nb673darvogh7cvdxg3twop5a.ardrive.net/r14of_KCIHFq6jcvck3kzjbQ-_sYI1cY_xVHc252c_o",
-        "mixDateYear": "7/18/25",
-        "mixDuration": "60:00",
-        "mixImageFilename": "img/artists/JoshZ_B2B_Baiee.png"
-      },
       {
         "mixTitle": "Live @ Viva Acid '24",
         "mixArweaveURL": "https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg",
         "mixDateYear": "'24",
         "mixDuration": "60:00",
-        "mixImageFilename": "img/bai_ee_closing_partyVAjpg.jpg"
+        "mixImageFilename": "https://arweave.net/uqBNvxk9bd-LETdZOD_O-QaKPiP6TYWi-9aP1zQZ4nY"
       },
       {
         "mixTitle": "Fathers Day Jazz Mix",
@@ -104,71 +151,326 @@
         "mixArweaveURL": "https://ynfuoawcqrbjqsood6erdnboyvcy7p7ndipmphftwtehjy2to5xq.arweave.net/w0tHAsKEQphJzh-JEbQuxUWPv-0aHsecs7TIdONTd28",
         "mixDateYear": "'16",
         "mixDuration": "61:00",
-        "mixImageFilename": "img/roughtimes.jpg"
+        "mixImageFilename": "https://arweave.net/OsLJiW54iwyNfzAcR6w0pGd9pTcYn5rd3NA10cVFFYU"
       },
       {
         "mixTitle": "Love Manifesto (2) V-Day Mix",
         "mixArweaveURL": "https://avbaf4pajrqslakfjysssiaqk266x6wkmjm3fnf3cz4yhoxf6aoa.arweave.net/BUIC8eBMYSWBRU4lKSAQVr3r-spiWbK0uxZ5g7rl8Bw",
         "mixDateYear": "'24",
         "mixDuration": "72:00",
-        "mixImageFilename": "img/covers/lovemanifesto2.jpg"
+        "mixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/lovemanifesto2.jpg"
       },
       {
         "mixTitle": "Love Manifesto V-Day Mix",
         "mixArweaveURL": "https://p4oglbpmdcjtobggvj7xgpeoo7nhllg43pmqlaqxs2sbtb5dnxwa.arweave.net/fxxlhewYkzcExqp_czyOd9p1rNzb2QWCF5akGYejbew",
         "mixDateYear": "'23",
         "mixDuration": "83:00",
-        "mixImageFilename": "img/covers/lovemanifesto.jpg"
+        "mixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/lovemanifesto.jpg"
       },
       {
-        "mixTitle": "Live @ Smartbar",
-        "mixArweaveURL": "https://tsksz4eeemr4tlq46gvx2j3ikuv2xvzv7pzxft4dcc76qn3g3frq.arweave.net/nJUs8IQjI8muHPGrfSdoVSur1zX783LPgxC_6Ddm2WM",
-        "mixDateYear": "'11",
-        "mixDuration": "90:00",
-        "mixImageFilename": "img/covers/acidtest.jpg"
+        "mixTitle": "HPIT Promo Mix",
+        "mixArweaveURL": "https://arweave.net/neH-PrcWXd71JCZayTX",
+        "mixDateYear": "2022",
+        "mixDuration": "60",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/191e77c184347e9c-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-2d822651",
+          "sourceTimeSec": 3.96,
+          "candidateId": "skyline-2d822651@3.96",
+          "dHash": "f0f3e6f6f63a62e0",
+          "generatedAt": "2026-09-13T02:07:36.646Z",
+          "contentHash": "94b2d7c5ea0aab12868e1dc37725bfdfd813ae6fbd06fb0a14eae11b9bd55ce6",
+          "storagePath": "website/generated-thumbnails/v1/mix/191e77c184347e9c-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 80488,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:191e77c184347e9c:v1"
+        }
       },
       {
-        "mixTitle": "Loft Livin '05",
-        "mixArweaveURL": "https://2a3ilgvxa3h3qnbgs5kcfr3tclfsuf6w2qztps4igikcwczf2uba.arweave.net/0DaFmrcGz7g0JpdUIsdzEssqF9bUMzfLiDIUKwsl1QI",
-        "mixDateYear": "'05",
-        "mixDuration": "90:00",
-        "mixImageFilename": "img/covers/loftlivin.jpg"
+        "mixTitle": "Love Manifesto #3",
+        "mixArweaveURL": "https://arweave.net/Ex1n-m0Pdea7Kfm3a0F9IkT875idE2tyyE1LtXbxZSs",
+        "mixDateYear": "2025",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/7374d46d7a99ae15-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-cfeb6c99",
+          "sourceTimeSec": 3.66,
+          "candidateId": "skyline-cfeb6c99@3.66",
+          "dHash": "cecccc8cccceccc5",
+          "generatedAt": "2026-09-13T02:07:38.296Z",
+          "contentHash": "65938651b2aec87a9aea5260089544b7cf88da1db01015bbf0393e791d9d8505",
+          "storagePath": "website/generated-thumbnails/v1/mix/7374d46d7a99ae15-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 97774,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:7374d46d7a99ae15:v1"
+        }
+      },
+      {
+        "mixTitle": "Music Mix",
+        "mixArweaveURL": "https://arweave.net/qmOWTuGHuf7-ed5jb9KD8NFE2ARXCZFGG6bk5Na-ZJ8",
+        "mixDateYear": "2011",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/5c5ef3b4b81982c9-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-49aee0b6",
+          "sourceTimeSec": 2.8,
+          "candidateId": "skyline-49aee0b6@2.80",
+          "dHash": "8ec4c2644d3064c7",
+          "generatedAt": "2026-09-13T02:07:40.251Z",
+          "contentHash": "475f2989028cf47318c4d2ac8ad7ad91f73c9294691463e5558d1b6e4f88fe25",
+          "storagePath": "website/generated-thumbnails/v1/mix/5c5ef3b4b81982c9-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 150948,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:5c5ef3b4b81982c9:v1"
+        }
+      },
+      {
+        "mixTitle": "Sounds From the Divide Mix 19",
+        "mixArweaveURL": "https://arweave.net/M-3TZEkPlLTvsI7NVHsqYZFuBZXcJQCm1tMkaj_f_v4",
+        "mixDateYear": "2019",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/3779e09b5bc87f4e-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-49aee0b6",
+          "sourceTimeSec": 1.01,
+          "candidateId": "skyline-49aee0b6@1.01",
+          "dHash": "888ee6c83260cace",
+          "generatedAt": "2026-09-13T02:07:41.401Z",
+          "contentHash": "7da3655cba8568426bcb51d56433f5bdbc64d09d6dba654dc255bd2db067af42",
+          "storagePath": "website/generated-thumbnails/v1/mix/3779e09b5bc87f4e-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 155434,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:3779e09b5bc87f4e:v1"
+        }
+      },
+      {
+        "mixTitle": "Sounds From the Divide Mix 18",
+        "mixArweaveURL": "https://arweave.net/y-Lik8vT2L8XUxjPrUEd6METNjYXJfDY52DspUNEJf0",
+        "mixDateYear": "2022",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/cdfb3ebadd9f5354-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-efe420db",
+          "sourceTimeSec": 6.03,
+          "candidateId": "skyline-efe420db@6.03",
+          "dHash": "9e86e6e6e6d4d4a2",
+          "generatedAt": "2026-09-13T02:07:44.542Z",
+          "contentHash": "a2e912385395e3c1653fccb3a2964e43188640195abb57dc699bd9a058feff08",
+          "storagePath": "website/generated-thumbnails/v1/mix/cdfb3ebadd9f5354-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 136420,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:cdfb3ebadd9f5354:v1"
+        }
+      },
+      {
+        "mixTitle": "12 Step Music Mix",
+        "mixArweaveURL": "https://arweave.net/uOXdDRYvNv2OUm6tdEuyZvL1_1O8FtL7KvYBisNEg2o",
+        "mixDateYear": "2019",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/68a7fd1dffd09adb-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-01baa7aa",
+          "sourceTimeSec": 5.99,
+          "candidateId": "skyline-01baa7aa@5.99",
+          "dHash": "67e7a3b3b3b37bf1",
+          "generatedAt": "2026-09-13T02:07:45.564Z",
+          "contentHash": "13fcb833d314eda730ccadb04736628457f540fbfa6bcdbf891abf1d383d52c6",
+          "storagePath": "website/generated-thumbnails/v1/mix/68a7fd1dffd09adb-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 107284,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:68a7fd1dffd09adb:v1"
+        }
+      },
+      {
+        "mixTitle": "Live in Hawaii (Asylum)",
+        "mixArweaveURL": "https://arweave.net/9LUIqtUo6qbpnVKJWQc87xQ5iROjWVVJao-8nhasndU",
+        "mixDateYear": "2018",
+        "mixDuration": "60",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/3fa96fb8957c4ef0-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-efe420db",
+          "sourceTimeSec": 3.14,
+          "candidateId": "skyline-efe420db@3.14",
+          "dHash": "5ad6c6e6e6f6eec2",
+          "generatedAt": "2026-09-13T02:07:46.654Z",
+          "contentHash": "5b9fc949a557e13a4fe95b5e6e754b1243a3e92f91608718c5a314e4b80cd8f6",
+          "storagePath": "website/generated-thumbnails/v1/mix/3fa96fb8957c4ef0-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 129540,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:3fa96fb8957c4ef0:v1"
+        }
+      },
+      {
+        "mixTitle": "Live Performance",
+        "mixArweaveURL": "https://arweave.net/e7vfpyZKSyUOv_oro5FnO8Wuyf1wIKq9S4EhlvV8o18",
+        "mixDateYear": "2018",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a7f29497b2bb5b2f-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-b14c5182",
+          "sourceTimeSec": 4.48,
+          "candidateId": "skyline-b14c5182@4.48",
+          "dHash": "43c1e2e4f4f571d9",
+          "generatedAt": "2026-09-13T02:07:49.707Z",
+          "contentHash": "afb6bd32df660821069e8f6305eb5436aa9849a510c92ec643d0cfb7bcfb3cd8",
+          "storagePath": "website/generated-thumbnails/v1/mix/a7f29497b2bb5b2f-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 75234,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:a7f29497b2bb5b2f:v1"
+        }
+      },
+      {
+        "mixTitle": "Naree Bday Mix",
+        "mixArweaveURL": "https://arweave.net/lcEj4KEz6SbHL8f3veGO4DJJmz4ECsItIwaJ3XMAiDo",
+        "mixDateYear": "2022",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/44010795424ffcd7-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-00cc6d5c",
+          "sourceTimeSec": 9.07,
+          "candidateId": "skyline-00cc6d5c@9.07",
+          "dHash": "101632524e538200",
+          "generatedAt": "2026-09-13T02:07:52.981Z",
+          "contentHash": "d02edb284b2deaad2e8d02968df7603817f40bb3cdc6885726850409c34425c6",
+          "storagePath": "website/generated-thumbnails/v1/mix/44010795424ffcd7-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 123426,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:44010795424ffcd7:v1"
+        }
+      },
+      {
+        "mixTitle": "Love Manifesto 3",
+        "mixArweaveURL": "https://arweave.net/obNw2Z8Iqiyb20nWRLGzLD0zeHQyoyPVkM7J7KpEGRc",
+        "mixDateYear": "2025",
+        "mixDuration": "1:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/7cafda6fb931e2ab-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-fd456554",
+          "sourceTimeSec": 4.79,
+          "candidateId": "skyline-fd456554@4.79",
+          "dHash": "cddddddddf9f7e6e",
+          "generatedAt": "2026-09-13T02:03:10.840Z",
+          "contentHash": "ee33aba06545df7a43c1bed4c92e2519e13e974e0f4f606d682e29b8ce1a3685",
+          "storagePath": "website/generated-thumbnails/v1/mix/7cafda6fb931e2ab-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 89968,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:7cafda6fb931e2ab:v1"
+        }
       }
     ]
   },
   {
     "artistName": "BLUE JAY (AKA Josh Zeitler)",
     "artistFilename": "zeitler.html",
-    "artistImageFilename": "img/artists/josh_zeitler.png",
+    "artistImageFilename": "https://arweave.net/D7QsuJ9bl4ze6ci6kOctGBm8F0joW9uUXb4YWg96N1c",
     "artistGenre": "acid",
     "mixes": [
-      {
-        "mixTitle": "Josh Z & Bai-ee B2B Podlasie 7/18/25",
-        "mixArweaveURL": "https://v5pcq77sqiqhc2xkg4xxetpezy3nb673darvogh7cvdxg3twop5a.ardrive.net/r14of_KCIHFq6jcvck3kzjbQ-_sYI1cY_xVHc252c_o",
-        "mixDateYear": "7/18/25",
-        "mixDuration": "60:00",
-        "mixImageFilename": "img/artists/JoshZ_B2B_Baiee.png"
-      },
       {
         "mixTitle": "Live at Studio409 New York (2024)",
         "mixArweaveURL": "https://uzh5clhxybxsww3li3gmcodyxok7dwa46vfq7etzn6owprhujdea.arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg",
         "mixDateYear": "2024",
         "mixDuration": "2:58",
-        "mixImageFilename": "img/artists/josh_zeitler.png"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/6f647a005d6fcce2-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-00cc6d5c",
+          "sourceTimeSec": 4.63,
+          "candidateId": "skyline-00cc6d5c@4.63",
+          "dHash": "879e901e1899b240",
+          "generatedAt": "2026-09-13T02:07:54.235Z",
+          "contentHash": "8b6cb3c3e002e72a5c7a9fc5c82ac551201953b2d9923e987664a4044a4fc5c7",
+          "storagePath": "website/generated-thumbnails/v1/mix/6f647a005d6fcce2-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 95200,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:6f647a005d6fcce2:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/D7QsuJ9bl4ze6ci6kOctGBm8F0joW9uUXb4YWg96N1c"
       },
       {
         "mixTitle": "Blue Jay Live at Hush 2024 in San Francisco",
         "mixArweaveURL": "https://icvl3qhmdkbyqm626rqj44qeu32iyswsx5s4pndqrfao46bw4iuq.arweave.net/QKq9wOwag4gz2vRgnnIEpvSMStK_Zce0cIlA7ng24ik",
         "mixDateYear": "2024",
-        "mixDuration": "60min",
-        "mixImageFilename": "img/artists/josh_zeitler.png"
+        "mixDuration": "60:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/881d529d4cde69ae-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-169f781c",
+          "sourceTimeSec": 6.25,
+          "candidateId": "skyline-169f781c@6.25",
+          "dHash": "0010b1b1f17bcd97",
+          "generatedAt": "2026-09-13T02:07:56.214Z",
+          "contentHash": "9906de889d340534cb134e3b55304c9f76cbfe00ee7351cabb2bfc8c3a69ed8a",
+          "storagePath": "website/generated-thumbnails/v1/mix/881d529d4cde69ae-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 116278,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:881d529d4cde69ae:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/D7QsuJ9bl4ze6ci6kOctGBm8F0joW9uUXb4YWg96N1c"
       }
     ]
   },
   {
     "artistName": "CESAR RAMIREZ",
     "artistFilename": "cesarramirez.html",
-    "artistImageFilename": "img/artists/cesarramirez.jpg",
+    "artistImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/cesarramirez.jpg",
     "artistGenre": "house",
     "mixes": [
       {
@@ -176,44 +478,47 @@
         "mixArweaveURL": "https://wqyhof73vki2hs5mwj6tm4godenmlg7b24jik2ovjtnfhzosizbq.arweave.net/tDB3F_uqkaPLrLJ9NnDOGRrFm-HXEoVp1UzaU-XSRkM",
         "mixDateYear": "'01'",
         "mixDuration": "93:00",
-        "mixImageFilename": "img/covers/letyourselfgo.jpg"
+        "mixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/covers/letyourselfgo.jpg"
       }
     ]
   },
   {
     "artistName": "JOHN SIMMONS",
     "artistFilename": "johnsimmons.html",
-    "artistImageFilename": "img/artists/js.jpg",
+    "artistImageFilename": "https://arweave.net/jTID0iQiLffUIft9t4aRnXANGMi_0xKoNso_4wwbhcc",
     "artistGenre": "techno",
     "mixes": [
       {
-        "mixTitle": "Live @ UE.info",
+        "mixTitle": "Live @ UE.info ??",
         "mixArweaveURL": "https://us52zeiw62ei2egubws4huywpyw4nzvjxueism7pkt32pcjyoizq.arweave.net/pLuskRb2iI0Q1A2lw9MWfi3G5qm9CIkz71T3p4k4cjM",
-        "mixDateYear": "20TBA",
+        "mixDateYear": "20??",
         "mixDuration": "120:00",
-        "mixImageFilename": "img/artists/js.jpg"
-      }
-    ]
-  },
-  {
-    "artistName": "LORELEI",
-    "artistFilename": "lorelei.html",
-    "artistImageFilename": "img/artists/lorelei.png",
-    "artistGenre": "acid",
-    "mixes": [
-      {
-        "mixTitle": "Lorelei Live at Podlasie 7/18/25",
-        "mixArweaveURL": "https://moin6j46cuf73puauj65coz7islgdbbsvrl45pkj3mmaosp5dkrq.ardrive.net/Y5DfJ54VC_2-gKJ90Ts_RJZhhDKsV869SdsYB0n9GqM",
-        "mixDateYear": "7/18/25",
-        "mixDuration": "120:00",
-        "mixImageFilename": "img/artists/lorelei.png"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/c8ac39e7b9dd1fa4-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-45a9a7b1",
+          "sourceTimeSec": 4.44,
+          "candidateId": "skyline-45a9a7b1@4.44",
+          "dHash": "e8d0e0e26267b7af",
+          "generatedAt": "2026-09-13T02:07:59.963Z",
+          "contentHash": "89192a1998a1b6d00e6cc9483c79973d566ab08398550f10bc5fa66623f6d792",
+          "storagePath": "website/generated-thumbnails/v1/mix/c8ac39e7b9dd1fa4-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 75148,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:c8ac39e7b9dd1fa4:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/jTID0iQiLffUIft9t4aRnXANGMi_0xKoNso_4wwbhcc"
       }
     ]
   },
   {
     "artistName": "RED EYE",
     "artistFilename": "redeye.html",
-    "artistImageFilename": "img/artists/redeye.png",
+    "artistImageFilename": "https://arweave.net/n_UpDMJVzl1EreTTlb4-lubx_aDtOsidIC2KmqcPeJk",
     "artistGenre": "acid",
     "mixes": [
       {
@@ -221,22 +526,40 @@
         "mixArweaveURL": "https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM",
         "mixDateYear": "'24",
         "mixDuration": "120:00",
-        "mixImageFilename": "img/covers/andrewb2bredeye.png"
+        "mixImageFilename": "https://arweave.net/xuaroc0oIIAuIuokRn3LJwg0a-UgpVLtv-jcKm1NS18"
       }
     ]
   },
   {
     "artistName": "DJ RELEASE AKA IKE",
     "artistFilename": "release.html",
-    "artistImageFilename": "img/artists/ike.jpg",
+    "artistImageFilename": "https://arweave.net/iooeHM6ipGw_iUvx6_rlFZnjl3XkprLX1v_VmMogOHU",
     "artistGenre": "house",
     "mixes": [
       {
-        "mixTitle": "Live @ UE.info",
+        "mixTitle": "Live @ UE.info ??",
         "mixArweaveURL": "https://embbv2sphugsxwzrx222jkjpcqbj2unqbn5yaiqh4rgoacvigycq.arweave.net/IwIa6k89DSvbMb61pKkvFAKdUbALe4AiB-RM4AqoNgU",
-        "mixDateYear": "20TBA",
+        "mixDateYear": "20??",
         "mixDuration": "60:00",
-        "mixImageFilename": "img/artists/ike.jpg"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1b1ce66a9c30e98a-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-a0d513a9",
+          "sourceTimeSec": 3.7,
+          "candidateId": "skyline-a0d513a9@3.70",
+          "dHash": "e870694d5aca6d69",
+          "generatedAt": "2026-09-13T02:08:02.487Z",
+          "contentHash": "60f39b8c2b715d9bdc096f3f2137914c04a0b967560230edc6ee697e6ff1aa28",
+          "storagePath": "website/generated-thumbnails/v1/mix/1b1ce66a9c30e98a-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 91740,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:1b1ce66a9c30e98a:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/iooeHM6ipGw_iUvx6_rlFZnjl3XkprLX1v_VmMogOHU"
       }
     ]
   },
@@ -251,14 +574,32 @@
         "mixArweaveURL": "https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0",
         "mixDateYear": "2024",
         "mixDuration": "120:00",
-        "mixImageFilename": "img/artists/sassmouth.jpg"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1734d1b4ae911269-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-4b8433fa",
+          "sourceTimeSec": 0.38,
+          "candidateId": "skyline-4b8433fa@0.38",
+          "dHash": "797965646429c9c9",
+          "generatedAt": "2026-09-13T02:08:04.221Z",
+          "contentHash": "43cab165f3d5055dfbbca462182a9e14d1e54cd4bd58f999b344f3960925ea1e",
+          "storagePath": "website/generated-thumbnails/v1/mix/1734d1b4ae911269-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 97466,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:1734d1b4ae911269:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/sassmouth.jpg"
       }
     ]
   },
   {
     "artistName": "SEAN SMITH",
     "artistFilename": "seansmith.html",
-    "artistImageFilename": "img/artists/sean_smith.jpg",
+    "artistImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/sean_smith.jpg",
     "artistGenre": "other",
     "mixes": [
       {
@@ -266,14 +607,32 @@
         "mixArweaveURL": "https://bzihmbcqda77zu2zf6xgurrcwke37xbcewvg5xovs45znnt5bnda.arweave.net/DlB2BFAYP_zTWS-uakYisom_3CIlqm7d1Zc7lrZ9C0Y",
         "mixDateYear": "Circa 2009",
         "mixDuration": "120:00",
-        "mixImageFilename": "img/artists/sean_smith.jpg"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/2ba89fdd3ef068c7-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-07a497ee",
+          "sourceTimeSec": 3.43,
+          "candidateId": "skyline-07a497ee@3.43",
+          "dHash": "a9d889f6d6bf7666",
+          "generatedAt": "2026-09-13T02:08:07.322Z",
+          "contentHash": "06fe27ae92c7fab9a01bdef782f9553f47039e69c6da0d364c66d401900e6635",
+          "storagePath": "website/generated-thumbnails/v1/mix/2ba89fdd3ef068c7-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 70890,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:2ba89fdd3ef068c7:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/sean_smith.jpg"
       }
     ]
   },
   {
     "artistName": "STAR TRAXX",
     "artistFilename": "Startraxx.html",
-    "artistImageFilename": "img/artists/startraxxthumb.jpg",
+    "artistImageFilename": "https://7utlvsnf5pwxyvghgmypkzmcvm6skupeup5cj5ogdaygu5rzjtca.ardrive.net/_Sa6yaXr7XxUxzMw9WWCqz0lUeSj-iT1xhgwanY5TMQ/img/artists/startraxxthumb.jpg",
     "artistGenre": "other",
     "mixes": [
       {
@@ -281,100 +640,378 @@
         "mixArweaveURL": "https://3t4xoq2sswghgedqxsojzckllnq4oay6p4xrte7tl5mfm5ia7cka.arweave.net/3Pl3Q1KVjHMQcLycnIlLW2HHAx5_LxmT819YVnUA-JQ",
         "mixDateYear": "Circe '95",
         "mixDuration": "30:00",
-        "mixImageFilename": "img/artists/startraxxthumb.jpg"
+        "mixImageFilename": "https://arweave.net/_RZiEh4ns9t2kqWwYLg4cjaUz3MFiP1uUhlEY-frQYc"
       }
     ]
   },
   {
     "artistName": "TYREL WILLIAMS",
     "artistFilename": "tyrel.html",
-    "artistImageFilename": "img/artists/tyrelwilliams.jpg",
+    "artistImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/tyrelwilliams.jpg",
     "artistGenre": "techno",
     "mixes": [
       {
-        "mixTitle": "Tyrel Williams Live at Podlasie 2024",
+        "mixTitle": "Live at Podlasie",
         "mixArweaveURL": "https://nbdlqhjegffe2b43r4pz5dbnnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU",
-        "mixDateYear": "2024",
+        "mixDateYear": "2024h",
         "mixDuration": "120:00",
-        "mixImageFilename": "img/artists/tyrelwilliams.jpg"
-      },
-      {
-        "mixTitle": "Tyrel Williams Live at Podlasie 2025",
-        "mixArweaveURL": "https://cc5ljjz5pjfxckbwfw7jblqhr7wend5is6crvyull4qaasecsbha.ardrive.net/ELq0pz16S3EoNi2-kK4Hj-xGj6iXhRrii18gAEiCkE4",
-        "mixDateYear": "2025",
-        "mixDuration": "60:00",
-        "mixImageFilename": "img/artists/tyrelwilliams.jpg"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a6ac343e51e3a993-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-ca35d5e4",
+          "sourceTimeSec": 3.84,
+          "candidateId": "skyline-ca35d5e4@3.84",
+          "dHash": "8c8e97bfbe7eee64",
+          "generatedAt": "2026-09-13T02:08:10.002Z",
+          "contentHash": "a8f96760b18be51753a82d5363398aba31ad78fe9127e4f7c8d98d6f4fd69405",
+          "storagePath": "website/generated-thumbnails/v1/mix/a6ac343e51e3a993-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 212450,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:a6ac343e51e3a993:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/tyrelwilliams.jpg"
       }
     ]
   },
   {
     "artistName": "VIVA ACID",
     "artistFilename": "vivaacid.html",
-    "artistImageFilename": "img/artists/vivaacid.png",
+    "artistImageFilename": "https://arweave.net/GJdXDHdXg39QayQSvsX41IXND3VOow7Tq6XgWskB6xU",
     "artistGenre": "acid",
     "mixes": [
-      {
-        "mixTitle": "Viva Acid at Podlasie 7/18/25",
-        "mixArweaveURL": "https://yq3iykqm666wepox224lvonfehrupieuxwvfc3qdbe6acrcajqgq.ardrive.net/xDaMKgz3vWI919a4urmlIeNHoJS9qlFuAwk8AURATA0",
-        "mixDateYear": "7/18/25",
-        "mixDuration": "180:00",
-        "mixImageFilename": "img/artists/vivaacid_podlasie_71825.png"
-      },
-      {
-        "mixTitle": "Josh Z & Bai-ee B2B Podlasie 7/18/25",
-        "mixArweaveURL": "https://v5pcq77sqiqhc2xkg4xxetpezy3nb673darvogh7cvdxg3twop5a.ardrive.net/r14of_KCIHFq6jcvck3kzjbQ-_sYI1cY_xVHc252c_o",
-        "mixDateYear": "7/18/25",
-        "mixDuration": "60:00",
-        "mixImageFilename": "img/artists/JoshZ_B2B_Baiee.png"
-      },
-      {
-        "mixTitle": "Jaggy @ Viva Acid '24",
-        "mixArweaveURL": "https://swbvmevnmdjuyfieo7kceppa7g5ni4s7x2gt2acs23x4wl5qfmca.arweave.net/lYNWEq1g00wVBHfUIj3g-brUcl--jT0AUtbvyy-wKwQ",
-        "mixDateYear": "'24",
-        "mixDuration": "60:00",
-        "mixImageFilename": "img/bai_ee_closing_partyVAjpg.jpg"
-      },
       {
         "mixTitle": "Live @ Viva Acid '24",
         "mixArweaveURL": "https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg",
         "mixDateYear": "'24",
         "mixDuration": "60:00",
-        "mixImageFilename": "img/bai_ee_closing_partyVAjpg.jpg"
-      },
-      {
-        "mixTitle": "Lorelei Live at Podlasie 7/18/25",
-        "mixArweaveURL": "https://moin6j46cuf73puauj65coz7islgdbbsvrl45pkj3mmaosp5dkrq.ardrive.net/Y5DfJ54VC_2-gKJ90Ts_RJZhhDKsV869SdsYB0n9GqM",
-        "mixDateYear": "7/18/25",
-        "mixDuration": "120:00",
-        "mixImageFilename": "img/artists/lorelei.png"
-      },
-      {
-        "mixTitle": "Tyrel Williams Live at Podlasie 2025",
-        "mixArweaveURL": "https://cc5ljjz5pjfxckbwfw7jblqhr7wend5is6crvyull4qaasecsbha.ardrive.net/ELq0pz16S3EoNi2-kK4Hj-xGj6iXhRrii18gAEiCkE4",
-        "mixDateYear": "2025",
-        "mixDuration": "60:00",
-        "mixImageFilename": "img/artists/tyrelwilliams.jpg"
+        "mixImageFilename": "https://arweave.net/uqBNvxk9bd-LETdZOD_O-QaKPiP6TYWi-9aP1zQZ4nY"
       },
       {
         "mixTitle": "Live @ Viva Acid '24",
         "mixArweaveURL": "https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM",
         "mixDateYear": "'24",
         "mixDuration": "120:00",
-        "mixImageFilename": "img/covers/andrewb2bredeye.png"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/61239f57a030e6d5-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-22e9442d",
+          "sourceTimeSec": 5.93,
+          "candidateId": "skyline-22e9442d@5.93",
+          "dHash": "f8d8c8182ea6bb3e",
+          "generatedAt": "2026-09-13T02:08:13.352Z",
+          "contentHash": "80161d2e11df9efc2a52b5b5ba106084193e1fe39a4b48f8013c5faa80a88ec1",
+          "storagePath": "website/generated-thumbnails/v1/mix/61239f57a030e6d5-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 58316,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:61239f57a030e6d5:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/GJdXDHdXg39QayQSvsX41IXND3VOow7Tq6XgWskB6xU"
       },
       {
         "mixTitle": "Live @ Viva Acid '24",
         "mixArweaveURL": "https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0",
         "mixDateYear": "'24",
         "mixDuration": "120:00",
-        "mixImageFilename": "img/artists/sassmouth.jpg"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/063fc964a155ede8-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-4b8433fa",
+          "sourceTimeSec": 4.19,
+          "candidateId": "skyline-4b8433fa@4.19",
+          "dHash": "135b1bd95b3b58b0",
+          "generatedAt": "2026-09-13T02:08:14.403Z",
+          "contentHash": "e3be923b7e6f1dc530ede4550367d06afb3493017ec7bf3635639f95d59830d2",
+          "storagePath": "website/generated-thumbnails/v1/mix/063fc964a155ede8-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 110264,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:063fc964a155ede8:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/sassmouth.jpg"
       },
       {
         "mixTitle": "Live @ Viva Acid '24",
-        "mixArweaveURL": "https://nbdlqhjegffe2b43r4pz5dbnnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU",
+        "mixArweaveURL": "https://nbdlqhjegffe2b43r4pz5db2nnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU",
         "mixDateYear": "'24",
         "mixDuration": "120:00",
-        "mixImageFilename": "img/artists/tyrelwilliams.jpg"
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e8d8fe5fa505d76d-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-f9c78b9c",
+          "sourceTimeSec": 1.41,
+          "candidateId": "skyline-f9c78b9c@1.41",
+          "dHash": "e870db6b656464c1",
+          "generatedAt": "2026-09-13T02:08:17.205Z",
+          "contentHash": "09746fe0472e43446d05a4a8a49da84a6fb099f0734c3437f030f1c1c78a4fe6",
+          "storagePath": "website/generated-thumbnails/v1/mix/e8d8fe5fa505d76d-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 86208,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:e8d8fe5fa505d76d:v1"
+        },
+        "previousMixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/tyrelwilliams.jpg"
+      }
+    ]
+  },
+  {
+    "artistName": "Chicago Skyway",
+    "artistFilename": "chicagoskyway.html",
+    "artistImageFilename": "https://arweave.net/J430CY2mNKY9Qy87n1EcOg1G8Qi05kqwTRUPiFr-uzg",
+    "artistGenre": "house",
+    "mixes": [
+      {
+        "mixTitle": "For Hakim",
+        "mixArweaveURL": "https://arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA",
+        "mixDateYear": "??",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a5ffe359b0e48cee-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-0689d386",
+          "sourceTimeSec": 6.34,
+          "candidateId": "skyline-0689d386@6.34",
+          "dHash": "48cc24b4c4e4b4f0",
+          "generatedAt": "2026-09-13T02:08:18.861Z",
+          "contentHash": "c6fdc64c00c2afee963eb04fbe8491c13c73e5d9d2038d9d5ef2cc7ff5e0019d",
+          "storagePath": "website/generated-thumbnails/v1/mix/a5ffe359b0e48cee-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 79060,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:a5ffe359b0e48cee:v1"
+        }
+      },
+      {
+        "mixTitle": "For Hakim",
+        "mixArweaveURL": "https://4zj2ozjipdt4lqx3be24koilrjqt4l7igs7hfhumrha7g7qvabaa.arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA",
+        "mixDateYear": "??",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a5ffe359b0e48cee-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-0689d386",
+          "sourceTimeSec": 6.34,
+          "candidateId": "skyline-0689d386@6.34",
+          "dHash": "48cc24b4c4e4b4f0",
+          "generatedAt": "2026-09-13T02:08:18.861Z",
+          "contentHash": "c6fdc64c00c2afee963eb04fbe8491c13c73e5d9d2038d9d5ef2cc7ff5e0019d",
+          "storagePath": "website/generated-thumbnails/v1/mix/a5ffe359b0e48cee-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 79060,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:a5ffe359b0e48cee:v1"
+        }
+      },
+      {
+        "mixTitle": "Little White Earbuds Mix",
+        "mixArweaveURL": "https://4zj2ozjipdt4lqx3be24koilrjqt4l7igs7hfhumrha7g7qvabaa.arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA",
+        "mixDateYear": "??",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/9710af8b39671656-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-169f781c",
+          "sourceTimeSec": 3.7,
+          "candidateId": "skyline-169f781c@3.70",
+          "dHash": "00202636d0d01135",
+          "generatedAt": "2026-09-13T02:08:20.665Z",
+          "contentHash": "f74825fe3e082dc54cea4ecd555d2178a28a449fe7e1274c254ca53c7cb1e226",
+          "storagePath": "website/generated-thumbnails/v1/mix/9710af8b39671656-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 111556,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:9710af8b39671656:v1"
+        }
+      },
+      {
+        "mixTitle": "Playing to the Wall",
+        "mixArweaveURL": "https://gdzput7zxnda3rncbjctigt424v2sza3chbo5e4tltdfs53tjm5a.arweave.net/MPL6T_m7Rg3FogpFNBp81yupZBsRwu6Tk1zGWXdzSzo",
+        "mixDateYear": "??",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/bd7d5063b27e1d82-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-4b8433fa",
+          "sourceTimeSec": 6.96,
+          "candidateId": "skyline-4b8433fa@6.96",
+          "dHash": "154d0d89a926a2aa",
+          "generatedAt": "2026-09-13T02:08:21.668Z",
+          "contentHash": "82ea1630caf7b838569ba536773b871a9f864c5fd85457201781f8143dd481fe",
+          "storagePath": "website/generated-thumbnails/v1/mix/bd7d5063b27e1d82-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 113338,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:bd7d5063b27e1d82:v1"
+        }
+      },
+      {
+        "mixTitle": "WWFM",
+        "mixArweaveURL": "https://2pgnqqeqgn7ric25tb3jy3lbmo4jfnjn4ljyhjmx7xaybtt35qvq.arweave.net/08zYQJAzfxQLXZh2nG1hY7iStS3i04Oll_3BgM577Cs",
+        "mixDateYear": "2011",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/549a02fd799e97cc-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-9c619a79",
+          "sourceTimeSec": 5.53,
+          "candidateId": "skyline-9c619a79@5.53",
+          "dHash": "809094b6b4a3b6f0",
+          "generatedAt": "2026-09-13T02:08:23.308Z",
+          "contentHash": "0934ffa55a08cc391550d71a0b280eede53baa028fdf01f0c66f63067088a4f3",
+          "storagePath": "website/generated-thumbnails/v1/mix/549a02fd799e97cc-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 81308,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:549a02fd799e97cc:v1"
+        }
+      },
+      {
+        "mixTitle": "Chubby Podcast",
+        "mixArweaveURL": "https://zcxekfuulha26hweqntyez4egu4baliajqdrfcu7xc2wvtnuef4q.arweave.net/yK5FFpRZwa8exINngmeENTgQLQBMBxKKn7i1as20IXk",
+        "mixDateYear": "??",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/11d106493e3bfcec-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-07a497ee",
+          "sourceTimeSec": 2.07,
+          "candidateId": "skyline-07a497ee@2.07",
+          "dHash": "9a9199e1ebfdbbb8",
+          "generatedAt": "2026-09-13T02:08:24.449Z",
+          "contentHash": "8af54d600d105e26b0d8ea674f2bfc0614a55279cf86ad7b7f637ff4fe3837c0",
+          "storagePath": "website/generated-thumbnails/v1/mix/11d106493e3bfcec-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 72742,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:11d106493e3bfcec:v1"
+        }
+      }
+    ]
+  },
+  {
+    "artistName": "LORELEI",
+    "artistFilename": "lorelei.html",
+    "artistImageFilename": "https://arweave.net/ufUDeqU1SVNtQiHa3y8acajE65XoyYNxFe0nY_plqjQ",
+    "artistGenre": "techno",
+    "mixes": [
+      {
+        "mixTitle": "Lorelei Live at Podlasie 7/18/25",
+        "mixArweaveURL": "https://arweave.net/Y5DfJ54VC_2-gKJ90Ts_RJZhhDKsV869SdsYB0n9GqM",
+        "mixDateYear": "7/18/25",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-45a9a7b1",
+          "sourceTimeSec": 5.55,
+          "candidateId": "skyline-45a9a7b1@5.55",
+          "dHash": "c0d0e2e363655f5f",
+          "generatedAt": "2026-09-13T02:03:07.107Z",
+          "contentHash": "4de12aae272a4a864827e0c05e0f8cf95a82229e7cae614be7e0f4746296b489",
+          "storagePath": "website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 73746,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:fc9e91785de73abc:v1"
+        }
+      }
+    ]
+  },
+  {
+    "artistName": "JEVON JACKSON",
+    "artistFilename": "jevonjackson.html",
+    "artistImageFilename": "https://arweave.net/JKwj45bHoaWwj4lpXZlfx3bO_eBYLnwV18ZXSNJu0qU",
+    "artistGenre": "house",
+    "mixes": [
+      {
+        "mixTitle": "Frankie Vega B2B Jevon Jackson",
+        "mixArweaveURL": "https://arweave.net/26lgzySQrL0NGDnPiHvpA89UFK15x4JxF_YLo0jDI1Y",
+        "mixDateYear": "??",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/f2bc27ba45e5c85a-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-4b8433fa",
+          "sourceTimeSec": 1.79,
+          "candidateId": "skyline-4b8433fa@1.79",
+          "dHash": "161614979794ac8c",
+          "generatedAt": "2026-09-13T02:08:25.380Z",
+          "contentHash": "1dc8c322f417265e81f124c00c57ec2c6d7a3da00e99584c45677900c74ef8db",
+          "storagePath": "website/generated-thumbnails/v1/mix/f2bc27ba45e5c85a-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 99726,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:f2bc27ba45e5c85a:v1"
+        }
+      }
+    ]
+  },
+  {
+    "artistName": "BERNARD BADIE",
+    "artistFilename": "bernardbadie.html",
+    "artistImageFilename": "https://arweave.net/xMui0L3inJF8NX8b3ydrzuLjNHrtBSjBvqxV0lOoBAo",
+    "artistGenre": "house",
+    "mixes": [
+      {
+        "mixTitle": "Live at UE (B2B Sean Smith)",
+        "mixArweaveURL": "https://arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg",
+        "mixDateYear": "??",
+        "mixDuration": "0:00",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/38c7dbfa896f8a89-v1.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "sourceVideoId": "skyline-bd3342ac",
+          "sourceTimeSec": 7.76,
+          "candidateId": "skyline-bd3342ac@7.76",
+          "dHash": "716141a7a62e8424",
+          "generatedAt": "2026-09-13T02:08:29.586Z",
+          "contentHash": "e9485b0ae575a823c83159558693bde917d54342d28eae2017c8c8ca6a47b35c",
+          "storagePath": "website/generated-thumbnails/v1/mix/38c7dbfa896f8a89-v1.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 93176,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:38c7dbfa896f8a89:v1"
+        }
       }
     ]
   }

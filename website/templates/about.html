@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{> head}}
+</head>
+<body>
+{{> icons}}
+{{> nav}}
+
+<main class="page-shell">
+  <section id="about-content-panel" data-section="about-content">
+    <span class="section-eyebrow">About</span>
+    <p class="about-lead">Underground Existence is a living archive of Chicago house &amp; techno mixtapes — recorded in basements, lofts and clubs, and preserved forever on the permaweb.</p>
+
+    <div id="about-receipt-strip" aria-hidden="true">
+      <span class="receipt-strip-script">Hosted on Arweave</span>
+      <span>Est. 2007</span>
+      <span>UE.INFO</span>
+      <span>{{MIX_TOTAL}} mixes &middot; {{ARTIST_TOTAL}} residents</span>
+    </div>
+
+    <p><strong>Est. 2007.</strong> What started as a crew of Chicago DJs trading tapes and recordings became a catalog of the city's underground — acid, house, techno and everything between, mixed live by the residents who lived it.</p>
+
+    <p><strong>Archived in permanence.</strong> Every mix on this site is stored on <strong>Arweave</strong>, a permanent, decentralized storage network. There is no server to shut down and no host to disappear — each recording is written to the permaweb and served from it directly. This site itself is deployed the same way.</p>
+
+    <p><strong>Play-only by design.</strong> Mixes stream straight from the permaweb. Press play, let it run — the waveform tracks your progress through the tape.</p>
+
+    <p>Have a mix that belongs in the archive? Get in touch.</p>
+
+    <a id="about-contribute-cta" href="https://docs.google.com/forms/d/e/1FAIpQLSfnuTItd-QSZkgPwIy9baGBZ8nyC_6Y3JxsXLSLywJfuwrXYw/viewform?usp=sf_link" target="_blank" rel="noopener">Contribute Here</a>
+  </section>
+
+  <section id="about-flyers-section" data-section="about-flyers">
+    <span class="section-eyebrow section-eyebrow--plain">Flyers</span>
+    <div id="about-flyers-grid">
+      <img class="flyer-grid-item" src="img/flyers/flyer1.jpg" alt="Underground Existence event flyer" loading="lazy">
+      <img class="flyer-grid-item" src="img/flyers/flyer2.jpg" alt="Underground Existence event flyer" loading="lazy">
+    </div>
+  </section>
+</main>
+
+{{> footer}}
+{{> player-bar}}
+{{> search-overlay}}
+<script src="js/boot.js" defer></script>
+</body>
+</html>

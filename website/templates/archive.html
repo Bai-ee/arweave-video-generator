@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{> head}}
+</head>
+<body>
+{{> icons}}
+{{> nav}}
+
+<main class="page-shell">
+  <section class="page-title-block" data-section="archive-header">
+    <span class="section-eyebrow">Archive</span>
+    <h1>Full Catalog</h1>
+    <p class="page-title-sub">Every mix in the Underground Existence archive — {{MIX_TOTAL}} recordings, numbered oldest to newest, hosted permanently on Arweave.</p>
+  </section>
+
+  <section data-section="archive-catalog">
+    <div id="archive-catalog-list" class="catalog-list">
+{{ARCHIVE_ROWS}}
+    </div>
+  </section>
+</main>
+
+{{> footer}}
+{{> player-bar}}
+{{> search-overlay}}
+<script src="js/boot.js" defer></script>
+</body>
+</html>
