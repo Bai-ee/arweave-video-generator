@@ -194,7 +194,10 @@ describe('generate() — happy path', () => {
     assert.equal(result.ok, true);
     assert.equal(result.rejected.length, 0);
     assert.ok(result.probeCount >= 1);
-    assert.equal(result.imageUrl, `https://fake.example/website/generated-thumbnails/v1/mix/abcd1234abcd1234-v1.webp`);
+    // Default treatment is v2, so the asset carries the treatment suffix. v1 assets
+    // keep their unsuffixed path (asserted separately below) because they are already
+    // published with immutable caching.
+    assert.equal(result.imageUrl, `https://fake.example/website/generated-thumbnails/v1/mix/abcd1234abcd1234-v1t2.webp`);
 
     const meta = result.meta;
     assert.equal(meta.origin, 'generated-skyline');
@@ -203,7 +206,8 @@ describe('generate() — happy path', () => {
     assert.equal(meta.serviceVersion, 1);
     assert.equal(meta.width, 960);
     assert.equal(meta.height, 960);
-    assert.equal(meta.storagePath, 'website/generated-thumbnails/v1/mix/abcd1234abcd1234-v1.webp');
+    assert.equal(meta.storagePath, 'website/generated-thumbnails/v1/mix/abcd1234abcd1234-v1t2.webp');
+    assert.equal(meta.treatmentVersion, 2);
     assert.match(meta.dHash, /^[0-9a-f]{16}$/);
     assert.match(meta.candidateId, /^skyline-[abc]@\d+\.\d{2}$/);
 
@@ -241,7 +245,7 @@ describe('generate() — happy path', () => {
     assert.equal(result.imageUrl, '');
     assert.equal(uploadCalls.length, 0);
     assert.ok(fs.existsSync(result.localPath));
-    assert.equal(result.localPath, path.join(previewDir, 'artist-ffff0000ffff0000-v1.webp'));
+    assert.equal(result.localPath, path.join(previewDir, 'artist-ffff0000ffff0000-v1t2.webp'));
   });
 
   test('dryRun without previewDir fails with catalog-invalid', async () => {
@@ -660,9 +664,12 @@ describe('generate() — visual treatment (Job A: black-and-white/grainy/cinemat
 
     assert.equal(result.ok, true); // never throws when the file is absent
     const { vf } = findRenderArgs(calls);
-    // Baked-in default values (identical to config/skyline-thumbnail-treatment.json).
-    assert.match(vf, /contrast=1\.3:brightness=-0\.03:gamma=0\.95/);
-    assert.match(vf, /noise=alls=16:/);
+    // Baked-in default values (identical to config/skyline-thumbnail-treatment.json,
+    // which is treatmentVersion 2: normalise + fixed tone curve + CRT scanlines).
+    assert.match(vf, /normalize=blackpt=black:whitept=white:smoothing=0/);
+    assert.match(vf, /curves=master='0\/0 0\.18\/0\.06 0\.45\/0\.45 0\.80\/0\.93 1\/1'/);
+    assert.match(vf, /geq=lum=/);
+    assert.match(vf, /noise=alls=12:/);
   });
 
   test('the noise filter all_seed is derived from seedFromKey() and is identical across two calls with the same key, different for a different assignmentVersion', async () => {
@@ -728,7 +735,10 @@ describe('generate() — visual treatment (Job A: black-and-white/grainy/cinemat
     assert.ok(!vf.includes('unsharp='));
     assert.ok(!vf.includes('noise='));
     assert.ok(!vf.includes('vignette='));
-    assert.match(vf, /saturation=1/);
+    // v2 grades through `curves`, which is channel-agnostic, so no saturation
+    // directive is emitted at all — the point of the test (nothing desaturates
+    // the frame) still holds, and is asserted directly.
+    assert.ok(!vf.includes('saturation=0'));
   });
 });
 

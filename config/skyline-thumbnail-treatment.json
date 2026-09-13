@@ -1,11 +1,15 @@
 {
-  "treatmentVersion": 1,
+  "treatmentVersion": 2,
   "monochrome": true,
+  "normalize": true,
+  "toneCurve": "0/0 0.18/0.06 0.45/0.45 0.80/0.93 1/1",
+  "unsharpAmount": 0.85,
+  "scanlinePitch": 8,
+  "scanlineDepth": 0.38,
+  "grainStrength": 12,
+  "vignetteStrength": 0.35,
+  "encodeQuality": 84,
   "contrast": 1.3,
   "brightness": -0.03,
-  "gamma": 0.95,
-  "unsharpAmount": 0.55,
-  "grainStrength": 16,
-  "vignetteStrength": 0.3,
-  "encodeQuality": 82
+  "gamma": 0.95
 }

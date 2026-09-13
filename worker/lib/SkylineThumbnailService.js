@@ -61,16 +61,70 @@ const NOISE_SEED_MODULUS = 2147483647; // 2^31 - 1, ffmpeg's all_seed INT_MAX
  * brief); numeric values are tunable.
  */
 const DEFAULT_TREATMENT = Object.freeze({
+  treatmentVersion: 2,
+  monochrome: true,
+  // v2 grades by normalising each frame's own levels and then applying a fixed
+  // S-curve, rather than by pushing a global `contrast` value. A single
+  // contrast number cannot serve both a near-black night tower and a bright
+  // daytime skyline: the value that makes the daylight frame punchy crushes the
+  // night frame to mud. Per-frame normalisation is what makes 31 thumbnails
+  // drawn from wildly different footage read as one consistent set.
+  normalize: true,
+  // Deep blacks, held midtones, clean (unclipped) highlights.
+  toneCurve: '0/0 0.18/0.06 0.45/0.45 0.80/0.93 1/1',
+  unsharpAmount: 0.85,
+  // CRT scanlines. `scanlinePitch` is in pixels at the 960px render size.
+  // 8 was chosen by measurement, not taste: finer pitches are averaged away
+  // entirely by the browser's downscale to the ~230px card and 64px archive
+  // row, so they exist only in the file and never on screen. At pitch 8 the
+  // lines survive at hero (~490px) and card (~230px) sizes without degrading
+  // into coarse bars. See outputs contact sheets `crt-pitch.png`.
+  scanlinePitch: 8,
+  scanlineDepth: 0.38,
+  grainStrength: 12,
+  vignetteStrength: 0.35,
+  encodeQuality: 84,
+  // Legacy v1 knobs, kept so a treatment file pinned to v1 still renders the
+  // original look (used only when `normalize` is false).
+  contrast: 1.3,
+  brightness: -0.03,
+  gamma: 0.95
+});
+
+/**
+ * The original v1 look, kept as a real, selectable base rather than as
+ * documentation. Pinning `treatmentVersion: 1` (in the config file or via the
+ * constructor seam) must reproduce the v1 grade exactly — that is the rollback
+ * path for a regrade, and the v2 keys must not bleed into it through the
+ * defaults merge.
+ */
+const TREATMENT_V1 = Object.freeze({
   treatmentVersion: 1,
   monochrome: true,
+  normalize: false,
+  toneCurve: null,
   contrast: 1.3,
   brightness: -0.03,
   gamma: 0.95,
   unsharpAmount: 0.55,
+  scanlinePitch: 0,
+  scanlineDepth: 0,
   grainStrength: 16,
   vignetteStrength: 0.3,
   encodeQuality: 82
 });
+
+/**
+ * Pick the defaults a partial treatment should be merged onto, based on the
+ * treatmentVersion it declares. Without this, a v1-pinned config would inherit
+ * v2's normalize/toneCurve/scanline keys and silently render the v2 look.
+ * @param {object|null|undefined} incoming
+ * @returns {object}
+ */
+function baseForTreatment(incoming) {
+  const v = incoming && Number(incoming.treatmentVersion);
+  return v === 1 ? TREATMENT_V1 : DEFAULT_TREATMENT;
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_TREATMENT_PATH = path.join(__dirname, '..', '..', 'config', 'skyline-thumbnail-treatment.json');
@@ -115,13 +169,34 @@ function buildRenderFilterChain({ size, treatment, noiseSeed }) {
 
   if (treatment.monochrome) filters.push('format=gray');
 
-  // saturation is only forced to 0 when the config actually asks for
-  // monochrome — `monochrome` is a real toggle, not just documentation.
-  const saturation = treatment.monochrome ? 0 : 1;
-  filters.push(`eq=contrast=${treatment.contrast}:brightness=${treatment.brightness}:gamma=${treatment.gamma}:saturation=${saturation}`);
+  if (treatment.normalize) {
+    // Stretch each frame to the full black..white range before grading, so the
+    // fixed tone curve below lands the same way on a night shot and a noon
+    // shot. smoothing=0 keeps it a pure per-frame op (we render one frame).
+    filters.push('normalize=blackpt=black:whitept=white:smoothing=0');
+  }
+
+  if (treatment.toneCurve) {
+    filters.push(`curves=master='${treatment.toneCurve}'`);
+  } else {
+    // v1 path: a single global contrast/brightness/gamma grade.
+    // saturation is only forced to 0 when the config actually asks for
+    // monochrome — `monochrome` is a real toggle, not just documentation.
+    const saturation = treatment.monochrome ? 0 : 1;
+    filters.push(`eq=contrast=${treatment.contrast}:brightness=${treatment.brightness}:gamma=${treatment.gamma}:saturation=${saturation}`);
+  }
 
   if (treatment.unsharpAmount) {
     filters.push(`unsharp=5:5:${treatment.unsharpAmount}:5:5:0.0`);
+  }
+
+  if (treatment.scanlineDepth > 0 && treatment.scanlinePitch >= 2) {
+    // CRT scanlines: darken the lower half of every `pitch`-pixel band.
+    // Commas inside the geq expression must be escaped for the filtergraph
+    // parser even though we pass -vf as a single argv element.
+    const pitch = Math.round(treatment.scanlinePitch);
+    const depth = Number(treatment.scanlineDepth);
+    filters.push(`geq=lum='lum(X\\,Y)*(1-${depth}*gte(mod(Y\\,${pitch})\\,${pitch / 2}))'`);
   }
 
   if (treatment.grainStrength > 0) {
@@ -136,6 +211,22 @@ function buildRenderFilterChain({ size, treatment, noiseSeed }) {
   if (treatment.monochrome) filters.push('format=gray');
 
   return filters.join(',');
+}
+
+/**
+ * Asset filename stem for an assignment. The treatment version is appended
+ * only from v2 onward, so every v1 asset keeps its existing URL: those objects
+ * are already live and served with `immutable` caching, so re-rendering them
+ * in place would leave browsers and CDNs showing the old grade indefinitely.
+ * A regrade therefore publishes a NEW object and repoints the record.
+ * @param {{ stableKey: string, assignmentVersion: number, treatmentVersion: number }} p
+ * @returns {string}
+ */
+function assetStem({ stableKey, assignmentVersion, treatmentVersion }) {
+  const tv = Number(treatmentVersion) || 1;
+  return tv > 1
+    ? `${stableKey}-v${assignmentVersion}t${tv}`
+    : `${stableKey}-v${assignmentVersion}`;
 }
 
 /**
@@ -235,14 +326,14 @@ export function createSkylineThumbnailService({ catalog, storage, runFfmpeg, tmp
   async function ensureTreatment() {
     if (cachedTreatment) return cachedTreatment;
     if (treatment && typeof treatment === 'object') {
-      cachedTreatment = { ...DEFAULT_TREATMENT, ...treatment };
+      cachedTreatment = { ...baseForTreatment(treatment), ...treatment };
       return cachedTreatment;
     }
     const resolvedPath = treatmentPath || DEFAULT_TREATMENT_PATH;
     try {
       const raw = await fs.readFile(resolvedPath, 'utf8');
       const parsed = JSON.parse(raw);
-      cachedTreatment = { ...DEFAULT_TREATMENT, ...parsed };
+      cachedTreatment = { ...baseForTreatment(parsed), ...parsed };
     } catch (err) {
       log.warn(
         `[SkylineThumbnailService] treatment config unavailable at "${resolvedPath}" (${err && err.message ? err.message : err}); using baked-in default`
@@ -413,10 +504,11 @@ export function createSkylineThumbnailService({ catalog, storage, runFfmpeg, tmp
     return { candidate: null, exhausted: true, probeCount };
   }
 
-  function buildMeta({ candidate, assignmentVersion, generatedAt, contentHash, rendered, storagePath }) {
+  function buildMeta({ candidate, assignmentVersion, treatmentVersion, generatedAt, contentHash, rendered, storagePath }) {
     return {
       origin: 'generated-skyline',
       assignmentVersion,
+      treatmentVersion: Number(treatmentVersion) || 1,
       sourceVideoId: candidate.sourceVideoId,
       sourceTimeSec: candidate.timeSec,
       candidateId: candidate.candidateId,
@@ -451,7 +543,7 @@ export function createSkylineThumbnailService({ catalog, storage, runFfmpeg, tmp
    *   dryRun?: boolean, previewDir?: string
    * }} params
    */
-  async function generate({ entityType, stableKey, assignmentVersion, used, dryRun, previewDir }) {
+  async function generate({ entityType, stableKey, assignmentVersion, used, dryRun, previewDir, forceCandidate }) {
     try {
       if (entityType !== 'mix' && entityType !== 'artist') {
         return fail('catalog-invalid', `entityType must be 'mix' or 'artist', got "${entityType}"`);
@@ -482,17 +574,34 @@ export function createSkylineThumbnailService({ catalog, storage, runFfmpeg, tmp
       const rejected = [];
 
       let winner;
-      try {
-        winner = await findWinner({
-          candidates: candidateInventory,
-          seed,
-          used,
-          maxDHashHamming,
-          qualityCfg,
-          rejected
-        });
-      } catch (err) {
-        return mapSearchError(err);
+      if (forceCandidate && forceCandidate.candidateId) {
+        // Re-render an ALREADY-ASSIGNED frame under a new treatment. Selection
+        // is skipped entirely: a regrade must not change which still a mix
+        // shows, and re-running selection would, because the probe order is
+        // seeded per assignmentVersion and the used-index now contains this
+        // very candidate. The stored dHash is reused verbatim so the record's
+        // provenance and the cross-run uniqueness index stay consistent.
+        const found = candidateInventory.find(c => c.candidateId === forceCandidate.candidateId);
+        if (!found) {
+          return fail(
+            'no-eligible-candidate',
+            `forceCandidate "${forceCandidate.candidateId}" is not in the current catalog inventory (its source may have been disabled)`
+          );
+        }
+        winner = { candidate: { ...found, dHash: forceCandidate.dHash || found.dHash }, probeCount: 0 };
+      } else {
+        try {
+          winner = await findWinner({
+            candidates: candidateInventory,
+            seed,
+            used,
+            maxDHashHamming,
+            qualityCfg,
+            rejected
+          });
+        } catch (err) {
+          return mapSearchError(err);
+        }
       }
 
       if (!winner.candidate) {
@@ -522,7 +631,7 @@ export function createSkylineThumbnailService({ catalog, storage, runFfmpeg, tmp
 
       if (dryRun) {
         await fs.mkdir(previewDir, { recursive: true });
-        const previewPath = path.join(previewDir, `${entityType}-${stableKey}-v${assignmentVersion}.webp`);
+        const previewPath = path.join(previewDir, `${entityType}-${assetStem({ stableKey, assignmentVersion, treatmentVersion: treatmentCfg.treatmentVersion })}.webp`);
         await fs.copyFile(rendered.outPath, previewPath);
         await cleanupFile(rendered.outPath);
 
@@ -530,13 +639,13 @@ export function createSkylineThumbnailService({ catalog, storage, runFfmpeg, tmp
           ok: true,
           imageUrl: '',
           localPath: previewPath,
-          meta: buildMeta({ candidate, assignmentVersion, generatedAt, contentHash, rendered }),
+          meta: buildMeta({ candidate, assignmentVersion, treatmentVersion: treatmentCfg.treatmentVersion, generatedAt, contentHash, rendered }),
           rejected,
           probeCount: winner.probeCount
         };
       }
 
-      const storagePath = `${outputCfg.storagePrefix}/${entityType}/${stableKey}-v${assignmentVersion}.webp`;
+      const storagePath = `${outputCfg.storagePrefix}/${entityType}/${assetStem({ stableKey, assignmentVersion, treatmentVersion: treatmentCfg.treatmentVersion })}.webp`;
 
       let uploadResult;
       try {
@@ -557,7 +666,7 @@ export function createSkylineThumbnailService({ catalog, storage, runFfmpeg, tmp
         ok: true,
         imageUrl: (uploadResult && uploadResult.publicUrl) || '',
         localPath: rendered.outPath,
-        meta: buildMeta({ candidate, assignmentVersion, generatedAt, contentHash, rendered, storagePath }),
+        meta: buildMeta({ candidate, assignmentVersion, treatmentVersion: treatmentCfg.treatmentVersion, generatedAt, contentHash, rendered, storagePath }),
         rejected,
         probeCount: winner.probeCount
       };

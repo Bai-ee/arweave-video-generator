@@ -771,7 +771,7 @@ describe('integration: regeneration bumps version + new asset path, preserves pr
     let mix = doc.data().artists[0].mixes[0];
     const v1Url = mix.mixImageFilename;
     assert.equal(mix.mixImageMeta.assignmentVersion, 1);
-    assert.match(uploadCalls[0].storagePath, /-v1\.webp$/);
+    assert.match(uploadCalls[0].storagePath, /-v1t2\.webp$/);
 
     // v2 via regenerateThumbnailAction + a real drain.
     const regenReq = await regenerateThumbnailAction(db, { entityType: 'mix', artistName: 'Regen Artist', mixArweaveURL: 'https://arweave.net/' + TX_REGEN, mixTitle: 'Regen Mix' });
@@ -789,7 +789,7 @@ describe('integration: regeneration bumps version + new asset path, preserves pr
     const v2Url = mix.mixImageFilename;
     assert.notEqual(v1Url, v2Url, 'regenerate must produce a NEW url/asset, not overwrite in place');
     assert.equal(mix.mixImageMeta.assignmentVersion, 2);
-    assert.match(uploadCalls[1].storagePath, /-v2\.webp$/);
+    assert.match(uploadCalls[1].storagePath, /-v2t2\.webp$/);
     assert.notEqual(uploadCalls[0].storagePath, uploadCalls[1].storagePath, 'v1 and v2 must be distinct storage objects');
     // previous* must still be the ORIGINAL pre-pipeline value, never the v1 generated url.
     assert.equal(mix.previousMixImageFilename, '');

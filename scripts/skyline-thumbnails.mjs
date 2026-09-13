@@ -20,6 +20,8 @@
  *   --json                     machine-readable summary on stdout
  *   --sync                     (repo hard-constraint, not in §3.10) run WebsiteSync AFTER a fully
  *                               successful --apply batch only; never runs on its own, never in dry-run
+ *   --rerender                 re-grade already-generated thumbnails with the current treatment:
+ *                              same frame, same assignmentVersion, new treatment-versioned asset path
  *   --ignore-used-index        maintenance override (Job B amendment, not in §3.10): skip seeding the
  *                               `used` collision-avoidance set from store.readUsedIndex() entirely, so
  *                               every entity is selected as if no prior run ever happened. Prints a loud
@@ -81,7 +83,8 @@ export function parseArgs(argv) {
     reportDir: null,
     json: false,
     sync: false,
-    ignoreUsedIndex: false
+    ignoreUsedIndex: false,
+    rerender: false
   };
   const errors = [];
 
@@ -113,6 +116,9 @@ export function parseArgs(argv) {
         break;
       case '--ignore-used-index':
         options.ignoreUsedIndex = true;
+        break;
+      case '--rerender':
+        options.rerender = true;
         break;
       case '--target': {
         const value = argv[i + 1];
@@ -366,7 +372,7 @@ export async function runCli(argv, deps = {}) {
         artist: options.artist,
         mixKey: options.mixKey,
         includeUploaded: options.includeUploaded,
-        regenerate: options.regenerate,
+        regenerate: options.regenerate || options.rerender,
         assignmentVersion: options.assignmentVersion
       }
     });
@@ -456,7 +462,7 @@ export async function runCli(argv, deps = {}) {
       continue;
     }
 
-    const dedupeKey = `${entity.entityType}:${entity.entityKey}:v${entity.nextAssignmentVersion}`;
+    const dedupeKey = `${entity.entityType}:${entity.entityKey}:v${options.rerender && entity.existingMeta ? entity.existingMeta.assignmentVersion : entity.nextAssignmentVersion}`;
     const alreadyGenerated = generatedByKey.get(dedupeKey);
 
     let genResult;
@@ -464,13 +470,22 @@ export async function runCli(argv, deps = {}) {
       genResult = alreadyGenerated;
     } else {
       try {
+        // --rerender regrades an EXISTING assignment: the same source frame is
+        // re-encoded under the current treatment and published at a new,
+        // treatment-versioned path. assignmentVersion is deliberately NOT
+        // bumped (that would re-roll which frame the mix shows) and the stored
+        // candidate is forced, so a regrade can never change the imagery.
+        const rerenderMeta = options.rerender ? entity.existingMeta : null;
         genResult = await media.service.generate({
           entityType: entity.entityType,
           stableKey: entity.entityKey,
-          assignmentVersion: entity.nextAssignmentVersion,
+          assignmentVersion: rerenderMeta ? rerenderMeta.assignmentVersion : entity.nextAssignmentVersion,
           used,
           dryRun: options.dryRun,
-          previewDir: options.dryRun ? previewDir : undefined
+          previewDir: options.dryRun ? previewDir : undefined,
+          forceCandidate: rerenderMeta
+            ? { candidateId: rerenderMeta.candidateId, dHash: rerenderMeta.dHash }
+            : undefined
         });
       } catch (err) {
         genResult = { ok: false, error: { code: 'service-threw', message: err && err.message ? err.message : String(err) } };
@@ -506,7 +521,7 @@ export async function runCli(argv, deps = {}) {
 
     if (options.apply) {
       const meta = buildImageMeta({
-        generatedMeta: { ...genResult.meta, assignmentVersion: entity.nextAssignmentVersion }
+        generatedMeta: { ...genResult.meta, assignmentVersion: genResult.meta.assignmentVersion }
       });
       let applyResult;
       try {
