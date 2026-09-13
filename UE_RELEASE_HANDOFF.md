@@ -645,3 +645,93 @@ now ignored.
   risk is judged low after eight independent inspection passes, but it is not zero.
 - **Vercel-run deploys were not exercised.** The deploy ran the real handler locally. The required
   fonts/images are now tracked so a Vercel-packaged deploy should work, but that path is untested.
+
+---
+
+## 17. Treatment v2 — high-contrast B&W + CRT (owner-requested regrade)
+
+Site approved; the thumbnail *rendering* was asked to match the site's artist-image
+language — high-contrast black and white with a slight CRT filter.
+
+**This is a regrade, not a reselection.** Every mix keeps the exact still it already had
+(`frameChanged=0`); only the grade changed.
+
+### The look
+
+```
+crop → scale 960 → format=gray
+normalize=blackpt=black:whitept=white:smoothing=0
+curves=master='0/0 0.18/0.06 0.45/0.45 0.80/0.93 1/1'
+unsharp=5:5:0.85:5:5:0.0
+geq  (CRT scanlines, pitch 8px, depth 0.38)
+noise=alls=12  →  vignette  →  libwebp -quality 84
+```
+
+Two decisions worth recording, both made from measurement rather than taste:
+
+1. **Per-frame normalisation replaced the global contrast knob.** A single `contrast`
+   value cannot serve both a near-black night tower and a noon skyline — the value that
+   makes daylight punchy crushes the night frame to mud. Normalising each frame to the
+   full range first, then applying one fixed S-curve, is what makes 31 stills drawn from
+   very different footage read as a single consistent set. (A `histeq` variant was tried
+   and rejected: it blew out and posterized.)
+
+2. **Scanline pitch 8px, not 3px.** Fine scanlines look right at 1:1 and are *completely
+   invisible on the actual site*: the browser downscales these to ~230px cards and 64px
+   archive rows, and anything finer than roughly 2× the display pixel pitch is averaged
+   away. Measured across pitches 4/6/8/12 at 490/230/64px — pitch 8 is the only one that
+   survives at hero and card size without degrading into coarse bars. Evidence:
+   `outputs/release-tmp/lead-review/crt-pitch.png`, `crt-downscale.png`, `crt-final.png`.
+
+### Regrade safety (three traps hit and fixed)
+
+- **The live v1 objects must not be overwritten.** They are served
+  `cache-control: public, max-age=31536000, immutable`, so re-rendering in place would
+  leave browsers and CDNs on the old grade indefinitely. Assets are now published at a
+  treatment-versioned path (`{key}-v1t2.webp`); v1 objects are untouched and remain the
+  rollback target (verified still HTTP 200).
+- **Re-running selection would silently change the imagery.** Probe order is seeded per
+  `assignmentVersion`, and the used-index now contains every live candidate — so a plain
+  `--regenerate` would deliberately pick *different* frames. New `--rerender` keeps the
+  assignmentVersion and forces the stored `candidateId`. A test proves that without the
+  force, a seeded used-index does move the selection.
+- **The first apply silently did nothing.** All 32 returned `already-applied`:
+  `deriveIdempotencyKey` keyed only on `assignmentVersion`, which a regrade deliberately
+  does not bump. It now takes an optional `treatmentVersion`, appended only from v2 so
+  every previously minted key is byte-identical. Related: `buildImageMeta` was
+  whitelisting fields and **dropping `treatmentVersion`**, so records carried no grade
+  version at all — fixed, and that is now persisted.
+- Pinning `treatmentVersion: 1` genuinely reproduces the v1 look again: a partial config
+  now merges onto a version-appropriate base instead of inheriting v2's keys. That is the
+  grade-level rollback path, and it is tested.
+
+### Result
+
+| | |
+|---|---|
+| Records regraded | **32** (31 unique assets) |
+| Frames changed | **0** |
+| Real cover artwork touched | **0** of 13 |
+| New assets public | **31 / 31 → HTTP 200** |
+| v1 assets still live (rollback) | yes, unchanged |
+| Tests | **695 pass, 0 fail** (+7 new) |
+| Commit | `5770d01` |
+| Manifest | **`4R6eLhJ1PtAncF3Zu_vIehynWCWQYde_VCW0R-wO4WQ`** (52 files, 17 uploaded, 35 reused) |
+
+Live verification on the new manifest: homepage 10/10 images loaded / 0 broken, six
+regraded thumbs at 960×960; archive 45 rows = **32 regraded + 13 uploaded covers**,
+48/48 loaded, **0 broken, 0 stale v1 references**; all runtime modules present; **no
+console errors**. Scanlines confirmed visible at card size by zooming the live page.
+
+⚠️ **The GoDaddy forward still points at the FIRST manifest** (`sEIIpqWb…`), so the public
+domain does not yet show this regrade. Update the forward to:
+
+```
+https://arweave.net/4R6eLhJ1PtAncF3Zu_vIehynWCWQYde_VCW0R-wO4WQ/index.html
+```
+
+### Grade rollback
+
+Set `"treatmentVersion": 1` in `config/skyline-thumbnail-treatment.json` and re-run
+`--rerender --apply`; records repoint to the untouched v1 assets' look. The v1 objects
+themselves were never modified.
