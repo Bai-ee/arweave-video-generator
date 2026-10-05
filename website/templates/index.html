@@ -10,8 +10,35 @@
 <main class="page-shell">
   <section id="featured-mix-hero" data-section="featured-hero">
     <div id="hero-collage-frame">
-      <div class="hero-image-clip">
+      <div class="hero-image-clip" id="hero-media" data-hero-clips="{{HERO_PROMO_CLIPS}}" data-hero-artists="{{HERO_ARTIST_IMAGES}}">
         {{FEATURED_IMAGE}}
+      </div>
+      <!-- What the big frame above shows. Three sources for the featured mix —
+           its promo film, its cover, and the selector's portrait — and the
+           listener picks. Each button is hidden until its source actually
+           resolves for the current mix, so a mix with no promo shows two
+           thumbs rather than a dead one. The strip is inert without JS (the
+           frame keeps its still), and the inline hero script below wires it. -->
+      <div id="hero-source-thumbs" role="group" aria-label="Choose what the hero shows">
+        <button class="hero-thumb" type="button" data-hero-source="promo" aria-pressed="false" hidden>
+          <span class="hero-thumb-frame">
+            <img class="hero-thumb-img" alt="" decoding="async">
+            <span class="hero-thumb-badge" aria-hidden="true"><svg class="icon-svg"><use href="#i-play"></use></svg></span>
+          </span>
+          <span class="hero-thumb-label">Film</span>
+        </button>
+        <button class="hero-thumb" type="button" data-hero-source="art" aria-pressed="false" hidden>
+          <span class="hero-thumb-frame">
+            <img class="hero-thumb-img" alt="" decoding="async">
+          </span>
+          <span class="hero-thumb-label">Cover</span>
+        </button>
+        <button class="hero-thumb" type="button" data-hero-source="artist" aria-pressed="false" hidden>
+          <span class="hero-thumb-frame">
+            <img class="hero-thumb-img" alt="" decoding="async">
+          </span>
+          <span class="hero-thumb-label">Artist</span>
+        </button>
       </div>
     </div>
     <div id="featured-mix-content">
@@ -24,7 +51,7 @@
         {{FEATURED_DATE_CHIP}}
       </div>
       <div id="featured-player-row">
-        <a id="featured-play-button" class="play-circle play-circle--lg" data-featured-mix data-playlist data-title="{{FEATURED_TITLE_ATTR}}" data-artist="{{FEATURED_ARTIST_ATTR}}" data-img="{{FEATURED_IMG_URL}}" data-duration-sec="{{FEATURED_DURATION_SEC}}" href="{{FEATURED_AUDIO_URL}}" aria-label="Play featured mix">
+        <a id="featured-play-button" class="play-circle play-circle--lg" data-featured-mix data-playlist data-title="{{FEATURED_TITLE_ATTR}}" data-artist="{{FEATURED_ARTIST_ATTR}}" data-img="{{FEATURED_IMG_URL}}" data-duration-sec="{{FEATURED_DURATION_SEC}}" data-page="{{FEATURED_ARTIST_PAGE}}" data-video="{{FEATURED_VIDEO_URL}}" href="{{FEATURED_AUDIO_URL}}" aria-label="Play featured mix">
           <svg class="icon-svg icon-play"><use href="#i-play"></use></svg>
           <svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg>
         </a>
@@ -60,6 +87,454 @@
 {{> footer}}
 {{> player-bar}}
 {{> search-overlay}}
+{{> modal}}
+{{> share-modal}}
+<!-- Hero media: a promo skyline clip on arrival, the playing mix's own skyline
+     frame once something is playing. Homepage only, so it lives here rather
+     than in a shared partial, and inline because a new .js file would break the
+     23-path REQUIRED_MANIFEST_PATHS deploy gate.
+     Progressive enhancement throughout: with no JS, a blocked autoplay, an
+     empty clip list or a browser that refuses the codec, the hero stays the
+     still image that is already painted underneath. -->
+<script>
+(function () {
+  var media = document.getElementById('hero-media');
+  var video = document.getElementById('hero-promo-video');
+  var art = document.getElementById('hero-mix-art');
+  var still = document.getElementById('hero-still');
+  if (!media || !video || !art) return;
+
+  function reducedMotion() {
+    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+  }
+  function saveData() {
+    try { return !!(navigator.connection && navigator.connection.saveData); } catch (e) { return false; }
+  }
+
+  /* ---- 0. publish the promo index BEFORE player.js loads ----
+     player.js's randomizeFeatured() reads this to narrow its random pick to
+     mixes we have a promo for, so the preloaded mix and the hero film are the
+     same mix rather than two independent coin flips. This script is inline and
+     player.js is lazy, so the ordering is guaranteed. */
+  var CLIPS = [];
+  try { CLIPS = JSON.parse(media.getAttribute('data-hero-clips') || '[]'); } catch (e) { CLIPS = []; }
+  var promoIndex = {};
+  CLIPS.forEach(function (c) {
+    if (c && c.u && c.a && c.t) promoIndex[(c.a + '|' + c.t).toLowerCase()] = c.u;
+  });
+  window.__ueHeroPromos = { index: promoIndex, count: CLIPS.length };
+
+  function clipFor(artist, title) {
+    if (!artist || !title) return null;
+    return promoIndex[(artist + '|' + title).toLowerCase()] || null;
+  }
+
+  /* ---- 1. the promo clip ---- */
+  function playClip(url, artist, title) {
+    if (!url) return;
+    media.setAttribute('data-promo-artist', artist || '');
+    media.setAttribute('data-promo-title', title || '');
+    /* Already loaded. This is the listener switching BACK to the film from the
+       cover or the portrait, so there is nothing to fetch — just show it again.
+       (The old early-return here bailed on this case entirely, which is fine
+       when the film can only ever be set once, and wrong now that the thumbs
+       can leave and return to it.) */
+    if (video.currentSrc === url || video.getAttribute('src') === url) {
+      if (media.dataset.heroMode !== 'promo') {
+        media.dataset.heroMode = 'promo';
+        renderThumbs();
+      }
+      var rp = video.play();
+      if (rp && typeof rp.catch === 'function') rp.catch(function () { /* blocked */ });
+      return;
+    }
+    video.src = url;
+    video.load();
+    /* only reveal once it can actually paint, so a failed fetch or a codec the
+       browser rejects never shows an empty black box over the still */
+    video.addEventListener('canplay', function () {
+      if (pinned && pinned !== 'promo') return;                 // listener chose otherwise
+      if (!pinned && media.dataset.heroMode === 'art') return;   // a mix already claimed it
+      media.dataset.heroMode = 'promo';
+      renderThumbs();
+    }, { once: true });
+    var p = video.play();
+    if (p && typeof p.catch === 'function') p.catch(function () { /* autoplay blocked — still stays */ });
+  }
+
+  function startPromo() {
+    /* Honour the two cases where an autoplaying 30s video is the wrong answer,
+       and simply keep the still: reduced-motion, and Save-Data. */
+    if (reducedMotion() || saveData() || !CLIPS.length) return;
+    /* Prefer the featured mix's OWN film. The hero, the thumbs and the mix
+       preloaded on the right are then one record from the first frame, instead
+       of the hero promoting a random mix for the few hundred ms before
+       randomizeFeatured() announces a winner. Only when the featured mix has no
+       promo does this fall back to the old provisional random pick — better a
+       film of something than a dead frame — and `ue-featured-changed` re-points
+       either way. */
+    if (SOURCES.promo) { applySource('promo'); return; }
+    var pick = CLIPS[Math.floor(Math.random() * CLIPS.length)];
+    if (pick && pick.u) {
+      updateSources({ artist: pick.a, title: pick.t });
+      playClip(pick.u, pick.a, pick.t);
+    }
+  }
+
+  /* ---- 2. the playing mix's artwork, wearing the branded plate ---- */
+  function setPlate(title, artistName) {
+    var t = document.getElementById('hero-plate-title');
+    var a = document.getElementById('hero-plate-artist');
+    if (t) t.textContent = title || '';
+    if (a) a.textContent = artistName || '';
+  }
+
+  /* One <img> layer serves BOTH stills — the mix cover and the artist portrait.
+     They are never shown at once, and a second absolutely-positioned image in
+     the frame would only be a second thing to keep in sync. `mode` is what
+     tells them apart, and css/site.css reveals the layer for either value while
+     wearing the branded plate only for the cover. */
+  function showStill(src, mode, title, artistName) {
+    if (!src) return false;
+    setPlate(title, artistName);
+    if (media.dataset.heroMode === mode && art.getAttribute('src') === src) return true;
+    art.onload = function () { media.dataset.heroMode = mode; renderThumbs(); };
+    art.onerror = function () { /* keep whatever is showing */ };
+    art.hidden = false;
+    art.setAttribute('src', src);
+    try { video.pause(); } catch (e) {}
+    return true;
+  }
+
+  function showArt(src, title, artistName) {
+    return showStill(src, 'art', title, artistName);
+  }
+
+  /* ---- 2b. the three sources, and the thumbs that choose between them ----
+     The featured mix can be shown three ways: its promo film, its cover, and
+     the selector's portrait. `SOURCES` holds the URL for each for the CURRENT
+     mix; a source with no URL simply has no thumb.
+
+     `pinned` is the listener's choice, and it pins a KIND, not a URL — so when
+     the featured mix changes or a different mix starts playing, the hero
+     re-resolves that same kind for the new record rather than freezing on an
+     image of the old one. Until they touch a thumb, `pinned` stays null and the
+     page behaves exactly as it did before this strip existed. */
+  var ARTISTS = {};
+  try { ARTISTS = JSON.parse(media.getAttribute('data-hero-artists') || '{}'); } catch (e) { ARTISTS = {}; }
+
+  function artistMeta(name) {
+    if (!name) return null;
+    return ARTISTS[String(name).trim().replace(/\s+/g, ' ').toLowerCase()] || null;
+  }
+  function artistImageFor(name) {
+    var m = artistMeta(name);
+    return (m && m.img) || '';
+  }
+
+  var thumbsEl = document.getElementById('hero-source-thumbs');
+  var SOURCES = { promo: '', art: '', artist: '' };
+  var CURRENT = { title: '', artist: '' };
+  var pinned = null;
+
+  function updateSources(d) {
+    d = d || {};
+    if (d.title) CURRENT.title = d.title;
+    if (d.artist) CURRENT.artist = d.artist;
+    if (d.image) SOURCES.art = d.image;
+    /* `d.video` is the film named by the clicked mix's own anchor (data-video,
+       stamped by the generator). It wins over the artist|title lookup because a
+       card knows its film directly, where the lookup can miss on a title typed
+       differently in the two sources. */
+    SOURCES.promo = d.video || clipFor(CURRENT.artist, CURRENT.title) || '';
+    SOURCES.artist = artistImageFor(CURRENT.artist);
+    renderMark(CURRENT.artist);
+    renderThumbs();
+  }
+
+  /* The handwritten artist mark, laid across the hero cover exactly as it is
+     across every card in Latest Mixes — same renderer, same splitting and
+     sizing rules (window.ueScriptMark, in partials/footer.html). Drawn at
+     runtime because the hero's mix changes on every load and every click.
+     CSS reveals it only in `art` mode: over a film it would fight the
+     furniture already burnt into the frame, and over the portrait it would
+     repeat the name the selector's own page states. */
+  function renderMark(artistName) {
+    var el = document.getElementById('hero-art-mark');
+    if (!el || !window.ueScriptMark) return;
+    window.ueScriptMark.render(el, artistName || '');
+  }
+
+  function renderThumbs() {
+    if (!thumbsEl) return;
+    var any = false;
+    Array.prototype.forEach.call(thumbsEl.querySelectorAll('.hero-thumb'), function (b) {
+      var kind = b.getAttribute('data-hero-source');
+      /* The film has no still of its own without downloading it, so its thumb
+         wears the cover (or the portrait) and the play badge + label are what
+         tell the two apart. */
+      var src = kind === 'promo' ? (SOURCES.art || SOURCES.artist) : SOURCES[kind];
+      b.hidden = !SOURCES[kind] || !src;
+      if (b.hidden) return;
+      any = true;
+      var img = b.querySelector('.hero-thumb-img');
+      if (img && img.getAttribute('src') !== src) img.setAttribute('src', src);
+      b.setAttribute('aria-pressed', media.dataset.heroMode === kind ? 'true' : 'false');
+    });
+    /* one lone thumb is not a choice — hide the strip entirely */
+    thumbsEl.hidden = !any;
+  }
+
+  function applySource(kind) {
+    if (kind === 'promo' && SOURCES.promo) { playClip(SOURCES.promo, CURRENT.artist, CURRENT.title); return true; }
+    if (kind === 'artist' && SOURCES.artist) return showStill(SOURCES.artist, 'artist', CURRENT.title, CURRENT.artist);
+    if (kind === 'art' && SOURCES.art) return showArt(SOURCES.art, CURRENT.title, CURRENT.artist);
+    return false;
+  }
+
+  /* Whatever the listener pinned, for the record now on screen; falls back to
+     the cover when the new record has no film or no portrait. */
+  function applyPinned() {
+    return applySource(pinned) || applySource('art');
+  }
+
+  if (thumbsEl) {
+    thumbsEl.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('.hero-thumb') : null;
+      if (!btn) return;
+      var kind = btn.getAttribute('data-hero-source');
+      if (!applySource(kind)) return;   // nothing to show -> not a choice, stay put
+      pinned = kind;
+      renderThumbs();
+    });
+  }
+
+  function currentTrack() {
+    try {
+      var host = window.UEPlayer && window.UEPlayer.host;
+      return (host && host.getCurrentTrack && host.getCurrentTrack()) || null;
+    } catch (e) { return null; }
+  }
+
+  /* ---- 3. controls: mute and share, on the film itself ---- */
+  function featuredDeepLink() {
+    /* the hero promo and the preloaded mix are the same record, so the featured
+       anchor is the thing to share. Same ?mix=<txid> shape ue-links builds, so a
+       shared hero link lands exactly like a shared mix link. */
+    try {
+      var a = document.getElementById('featured-play-button');
+      var href = a && a.getAttribute('href');
+      var core = window.UEPlayerCore;
+      var txid = core && core.extractTxid ? core.extractTxid(href) : null;
+      if (!txid) return null;
+      return location.origin + location.pathname + '?mix=' + txid;
+    } catch (e) { return null; }
+  }
+
+  function wireControls() {
+    var muteBtn = document.getElementById('hero-mute-toggle');
+    var shareBtn = document.getElementById('hero-share');
+
+    if (muteBtn) {
+      muteBtn.addEventListener('click', function () {
+        /* the clip autoplays muted because browsers require it; this is the
+           gesture that is allowed to turn sound on */
+        video.muted = !video.muted;
+        media.dataset.heroMuted = video.muted ? 'on' : 'off';
+        muteBtn.setAttribute('aria-pressed', video.muted ? 'false' : 'true');
+        muteBtn.setAttribute('aria-label', video.muted ? 'Unmute promo video' : 'Mute promo video');
+        if (!video.muted && video.paused) { try { video.play(); } catch (e) {} }
+      });
+    }
+
+    if (shareBtn) {
+      shareBtn.addEventListener('click', function () {
+        /* The share modal owns this now (one share UI sitewide — see
+           partials/share-modal.html). The legacy inline path below stays as the
+           fallback for an engine without <dialog>, where window.ueShare never
+           claims the job. */
+        if (window.ueShare && typeof window.ueShare.open === 'function') {
+          var info = heroShareInfo();
+          if (info && window.ueShare.open(info)) return;
+        }
+        var url = featuredDeepLink();
+        if (!url) return;
+        var title = (document.getElementById('featured-mix-title') || {}).textContent || 'Underground Existence';
+        if (navigator.share) {
+          navigator.share({ title: title, url: url }).catch(function () { /* dismissed */ });
+          return;
+        }
+        var done = function () { shareBtn.setAttribute('aria-label', 'Link copied'); };
+        try {
+          navigator.clipboard.writeText(url).then(done, function () { copyFallback(url); });
+        } catch (e) { copyFallback(url); }
+      });
+    }
+  }
+
+  /* What the hero's share button is actually offering. The hero shows the
+     featured mix on arrival and the PLAYING mix once something is playing, so
+     the share follows the same rule — sharing the featured record while a
+     different mix is audible would be a lie. Falls back to the featured anchor,
+     which is the one record guaranteed to be on the page. */
+  function anchorForTxid(txid) {
+    try {
+      var core = window.UEPlayerCore;
+      if (!core || !core.extractTxid || !txid) return null;
+      var list = document.querySelectorAll('a[data-playlist]');
+      for (var i = 0; i < list.length; i++) {
+        if (core.extractTxid(list[i].getAttribute('href')) === txid) return list[i];
+      }
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  function infoFromAnchor(a, txid, t) {
+    if (!a) return null;
+    var attr = function (n) { return a.getAttribute(n) || ''; };
+    return {
+      txid: txid,
+      title: attr('data-title'),
+      artist: attr('data-artist'),
+      img: attr('data-img'),
+      video: attr('data-video'),
+      audio: attr('href'),
+      page: attr('data-page'),
+      filename: (attr('data-artist') ? attr('data-artist') + ' - ' : '') + attr('data-title'),
+      t: t || 0
+    };
+  }
+
+  function heroShareInfo() {
+    var core = window.UEPlayerCore;
+    if (!core || !core.extractTxid) return null;
+    try {
+      var host = window.UEPlayer && window.UEPlayer.host;
+      var track = host && host.getCurrentTrack ? host.getCurrentTrack() : null;
+      if (track) {
+        var playingTxid = host.getTxid ? host.getTxid() : null;
+        var playingAnchor = anchorForTxid(playingTxid);
+        if (playingAnchor) {
+          var at = 0;
+          try { at = Math.floor(host.getCurrentTime() || 0); } catch (e) { at = 0; }
+          return infoFromAnchor(playingAnchor, playingTxid, at);
+        }
+      }
+    } catch (e) { /* fall through to the featured record */ }
+    var featuredAnchor = document.getElementById('featured-play-button');
+    var featuredTxid = featuredAnchor ? core.extractTxid(featuredAnchor.getAttribute('href')) : null;
+    return featuredTxid ? infoFromAnchor(featuredAnchor, featuredTxid, 0) : null;
+  }
+
+  function copyFallback(url) {
+    /* same escalation the share buttons use: the one shared dialog, never a
+       new floating panel */
+    if (window.ueDialog && typeof window.ueDialog.open === 'function') {
+      window.ueDialog.open({
+        title: 'Copy this link',
+        message: 'Your browser blocked the automatic copy, so here is the link.',
+        copyText: url
+      });
+    } else if (typeof window.prompt === 'function') {
+      window.prompt('Copy this link', url);
+    }
+  }
+
+  function whenPlayerReady(cb) {
+    try {
+      if (window.UEPlayer && window.UEPlayer.host) { cb(); return; }
+      document.addEventListener('ue-player-ready', function () { cb(); }, { once: true });
+    } catch (e) { /* no player on this page */ }
+  }
+
+  /* Seed the strip from the build-time featured mix, before anything animates:
+     the anchor on the right already carries this record's title, artist and
+     cover, so the thumbs are correct on the first frame rather than after
+     player.js lazily loads and re-rolls. */
+  (function seedFromFeatured() {
+    var a = document.getElementById('featured-play-button');
+    if (!a) return;
+    updateSources({
+      title: a.getAttribute('data-title') || '',
+      artist: a.getAttribute('data-artist') || '',
+      image: a.getAttribute('data-img') || ''
+    });
+  }());
+
+  startPromo();
+
+  /* The featured mix is re-rolled client-side by player.js; when it announces
+     the winner, point the hero film at THAT mix so the square and the preloaded
+     mix on the right are the same record. If that mix somehow has no promo
+     (index empty, or a mix added since the catalog was last built) the hero
+     still shows its artwork, which stays coherent rather than promoting one mix
+     beside another. */
+  /* player.js's randomizeFeatured() rewrites the featured anchor's
+     data-title/-artist/-img/-duration-sec and its href, but it predates
+     data-page and data-video and leaves both describing the BUILD-TIME mix.
+     The share modal reads that anchor, so without this the hero's share button
+     offered the previous mix's artist page and promo film. Re-stamp them from
+     the same two maps the thumbs use. */
+  function restampFeaturedAnchor() {
+    var a = document.getElementById('featured-play-button');
+    if (!a) return;
+    var meta = artistMeta(CURRENT.artist);
+    a.setAttribute('data-video', SOURCES.promo || '');
+    if (meta && meta.page) a.setAttribute('data-page', meta.page);
+  }
+
+  document.addEventListener('ue-featured-changed', function (ev) {
+    var d = (ev && ev.detail) || {};
+    updateSources(d);
+    restampFeaturedAnchor();
+    setPlate(CURRENT.title, CURRENT.artist);   // ready for the moment a mix starts
+    /* A listener who has picked a source keeps it — re-resolved for the mix
+       that just won, never overridden by it. */
+    if (pinned) { applyPinned(); return; }
+    if (SOURCES.promo) {
+      if (media.dataset.heroMode !== 'art') applySource('promo');
+    } else if (SOURCES.art && media.dataset.heroMode !== 'art') {
+      applySource('art');
+    }
+  });
+
+  wireControls();
+
+  /* A mix was clicked (or the player moved to the next track): player.js has
+     already repointed the hero's copy and transport at that record — see
+     pointHeroAt() — and this is the matching half, the hero's MEDIA. The mix's
+     own promo film leads, because that is what the hero is for; its cover,
+     wearing the mark, is the fallback for a mix with no film. */
+  document.addEventListener('ue-hero-repointed', function (ev) {
+    var d = (ev && ev.detail) || {};
+    updateSources(d);
+    restampFeaturedAnchor();
+    setPlate(CURRENT.title, CURRENT.artist);
+    if (pinned) { applyPinned(); return; }
+    if (!applySource('promo')) applySource('art');
+  });
+
+  whenPlayerReady(function () {
+    var host = window.UEPlayer.host;
+    var sync = function () {
+      var t = currentTrack();
+      if (!t) return;
+      updateSources({ title: t.title, artist: t.artist, image: t.img });
+      if (pinned) { applyPinned(); return; }
+      /* same order as the repoint above: the playing mix's film, then its
+         cover. Reached when a track starts by a route that did not repoint the
+         hero (a restored position, a deep link) — otherwise this agrees with
+         what the repoint already did and changes nothing. */
+      if (!applySource('promo')) applySource('art');
+    };
+    try {
+      host.on('track', sync);
+      host.on('playback', sync);
+    } catch (e) { /* host contract changed — hero just stays on the promo */ }
+    sync();
+  });
+}());
+</script>
 <script src="js/boot.js" defer></script>
 </body>
 </html>

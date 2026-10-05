@@ -48,7 +48,14 @@
   src: url('../fonts/rationale-v1-regular.woff2') format('woff2');
 }
 
-/* ---- Tokens ---- */
+/* ---- Tokens ----
+   Two themes live in this file. DARK (oxblood — the brand default) is defined
+   here on :root. LIGHT (warm ink on paper, same red, opt-in) overrides the
+   colour half of this set in the "Light theme" block at the end of the file.
+   Absence of the `data-theme` attribute IS dark, so a page whose JS never runs
+   renders exactly as it always has.
+
+   Rule for new work: no raw colour literals outside these two blocks. */
 :root {
   --bg-base: #0a0606;
   --bg-panel: #140d0d;
@@ -57,13 +64,86 @@
   --accent: #c1121f;
   --accent-bright: #e01e2b;
   --accent-dim: #7a0e16;
+  --on-accent: #ffffff;
   --paper: #e8e0d0;
   --paper-ink: #2a231c;
   --text-primary: #f2ece4;
   --text-secondary: #b7aaa3;
   --text-muted: #8a7d77;
   --hairline: rgba(255, 255, 255, 0.08);
-  --hairline-red: rgba(193, 18, 31, 0.45);
+  --hairline-accent: rgba(193, 18, 31, 0.45); /* was --hairline-red; renamed because
+     light theme's equivalent is not red. Do NOT reinstate the old name as an alias:
+     `--hairline-red: var(--hairline-accent)` substitutes at :root, so inside the dark
+     island it would resolve to the PAPER hairline, not the red one. */
+
+  /* translucent chrome that floats over page content */
+  --scrim-header: rgba(10, 6, 6, 0.94);
+  --scrim-player: rgba(12, 7, 7, 0.96);
+  --scrim-search: rgba(8, 5, 5, 0.97);
+  --scrim-panel: rgba(10, 6, 6, 0.92);
+  --scrim-backdrop: rgba(8, 5, 5, 0.62); /* behind the shared dialog */
+  /* opaque chrome — the mobile menu can't be translucent, it drops over content.
+     Identical in both themes: the chrome stays dark in light theme too. */
+  --chrome-solid: #0a0606;
+
+  /* hairline-weight veils: hover washes and the 1px inset lip on chrome */
+  --veil-hover: rgba(255, 255, 255, 0.025);
+  --veil-inset: rgba(255, 255, 255, 0.04);
+  --veil-inset-strong: rgba(255, 255, 255, 0.05);
+  --track-empty: rgba(255, 255, 255, 0.14);
+  --track-empty-strong: rgba(255, 255, 255, 0.18);
+
+  /* accent-derived washes and glows */
+  --accent-veil: rgba(193, 18, 31, 0.08);
+  --accent-veil-strong: rgba(193, 18, 31, 0.14);
+  --accent-glow: rgba(224, 30, 43, 0.7);
+  --accent-glow-soft: rgba(224, 30, 43, 0.4);
+
+  /* composite shadows */
+  --shadow-card-hover: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 24px rgba(193, 18, 31, 0.12);
+  --shadow-frame: 0 0 0 1px rgba(193, 18, 31, 0.15), 0 0 44px rgba(193, 18, 31, 0.16), 0 24px 60px rgba(0, 0, 0, 0.55);
+  --shadow-portrait: 0 0 34px rgba(193, 18, 31, 0.14), 0 20px 48px rgba(0, 0, 0, 0.5);
+  --shadow-panel: 0 8px 20px rgba(0, 0, 0, 0.4);
+  /* floating runtime UI (share popover, deep-link banner, resume bar — all
+     injected by ue-links.js / ue-resume.js, which read these same tokens) */
+  --shadow-float: 0 12px 30px rgba(0, 0, 0, 0.5);
+  /* resting elevation on cards. Dark doesn't use one — it separates surfaces
+     by luminance (#0a0606 page vs #150e0e card) and a shadow on near-black is
+     invisible anyway. On paper that trick is unavailable, so light defines a
+     real one; keeping the token here at `none` means the base rule can carry
+     it unconditionally without touching dark's render. */
+  --shadow-card-rest: none;
+  --shadow-logo: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
+  --text-shadow-title: 0 2px 0 rgba(0, 0, 0, 0.4);
+  --text-shadow-number: 0 1px 6px rgba(0, 0, 0, 0.8);
+
+  /* scrims painted over artwork — legibility, not decoration */
+  /* Two jobs: a light top wash so the mix number reads, and a heavy bottom
+     ramp that the overlaid title/artist/meta sit on. The thumbnails average
+     56/255 luminance, but a skyline's lit windows are locally bright — this
+     ramp is what guarantees the type survives them. */
+  /* Used by exactly one thing: .mix-card-cover::after. The lower stop moved
+     36% -> 50% when the tile lost its genre/duration/date rows — the ramp had
+     been sized to keep four stacked lines legible, and against the new
+     two-element plate it was darkening a third of the artwork for nothing. */
+  --cover-scrim: linear-gradient(180deg, rgba(10, 6, 6, 0.45) 0%, transparent 22%, transparent 50%, rgba(6, 4, 4, 0.84) 100%);
+  --hero-scrim: linear-gradient(160deg, rgba(193, 18, 31, 0.14), transparent 45%), linear-gradient(0deg, rgba(10, 6, 6, 0.35), transparent 40%);
+  --portrait-scrim: linear-gradient(180deg, transparent 55%, rgba(10, 6, 6, 0.55));
+  --img-filter: contrast(1.05) saturate(1.02);
+  --img-filter-hero: contrast(1.06) saturate(1.05);
+
+  /* waveform canvases — read from player.js as well as from CSS */
+  --wave-played: #e01e2b;
+  --wave-unplayed: rgba(242, 236, 228, 0.82);
+  --wave-remaining: rgba(154, 143, 138, 0.55);
+
+  /* full-page texture: film grain in dark; grain + CRT scanlines in light */
+  --grain-opacity: 0.14;
+  --grain-blend: normal;
+  --scanline-opacity: 0;
+  --scanline-pitch: 3px;
+  --scanline-ink: rgba(0, 0, 0, 0.55);
+
   --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
   --font-body: 'Rationale', Arial, sans-serif;
   --font-display: 'Special Elite', 'Courier New', serif;
@@ -109,8 +189,25 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: 2000;
-  opacity: 0.14;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: var(--grain-blend);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* CRT scanlines — second fixed layer, off (opacity 0) in dark, on in light.
+   Separate from the grain layer because the two need different blend modes:
+   grain multiplies into the paper, scanlines sit on top as ruled ink. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2001;
+  opacity: var(--scanline-opacity);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--scanline-ink) 0 1px,
+    transparent 1px var(--scanline-pitch)
+  );
 }
 img { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
@@ -142,11 +239,11 @@ ul { list-style: none; }
   position: sticky;
   top: 0;
   z-index: 900;
-  background: rgba(10, 6, 6, 0.94);
+  background: var(--scrim-header);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--hairline-red);
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--hairline-accent);
+  box-shadow: inset 0 -1px 0 var(--veil-inset);
 }
 #site-header-inner {
   max-width: var(--page-max);
@@ -197,6 +294,20 @@ ul { list-style: none; }
 }
 #nav-search-toggle:hover, #mobile-search-toggle:hover { color: var(--text-primary); }
 #nav-search-divider { width: 1px; height: 22px; background: var(--hairline); }
+/* theme toggle — same affordance as the search button, icon-only.
+   The button's icon (#i-sun / #i-moon), aria-label and aria-pressed are
+   swapped by the inline theme script in partials/head.html; CSS only
+   carries the resting/hover/active treatment. */
+#nav-theme-toggle, #mobile-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: color 0.2s ease, transform 0.3s var(--ease-out-expo);
+}
+#nav-theme-toggle:hover, #mobile-theme-toggle:hover { color: var(--text-primary); }
+#nav-theme-toggle:active, #mobile-theme-toggle:active { transform: scale(0.9); transition-duration: 0.1s; }
+#nav-theme-toggle .icon-svg { width: 18px; height: 18px; }
 #mobile-nav-actions { display: none; align-items: center; gap: 18px; }
 #mobile-menu-toggle { font-size: 20px; color: var(--text-primary); display: inline-flex; }
 
@@ -204,7 +315,7 @@ ul { list-style: none; }
 #mobile-menu {
   display: none;
   border-top: 1px solid var(--hairline);
-  background: var(--bg-base);
+  background: var(--chrome-solid);
   padding: 12px var(--page-pad) 20px;
 }
 #mobile-menu.is-open { display: block; }
@@ -284,13 +395,23 @@ ul { list-style: none; }
 #hero-collage-frame {
   position: relative;
   border-radius: var(--radius-frame);
-  border: 1px solid var(--hairline-red);
-  box-shadow: 0 0 0 1px rgba(193, 18, 31, 0.15), 0 0 44px rgba(193, 18, 31, 0.16), 0 24px 60px rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--hairline-accent);
+  box-shadow: var(--shadow-frame);
 }
 #hero-collage-frame .hero-image-clip {
+  /* MUST stay positioned: the still/video/artwork layers inside are absolute,
+     and without this their containing block is #hero-collage-frame — which
+     puts them outside this element's overflow, so the border-radius stops
+     clipping them and the hero renders with square corners. */
+  position: relative;
   border-radius: var(--radius-frame);
   overflow: hidden;
-  aspect-ratio: 4 / 3.4;
+  /* SQUARE, because the content is square: every generated mix promo is
+     720x720 (verified across the catalog), and the skyline thumbnails the hero
+     swaps to are generated square too. The old 4/3.4 box meant the promo either
+     letterboxed inside it or got cropped. Matching the media means the film
+     fills the frame exactly, with nothing trimmed and no bars. */
+  aspect-ratio: 1 / 1;
   background: var(--bg-panel);
 }
 #hero-collage-frame .hero-image-clip picture {
@@ -298,21 +419,257 @@ ul { list-style: none; }
   width: 100%;
   height: 100%;
 }
+/* Three stacked layers in one frame: the still (always painted, and the
+   video's poster), the promo clip, and the playing mix's artwork. Only one is
+   visible at a time — `data-hero-mode` on #hero-media decides which, so a
+   failed fetch, a blocked autoplay or no JS at all simply leaves the still.
+   They cross-fade rather than cut, because the swap happens under the user's
+   eye the moment they press play. */
+#hero-collage-frame .hero-image-clip picture,
 #hero-collage-frame .hero-image-clip img,
+#hero-collage-frame .hero-image-clip video,
 #hero-collage-frame .hero-image-clip .cover-fallback {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: contrast(1.06) saturate(1.05);
+  filter: var(--img-filter-hero);
+}
+#hero-promo-video,
+#hero-mix-art {
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out-expo);
+}
+/* The promo film is CONTAINED, not cropped: these are 16:9 renders and the
+   hero frame is ~4/3.4, so `cover` was cutting the sides off a composition
+   that was authored to be seen whole. It letterboxes against the dark well
+   (--bg-panel), which is the same recess the artwork sits in.
+   The still and the mix artwork keep `cover` — they are stills chosen to fill
+   the frame, and containing them would leave bars for no reason. */
+/* needs the full ancestor chain: the grouped rule above that sets `cover` is
+   `#hero-collage-frame .hero-image-clip video` (0,1,1,1), so a bare
+   `#hero-promo-video` (0,1,0,0) loses to it */
+#hero-collage-frame .hero-image-clip #hero-promo-video { object-fit: contain; }
+/* `artist` rides the same <img> layer as `art` — one still layer, two meanings,
+   see showStill() in the homepage's inline hero script. */
+#hero-media[data-hero-mode="promo"] #hero-promo-video,
+#hero-media[data-hero-mode="art"] #hero-mix-art,
+#hero-media[data-hero-mode="artist"] #hero-mix-art { opacity: 1; }
+/* A portrait is not a 720x720 skyline frame — contain it rather than crop a
+   face to fill a square. */
+#hero-collage-frame .hero-image-clip #hero-mix-art { object-fit: cover; }
+#hero-media[data-hero-mode="artist"] #hero-mix-art { object-fit: contain; }
+
+/* ---- the source thumbs: film / cover / artist -------------------------
+   Inside the frame, under the square, so the choice reads as belonging to the
+   image it changes. Each button is hidden by the script until its source
+   resolves for the current mix, and the strip hides itself when nothing is
+   left — a single thumb is not a choice. */
+#hero-source-thumbs {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid var(--hairline);
+}
+.hero-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  width: 64px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.hero-thumb-frame {
+  position: relative;
+  display: block;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  transition: border-color 0.2s var(--ease-out-expo), transform 0.16s var(--ease-out-expo);
+}
+.hero-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: var(--img-filter);
+}
+.hero-thumb-badge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 5, 5, 0.42);
+  color: #fff;
+}
+.hero-thumb-badge .icon-svg { width: 16px; height: 16px; }
+.hero-thumb-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .hero-thumb:hover .hero-thumb-frame { border-color: var(--accent-bright); }
+  .hero-thumb:hover .hero-thumb-label { color: var(--text-primary); }
+}
+.hero-thumb:active .hero-thumb-frame { transform: scale(0.96); transition-duration: 0.1s; }
+.hero-thumb[aria-pressed="true"] .hero-thumb-frame {
+  border-color: var(--accent-bright);
+  box-shadow: 0 0 0 1px var(--accent-bright);
+}
+.hero-thumb[aria-pressed="true"] .hero-thumb-label { color: var(--text-primary); }
+@media (max-width: 540px) {
+  #hero-source-thumbs { gap: 8px; padding: 10px; }
+  .hero-thumb, .hero-thumb-frame { width: 56px; }
+  .hero-thumb-frame { height: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-thumb-frame, .hero-thumb-label { transition: none; }
+  .hero-thumb:active .hero-thumb-frame { transform: none; }
+}
+
+/* --- the branded plate, worn only in `art` mode ------------------------
+   Wordmark at the top, mix details at the bottom, over the skyline frame —
+   the same furniture the generated promo films carry burnt in, so the hero
+   reads as one piece whether it is playing the film or showing the mix.
+   Everything here sits ON artwork, so the ink is light in both themes and
+   the plate provides its own scrim rather than trusting the image. */
+#hero-mix-plate {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(14px, 2.2vw, 22px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s var(--ease-out-expo);
+  background:
+    linear-gradient(180deg, rgba(6, 4, 4, 0.72), transparent 26%),
+    linear-gradient(0deg, rgba(6, 4, 4, 0.82), transparent 38%);
+}
+#hero-media[data-hero-mode="art"] #hero-mix-plate { opacity: 1; }
+
+/* The handwritten artist mark on the hero cover — the same mark, the same
+   renderer and the same one division as the cards (see the "handwritten artist
+   mark" block), so the hero and the grid read as one system.
+
+   Shown for the mix COVER only. Over the promo film it would fight the
+   furniture already burnt into the frame, and over a selector's portrait it
+   would repeat what that page already says. It sits under the plate (z-index 3)
+   and over the artwork, and the frame is its sizing container. */
+#hero-collage-frame .hero-image-clip { container-type: inline-size; }
+#hero-art-mark {
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out-expo);
+  /* the plate's title/artist occupy the bottom of the frame, so the mark takes
+     the picture above it — same reasoning as the mix card's own padding */
+  padding-bottom: 12%;
+  --script-fit: 0.78;
+  --script-h: 34cqi;
+}
+#hero-media[data-hero-mode="art"] #hero-art-mark { opacity: 1; }
+/* full ancestor chain: the wordmark is an <img> inside .hero-image-clip, so the
+   grouped "fill the frame" rule (#hero-collage-frame .hero-image-clip img —
+   absolute, inset 0, 100%x100%) outranks a bare #hero-plate-logo and stretched
+   it across the entire hero */
+#hero-collage-frame .hero-image-clip #hero-plate-logo {
+  position: static;
+  inset: auto;
+  width: clamp(120px, 46%, 250px);
+  height: auto;
+  object-fit: contain;
+  filter: none;
+  align-self: flex-start;
+}
+#hero-plate-title {
+  font-family: var(--font-body);
+  font-size: clamp(19px, 2.2vw, 30px);
+  line-height: 1.12;
+  color: #f6f3ee;
+  text-wrap: balance;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
+}
+#hero-plate-artist {
+  margin-top: 4px;
+  font-family: var(--font-script);
+  font-size: clamp(20px, 2.4vw, 32px);
+  line-height: 1.1;
+  color: #e01e2b;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* --- controls on the film: mute + share -------------------------------- */
+#hero-media-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 4;
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out-expo);
+}
+/* they belong to the film, so they appear with it — and stay reachable by
+   keyboard even while the hero is still showing the poster */
+#hero-media[data-hero-mode="promo"] #hero-media-controls,
+#hero-media[data-hero-mode="art"] #hero-media-controls,
+#hero-media:hover #hero-media-controls,
+#hero-media-controls:focus-within { opacity: 1; }
+#hero-media-controls button {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(6, 4, 4, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #f6f3ee;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s var(--ease-out-expo);
+}
+#hero-media-controls button:hover {
+  background: rgba(6, 4, 4, 0.78);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+#hero-media-controls button:active { transform: scale(0.94); transition-duration: 0.1s; }
+#hero-media-controls .icon-svg { width: 16px; height: 16px; }
+/* the mute button shows the state it will MOVE to, like the theme toggle:
+   muted now => offer sound */
+#hero-mute-toggle .icon-unmuted { display: none; }
+#hero-media[data-hero-muted="off"] #hero-mute-toggle .icon-muted { display: none; }
+#hero-media[data-hero-muted="off"] #hero-mute-toggle .icon-unmuted { display: block; }
+@media (prefers-reduced-motion: reduce) {
+  #hero-mix-plate, #hero-media-controls { transition: none; }
+}
+/* the artwork wins outright once a mix is playing — the clip stops paying for
+   itself the moment there is something truer to show */
+#hero-media[data-hero-mode="art"] #hero-promo-video { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  #hero-promo-video, #hero-mix-art { transition: none; }
 }
 #hero-collage-frame .hero-image-clip::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: var(--radius-frame);
-  background:
-    linear-gradient(160deg, rgba(193, 18, 31, 0.14), transparent 45%),
-    linear-gradient(0deg, rgba(10, 6, 6, 0.35), transparent 40%);
+  background: var(--hero-scrim);
   pointer-events: none;
 }
 #featured-mix-content { position: relative; min-width: 0; }
@@ -323,7 +680,7 @@ ul { list-style: none; }
   line-height: 1.06;
   color: var(--text-primary);
   margin: 18px 0 2px;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  text-shadow: var(--text-shadow-title);
 }
 #featured-artist-signature {
   font-family: var(--font-script);
@@ -371,20 +728,31 @@ ul { list-style: none; }
   border-radius: 50%;
   border: 2px solid var(--accent-bright);
   color: var(--accent-bright);
-  background: rgba(193, 18, 31, 0.08);
-  transition: background 0.3s var(--ease-out-expo), color 0.3s var(--ease-out-expo);
+  background: var(--accent-veil);
+  transition: background 0.2s var(--ease-out-expo), color 0.2s var(--ease-out-expo), transform 0.16s var(--ease-out-expo);
   flex: none;
 }
 .play-circle:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
+/* The one control on this site that had no press state, while .download-btn
+   beside it always has. Play is the most-pressed thing on the page; it has to
+   answer the finger before the audio does. */
+.play-circle:active { transform: scale(0.96); transition-duration: 0.1s; }
+/* No margin nudge on the glyph. A play triangle does need optical centring —
+   its centroid sits 1/3 from the base, not at its bounding-box centre — but
+   that compensation is already BUILT INTO the icon: #i-play spans x 8→20.9 in
+   a 24-unit viewBox, so its centroid lands at 12.3 against a centre of 12.
+   The old `margin-left: 3px/2px` applied it a second time, pushing the glyph
+   +4.47px right of centre on the 76px button and +2.72px on the 42/46px ones
+   (measured). #i-pause spans 7→17 and is centred exactly, which is why it
+   needed its own `margin-left: 0` to undo the nudge — with the nudge gone,
+   both glyphs are correct and the override is unnecessary. */
 .play-circle--lg { width: 76px; height: 76px; }
-.play-circle--lg .icon-svg { width: 26px; height: 26px; margin-left: 3px; }
-.play-circle--lg .icon-pause { margin-left: 0; }
+.play-circle--lg .icon-svg { width: 26px; height: 26px; }
 .play-circle--sm { width: 42px; height: 42px; border-width: 1.5px; }
-.play-circle--sm .icon-svg { width: 15px; height: 15px; margin-left: 2px; }
-.play-circle--sm .icon-pause { margin-left: 0; }
+.play-circle--sm .icon-svg { width: 15px; height: 15px; }
 .play-circle .icon-pause { display: none; }
 .play-circle.is-playing .icon-play { display: none; }
 .play-circle.is-playing .icon-pause { display: block; }
@@ -396,7 +764,7 @@ ul { list-style: none; }
 .waveform-progress-line {
   position: relative;
   height: 2px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--track-empty);
   margin-top: 12px;
   cursor: pointer;
   touch-action: none;
@@ -422,7 +790,7 @@ ul { list-style: none; }
   border-radius: 50%;
   background: var(--accent-bright);
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 10px rgba(224, 30, 43, 0.7);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 .waveform-time-row {
   display: flex;
@@ -459,38 +827,74 @@ ul { list-style: none; }
 @media (max-width: 760px)  { .mix-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 540px)  { .mix-card-grid { grid-template-columns: 1fr; } }
 
+/* OVERLAY CARD — the artwork IS the card.
+   No panel, no border, no body block underneath: the image fills the tile and
+   every piece of metadata sits on top of it. Two consequences drive the rest
+   of this section:
+   1. Everything here sits ON ARTWORK, never on a themed surface, so the card
+      re-declares its ink locally (the same trick the dark island uses, and it
+      needs the same `color` line — tokens alone don't reach elements that only
+      inherit). It reads identically in both themes, because the ground is the
+      photograph, not the page.
+   2. The cover is wrapped in the play anchor, so the overlay must not swallow
+      clicks — .mix-card-body is pointer-events:none and hands them back on its
+      own interactive children. */
 .mix-card {
-  background: var(--bg-card);
-  border: 1px solid var(--hairline);
+  background: transparent;
+  border: none;
   border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card-rest);
   overflow: hidden;
   position: relative;
-  transition: transform 0.4s var(--ease-out-expo), border-color 0.4s var(--ease-out-expo), box-shadow 0.4s var(--ease-out-expo);
+  isolation: isolate;
+  color: var(--text-primary);
+  --text-primary: #f6f3ee;
+  --text-secondary: rgba(246, 243, 238, 0.84);
+  --text-muted: rgba(246, 243, 238, 0.6);
+  --accent: #c1121f;
+  --accent-bright: #e01e2b;
+  --hairline: rgba(255, 255, 255, 0.22);
+  /* An EDGE, not a background. On paper the resting shadow separates the tile,
+     but in dark the scrimmed bottom of the image is within a few percent of the
+     page and the card dissolves into it — a 1px inset ring is the least that
+     restores the boundary without reintroducing a card surface. */
+  box-shadow: var(--shadow-card-rest), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  /* 240ms, not 400: a hover is watched at its very first frame, and the lift
+     read as lag at 400. Both hover rules are gated on a real pointer — on a
+     touch screen `:hover` fires on tap and sticks there until the next tap
+     elsewhere, so the tile stayed lifted and zoomed after every press. */
+  transition: transform 0.24s var(--ease-out-expo), box-shadow 0.24s var(--ease-out-expo);
 }
-.mix-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--hairline-red);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 24px rgba(193, 18, 31, 0.12);
+@media (hover: hover) and (pointer: fine) {
+  .mix-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-card-hover), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  }
 }
 .mix-card-cover {
   position: relative;
-  aspect-ratio: 1 / 0.86;
+  /* taller than the old 1/0.86: the metadata now lives inside this box, so the
+     lower third is type rather than picture */
+  aspect-ratio: 1 / 1.22;
   background: var(--bg-panel);
   overflow: hidden;
+  border-radius: var(--radius-card);
 }
 .mix-card-cover img, .mix-card-cover .cover-fallback {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: contrast(1.05) saturate(1.02);
-  transition: transform 0.6s var(--ease-out-expo);
+  filter: var(--img-filter);
+  transition: transform 0.42s var(--ease-out-expo);
 }
-.mix-card:hover .mix-card-cover img { transform: scale(1.04); }
+@media (hover: hover) and (pointer: fine) {
+  .mix-card:hover .mix-card-cover img { transform: scale(1.04); }
+}
 .mix-card-cover::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(10, 6, 6, 0.32), transparent 38%, rgba(10, 6, 6, 0.25));
+  background: var(--cover-scrim);
   pointer-events: none;
 }
 .mix-card-number {
@@ -502,52 +906,61 @@ ul { list-style: none; }
   font-weight: 700;
   letter-spacing: 0.1em;
   color: var(--text-primary);
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+  text-shadow: var(--text-shadow-number);
 }
-.mix-card-body { padding: 14px 14px 16px; }
-.mix-card-title-row {
+/* the metadata plate, laid over the lower part of the artwork */
+.mix-card-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 14px 14px 15px;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  /* stretch, not flex-start: the title is the full width of the tile now */
+  gap: 12px;
+  /* the cover's play anchor sits underneath — let clicks through, and hand
+     them back only on the things that are themselves interactive */
+  pointer-events: none;
 }
+.mix-card-body a,
+.mix-card-body button { pointer-events: auto; }
+/* The title owns its own line, at full card width, with the controls beneath
+   it. It used to share a flex row with the buttons, which cost it roughly a
+   third of the tile and clamped most real titles to "Love Mani…" on a phone.
+   Nothing sits beside it now, so the clamp is a safety net for genuinely long
+   titles rather than the normal case. */
 .mix-card-title {
-  font-size: 27px;
+  font-size: clamp(19px, 1.6vw, 26px);
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.15;
   color: var(--text-primary);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
   overflow-wrap: anywhere;
+  text-wrap: balance;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.mix-card-title a:hover { color: var(--accent-bright); }
+.mix-card-title a { transition: color 0.16s ease; }
+/* The artist, small, under the title. This line and the big handwritten mark
+   across the artwork are two answers to the same question, so the card carries
+   one of them at a time — see the cover-script section below for how to swap
+   back. Mono/uppercase rather than the old 14px body text: at this size it
+   reads as a credit line beside the number, not as a second title. */
 .mix-card-artist {
   display: inline-block;
-  font-size: 14px;
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   color: var(--accent-bright);
-  margin-top: 4px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+  transition: color 0.16s ease;
 }
 .mix-card-artist:hover { color: var(--text-primary); }
-.mix-card-genres {
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-top: 8px;
-}
-.mix-card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  font-size: 12.5px;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-  margin-top: 10px;
-}
-.mix-card .play-circle { margin-top: 2px; }
 .mix-card.is-unplayable .play-circle { opacity: 0.3; pointer-events: none; }
 
 /* download buttons (blob download of the mix audio) */
@@ -566,9 +979,9 @@ ul { list-style: none; }
 .download-btn:active { transform: scale(0.94); transition-duration: 0.1s; }
 .download-btn .icon-svg { width: 16px; height: 16px; }
 .download-btn:hover {
-  color: #fff;
+  color: var(--on-accent);
   border-color: var(--accent-bright);
-  background: rgba(193, 18, 31, 0.14);
+  background: var(--accent-veil-strong);
   transform: scale(1.04);
 }
 .download-btn--sm { width: 34px; height: 34px; }
@@ -580,12 +993,14 @@ ul { list-style: none; }
   animation: dl-pulse 1s ease-in-out infinite;
 }
 @keyframes dl-pulse { 50% { opacity: 0.35; } }
+/* was a vertical stack, which left a dead column of empty card beside the
+   title; on the overlay card the controls read as one row of affordances */
 .mix-card-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
-  margin-top: 2px;
+  flex: none;
 }
 .catalog-row-actions { display: flex; align-items: center; gap: 10px; }
 #featured-download-button { width: 46px; height: 46px; }
@@ -598,6 +1013,124 @@ ul { list-style: none; }
   background: var(--bg-panel);
   padding: 18%;
   filter: none !important;
+}
+
+/* ==========================================================================
+   The handwritten artist mark (mix thumbnails + resident portraits)
+   --------------------------------------------------------------------------
+   The artist's name in the script face, laid across the middle of the artwork
+   and sized to span the tile — short names huge, long ones stepped down, two
+   words stacked on two lines. The markup comes from `coverScriptHtml()` in
+   lib/WebsitePageGenerator.cjs, which carries the rest of the sizing contract.
+
+   The whole mechanism is one line of maths: the tile is an inline-size
+   container, each line carries its own natural width in em as `--script-w`,
+   and the font-size is the tile's width divided by that width. Nothing here
+   depends on the character count or on a per-name breakpoint.
+   ========================================================================== */
+.mix-card-cover,
+.resident-card-photo { container-type: inline-size; }
+
+.cover-script {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* the cover is wrapped in the play anchor — the mark must never eat a click */
+  pointer-events: none;
+  font-family: var(--font-script);
+  /* ON-ARTWORK ISLAND: the same trick as .mix-card and the light theme's dark
+     island. The ground here is the photograph, not the page, so the ink is
+     declared on this subtree and the lines inherit it — which is what makes the
+     mark read identically in both themes instead of flipping to paper ink over
+     a near-black skyline. The `color` line is required, not decorative: tokens
+     alone do not reach an element that only inherits its colour. */
+  --text-primary: #f6f3ee;
+  --accent-bright: #e01e2b;
+  color: var(--text-primary);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5), 0 0 3px rgba(0, 0, 0, 0.4);
+  /* the same signature tilt the hero's artist line wears */
+  transform: rotate(-2deg);
+  transition: color 0.4s var(--ease-out-expo);
+}
+.mix-card:hover .cover-script,
+.resident-card:hover .cover-script { color: var(--accent-bright); }
+
+.cover-script-line {
+  display: block;
+  /* Two limits, whichever is smaller:
+     WIDTH  — --script-w is the line's natural width in em (generator-estimated,
+              then refined to the measured value by partials/footer), so
+              `100cqi * fit / --script-w` always spans the same fraction of the
+              tile whatever the name's length. This is the one that governs.
+     HEIGHT — --script-h is the tile's CLEAR height (the part with no metadata
+              on it), also expressed in cqi so it tracks the fixed aspect ratio.
+              Split between the stacked lines it stops a two- or three-line name
+              from growing down into the type below it.
+     A one-word name is therefore as big as the tile is wide; a stacked one is
+     as big as the clear space allows. */
+  font-size: min(
+    100cqi * var(--script-fit, 0.82) / var(--script-w, 5),
+    var(--script-h, 40cqi) / var(--script-lines, 1)
+  );
+  line-height: 0.92;
+  white-space: nowrap;
+}
+
+/* The mix card's metadata is laid over the lower ~60% of its own cover, so the
+   mark takes the picture above it: centred there by the padding, bounded by
+   --script-h. The resident portrait carries its name in a body block BELOW the
+   photo, so the whole photo is clear and the mark gets almost all of it. */
+/* The mark is centred in the CLEAR part of the tile — the artwork above the
+   plate — so both numbers below have to track the plate's real height.
+
+   ⚠️ That height is very nearly constant in PIXELS (two fixed paddings, one
+   title line, one 12px gap, one 34px control row) while the tile itself scales
+   with the column. A percentage is the wrong unit twice over: `padding-bottom`
+   resolves percentages against the WIDTH, and the width is exactly what the
+   plate does not follow. At six columns 46% happened to land near the plate; in
+   the one-column phone layout the same 46% was 183px against a ~97px plate and
+   pushed the mark 43px too high, leaving a hole above the title.
+
+   So state the plate in the units it is actually made of. 95px = 14 top pad +
+   12 gap + 12 gap + 42 control row + 15 bottom pad; then the title's own clamp
+   times its 1.15 line-height, and the artist line (13px at 1.2). The control
+   row is 42 because that is .play-circle--sm — the download and share buttons
+   beside it are smaller (34, and 30 below 480px) and never set the row's
+   height. Measured, not assumed: an earlier pass guessed 34 and left the mark
+   sitting 4px low at every width. */
+.mix-card { --mix-plate-h: calc(95px + 1.15 * clamp(19px, 1.6vw, 26px) + 1.2 * 13px); }
+
+/* ⚠️ THE MARK IS OFF ON MIX CARDS — paused, not deleted.
+   The card now credits its artist with the small .mix-card-artist line under
+   the title instead. Everything the mark needs is still here and still live on
+   the residents page (.resident-card-photo .cover-script, below).
+
+   TO BRING IT BACK:
+     1. un-comment the rule immediately below;
+     2. lib/WebsitePageGenerator.cjs — re-add `coverScriptHtml(entry.artistName)`
+        to mixCardHtml, after the cover anchor's imageHtml(...) (residentCardHtml
+        still calls it, so copy that line);
+     3. decide whether .mix-card-artist stays. The mark and the link say the
+        same thing, and carrying both is the layout the mark was removed from.
+   The --mix-plate-h maths above is kept current for exactly this reason: the
+   mark is centred in the artwork ABOVE the plate, so it needs the plate's real
+   height the moment it returns.
+
+.mix-card-cover .cover-script {
+  padding-bottom: var(--mix-plate-h);
+  --script-h: calc(122cqi - var(--mix-plate-h) - 36px);
+}
+*/
+.resident-card-photo .cover-script { --script-h: 74cqi; }
+
+/* No container queries (pre-2023 engines): the fit maths cannot run, and a mark
+   at an arbitrary size is worse than none, so the tile renders as it did. */
+@supports not (font-size: 1cqi) {
+  .cover-script { display: none; }
 }
 
 /* ==========================================================================
@@ -618,7 +1151,7 @@ ul { list-style: none; }
   border-bottom: 1px solid var(--hairline);
   transition: background 0.2s ease;
 }
-.catalog-row:hover { background: rgba(255, 255, 255, 0.025); }
+.catalog-row:hover { background: var(--veil-hover); }
 .catalog-row-number {
   font-size: 15px;
   font-weight: 700;
@@ -694,13 +1227,14 @@ ul { list-style: none; }
   background: var(--bg-card);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card-rest);
   overflow: hidden;
   transition: transform 0.4s var(--ease-out-expo), border-color 0.4s var(--ease-out-expo), box-shadow 0.4s var(--ease-out-expo);
 }
 .resident-card:hover {
   transform: translateY(-4px);
-  border-color: var(--hairline-red);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 24px rgba(193, 18, 31, 0.12);
+  border-color: var(--hairline-accent);
+  box-shadow: var(--shadow-card-hover);
 }
 .resident-card-photo {
   aspect-ratio: 1 / 1.05;
@@ -710,7 +1244,7 @@ ul { list-style: none; }
 }
 .resident-card-photo img, .resident-card-photo .cover-fallback {
   width: 100%; height: 100%; object-fit: cover;
-  filter: contrast(1.05) saturate(1.02);
+  filter: var(--img-filter);
   transition: transform 0.6s var(--ease-out-expo);
 }
 .resident-card:hover .resident-card-photo img { transform: scale(1.04); }
@@ -718,7 +1252,7 @@ ul { list-style: none; }
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 55%, rgba(10, 6, 6, 0.55));
+  background: var(--portrait-scrim);
   pointer-events: none;
 }
 .resident-card-body { padding: 14px 14px 16px; }
@@ -759,8 +1293,8 @@ ul { list-style: none; }
 #artist-detail-portrait {
   position: relative;
   border-radius: var(--radius-frame);
-  border: 1px solid var(--hairline-red);
-  box-shadow: 0 0 34px rgba(193, 18, 31, 0.14), 0 20px 48px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--hairline-accent);
+  box-shadow: var(--shadow-portrait);
 }
 #artist-detail-portrait .hero-image-clip {
   position: relative;
@@ -771,16 +1305,23 @@ ul { list-style: none; }
 }
 #artist-detail-portrait img:not(#artist-detail-portrait-logo), #artist-detail-portrait .cover-fallback {
   width: 100%; height: 100%; object-fit: cover;
-  filter: contrast(1.06) saturate(1.05);
+  filter: var(--img-filter-hero);
 }
+/* Centred and sized to fit WHOLE. This sits inside .hero-image-clip, which is
+   overflow:hidden, so the old `left:-4%; width:108%` bled 4% past each edge and
+   the clip ate it — measured 16.1px off the left, which cropped the leading "U"
+   of UNDERGROUND on every artist page.
+   The mark is 1773×198 (8.95:1), and rotating it 4° widens its footprint to
+   W·cos4° + (W/8.95)·sin4° ≈ W·1.005 — so 92% leaves ~14px of air on each side
+   at the 378px rendered size and the full lockup always lands inside. */
 #artist-detail-portrait-logo {
   position: absolute;
   top: 8%;
-  left: -4%;
-  width: 108%;
+  left: 50%;
+  width: 92%;
   height: auto;
-  transform: rotate(4deg);
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
+  transform: translateX(-50%) rotate(4deg);
+  filter: var(--shadow-logo);
   pointer-events: none;
   z-index: 2;
 }
@@ -861,8 +1402,8 @@ ul { list-style: none; }
 }
 #about-contribute-cta:hover {
   background: var(--accent);
-  color: #fff;
-  box-shadow: 0 0 24px rgba(224, 30, 43, 0.4);
+  color: var(--on-accent);
+  box-shadow: 0 0 24px var(--accent-glow-soft);
 }
 #about-contribute-cta:active { transform: scale(0.97); }
 
@@ -882,13 +1423,13 @@ ul { list-style: none; }
   background: var(--bg-panel);
   transition: transform 0.4s var(--ease-out-expo), border-color 0.4s var(--ease-out-expo);
 }
-.flyer-grid-item:hover { transform: translateY(-4px); border-color: var(--hairline-red); }
+.flyer-grid-item:hover { transform: translateY(-4px); border-color: var(--hairline-accent); }
 
 /* ==========================================================================
    Footer
    ========================================================================== */
 #site-footer {
-  border-top: 1px solid var(--hairline-red);
+  border-top: 1px solid var(--hairline-accent);
   margin-top: clamp(30px, 5vw, 64px);
   padding: 30px 0 40px;
 }
@@ -902,7 +1443,8 @@ ul { list-style: none; }
   justify-content: space-between;
   gap: 16px 32px;
 }
-.footer-wordmark { width: clamp(130px, 40vw, 273px); height: auto; display: block; }
+/* The footer's barcode lockup was removed; the tagline is the brand block's
+   only child now, so it carries no top offset of its own. */
 .footer-tagline {
   font-size: 12.5px;
   letter-spacing: 0.16em;
@@ -911,7 +1453,6 @@ ul { list-style: none; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 6px;
 }
 .footer-links { display: flex; flex-wrap: wrap; gap: 10px 22px; }
 .footer-links a {
@@ -925,8 +1466,6 @@ ul { list-style: none; }
   #site-footer { padding: 36px 0 44px; }
   #site-footer-inner { flex-direction: column; gap: 32px; }
   #footer-brand-block { display: flex; flex-direction: column; align-items: center; width: 100%; }
-  .footer-wordmark { width: 100%; }
-  .footer-tagline { margin-top: 12px; }
   .footer-links { width: 100%; justify-content: center; gap: 12px 22px; }
 }
 
@@ -938,11 +1477,11 @@ ul { list-style: none; }
   left: 0; right: 0; bottom: 0;
   z-index: 1000;
   height: var(--player-bar-height);
-  background: rgba(12, 7, 7, 0.96);
+  background: var(--scrim-player);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border-top: 1px solid var(--hairline-red);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--hairline-accent);
+  box-shadow: inset 0 1px 0 var(--veil-inset-strong);
   display: grid;
   grid-template-columns: minmax(180px, 320px) auto minmax(200px, 1fr) auto auto;
   align-items: center;
@@ -1000,7 +1539,7 @@ ul { list-style: none; }
   width: clamp(70px, 8vw, 120px);
   height: 3px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--track-empty-strong);
   outline: none;
 }
 #volume-slider::-webkit-slider-thumb {
@@ -1020,6 +1559,47 @@ ul { list-style: none; }
 #player-bar-menu-btn { color: var(--text-secondary); display: inline-flex; padding: 6px; }
 #player-bar-menu-btn:hover { color: var(--text-primary); }
 #persistent-player-bar.is-idle #player-bar-title { color: var(--text-muted); font-weight: 500; }
+
+/* --- primed state -------------------------------------------------------
+   The bar carries the "resume at 0:52" / "shared link from 1:23" offer that
+   used to be a floating slab over the grid. Nothing is added to the page: the
+   bar is already here, and its idle slot ("Select a mix to play") is replaced
+   by the queued track until the visitor takes it or plays something else.
+   The whole affordance is one muted line plus a slow ring on the play button —
+   an indicator, not an announcement. */
+.player-bar-primed-label {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+/* the play button is the only thing to do here, so it gets the one cue —
+   a slow ring, not a colour change, so it reads as "waiting" not "error" */
+#persistent-player-bar.is-primed #player-bar-play {
+  position: relative;
+  border-color: var(--accent-bright);
+}
+#persistent-player-bar.is-primed #player-bar-play::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-bright);
+  opacity: 0;
+  animation: primed-ring 2.6s var(--ease-out-expo) infinite;
+  pointer-events: none;
+}
+@keyframes primed-ring {
+  0%   { transform: scale(0.9); opacity: 0; }
+  35%  { opacity: 0.55; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* the global reduced-motion rule already kills the animation; without it the
+     ring would sit at opacity 0 and the cue would vanish entirely, so pin it
+     to a static ring instead */
+  #persistent-player-bar.is-primed #player-bar-play::after { opacity: 0.4; }
+}
 
 /* breathing live-dot while audio is playing */
 #player-bar-title { position: relative; }
@@ -1064,7 +1644,7 @@ ul { list-style: none; }
   position: fixed;
   inset: 0;
   z-index: 1500;
-  background: rgba(8, 5, 5, 0.97);
+  background: var(--scrim-search);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: none;
@@ -1152,8 +1732,8 @@ ul { list-style: none; }
   padding: 5px 10px;
   border-radius: 7px;
   border: 1px solid var(--hairline);
-  background: rgba(10, 6, 6, 0.92);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  background: var(--scrim-panel);
+  box-shadow: var(--shadow-panel);
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -1165,26 +1745,70 @@ ul { list-style: none; }
      real Retry/Download action) opts back in, below */
   pointer-events: none;
 }
-.player-status-region.is-buffering,
-.player-status-region.is-reconnecting,
-.player-status-region.is-seeking,
+/* TRANSIENT STATES SHOW NO BOX.
+   Starting / buffering / seeking / reconnecting used to float a pill — over the
+   hero waveform, and over the page above the player bar, where it covered the
+   card grid. They are now expressed by the thing they are about: the waveform
+   breathes while it waits. Nothing is added to the page, nothing moves, and no
+   layout shifts when the state clears.
+   This costs screen readers NOTHING: the announcements live in separate
+   `aria-live` nodes (#player-bar-status-live, #featured-waveform-status-live)
+   that sit OUTSIDE this element, so hiding the pill never touches them.
+   Only `.is-failed` — the terminal state with a real decision — still renders,
+   and it is backed by the dialog. */
 .player-status-region.is-failed {
   display: inline-flex;
 }
+
+@keyframes wave-waiting {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.42; }
+}
+#featured-waveform:has(.player-status-region.is-starting) canvas,
+#featured-waveform:has(.player-status-region.is-buffering) canvas,
+#featured-waveform:has(.player-status-region.is-seeking) canvas,
+#featured-waveform:has(.player-status-region.is-reconnecting) canvas,
+#player-bar-wave-wrap:has(.player-status-region.is-starting) canvas,
+#player-bar-wave-wrap:has(.player-status-region.is-buffering) canvas,
+#player-bar-wave-wrap:has(.player-status-region.is-seeking) canvas,
+#player-bar-wave-wrap:has(.player-status-region.is-reconnecting) canvas {
+  animation: wave-waiting 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* the global reduced-motion rule kills the animation, which would leave no
+     cue at all — hold the waveform at the dimmed end instead */
+  #featured-waveform:has(.player-status-region.is-starting) canvas,
+  #featured-waveform:has(.player-status-region.is-buffering) canvas,
+  #featured-waveform:has(.player-status-region.is-seeking) canvas,
+  #featured-waveform:has(.player-status-region.is-reconnecting) canvas,
+  #player-bar-wave-wrap:has(.player-status-region.is-starting) canvas,
+  #player-bar-wave-wrap:has(.player-status-region.is-buffering) canvas,
+  #player-bar-wave-wrap:has(.player-status-region.is-seeking) canvas,
+  #player-bar-wave-wrap:has(.player-status-region.is-reconnecting) canvas {
+    opacity: 0.55;
+  }
+}
 .player-status-region.is-failed {
   border-color: var(--accent-bright);
-  background: rgba(193, 18, 31, 0.14);
+  background: var(--accent-veil-strong);
   pointer-events: auto;
 }
 
 /* player bar: pill floats just above the bar and spans the waveform
    column's own width — never widens the fixed 5-column bar grid, never
    changes the bar's fixed height, no layout shift on any state change */
+/* Sits INSIDE the bar's waveform column. It used to be `bottom: calc(100% + 8px)`
+   — i.e. floating above the whole player bar, full width, directly over the card
+   grid, which is exactly the "extra element parked on the page" pattern being
+   removed. Playback has failed at this point, so covering the waveform it
+   belongs to costs nothing. */
 #player-bar-status-region {
-  left: 0;
-  right: 0;
-  bottom: calc(100% + 8px);
-  justify-content: center;
+  left: auto;
+  right: 6px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  max-width: calc(100% - 12px);
 }
 
 /* hero: compact corner badge inside the waveform's own box — the row's
@@ -1232,7 +1856,7 @@ ul { list-style: none; }
   background: transparent;
   transition: background 0.2s ease, color 0.2s ease, transform 0.15s var(--ease-out-expo);
 }
-.player-status-retry-button:hover { background: var(--accent); color: #fff; }
+.player-status-retry-button:hover { background: var(--accent); color: var(--on-accent); }
 .player-status-retry-button:active { transform: scale(0.95); }
 
 /* non-seekable waveform affordance — applied by the integrator directly to
@@ -1251,7 +1875,7 @@ ul { list-style: none; }
     padding: 4px 8px;
     gap: 6px;
   }
-  #player-bar-status-region { bottom: calc(100% + 6px); }
+  #player-bar-status-region { right: 4px; }
   .player-status-retry-button { padding: 3px 9px; font-size: 10px; }
 }
 
@@ -1289,9 +1913,771 @@ ul { list-style: none; }
    .player-status-region / .player-status-icon selectors, so both apply to
    this state automatically; nothing to add for either.
    ========================================================================== */
+/* `starting` is a transient state, so it follows the same rule as
+   buffering/seeking/reconnecting: no pill. It is announced to screen readers by
+   #player-bar-status-live, and shown visually by the waveform's `wave-waiting`
+   breathe (see "Transient states show no box" above). This rule previously set
+   `display: inline-flex` and, sitting later in the file, silently won over that
+   block — which is why the pill kept appearing after it was supposedly hidden. */
 .player-status-region.is-starting {
-  display: inline-flex;
+  display: none;
 }
-.is-starting .player-status-icon {
-  animation: live-dot-breathe 1.8s ease-in-out infinite;
+
+/* ==========================================================================
+   Shared dialog — the ONLY interruption left
+   Markup is static in templates/partials/modal.html (never injected), so it is
+   styled here like everything else. Reserved for decisions the visitor has to
+   make: a mix that would not load (retry / download) and a blocked clipboard
+   (here is the link, copy it). Transient playback states stay as the inline
+   pill on the waveform, and the resume / shared-link offers live in the player
+   bar — see "primed state". Nothing else is allowed to interrupt.
+
+   Note: padding lives on #ue-dialog-panel, never on #ue-dialog. The controller
+   treats "press and release on the dialog element" as a backdrop click, so
+   padding on the dialog would become a dead strip that looks like the panel
+   but closes it.
+   ========================================================================== */
+#ue-dialog {
+  padding: 0;
+  border: none;
+  background: transparent;
+  max-width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  color: var(--text-primary);
+  overflow: visible;
+}
+#ue-dialog::backdrop {
+  background: var(--scrim-backdrop);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+#ue-dialog-panel {
+  position: relative;
+  background: var(--bg-elevated);
+  border: 1px solid var(--hairline-accent);
+  border-radius: var(--radius-frame);
+  box-shadow: var(--shadow-float);
+  padding: clamp(22px, 4vw, 30px);
+  font-family: var(--font-body);
+}
+#ue-dialog-title {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: clamp(20px, 3vw, 26px);
+  line-height: 1.15;
+  color: var(--text-primary);
+  padding-right: 28px; /* clear of the ✕ */
+  text-wrap: balance;
+}
+#ue-dialog-message {
+  margin-top: 10px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  max-width: 48ch;
+}
+#ue-dialog-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: color 0.2s ease, background 0.2s ease;
+}
+#ue-dialog-close:hover { color: var(--text-primary); background: var(--veil-hover); }
+#ue-dialog-close:active { transform: scale(0.92); transition-duration: 0.1s; }
+.ue-dialog-close-glyph { font-size: 15px; line-height: 1; }
+
+/* the copy fallback's field — monospace, because what it holds is a URL the
+   visitor is about to select and copy */
+#ue-dialog-copy-input {
+  /* deliberately NO `display` here. The partial hides this field with the
+     `hidden` attribute, and an id selector setting `display: block`
+     out-specifies the UA's `[hidden] { display: none }` — which printed an
+     empty input in every dialog that has no copyText. Only the
+     [data-copy="on"] rule below is allowed to make it visible. */
+  width: 100%;
+  margin-top: 18px;
+  padding: 11px 12px;
+  /* --bg-base, NOT --bg-panel: in light theme --bg-panel is the dark image
+     well (#1c1714), which inside a white panel would print dark ink on a dark
+     field. --bg-base reads as a recess against --bg-elevated in both themes. */
+  background: var(--bg-base);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+}
+#ue-dialog[data-copy="on"] #ue-dialog-copy-input { display: block; }
+
+#ue-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+#ue-dialog[data-actions="0"] #ue-dialog-actions { display: none; margin-top: 0; }
+.ue-dialog-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 22px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-family: var(--font-body);
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s var(--ease-out-expo);
+}
+.ue-dialog-action:active { transform: scale(0.97); transition-duration: 0.1s; }
+.ue-dialog-action--primary {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--on-accent);
+}
+.ue-dialog-action--primary:hover { background: var(--accent-bright); border-color: var(--accent-bright); }
+.ue-dialog-action--quiet {
+  background: transparent;
+  border: 1px solid var(--hairline-accent);
+  color: var(--text-secondary);
+}
+.ue-dialog-action--quiet:hover { color: var(--text-primary); border-color: var(--accent-bright); }
+
+@media (max-width: 540px) {
+  /* full-width panel on phones, actions stack and fill so neither is a
+     hard-to-hit pill at the bottom of a small screen */
+  #ue-dialog { max-width: calc(100vw - 20px); }
+  #ue-dialog-actions { flex-direction: column-reverse; align-items: stretch; }
+  .ue-dialog-action { width: 100%; }
+}
+
+/* ==========================================================================
+   Share modal — one share widget for the whole site
+   Markup is static in templates/partials/share-modal.html (never injected),
+   opened by every share affordance: the icon on a mix card, the icon on a
+   catalog row, the hero's share button, the player bar.
+
+   Reading order IS priority order, and the layout enforces it: the film first
+   (it is the thing that gets posted), then the two primary actions, then the
+   link itself, then the file downloads, and the platform chips last because
+   they are the least-used path.
+
+   Same backdrop-click rule as #ue-dialog: padding lives on #ue-share-panel,
+   never on #ue-share-dialog.
+   ========================================================================== */
+#ue-share-dialog {
+  padding: 0;
+  border: none;
+  background: transparent;
+  /* Desktop is a real two-column panel (the 720px rule below); the narrow
+     single column is the PHONE layout, not the default everywhere. */
+  max-width: min(800px, calc(100vw - 48px));
+  max-height: calc(100dvh - 24px);
+  color: var(--text-primary);
+  overflow: visible;
+}
+#ue-share-dialog::backdrop {
+  background: var(--scrim-backdrop);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* The controller shows and hides most of this panel's controls with the
+   `hidden` attribute (no video, no timestamp, no native share sheet). An
+   author `display` rule beats the UA's `[hidden] { display: none }` no matter
+   how specific it is — the exact trap #ue-dialog-copy-input documents above —
+   so this one rule re-asserts it for the whole subtree, and every rule below
+   is then free to set whatever display it needs. */
+#ue-share-dialog [hidden] { display: none !important; }
+
+#ue-share-panel {
+  position: relative;
+  background: var(--bg-elevated);
+  border: 1px solid var(--hairline-accent);
+  border-radius: var(--radius-frame);
+  box-shadow: var(--shadow-float);
+  padding: clamp(18px, 4vw, 26px);
+  font-family: var(--font-body);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}
+
+#ue-share-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--text-muted);
+  z-index: 2;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+#ue-share-close:hover { color: var(--text-primary); background: var(--veil-hover); }
+#ue-share-close:active { transform: scale(0.92); transition-duration: 0.1s; }
+.ue-share-close-glyph { font-size: 15px; line-height: 1; }
+
+#ue-share-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-right: 34px; /* clear of the ✕ */
+}
+
+/* The preview. Square because every generated promo is 720x720; the still sits
+   underneath, so a refused autoplay, Save-Data or reduced-motion leaves the
+   artwork rather than a black box. */
+#ue-share-media {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  margin-top: 14px;
+  margin-inline: auto;
+  aspect-ratio: 1 / 1;
+  max-height: min(42vh, 300px);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-base);
+  border: 1px solid var(--hairline);
+}
+
+#ue-share-art,
+#ue-share-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+#ue-share-video { z-index: 1; }
+#ue-share-sound {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  background: var(--scrim-panel);
+  color: var(--text-primary);
+}
+#ue-share-sound .icon-svg { width: 14px; height: 14px; }
+#ue-share-sound .icon-unmuted,
+#ue-share-sound[aria-pressed="true"] .icon-muted { display: none; }
+#ue-share-sound[aria-pressed="true"] .icon-unmuted { display: inline-block; }
+
+#ue-share-title {
+  margin-top: 16px;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: clamp(18px, 3vw, 22px);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+#ue-share-artist {
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* Primary actions. "Share…" is first and filled because on a phone it is the
+   one-tap route to Instagram, TikTok and Messages; it is absent on desktop,
+   where "Copy link" then takes the lead position on its own. */
+#ue-share-primary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.ue-share-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline-accent);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s var(--ease-out-expo);
+}
+.ue-share-action:hover { color: var(--text-primary); border-color: var(--accent-bright); }
+.ue-share-action:active { transform: scale(0.97); transition-duration: 0.1s; }
+.ue-share-action--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.ue-share-action--primary:hover {
+  background: var(--accent-bright);
+  border-color: var(--accent-bright);
+  color: var(--on-accent);
+}
+.ue-share-action.is-loading { opacity: 0.6; pointer-events: none; }
+
+/* Which address gets shared: the permanent Arweave one, or the host the
+   listener is on. A two-option switch rather than a checkbox, because neither
+   is a modifier of the other — they are two different links. */
+#ue-share-host {
+  display: inline-flex;
+  gap: 2px;
+  margin-top: 14px;
+  padding: 2px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--bg-base);
+}
+.ue-share-host-opt {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.ue-share-host-opt:hover { color: var(--text-primary); }
+.ue-share-host-opt[aria-pressed="true"] {
+  background: var(--accent-veil-strong);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px var(--hairline-accent);
+}
+
+#ue-share-note {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+/* The link, always visible. It says what is about to be sent, and it is the
+   recovery path when the clipboard is blocked — nothing to open, just select. */
+#ue-share-url {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg-base);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+}
+
+#ue-share-at {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+#ue-share-at-input { accent-color: var(--accent-bright); width: 15px; height: 15px; }
+#ue-share-at-time { color: var(--text-primary); }
+
+#ue-share-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+#ue-share-hint {
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Platform chips, deliberately last and deliberately quiet: they convert far
+   worse than the share sheet, and on a phone they are the wrong answer. */
+#ue-share-targets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hairline);
+}
+.ue-share-target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--hairline);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.ue-share-target:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-bright);
+  background: var(--accent-veil);
+}
+
+#ue-share-status {
+  margin-top: 12px;
+  min-height: 1em;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+/* Two columns from 720px: the film on the left at a size worth looking at,
+   every control on the right. Below that the grid collapses to one column and
+   the media re-centres — the phone layout the panel started as.
+
+   This block sits AFTER every base rule above on purpose: the overrides here
+   are same-specificity id selectors, so source order is the only thing that
+   decides them. Moved earlier in the file, the single-column rules would
+   silently win at desktop width. */
+@media (min-width: 720px) {
+  #ue-share-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+    gap: clamp(22px, 3vw, 34px);
+    align-items: start;
+    padding: clamp(26px, 3vw, 34px);
+  }
+  #ue-share-media {
+    margin-top: 0;
+    max-width: none;
+    max-height: none;
+  }
+  #ue-share-body { min-width: 0; }
+  #ue-share-eyebrow { padding-right: 34px; }
+  #ue-share-title { margin-top: 8px; font-size: clamp(22px, 2.2vw, 28px); }
+  #ue-share-primary .ue-share-action { flex: 0 1 auto; min-width: 148px; }
+  /* the platform chips stay three-up: six across this column would shrink
+     TELEGRAM and WHATSAPP past the point of reading */
+}
+
+@media (max-width: 540px) {
+  #ue-share-dialog { max-width: calc(100vw - 16px); }
+  #ue-share-media { max-width: 240px; max-height: 34vh; }
+  /* the two primaries fill the width and stack: a phone share is a thumb
+     reaching the bottom of the panel, not a pair of half-width pills */
+  #ue-share-primary { flex-direction: column; }
+  .ue-share-action { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ue-share-action,
+  .ue-share-target,
+  #ue-share-close { transition: none; }
+  .ue-share-action:active { transform: none; }
+}
+
+/* ==========================================================================
+   Light theme — warm ink on paper, same brand red, opt-in
+   Activated by `<html data-theme="light">`, set pre-paint by the inline
+   script in templates/partials/head.html from localStorage['ue-theme'].
+   Absence of the attribute is dark, so no-JS and first-visit both get the
+   brand default and there is no flash.
+
+   This is the same identity re-grounded on paper, NOT a monochrome inversion
+   of it. Dark is three things — near-black, warm ink, oxblood — and light is
+   the same three: four paper tones carrying dark's own surface relationship
+   (wells recess below the page, cards rise above it), warm-biased inks, and
+   the identical brand red as the highlight. What inverts is the DIRECTION of
+   emphasis, not the palette: on black, emphasis is lighter; on paper, deeper.
+   Imagery alone stays greyscale, so the red is the only chroma on the page and
+   the skyline thumbnails (already monochrome, treatment v2) read as one
+   material with it; the thumbnails' own near-black mass is the point here — on
+   paper they finally have somewhere to sit, which they never did on #0a0606.
+
+   The CRT texture is keyed off the thumbnails' own treatment spec
+   (config/skyline-thumbnail-treatment.json: scanlinePitch 8, scanlineDepth
+   0.38, grainStrength 12, contrast 1.3) so page texture and image texture
+   agree instead of competing. Page pitch is 3px, not 8: the thumbnail's 8px
+   pitch is at source resolution and lands near 2-3 CSS px once a 1200px-wide
+   image is drawn into a ~300px card.
+   ========================================================================== */
+:root[data-theme="light"] {
+  /* THE TONAL LADDER — five steps, not four whites.
+       #ffffff  elevated   popovers, the highest plane
+       #f8f6f4  card       raised above the page
+       #e8e4e0  page       the ground
+       #1c1714  well       image wells — actual holes, not grey squares
+       #0a0606  chrome     header / player bar / overlay (see the dark island;
+                           these are dark theme's own chrome values verbatim)
+     Two earlier passes failed here: all four surfaces within 3% of each other,
+     so nothing could sit on top of anything. Depth on paper comes from having
+     genuinely dark values in the palette, not from more shades of off-white.
+     The image wells going dark is the load-bearing move — the skyline
+     thumbnails are near-black, so a dark well is the same material as the
+     photograph instead of a light frame fighting it. */
+  --bg-base: #e8e4e0;
+  --bg-panel: #1c1714;
+  --bg-card: #f8f6f4;
+  --bg-elevated: #ffffff;
+
+  /* THE RED, AND WHERE IT IS ALLOWED TO LIVE.
+     Red over paper is the pink problem: every low-alpha red wash (a 7% veil, a
+     13% hover, a 16% ring, a 12% hero gradient) composites toward pink on a
+     light ground, and enough of them together tint the whole page. So in this
+     theme red NEVER touches paper as a wash. It appears two ways only:
+       1. at full strength on the DARK chrome, where it is simply red (see the
+          dark island block below — those surfaces use the brand values);
+       2. as deep oxblood TYPE on paper, dark enough to read as ink-with-blood
+          rather than as a pink accent.
+     Every wash token below is therefore neutral ink, not red. */
+  --accent: #8c0f18;
+  --accent-bright: #6e0c13;
+  --accent-dim: #7b6a64;
+  --on-accent: #f6f3f0;
+  /* the about-page receipt strip inverts with everything else: a near-black
+     ticket on paper, rather than paper-on-paper, which would vanish */
+  --paper: #1a1310;
+  --paper-ink: #ece6df;
+  /* inks carry the same warm bias dark's do (#f2ece4 / #b7aaa3 / #8a7d77) —
+     pure neutral greys on pure neutral paper were half the flatness */
+  --text-primary: #14100e;
+  --text-secondary: #4a423e;
+  --text-muted: #655c57;
+  --hairline: rgba(22, 17, 14, 0.2);
+  --hairline-accent: rgba(22, 17, 14, 0.5);
+
+  /* CHROME IS DARK IN BOTH THEMES. The header, player bar and search overlay
+     stay near-black on the paper page — which is where most of the new depth
+     comes from, and what lets the brand marks and the red keep their native
+     colours instead of being inverted or greyscaled into something else. */
+  --scrim-header: rgba(10, 6, 6, 0.94);
+  --scrim-player: rgba(12, 7, 7, 0.96);
+  --scrim-search: rgba(8, 5, 5, 0.97);
+  --scrim-panel: rgba(248, 246, 244, 0.96);
+  /* the dialog dims paper toward the page's own brown-black, not toward grey */
+  --scrim-backdrop: rgba(22, 17, 14, 0.5);
+
+  --veil-hover: rgba(22, 17, 14, 0.05);
+  --veil-inset: rgba(255, 255, 255, 0.06);
+  --veil-inset-strong: rgba(255, 255, 255, 0.07);
+  --track-empty: rgba(22, 17, 14, 0.2);
+  --track-empty-strong: rgba(22, 17, 14, 0.24);
+
+  /* neutral ink washes — see the note above on why these are not red */
+  --accent-veil: rgba(22, 17, 14, 0.05);
+  --accent-veil-strong: rgba(22, 17, 14, 0.1);
+  --accent-glow: rgba(22, 17, 14, 0.3);
+  --accent-glow-soft: rgba(22, 17, 14, 0.16);
+
+  /* Shadows carry the page's own brown-
+     black (22,17,14), never pure black, and every one is a CONTACT shadow plus
+     a soft one — the 1-2px contact layer is what makes an element sit on the
+     paper rather than float above a grey cloud. The hover ring is ink now, not
+     red: a 16% red ring on white was one of the pink sources. */
+  --shadow-card-rest: 0 1px 2px rgba(22, 17, 14, 0.07), 0 8px 20px rgba(22, 17, 14, 0.08);
+  --shadow-card-hover: 0 2px 6px rgba(22, 17, 14, 0.1), 0 18px 38px rgba(22, 17, 14, 0.18), 0 0 0 1px rgba(22, 17, 14, 0.14);
+  --shadow-frame: 0 0 0 1px rgba(22, 17, 14, 0.1), 0 2px 8px rgba(22, 17, 14, 0.1), 0 26px 56px rgba(22, 17, 14, 0.2);
+  --shadow-portrait: 0 2px 8px rgba(22, 17, 14, 0.1), 0 20px 48px rgba(22, 17, 14, 0.21);
+  --shadow-panel: 0 1px 2px rgba(22, 17, 14, 0.1), 0 10px 24px rgba(22, 17, 14, 0.16);
+  --shadow-float: 0 2px 6px rgba(22, 17, 14, 0.11), 0 18px 40px rgba(22, 17, 14, 0.2);
+  --shadow-logo: drop-shadow(0 3px 8px rgba(22, 17, 14, 0.32));
+  --text-shadow-title: none;
+
+  /* artwork: greyscale + a contrast lift. The mix thumbnails measure ~56/255
+     mean luminance by design; against paper that mass is the composition, so
+     it is lifted rather than scrimmed. */
+  --img-filter: grayscale(1) contrast(1.14);
+  --img-filter-hero: grayscale(1) contrast(1.08);
+  /* 0.6, against dark's 0.32: the mix number printed over this is forced white
+     (it sits on artwork), and this scrim is the only thing guaranteeing it a
+     ground when a thumbnail is missing or still loading. */
+  /* the card's ink is light in BOTH themes (it sits on artwork, not on paper),
+     so this scrim stays dark here too — see the overlay-card note */
+  --cover-scrim: linear-gradient(180deg, rgba(12, 9, 8, 0.5) 0%, transparent 22%, transparent 50%, rgba(8, 6, 5, 0.86) 100%);
+  /* no red gradient here — dark can wash its hero in 14% red because the
+     result stays dark; over a light-keyed image the same wash reads pink */
+  --hero-scrim: linear-gradient(0deg, rgba(12, 9, 8, 0.34), transparent 46%);
+  --portrait-scrim: linear-gradient(180deg, transparent 50%, rgba(12, 9, 8, 0.55));
+
+  /* dark draws the waveform as bright cream on near-black (0.82/0.55 alpha);
+     the mirror on paper needs comparable ink weight or the scrubber reads as
+     an empty box — measured on the featured hero at 1440px, 0.28/0.14 was
+     invisible past arm's length */
+  /* these are the HERO waveform's values, on paper. The player-bar waveform
+     sits on the dark chrome and gets the brand values from the dark-island
+     block below — player.js resolves these per canvas, not off :root. */
+  --wave-played: #6e0c13;
+  --wave-unplayed: rgba(20, 15, 13, 0.6);
+  --wave-remaining: rgba(20, 15, 13, 0.5);
+
+  --grain-opacity: 0.11;
+  --grain-blend: multiply;
+  --scanline-opacity: 0.07;
+}
+
+/* --- the dark island ----------------------------------------------------
+   The chrome stays dark in light theme, so it re-declares the colour tokens on
+   its own subtree. Because every rule in this stylesheet reads tokens rather
+   than literals, that single block flips the header, mobile menu, player bar
+   and search overlay wholesale — text, icons, hairlines, waveforms, hover
+   washes — with no per-rule overrides. These are dark's own values, which is
+   the point: on these surfaces the brand red is simply red, the white wordmark
+   needs no inversion, and nothing composites toward pink.
+   (Custom properties inherit, so a canvas inside the player bar resolves the
+   --wave-* values from here — player.js reads the canvas, not :root.) */
+:root[data-theme="light"] #site-header,
+:root[data-theme="light"] #mobile-menu,
+:root[data-theme="light"] #persistent-player-bar,
+:root[data-theme="light"] #search-overlay {
+  /* Re-declaring the tokens is not enough on its own. `color` INHERITS, and
+     elements that never declare their own (e.g. #player-bar-title) inherit the
+     value computed on <body> — outside this island — so the token said
+     #f2ece4 while the text painted in paper ink on the dark bar. Setting
+     `color` here gives the island its own inheritance root. Any future
+     re-grounded region needs this line as well as the tokens. */
+  color: var(--text-primary);
+  --text-primary: #f2ece4;
+  --text-secondary: #b7aaa3;
+  --text-muted: #8a7d77;
+  --accent: #c1121f;
+  --accent-bright: #e01e2b;
+  --on-accent: #ffffff;
+  --hairline: rgba(255, 255, 255, 0.1);
+  --hairline-accent: rgba(193, 18, 31, 0.45);
+  --veil-hover: rgba(255, 255, 255, 0.04);
+  --track-empty: rgba(255, 255, 255, 0.18);
+  --track-empty-strong: rgba(255, 255, 255, 0.22);
+  --accent-veil: rgba(193, 18, 31, 0.08);
+  --accent-veil-strong: rgba(193, 18, 31, 0.14);
+  --accent-glow: rgba(224, 30, 43, 0.7);
+  --bg-elevated: #1c1212;
+  --wave-played: #e01e2b;
+  --wave-unplayed: rgba(242, 236, 228, 0.82);
+  --wave-remaining: rgba(154, 143, 138, 0.55);
+}
+
+/* The paper itself is lit, not a flat fill: light falls from the top and the
+   ground deepens toward the bottom edge, so the page has a direction before
+   any element is drawn on it. Two stops, ~4% total range — at the point where
+   you can consciously see it as a gradient it has gone too far. Fixed
+   attachment so the lighting belongs to the viewport, not to the scroll
+   position, which is what stops it from banding as you scroll a long catalog. */
+:root[data-theme="light"] body {
+  background-image:
+    radial-gradient(115% 70% at 50% 0%, rgba(255, 255, 255, 0.55), transparent 62%),
+    linear-gradient(180deg, transparent 55%, rgba(22, 17, 14, 0.05));
+  background-attachment: fixed;
+}
+
+/* --- light-theme structural corrections ---------------------------------
+   Rules whose dark-theme value is not a token, or whose token flips the
+   wrong way because the element sits on artwork rather than on the page. */
+
+/* mix number and any cover-borne label sit ON a near-black thumbnail in BOTH
+   themes, so they stay paper-white — following --text-primary here would
+   print black-on-black */
+:root[data-theme="light"] .mix-card-number { color: #ffffff; }
+
+/* The UE placeholder mark keeps its oxblood in both themes — it was greyscaled
+   while this theme had no hue at all, and now that red IS the highlight, a
+   missing cover showing the red mark is correct rather than a leak. */
+
+/* The HEADER wordmark now needs no filter at all — it is a white-on-transparent
+   PNG sitting on the dark header, exactly as in dark theme, red badge intact.
+   Removing that filter also removed a pink source: invert() sends the badge's
+   red to cyan, and the hue-rotate(180deg) that brought it back landed on a
+   dusty rose, not the brand red.
+   The footer lockup used to be the one mark left on paper, and the only one
+   that inverted; it has since been removed from the footer, so no mark does.
+   NOT #artist-detail-portrait-logo: that lockup is laid OVER the portrait
+   photograph, not over paper, so it stays white in both themes for the same
+   reason .mix-card-number does — inverting it prints dark type on a dark
+   image. Same trap, different element. */
+:root[data-theme="light"] #artist-detail-portrait-logo { filter: var(--shadow-logo); }
+
+/* The download button is the one place --on-accent met a WASH rather than a
+   fill: paper-coloured icon on a 10% ink veil is 1.17:1 — the icon, which is
+   the button's entire content, disappeared on hover. Fill it like
+   .play-circle:hover already does (16.85:1), which is also this theme's own
+   language: active = a solid black block with paper type. */
+:root[data-theme="light"] .download-btn:hover { background: var(--accent); }
+
+/* the playing indicator pulses red in BOTH themes now — it inherits
+   --accent-bright and needs no light-specific rule */
+
+/* Theme flip: a short crossfade on the large surfaces only, so switching
+   reads as the room's lights changing rather than as a page reload. Deliberately
+   NOT a global `* { transition: background-color }` — that would also re-time
+   every hover state, which already owns its own curve. Colour properties only:
+   nothing here animates layout. The file's global prefers-reduced-motion rule
+   already neutralises all of it with !important, so a reduced-motion visitor
+   gets the instant cut. */
+body,
+#site-header,
+#persistent-player-bar,
+#search-overlay,
+.mix-card,
+.resident-card,
+.catalog-row,
+.play-circle,
+.download-btn {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.22s;
+  transition-timing-function: var(--ease-out-expo);
+}
+/* the two texture layers carry their own, slightly slower fade so the CRT
+   ruling arrives just after the ground has changed, not with it */
+body::before, body::after {
+  transition: opacity 0.32s var(--ease-out-expo);
+}
+/* the hover/press transitions declared on these elements earlier in the file
+   are longer and more specific in intent; re-assert them so the theme-flip
+   timing above cannot flatten them */
+.mix-card, .resident-card {
+  transition-property: transform, border-color, box-shadow, background-color;
+  transition-duration: 0.4s;
+}
+.play-circle, .download-btn {
+  transition-property: background-color, color, border-color, transform;
+  transition-duration: 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* the scanline layer is static, so it stays; nothing here animates */
+  :root[data-theme="light"] body::before { opacity: var(--scanline-opacity); }
 }

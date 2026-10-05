@@ -9,19 +9,40 @@
    What this file does, on any existing artist/catalog page (no new pages,
    no path changes):
      1. `<page>.html?mix=<txid>[&t=<seconds>]` — on load, if `mix` names a
-        playable track ON THIS PAGE, scroll it into view, highlight it, and
-        show a small dismissible banner. Never autoplays. If `t` is present
-        the banner offers an explicit "Play from mm:ss" button that starts
-        playback through the real host bridge, gated on a user click.
+        playable track ON THIS PAGE, scroll it into view and outline it
+        with `.ue-links-deep-link-highlight`. That highlight IS the "this
+        is the mix you were linked to" signal — this module injects no
+        floating banner of its own (one was deleted: it covered the grid,
+        and it said nothing the highlight does not). The offer to start at
+        a shared timestamp goes to the persistent player bar instead, via
+        `window.uePlayerBar.prime({... startSec, label, source:'deep-link'})`
+        — an element already on screen, with nothing to dismiss. Priming
+        neither autoplays nor loads audio; playing is the listener pressing
+        the bar's own play button. A missing/refusing player bar is a quiet
+        no-op: the scroll + highlight still happen.
      2. On real user-started playback, mirrors the now-playing track's txid
         into the address bar via history.replaceState (never a reload,
         never pushState spam).
      3. Injects small "share this mix" icon buttons into the existing
         `.mix-card-actions` / `.catalog-row-actions` rows, and into the
         persistent player bar for whatever is currently playing (with a
-        "copy link at current time" option). Uses navigator.share when
-        available, else clipboard, else execCommand('copy'), else a
-        visible read-only input as a last resort.
+        "copy link at current time" option).
+
+        Those buttons open the SHARE MODAL — `window.ueShare.open({...})`,
+        static markup + inline controller in templates/partials/share-modal.html
+        — which is the share UI for the whole site (it also carries the mix's
+        promo film, the permaweb/site address switch and the platform intents).
+        Everything this file passes it comes off the card's own generated
+        markup: data-title/-artist/-img/-video/-page and the href.
+
+        The modal is optional, exactly like this module: an engine without
+        <dialog> never defines `window.ueShare`, and each caller then keeps the
+        original inline behavior below — navigator.share when available, else
+        clipboard, else execCommand('copy'); when every automatic path is
+        blocked the URL is handed to the shared centre-screen dialog
+        (`window.ueDialog.open({ copyText })`) so it stays selectable, and
+        absent that dialog it degrades to the platform's own `prompt()`.
+        A share never silently loses the link.
 
    Pure helpers (query parse/validate, URL build, time format, the anchor-
    match lookup, and the share-strategy cascade) are exported on the
@@ -247,11 +268,9 @@
 
   var STYLE_ID = 'ue-links-styles';
   var LIVE_REGION_ID = 'ue-links-announcer';
-  var BANNER_ID = 'ue-links-deep-link-banner';
   var HIGHLIGHT_CLASS = 'ue-links-deep-link-highlight';
   var PLAYER_BAR_SHARE_ID = 'ue-links-player-bar-share';
   var PLAYER_BAR_POPOVER_ID = 'ue-links-player-bar-popover';
-  var MANUAL_COPY_PANEL_ID = 'ue-links-manual-copy-panel';
   var WIRED_ATTR = 'data-ue-links-wired';
 
   function hasWindow() {
@@ -340,47 +359,28 @@
   function cssText() {
     return (
       '.ue-links-visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}' +
-      '.ue-links-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.08);background:transparent;color:#b7aaa3;cursor:pointer;flex:none;padding:0;transition:color .2s ease,border-color .2s ease,background .2s ease,transform .2s ease}' +
-      '.ue-links-icon-btn:hover,.ue-links-icon-btn:focus-visible{color:#fff;border-color:var(--accent-bright,#e01e2b);background:rgba(193,18,31,0.14)}' +
+      '.ue-links-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.5px solid var(--hairline,rgba(255,255,255,0.08));background:transparent;color:var(--text-secondary,#b7aaa3);cursor:pointer;flex:none;padding:0;transition:color .2s ease,border-color .2s ease,background .2s ease,transform .2s ease}' +
+      '.ue-links-icon-btn:hover,.ue-links-icon-btn:focus-visible{color:var(--text-primary,#fff);border-color:var(--accent-bright,#e01e2b);background:var(--accent-veil-strong,rgba(193,18,31,0.14))}' +
       '.ue-links-icon-btn:active{transform:scale(0.94)}' +
       '.ue-links-icon-btn[hidden]{display:none!important}' +
       '.ue-links-icon-svg{width:15px;height:15px;fill:currentColor}' +
       '#player-bar-volume{position:relative}' +
       '#ue-links-player-bar-share{margin-left:4px}' +
-      '.ue-links-popover{position:absolute;bottom:calc(100% + 10px);right:0;min-width:190px;background:var(--bg-panel,#140d0d);border:1px solid var(--hairline-red,rgba(193,18,31,0.45));border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,0.5);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:1100}' +
+      '.ue-links-popover{position:absolute;bottom:calc(100% + 10px);right:0;min-width:190px;background:var(--bg-elevated,#140d0d);border:1px solid var(--hairline-accent,rgba(193,18,31,0.45));border-radius:10px;box-shadow:var(--shadow-float,0 12px 30px rgba(0,0,0,0.5));padding:6px;display:flex;flex-direction:column;gap:2px;z-index:1100}' +
       '.ue-links-popover-item{display:block;width:100%;text-align:left;background:transparent;border:0;border-radius:6px;color:var(--text-primary,#f2ece4);font-family:inherit;font-size:12.5px;padding:8px 10px;cursor:pointer}' +
-      '.ue-links-popover-item:hover,.ue-links-popover-item:focus-visible{background:rgba(193,18,31,0.16);color:#fff}' +
-      '.ue-links-banner{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1200;max-width:min(560px,calc(100vw - 32px));display:flex;align-items:center;gap:12px;background:rgba(20,13,13,0.96);border:1px solid var(--hairline-red,rgba(193,18,31,0.45));border-radius:10px;padding:10px 14px;color:var(--text-primary,#f2ece4);font-size:13px;box-shadow:0 14px 34px rgba(0,0,0,0.5)}' +
-      '.ue-links-banner-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
-      '.ue-links-banner-actions{display:flex;align-items:center;gap:8px;flex:none}' +
-      '.ue-links-banner-play,.ue-links-banner-dismiss{border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-primary,#f2ece4);border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit}' +
-      '.ue-links-banner-play{border-color:var(--accent-bright,#e01e2b);color:#fff;background:var(--accent,#c1121f)}' +
-      '.ue-links-banner-play:hover{background:var(--accent-bright,#e01e2b)}' +
-      '.ue-links-banner-dismiss:hover{border-color:var(--accent-bright,#e01e2b);color:#fff}' +
+      '.ue-links-popover-item:hover,.ue-links-popover-item:focus-visible{background:var(--accent-veil-strong,rgba(193,18,31,0.16));color:var(--text-primary,#fff)}' +
+      /* The whole of this module's deep-link feedback: an outline on the
+         linked mix plus a single pulse. No fixed-position slab, nothing to
+         dismiss, nothing covering the grid. */
       '.ue-links-deep-link-highlight{outline:2px solid var(--accent-bright,#e01e2b);outline-offset:4px;border-radius:12px;animation:ue-links-highlight-pulse 1.8s ease-out 1}' +
-      '@keyframes ue-links-highlight-pulse{0%{box-shadow:0 0 0 0 rgba(224,30,43,0.45)}100%{box-shadow:0 0 0 16px rgba(224,30,43,0)}}' +
-      /* `top` (not `bottom`) on purpose: an inline style.top is set by
-         showManualCopyPanel() right below, positioned to clear the sticky
-         site nav (and any currently-shown deep-link banner) -- the same
-         mechanism showDeepLinkBanner() uses for its own top offset. This
-         panel used to be `bottom:100px`, which visually collided with
-         ue-resume.js's own "Resume Listening" bar (confirmed: both are
-         fixed, horizontally-centered, near-identical bottom offset -- see
-         the integration contract's cross-module UI-collision review). The
-         `top:14px` below is only a same-frame fallback in case the inline
-         style is ever not applied for some reason. */
-      '.ue-links-manual-copy-panel{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1200;display:flex;gap:8px;align-items:center;background:rgba(20,13,13,0.97);border:1px solid var(--hairline-red,rgba(193,18,31,0.45));border-radius:10px;padding:8px 10px;max-width:min(90vw,420px)}' +
-      '.ue-links-manual-copy-input{flex:1;min-width:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:6px;color:var(--text-primary,#f2ece4);font-family:var(--font-mono,monospace);font-size:11.5px;padding:6px 8px}' +
-      '.ue-links-manual-copy-close{border:0;background:transparent;color:#b7aaa3;cursor:pointer;font-size:12px;padding:4px 8px}' +
+      '@keyframes ue-links-highlight-pulse{0%{box-shadow:0 0 0 0 var(--accent-glow-soft,rgba(224,30,43,0.45))}100%{box-shadow:0 0 0 16px rgba(224,30,43,0)}}' +
       '@media (max-width:480px){' +
-      '.ue-links-banner{left:8px;right:8px;top:8px;transform:none;max-width:none;font-size:12px}' +
       '.ue-links-icon-btn{width:30px;height:30px}' +
       '.ue-links-popover{right:-4px;min-width:170px}' +
-      '.ue-links-manual-copy-panel{left:8px;right:8px;transform:none;max-width:none}' +
       '}' +
       '@media (prefers-reduced-motion: reduce){' +
       '.ue-links-deep-link-highlight{animation:none}' +
-      '.ue-links-icon-btn,.ue-links-popover-item,.ue-links-banner-play,.ue-links-banner-dismiss{transition:none}' +
+      '.ue-links-icon-btn,.ue-links-popover-item{transition:none}' +
       '}'
     );
   }
@@ -468,39 +468,47 @@
     return { share: shareFn, clipboardWrite: clipboardWriteFn, execCommandCopy: execCommandCopyFallback };
   }
 
-  function removeManualCopyPanel() {
-    var doc = getDoc();
-    if (!doc) return;
+  /* The clipboard-blocked last resort. This module used to inject its own
+     fixed-position copy panel here; that is gone (it was a second floating
+     slab competing with the player bar for the same screen edge, and it
+     carried its own colours). The shared centre-screen dialog owns this
+     now: static markup, focus-trapped, Esc-closable, styled from site.css.
+
+     `window.ueDialog` can legitimately be missing (module load order, a
+     stripped page), and losing the user's link is worse than any panel --
+     so the absence path falls through to the platform's own prompt(),
+     which presents the URL pre-selected and copyable with no injected DOM
+     and no CSS of ours. Both paths are individually guarded: a share that
+     cannot be completed must still never throw. */
+  function showManualCopyFallback(url) {
+    var dialog = null;
+    try { dialog = hasWindow() ? window.ueDialog : null; } catch (err) { dialog = null; }
+    if (dialog && typeof dialog.open === 'function') {
+      try {
+        dialog.open({
+          title: 'Copy this link',
+          message: 'Your browser blocked the automatic copy. Select the link below and copy it.',
+          copyText: url
+        });
+        return;
+      } catch (err) { /* fall through to prompt() rather than lose the link */ }
+    }
     try {
-      var el = doc.getElementById(MANUAL_COPY_PANEL_ID);
-      if (el && el.parentNode) el.parentNode.removeChild(el);
+      if (hasWindow() && typeof window.prompt === 'function') window.prompt('Copy this link', url);
     } catch (err) { /* ignore */ }
   }
 
-  function showManualCopyPanel(url) {
-    var doc = getDoc();
-    if (!doc || !doc.body || !doc.createElement) return;
-    removeManualCopyPanel();
-    var panel = doc.createElement('div');
-    panel.id = MANUAL_COPY_PANEL_ID;
-    panel.className = 'ue-links-manual-copy-panel';
-    try { panel.style.top = computeManualCopyPanelTop(doc) + 'px'; } catch (err) { /* ignore */ }
-    var input = doc.createElement('input');
-    input.type = 'text';
-    input.readOnly = true;
-    input.value = url;
-    input.className = 'ue-links-manual-copy-input';
-    input.setAttribute('aria-label', 'Mix link');
-    var closeBtn = doc.createElement('button');
-    closeBtn.type = 'button';
-    closeBtn.className = 'ue-links-manual-copy-close';
-    closeBtn.textContent = 'Close';
-    closeBtn.setAttribute('aria-label', 'Close');
-    closeBtn.addEventListener('click', removeManualCopyPanel);
-    panel.appendChild(input);
-    panel.appendChild(closeBtn);
-    doc.body.appendChild(panel);
-    try { input.focus(); input.select(); } catch (err) { /* ignore */ }
+  /* The share modal (partials/share-modal.html) is the share UI for every
+     affordance in this file. It is optional in exactly the way everything else
+     here is: an engine without <dialog> never defines `window.ueShare`, and
+     each caller below then keeps its own pre-existing behavior. Returns whether
+     the modal took the share, so callers can branch without knowing why. */
+  function openShareModal(info) {
+    try {
+      var s = hasWindow() ? window.ueShare : null;
+      if (s && typeof s.open === 'function') return s.open(info) === true;
+    } catch (err) { /* ignore */ }
+    return false;
   }
 
   function giveShareFeedback(result, url, liveRegion) {
@@ -511,8 +519,8 @@
       announce(liveRegion, 'Link copied to clipboard.');
       return;
     }
-    announce(liveRegion, 'Could not copy automatically. Link shown below.');
-    showManualCopyPanel(url);
+    announce(liveRegion, 'Could not copy automatically. The link is shown so you can copy it.');
+    showManualCopyFallback(url);
   }
 
   /* The one entry point every share affordance below calls. Synchronous up
@@ -533,7 +541,7 @@
     );
   }
 
-  /* ---------- §1: deep link on load — highlight + banner ---------- */
+  /* ---------- §1: deep link on load — scroll, highlight, prime ---------- */
 
   /* A fresh navigation to an already-visited history entry for this exact
      URL (e.g. a bookmarked/re-shared deep link, or a manual reload) can
@@ -603,151 +611,73 @@
     try { container.classList && container.classList.add(HIGHLIGHT_CLASS); } catch (err) { /* ignore */ }
     disableScrollRestoration();
     scrollIntoViewWhenSettled(container);
+    return container;
   }
 
-  /* The ONLY place a feature module is allowed to start playback (per the
-     integration contract): gated entirely behind a real click on the
-     banner's "Play from" button. window.UEBoot.ensurePlayer() is called
-     synchronously inside that click handler, exactly as the contract
-     requires, and only when the player has not hydrated yet. */
-  function startDeepLinkPlayback(txid, t) {
-    function afterReady() {
-      if (!window.UEPlayer || !window.UEPlayer.host) return;
-      var idx = window.UEPlayer.host.findIndexByTxid(txid);
-      if (idx === -1) return;
-      window.UEPlayer.host.playIndexAt(idx, t);
-    }
-    if (window.UEBoot && typeof window.UEBoot.ensurePlayer === 'function') {
-      window.UEBoot.ensurePlayer(afterReady);
-    } else if (window.UEPlayer && window.UEPlayer.host) {
-      afterReady();
-    }
+  function readAttr(el, name) {
+    try { return (el && el.getAttribute && el.getAttribute(name)) || ''; } catch (err) { return ''; }
   }
 
-  function buildDismissButton(doc, onDismiss) {
-    var btn = doc.createElement('button');
-    btn.type = 'button';
-    btn.className = 'ue-links-banner-dismiss';
-    btn.setAttribute('aria-label', 'Dismiss');
-    btn.textContent = 'Dismiss';
-    btn.addEventListener('click', onDismiss);
-    return btn;
-  }
-
-  var BANNER_DEFAULT_TOP = 14; /* matches the injected CSS's own `top:14px` --
-    used whenever a live measurement of #site-header isn't available (missing
-    element, no getBoundingClientRect under node:vm's fake DOM, or a
-    measurement that comes back nonsensical) */
-  var BANNER_NAV_GAP = 14;
-
-  /* #site-header is a `position:sticky; top:0` nav (site.css, off-limits to
-     edit here) whose height varies by breakpoint (72px desktop, 60px at
-     <=1020px, auto-wrapping/taller at <=700px) — a single hardcoded offset
-     would inevitably drift from one of those. Reading the real, current
-     nav height instead keeps the banner clear of it at every width without
-     duplicating site.css's breakpoints here. */
-  function computeBannerTop(doc) {
+  /* The generated markup puts the download filename on the card's own
+     download anchor (lib/WebsitePageGenerator.cjs `downloadBtnHtml`), not
+     on the play anchor — so read it from the surrounding card/row rather
+     than re-deriving a naming convention this file does not own. Absent
+     (an older page, a surface with no download button) the contract
+     explicitly allows ''. */
+  function readDownloadFilename(container) {
     try {
-      var header = doc.getElementById('site-header');
-      if (header && typeof header.getBoundingClientRect === 'function') {
-        var rect = header.getBoundingClientRect();
-        if (rect && typeof rect.bottom === 'number' && isFinite(rect.bottom) && rect.bottom > 0) {
-          return Math.round(rect.bottom) + BANNER_NAV_GAP;
-        }
-      }
-    } catch (err) { /* fall through to the default */ }
-    return BANNER_DEFAULT_TOP;
+      var dl = container && container.querySelector ? container.querySelector('a[data-download]') : null;
+      return readAttr(dl, 'data-filename');
+    } catch (err) { return ''; }
   }
 
-  var MANUAL_COPY_PANEL_NAV_GAP = 10;
-
-  /* The manual-copy fallback panel used to sit at a fixed `bottom:100px`,
-     which visually collided with ue-resume.js's own bottom-anchored "Resume
-     Listening" bar (both fixed, horizontally centered, near-identical
-     offset from the bottom -- confirmed in a real browser). Anchoring from
-     the top instead sidesteps every bottom-anchored surface (the persistent
-     player bar AND the resume bar) entirely, reusing the same nav-clearance
-     measurement the deep-link banner uses. The one thing this panel can
-     still collide with is that SAME banner (both owned by this file), since
-     a user can trigger a share fallback while a deep-link banner is still
-     showing -- so this stacks below the banner's live position when one is
-     present, rather than merely reusing its top offset. */
-  function computeManualCopyPanelTop(doc) {
-    var top = computeBannerTop(doc);
-    try {
-      var banner = doc.getElementById(BANNER_ID);
-      if (banner && typeof banner.getBoundingClientRect === 'function') {
-        var rect = banner.getBoundingClientRect();
-        if (rect && typeof rect.bottom === 'number' && isFinite(rect.bottom) && rect.bottom > top) {
-          return Math.round(rect.bottom) + MANUAL_COPY_PANEL_NAV_GAP;
-        }
-      }
-    } catch (err) { /* fall through to the nav-clearance offset alone */ }
-    return top;
+  function buildPrimePayload(anchor, container, t) {
+    var hasTime = typeof t === 'number' && isFinite(t) && t > 0;
+    return {
+      title: readAttr(anchor, 'data-title') || 'this mix',
+      artist: readAttr(anchor, 'data-artist'),
+      img: readAttr(anchor, 'data-img'),
+      href: readAttr(anchor, 'href'),
+      filename: readDownloadFilename(container),
+      startSec: hasTime ? t : 0,
+      /* No "·" inside the label: the player bar already prefixes it with one
+         after the artist name, so 'shared · from 1:35' rendered as
+         "BAI-EE · shared · from 1:35" — two separators in five words. */
+      label: hasTime ? ('shared from ' + formatShareTime(t)) : 'shared link',
+      source: 'deep-link'
+    };
   }
 
-  function showDeepLinkBanner(doc, anchor, txid, t, liveRegion) {
-    if (!doc.body || doc.getElementById(BANNER_ID)) return;
-    var title = 'this mix';
-    var artist = '';
-    try { title = anchor.getAttribute('data-title') || 'this mix'; } catch (err) { /* keep default */ }
-    try { artist = anchor.getAttribute('data-artist') || ''; } catch (err) { /* keep default */ }
+  /* Hands the shared link to the persistent player bar — the element that
+     replaced this module's deleted banner. This does NOT start playback
+     and does NOT load audio (see the transient-UI contract): it fills the
+     bar's idle "Select a mix to play" slot so pressing the bar's own play
+     button resumes at the shared timestamp. The bar itself decides whether
+     to accept — it refuses while audio is already playing, so a listener
+     who hit play before this module initialised never has the bar yanked
+     out from under them.
 
-    var banner = doc.createElement('div');
-    banner.id = BANNER_ID;
-    banner.className = 'ue-links-banner';
-    banner.setAttribute('role', 'region');
-    banner.setAttribute('aria-label', 'Shared mix');
+     ⚠️ MUST be called from behind whenPlayerReady(), never at init time.
+     `window.uePlayerBar` is defined by player.js, which boot.js loads
+     LAZILY (requestIdleCallback, timeout 3500ms, or the first play-intent
+     tap) and announces with a document-level `ue-player-ready`. This file
+     is in boot.js's EAGER chain (player-core.js -> ue-host-pref.js ->
+     ue-warm.js -> ue-links.js -> ue-resume.js), so at init the bar is
+     reliably absent and priming there silently did nothing on every real
+     page load — confirmed in a live browser, and the same bug ue-resume.js
+     hit. window.UEPlayerCore, by contrast, IS eager and chained ahead of
+     us, which is why target resolution and the highlight work at init.
 
-    var text = doc.createElement('span');
-    text.className = 'ue-links-banner-text';
-    text.textContent = artist ? ('Shared mix: ' + title + ' — ' + artist) : ('Shared mix: ' + title);
-    banner.appendChild(text);
-
-    var actions = doc.createElement('div');
-    actions.className = 'ue-links-banner-actions';
-
-    if (typeof t === 'number' && t > 0) {
-      var playFromBtn = doc.createElement('button');
-      playFromBtn.type = 'button';
-      playFromBtn.className = 'ue-links-banner-play';
-      var label = 'Play from ' + formatShareTime(t);
-      playFromBtn.textContent = label;
-      playFromBtn.setAttribute('aria-label', label);
-      playFromBtn.addEventListener('click', function onPlayFromClick() {
-        startDeepLinkPlayback(txid, t);
-      });
-      actions.appendChild(playFromBtn);
-    }
-
-    /* Clear the sticky site nav (site.css `#site-header`, z-index 900) --
-       the CSS class's own `top:14px` would otherwise sit on top of it
-       (confirmed: the banner visually covered nav links at that fixed
-       offset). Set as an inline style so only `top` is overridden; every
-       other property still comes from the injected `.ue-links-banner`
-       class. Recomputed on resize/orientation-change (nav height changes
-       across the site's own breakpoints) for as long as the banner is
-       shown, and torn down when it is. */
-    function positionBanner() { try { banner.style.top = computeBannerTop(doc) + 'px'; } catch (err) { /* ignore */ } }
-    positionBanner();
-    var win = hasWindow() ? window : null;
-    var onResize = null;
-    if (win && typeof win.addEventListener === 'function') {
-      onResize = positionBanner;
-      try { win.addEventListener('resize', onResize); } catch (err) { onResize = null; }
-    }
-
-    function removeBanner() {
-      try { banner.parentNode && banner.parentNode.removeChild(banner); } catch (err) { /* ignore */ }
-      if (onResize && win && typeof win.removeEventListener === 'function') {
-        try { win.removeEventListener('resize', onResize); } catch (err) { /* ignore */ }
-      }
-    }
-    actions.appendChild(buildDismissButton(doc, removeBanner));
-    banner.appendChild(actions);
-
-    doc.body.appendChild(banner);
-    announce(liveRegion, text.textContent);
+     Every failure mode is the same quiet no-op: no `window.uePlayerBar`
+     (a stripped page, or a player that never hydrates at all), no `prime`
+     function, a `false` return, or a throw. The scroll + highlight have
+     already done the real work; priming is the bonus. Returns whether the
+     bar took it (used by tests; nothing in this file branches on it). */
+  function primePlayerBarForDeepLink(anchor, container, t) {
+    var bar = null;
+    try { bar = hasWindow() ? window.uePlayerBar : null; } catch (err) { bar = null; }
+    if (!bar || typeof bar.prime !== 'function') return false;
+    try { return bar.prime(buildPrimePayload(anchor, container, t)) === true; } catch (err) { return false; }
   }
 
   function handleDeepLinkOnLoad(liveRegion) {
@@ -757,8 +687,27 @@
     if (!query.mix) return; /* missing/invalid mix -> nothing to do, silently */
     var anchor = findAnchorForTxid(query.mix);
     if (!anchor) return; /* unknown mix, or not on THIS page -> fail silently */
-    highlightAndScrollTo(anchor);
-    showDeepLinkBanner(doc, anchor, query.mix, query.t, liveRegion);
+
+    /* Immediate: the reveal is the time-critical half and depends on
+       nothing but the DOM that is already parsed. */
+    var container = highlightAndScrollTo(anchor);
+    /* The highlight is purely visual, so the announcement the deleted
+       banner used to carry still has to be made — it is the only thing a
+       screen-reader user gets. The live region is visually hidden and
+       covers nothing. */
+    var title = readAttr(anchor, 'data-title') || 'this mix';
+    var artist = readAttr(anchor, 'data-artist');
+    announce(liveRegion, artist ? ('Shared mix: ' + title + ' — ' + artist) : ('Shared mix: ' + title));
+
+    /* Deferred, exactly once, no polling and no retry: the same one-shot
+       ready hook the player-bar share button below already uses. If the
+       player never hydrates the callback simply never runs — the reveal
+       above stands on its own. A listener who taps play (which is itself
+       what triggers hydration) is protected by the bar's own contract: it
+       refuses to prime while audio is already playing. */
+    whenPlayerReady(function () {
+      primePlayerBarForDeepLink(anchor, container, query.t);
+    });
   }
 
   /* ---------- §2: address bar mirrors real playback ---------- */
@@ -815,6 +764,21 @@
     var btn = buildIconButton(doc, 'Share this mix');
     btn.className += ' ue-links-share-btn';
     btn.addEventListener('click', function onShareCardClick() {
+      /* Everything the modal shows comes off the card's own generated markup
+         (lib/WebsitePageGenerator.cjs playAnchorAttrs) — no lookup, no fetch.
+         `data-page` is why the link points at the artist page: that is the
+         page whose og: tags the unfurled preview will use. */
+      if (openShareModal({
+        txid: txid,
+        title: title,
+        artist: artist,
+        img: readAttr(anchor, 'data-img'),
+        video: readAttr(anchor, 'data-video'),
+        audio: readAttr(anchor, 'href'),
+        page: readAttr(anchor, 'data-page'),
+        filename: readDownloadFilename(card),
+        t: 0
+      })) return;
       shareMix({ txid: txid, title: title, artist: artist, t: null }, liveRegion);
     });
     actions.appendChild(btn);
@@ -878,6 +842,23 @@
     if (doc.getElementById(PLAYER_BAR_POPOVER_ID)) { removePlayerBarPopover(); return; }
     var currentTime = 0;
     try { currentTime = Math.floor(window.UEPlayer.host.getCurrentTime() || 0); } catch (err) { currentTime = 0; }
+
+    /* The modal covers both of the popover's options in one surface: it carries
+       a "Start at <time>" toggle, already checked, because sharing the drop is
+       the whole reason to share mid-listen. The popover below stays as the
+       fallback for an engine that has no <dialog>. */
+    var playingAnchor = findAnchorForTxid(info.txid);
+    if (openShareModal({
+      txid: info.txid,
+      title: info.title,
+      artist: info.artist,
+      img: readAttr(playingAnchor, 'data-img'),
+      video: readAttr(playingAnchor, 'data-video'),
+      audio: readAttr(playingAnchor, 'href'),
+      page: readAttr(playingAnchor, 'data-page'),
+      filename: info.artist ? (info.artist + ' - ' + info.title) : info.title,
+      t: currentTime
+    })) return;
 
     var panel = doc.createElement('div');
     panel.id = PLAYER_BAR_POPOVER_ID;

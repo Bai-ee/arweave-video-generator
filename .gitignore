@@ -84,6 +84,12 @@ wallet-export/
 !tests/fixtures/*.json
 # Skyline thumbnail visual treatment (source, not generated output).
 !config/skyline-thumbnail-treatment.json
+# Homepage hero promo clips. Built by scripts/build-hero-promo-catalog.mjs, but
+# it IS a committed artifact: WebsitePageGenerator reads it at BUILD time, while
+# regenerating it needs live Firestore credentials. Without this negation the
+# blanket *.json rule drops it, and a fresh clone silently builds a homepage
+# whose hero falls back to the still image.
+!config/hero-promo-videos.json
 
 # OS files
 .DS_Store

@@ -1,11 +1,11 @@
 /* ==========================================================================
    Underground Existence — ue-resume.js
-   "Resume Listening": a local, privacy-safe prompt offering to pick a mix
-   back up where the listener left off.
+   "Resume Listening": a local, privacy-safe memory of where the listener
+   left off, offered back through the persistent player bar.
 
    Scope, per UE_PLAYABILITY_INTEGRATION_CONTRACT.md: a single stored record
    (stable mix key = Arweave txid, the artist-page path it was playing on,
-   confirmed position, title/artist for the prompt label, duration if known,
+   confirmed position, title/artist for the offer label, duration if known,
    and a timestamp). No IDs, no fingerprints, nothing leaves the device, no
    network calls. Every window.localStorage access is wrapped in try/catch —
    private/incognito modes throw on the PROPERTY ACCESS itself, not only on
@@ -24,7 +24,7 @@
    TTL — 21 days: long enough that a listener who returns after a week, or
    two, to a long mix they were partway through still gets offered a resume;
    short enough that a session abandoned over three weeks ago is unlikely to
-   still be relevant and shouldn't keep resurfacing a stale prompt.
+   still be relevant and shouldn't keep resurfacing a stale offer.
 
    Save thresholds:
      - MIN_RESUME_POSITION_SEC (30s) — nothing worth resuming before this;
@@ -60,40 +60,66 @@
    txid that doesn't match the 43-char Arweave shape, non-finite/negative/
    absurd times, a position beyond a known duration, a future timestamp, an
    oversized field, or simply expired — is discarded (localStorage entry
-   removed) without throwing, and no prompt is shown.
+   removed) without throwing, and no offer is made.
 
-   Prompt UI: injected at runtime (no template/generator/HTML edit — none is
-   needed or allowed for this feature per the contract), a single
-   `<style id="ue-resume-styles">` block guarded so it is only ever inserted
-   once, matching the site's dark/red look via the SAME CSS custom
-   properties site.css already defines on :root (var(--accent-bright) etc.,
-   with an inline literal fallback in case this file is ever loaded before
-   site.css finishes, belt-and-suspenders only). Real <button>s, aria-labels,
-   a visually-hidden aria-live="polite" announcer (mirrors player.js's own
-   buildStatusRegion() convention: a hidden live node held separate from the
-   visible text), and a bottom offset that clears the persistent player bar
-   at every width the site defines (900px breakpoint, which covers ≤480px).
+   Offer UI: NONE OF ITS OWN. This module injects no element and no CSS. It
+   hands the stored record to the persistent player bar — already on screen,
+   already carrying an idle "Select a mix to play" slot — via
+   window.uePlayerBar.prime({title, artist, img, href, filename, startSec,
+   label, source:'resume'}). The bar fills that slot with the stored track
+   and a "resume mm:ss" label (formatTime below). Nothing floats over the
+   grid, there is nothing to dismiss, and prime() neither autoplays nor
+   loads audio — pressing the bar's own play button is what starts playback,
+   at the stored position.
 
-   Two ways the prompt can resolve, decided WITHOUT needing player.js to
-   have hydrated (findIndexByTxid only exists on the live queue once
-   player.js loads, and hydration is deliberately lazy/user-gesture-gated —
-   this module must not force it just to decide what to render):
-     - the stored txid is found among this page's own anchors (pageHasTxid,
-       a pure scan over collected hrefs using window.UEPlayerCore.
-       extractTxid — the same identity function the rest of the playback
-       system already trusts) ⇒ a real "Resume" <button> that, on click,
-       calls window.UEBoot.ensurePlayer(cb) SYNCHRONOUSLY inside the
-       handler (contract §3b — required for the iOS audio-unlock gesture),
-       then window.UEPlayer.host.findIndexByTxid/playIndexAt inside that
-       callback. See createResumeHandler().
-     - not found on this page ⇒ a plain <a> to the stored artist page with
-       "?mix=<txid>" appended (buildFallbackUrl(), built and validated
-       here — same deep-link format ue-links.js reads back) — a normal
-       browser navigation, never a script-driven one, so it can never
-       itself start audio.
-   NEVER autoplays: nothing in this file calls play()/playIndexAt() except
-   from inside a real click handler's callback, and reading/rendering the
-   stored record on page load never touches window.UEPlayer at all.
+   The offer is made once per page view, and only when the stored txid is
+   found among THIS page's own playable mix anchors (the same
+   `a[data-playlist], a[data-link]` selector and unplayable/http filter
+   player.js builds its queue from — an anchor the queue rejects is one the
+   bar could never play).
+
+   Both the decision AND the prime() call hang off the existing
+   `ue-player-ready` hook. Delivery has to: window.uePlayerBar ships with
+   player.js, which boot.js loads LAZILY (idle time, or the first
+   play-intent tap), so at DOMContentLoaded there is nothing to prime.
+   (window.UEPlayerCore, by contrast, is loaded EAGERLY and this file is
+   chained after it, so the extractor below is reliably present either way —
+   the wait is not for it.) The DECISION rides the same hook for two
+   reasons: nothing consumes it earlier, so deferring costs nothing; and
+   player.js REWRITES the featured anchor's href and data-title/artist/img
+   as it hydrates (randomizeFeatured), so a scan taken before that could
+   match pre-randomization markup and prime a payload for a track the live
+   queue does not hold. Scanning after means this module and
+   findIndexByTxid see the same page. One hook, one prime(): no polling, no
+   retry, and no dependence on where in boot.js's eager chain this file
+   happens to sit. This module never FORCES hydration (the lazy queue is
+   deliberately gesture-gated); it only waits for it.
+   The scan is pure (pageHasTxid/indexOfTxid over collected hrefs, using
+   window.UEPlayerCore.extractTxid — the same identity function the rest of
+   the playback system already trusts), and the matching anchor is also
+   where the prime payload's title/artist/img/href/filename come from, so
+   the primed bar describes exactly what a click on that card would play.
+   A record whose track is NOT on this page stays in storage untouched and
+   is simply not offered here: the player bar can only queue what this page
+   has, and no element remains in which to offer a cross-page link.
+   buildFallbackUrl() still builds that "<page>?mix=<txid>" deep link — the
+   same format ue-links.js reads back — for any caller that wants it.
+
+   window.uePlayerBar may be absent (this module can load before player.js,
+   or on a stripped page) and prime() may decline (bad input, or audio
+   already playing — a returning visitor who pressed play first must never
+   have the bar yanked out from under them). Both are a quiet no-op: never a
+   throw, never a retry loop, never anything that touches playback.
+
+   NEVER autoplays: nothing in this file calls play()/playIndexAt(); waiting
+   on `ue-player-ready` and reading the stored record start nothing, and
+   prime() explicitly neither autoplays nor loads audio.
+   createResumeHandler() below remains the exported,
+   gesture-safe way to PERFORM a resume (contract §3b: window.UEBoot
+   .ensurePlayer(cb) called SYNCHRONOUSLY inside a real click, then
+   host.findIndexByTxid/playIndexAt inside that callback). The primed bar's
+   own play button now performs the resume inside player.js, so this file no
+   longer wires that handler to any DOM of its own.
    ========================================================================== */
 (function () {
   'use strict';
@@ -338,12 +364,13 @@
   }
 
   /* Pure scan over a plain array of href strings (as collected from the
-     current page's anchors — see collectPageHrefs() below) using an
+     current page's mix anchors — see collectPlayableAnchors() below) using an
      INJECTED extractTxid function, so this is fully testable with plain
      arrays and no DOM at all. Mirrors the identity check the rest of the
-     playback system already trusts (window.UEPlayerCore.extractTxid). */
-  function pageHasTxid(hrefs, txid, extractTxidFn) {
-    if (!Array.isArray(hrefs) || !isValidTxid(txid) || typeof extractTxidFn !== 'function') return false;
+     playback system already trusts (window.UEPlayerCore.extractTxid).
+     Returns the matching index, or -1. */
+  function indexOfTxid(hrefs, txid, extractTxidFn) {
+    if (!Array.isArray(hrefs) || !isValidTxid(txid) || typeof extractTxidFn !== 'function') return -1;
     for (var i = 0; i < hrefs.length; i++) {
       var found;
       try {
@@ -351,21 +378,35 @@
       } catch (err) {
         found = null;
       }
-      if (found === txid) return true;
+      if (found === txid) return i;
     }
-    return false;
+    return -1;
+  }
+
+  /* The boolean form of the same scan — the shape the rest of the system
+     (and the unit tests) ask the question in. One implementation, so "is it
+     on this page?" and "which anchor is it?" can never disagree. */
+  function pageHasTxid(hrefs, txid, extractTxidFn) {
+    return indexOfTxid(hrefs, txid, extractTxidFn) !== -1;
   }
 
   /* ---------- the resume action (pure enough to unit-test the
      "never autoplays" invariant without a browser) ----------
 
-     Returns a plain function representing "the user clicked Resume" —
+     Returns a plain function representing "the user asked to resume" —
      nothing above this line, and nothing during page load, ever calls
      ensurePlayer/findIndexByTxid/playIndexAt. Only INVOKING the returned
      function does, and per contract §3b, ensurePlayer(cb) is called
-     SYNCHRONOUSLY at the top of that invocation (the caller — buildBar's
-     real DOM click listener — must invoke this synchronously from inside
-     a real 'click' event for the iOS unlock gesture to carry). */
+     SYNCHRONOUSLY at the top of that invocation, so any caller must invoke
+     it synchronously from inside a real 'click' event for the iOS unlock
+     gesture to carry.
+
+     This module no longer owns a button of its own: the primed player bar's
+     play button performs the resume inside player.js. The handler is kept
+     exported because it is the module's stated, gesture-safe contract for
+     performing a resume from this file's stored record — the one place the
+     "ensurePlayer first, then findIndexByTxid/playIndexAt, never guess"
+     sequence is written down and tested. */
   function createResumeHandler(opts) {
     opts = opts || {};
     var ensurePlayer = typeof opts.ensurePlayer === 'function' ? opts.ensurePlayer : null;
@@ -446,67 +487,6 @@
      functions above for anything that needs to be unit-tested.
      ========================================================================== */
 
-  var STYLE_ID = 'ue-resume-styles';
-  var BAR_ID = 'ue-resume-bar';
-  var LIVE_ID = 'ue-resume-status-live';
-
-  function injectStyles() {
-    if (typeof document === 'undefined' || document.getElementById(STYLE_ID)) return;
-    var style = document.createElement('style');
-    style.id = STYLE_ID;
-    style.textContent =
-      '#' + BAR_ID + '{position:fixed;left:12px;right:12px;bottom:calc(var(--player-bar-height,84px) + 14px);' +
-      'z-index:998;margin:0 auto;max-width:560px;display:flex;align-items:center;gap:12px;' +
-      'padding:10px 14px;border-radius:var(--radius-card,12px);' +
-      'border:1px solid var(--hairline-red,rgba(193,18,31,0.45));background:rgba(20,13,13,0.96);' +
-      'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);' +
-      'box-shadow:0 10px 26px rgba(0,0,0,0.45);font-family:var(--font-mono,monospace);' +
-      'color:var(--text-primary,#f2ece4);transition:transform .3s var(--ease-out-expo,ease),opacity .3s var(--ease-out-expo,ease);}' +
-      '#ue-resume-message{flex:1 1 auto;min-width:0;font-size:12.5px;letter-spacing:.02em;' +
-      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
-      '#ue-resume-actions{flex:none;display:flex;align-items:center;gap:8px;}' +
-      '#ue-resume-play-button{border:1px solid var(--accent-bright,#e01e2b);border-radius:999px;' +
-      'padding:6px 14px;font-family:var(--font-mono,monospace);font-size:11px;font-weight:700;' +
-      'letter-spacing:.08em;text-transform:uppercase;color:var(--accent-bright,#e01e2b);' +
-      'background:transparent;transition:background .2s ease,color .2s ease,transform .15s var(--ease-out-expo,ease);}' +
-      '#ue-resume-play-button:hover{background:var(--accent,#c1121f);color:#fff;}' +
-      '#ue-resume-play-button:active{transform:scale(.95);}' +
-      '#ue-resume-link-button{font-family:var(--font-mono,monospace);font-size:11px;letter-spacing:.06em;' +
-      'text-transform:uppercase;color:var(--text-secondary,#b7aaa3);text-decoration:underline;text-underline-offset:3px;}' +
-      '#ue-resume-link-button:hover{color:var(--text-primary,#f2ece4);}' +
-      '#ue-resume-dismiss-button{flex:none;display:inline-flex;align-items:center;justify-content:center;' +
-      'width:26px;height:26px;border-radius:50%;color:var(--text-secondary,#b7aaa3);background:transparent;' +
-      'font-size:15px;line-height:1;}' +
-      '#ue-resume-dismiss-button:hover{color:var(--text-primary,#f2ece4);background:rgba(255,255,255,0.08);}' +
-      '@media (max-width:900px){#' + BAR_ID + '{bottom:calc(68px + 10px);left:8px;right:8px;padding:9px 12px;gap:10px;}' +
-      '#ue-resume-message{font-size:11.5px;}}' +
-      '@media (max-width:480px){#' + BAR_ID + '{max-width:none;}' +
-      '#ue-resume-play-button{padding:5px 11px;font-size:10px;}}' +
-      '@media (prefers-reduced-motion:reduce){#' + BAR_ID + '{transition:none!important;}}';
-    document.head.appendChild(style);
-  }
-
-  /* Removes the bar immediately; the hidden live-announcer node is kept
-     around briefly (with an updated announcement) so assistive tech has a
-     chance to read it before it too is removed — removing both nodes in
-     the same tick would very likely race the announcement out of
-     existence. */
-  function teardown(announceText) {
-    if (typeof document === 'undefined') return;
-    var barEl = document.getElementById(BAR_ID);
-    if (barEl && barEl.parentNode) barEl.parentNode.removeChild(barEl);
-    var liveEl = document.getElementById(LIVE_ID);
-    if (!liveEl) return;
-    if (announceText) {
-      liveEl.textContent = announceText;
-      setTimeout(function () {
-        if (liveEl.parentNode) liveEl.parentNode.removeChild(liveEl);
-      }, 1500);
-    } else if (liveEl.parentNode) {
-      liveEl.parentNode.removeChild(liveEl);
-    }
-  }
-
   function currentPagePath() {
     try {
       return (window.location && typeof window.location.pathname === 'string') ? window.location.pathname : '/';
@@ -515,12 +495,38 @@
     }
   }
 
-  function collectPageHrefs() {
+  /* Reads one attribute off an element, always as a string, never throwing
+     — the elements here come from the live page, not from this module. */
+  function attr(el, name) {
     try {
-      var anchors = document.querySelectorAll('a[href]');
+      var value = (el && typeof el.getAttribute === 'function') ? el.getAttribute(name) : null;
+      return typeof value === 'string' ? value : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function anchorHrefs(anchors) {
+    var out = [];
+    for (var i = 0; i < anchors.length; i++) out.push(attr(anchors[i], 'href'));
+    return out;
+  }
+
+  /* The page's playable mix anchors, as a plain array (never a live
+     NodeList) — the only DOM read this module performs on load. Deliberately
+     the SAME selector + filter player.js builds its queue from, because an
+     anchor the queue rejects is one the bar could never play: matching a
+     bare download link (no data-title/data-img) or a data-unplayable row
+     would only produce an offer that goes nowhere. */
+  function collectPlayableAnchors() {
+    try {
+      var nodes = document.querySelectorAll('a[data-playlist], a[data-link]');
       var out = [];
-      for (var i = 0; i < anchors.length; i++) {
-        out.push(anchors[i].getAttribute('href'));
+      for (var i = 0; i < nodes.length; i++) {
+        var el = nodes[i];
+        if (attr(el, 'data-unplayable') === 'true') continue;
+        if (!/^https?:\/\//.test(attr(el, 'href'))) continue;
+        out.push(el);
       }
       return out;
     } catch (err) {
@@ -528,91 +534,54 @@
     }
   }
 
-  function buildBar(promptState) {
-    if (typeof document === 'undefined' || document.getElementById(BAR_ID)) return;
-    injectStyles();
+  /* Hands the offer to the persistent player bar (transient-UI contract,
+     API 1) and stops. Builds the payload from the matched anchor — the
+     same attributes player.js builds its own queue entry from — so the
+     primed slot reads exactly like the track it points at; the stored
+     record supplies only the position, and the title/artist as a fallback
+     for an anchor missing them.
 
-    var record = promptState.record;
-    var label = record.title || 'this mix';
-    var timeLabel = formatTime(record.position);
+     Every failure mode is the same quiet no-op: no bar on the page yet (a
+     load-order race with player.js), no prime() on it, a declined prime
+     (bad input, or audio already playing), or a throw from inside it. */
+  function primeResumeOffer(record, anchor) {
+    var bar = window.uePlayerBar;
+    if (!bar || typeof bar.prime !== 'function') return;
 
-    var live = document.createElement('div');
-    live.id = LIVE_ID;
-    live.className = 'visually-hidden';
-    live.setAttribute('aria-live', 'polite');
-    live.setAttribute('aria-atomic', 'true');
-    live.setAttribute('role', 'status');
+    var href = attr(anchor, 'href');
+    if (!href) return;
 
-    var bar = document.createElement('div');
-    bar.id = BAR_ID;
-    bar.setAttribute('role', 'region');
-    bar.setAttribute('aria-label', 'Resume listening');
+    var title = attr(anchor, 'data-title') || record.title;
+    var artist = attr(anchor, 'data-artist') || record.artist;
+    if (!title) return; /* the bar's required field — never prime a nameless track */
 
-    var message = document.createElement('span');
-    message.id = 'ue-resume-message';
-    message.textContent = 'Resume ' + label + ' at ' + timeLabel;
-
-    var actions = document.createElement('div');
-    actions.id = 'ue-resume-actions';
-
-    var primary;
-    if (promptState.hasTrackOnPage) {
-      primary = document.createElement('button');
-      primary.type = 'button';
-      primary.id = 'ue-resume-play-button';
-      primary.textContent = 'Resume';
-      primary.setAttribute('aria-label', 'Resume ' + label + ' at ' + timeLabel);
-      primary.addEventListener('click', createResumeHandler({
-        ensurePlayer: function (cb) {
-          if (window.UEBoot && typeof window.UEBoot.ensurePlayer === 'function') {
-            window.UEBoot.ensurePlayer(cb);
-          }
-        },
-        getHost: function () {
-          return (window.UEPlayer && window.UEPlayer.host) || null;
-        },
-        txid: record.txid,
+    try {
+      bar.prime({
+        title: title,
+        artist: artist,
+        img: attr(anchor, 'data-img'),
+        href: href,
+        /* same shape player.js's own updateDownloadLinks() writes */
+        filename: (artist ? artist + ' - ' : '') + title,
         startSec: record.position,
-        onDone: function () { teardown('Resuming playback'); }
-      }));
-    } else {
-      primary = document.createElement('a');
-      primary.id = 'ue-resume-link-button';
-      /* Built here rather than delegated to ue-links.js: that module's
-         buildShareUrl() rewrites the CURRENT page's query string, while
-         this link points at a DIFFERENT stored page whose `page` field
-         only this file has validated (isValidPage/PAGE_RE). Both produce
-         the identical "<page>?mix=<txid>", so reaching across modules
-         would buy nothing and would widen this href's trust boundary. */
-      primary.setAttribute('href', buildFallbackUrl(record.page, record.txid));
-      primary.textContent = 'Go to mix';
-      primary.setAttribute('aria-label', 'Go to ' + label);
+        label: 'resume ' + formatTime(record.position),
+        source: 'resume'
+      });
+    } catch (err) {
+      /* a partial/broken bar must never break the page or playback */
     }
-
-    var dismissBtn = document.createElement('button');
-    dismissBtn.type = 'button';
-    dismissBtn.id = 'ue-resume-dismiss-button';
-    dismissBtn.setAttribute('aria-label', 'Dismiss resume prompt');
-    dismissBtn.textContent = '✕';
-    dismissBtn.addEventListener('click', function () {
-      teardown('Resume prompt dismissed');
-    });
-
-    actions.appendChild(primary);
-    actions.appendChild(dismissBtn);
-    bar.appendChild(message);
-    bar.appendChild(actions);
-
-    document.body.appendChild(live);
-    document.body.appendChild(bar);
   }
 
-  /* One-shot per page view: reads the stored record (if any), decides
-     Resume-button vs plain-link WITHOUT touching window.UEPlayer (see
-     header comment — pageHasTxid works from the page's own anchors), and
-     renders. A dismiss simply removes the DOM node — nothing re-shows it
-     later in this same page view; a reload is a fresh call to initPrompt(). */
-  function initPrompt() {
+  /* One-shot per page view: reads the stored record (if any), locates the
+     stored track among this page's own playable anchors, and offers it
+     through the player bar. A record for a track that is not on this page
+     is left alone — there is nothing here that could play it.
+
+     Called only from behind whenPlayerReady (see init below): window
+     .uePlayerBar does not exist until player.js hydrates, and the anchors
+     are not final until it does either (randomizeFeatured rewrites the
+     featured anchor's href and data-*). See the header comment. */
+  function initResumeOffer() {
     var storage = getLocalStorage();
     var record = readRecord(storage, { now: Date.now(), ttlMs: TTL_MS });
     if (!record) return;
@@ -620,9 +589,13 @@
     var extractTxidFn = (window.UEPlayerCore && typeof window.UEPlayerCore.extractTxid === 'function')
       ? window.UEPlayerCore.extractTxid
       : null;
-    var hasTrackOnPage = extractTxidFn ? pageHasTxid(collectPageHrefs(), record.txid, extractTxidFn) : false;
+    if (!extractTxidFn) return;
 
-    buildBar({ record: record, hasTrackOnPage: hasTrackOnPage });
+    var anchors = collectPlayableAnchors();
+    var idx = indexOfTxid(anchorHrefs(anchors), record.txid, extractTxidFn);
+    if (idx === -1) return;
+
+    primeResumeOffer(record, anchors[idx]);
   }
 
   /* Subscribes to the live host once it exists (see whenPlayerReady below)
@@ -701,10 +674,20 @@
     document.addEventListener('ue-player-ready', function () { cb(); }, { once: true });
   }
 
+  /* Both halves of this module hang off the SAME single ready hook, and for
+     the same reason: what they touch (UEPlayer.host, uePlayerBar, and the
+     final post-hydration markup) arrives with player.js, which boot.js
+     loads lazily. Fires immediately when the player is already live — so
+     the offer stays one
+     prime() call, never a poll and never a retry. If hydration was started
+     by the listener tapping play, prime() is contractually required to
+     refuse while audio is playing, so that listener is never interrupted.
+     The two are individually try/caught: a failed offer must still leave
+     position saving wired, and vice versa. */
   function init() {
-    try { initPrompt(); } catch (err) { /* progressive enhancement: never break the page */ }
     try {
       whenPlayerReady(function () {
+        try { initResumeOffer(); } catch (err) { /* progressive enhancement: never break the page */ }
         try { wireHostEvents(); } catch (err) { /* never break playback */ }
       });
     } catch (err) { /* ok */ }

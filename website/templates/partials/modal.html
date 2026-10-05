@@ -1,0 +1,260 @@
+<!-- UE shared dialog (transient-UI rework).
+     ONE centre-screen dialog for the whole site, reserved for genuine decisions:
+     a terminal playback failure (retry / download) and the clipboard-blocked copy
+     fallback. Transient states (starting / buffering / seeking) keep the existing
+     inline pill on the waveform and must NOT come through here.
+
+     WHY THIS MARKUP IS STATIC, AND WHY THE CONTROLLER IS INLINE:
+       * Static: the old floating slabs were injected at runtime, which is exactly
+         what this rework removes. The dialog ships in the page, hidden, so there is
+         nothing to build, nothing to tear down, and css/site.css can style it from
+         stable ids/classes.
+       * Inline script: `REQUIRED_MANIFEST_PATHS` in lib/WebsiteDeployer.js is a hard
+         23-path deploy gate — a new website/js/*.js file would need that gate changed
+         and is out of scope. A partial costs nothing: it is inlined into every
+         generated page by lib/WebsitePageGenerator.cjs.
+       * Position: this partial sits with the other global partials, immediately
+         before the deferred js/boot.js tag, so `window.ueDialog` exists before any
+         player module runs and the element is already parsed when it does.
+
+     NO COLOURS LIVE HERE. Everything visual is css/site.css (owned by the CSS lead).
+     Style hooks, all stable:
+       #ue-dialog (+ ::backdrop)      the <dialog> itself
+         [open]                       shown
+         [data-actions="0|1|2"]       how many action buttons are rendered
+         [data-copy="on|off"]         whether the copy input is showing
+       #ue-dialog-panel              inner panel — put PADDING HERE, not on #ue-dialog:
+                                     a backdrop click is detected as "target is the
+                                     dialog element", so padding on the dialog itself
+                                     would become a dead click-to-close zone.
+       #ue-dialog-close              the ✕ button   (.ue-dialog-close-glyph inside)
+       #ue-dialog-title              title line
+       #ue-dialog-message            body copy (carries [hidden] when unused)
+       #ue-dialog-copy-input         read-only copy fallback field (carries [hidden])
+       #ue-dialog-actions            actions row
+       .ue-dialog-action             an action button
+         .ue-dialog-action--primary / .ue-dialog-action--quiet  (also [data-variant])
+
+     The `hidden` attribute on the dialog is load-bearing in BOTH directions: a browser
+     with no <dialog> support treats the element as an unknown inline box and would
+     otherwise paint the panel inline on every page. The controller removes `hidden`
+     right before showModal() and restores it on close, so the UA rule
+     `[hidden] { display: none }` can never fight an open dialog. -->
+<dialog id="ue-dialog" aria-labelledby="ue-dialog-title" aria-describedby="ue-dialog-message" data-actions="0" data-copy="off" hidden>
+  <div id="ue-dialog-panel">
+    <button id="ue-dialog-close" type="button" aria-label="Close">
+      <span class="ue-dialog-close-glyph" aria-hidden="true">&#10005;</span>
+    </button>
+    <h2 id="ue-dialog-title"></h2>
+    <p id="ue-dialog-message" hidden></p>
+    <input id="ue-dialog-copy-input" type="text" readonly spellcheck="false" autocomplete="off" aria-label="Copy this text" hidden>
+    <div id="ue-dialog-actions"></div>
+  </div>
+</dialog>
+<script>
+(function () {
+  var dlg = document.getElementById('ue-dialog');
+  var panel = document.getElementById('ue-dialog-panel');
+  var titleEl = document.getElementById('ue-dialog-title');
+  var msgEl = document.getElementById('ue-dialog-message');
+  var copyEl = document.getElementById('ue-dialog-copy-input');
+  var actionsEl = document.getElementById('ue-dialog-actions');
+  var closeBtn = document.getElementById('ue-dialog-close');
+
+  /* Feature test, not a UA test. Old Safari and every pre-2022 engine either lack
+     <dialog> entirely or ship it without showModal; either way we degrade instead of
+     throwing, because a caller here is always on a playback path and playback must
+     never break because a dialog could not open. */
+  var supported = !!(dlg && panel && typeof dlg.showModal === 'function' && typeof dlg.close === 'function');
+
+  var lastFocused = null;   /* what to hand focus back to on close */
+  var pressedOnSelf = false; /* backdrop press tracking, see the click handler */
+
+  function str(v) {
+    return typeof v === 'string' ? v : (v === 0 || v ? String(v) : '');
+  }
+
+  function setText(el, text) {
+    if (!el) return false;
+    var value = str(text);
+    el.textContent = value;
+    if (value) el.removeAttribute('hidden');
+    else el.setAttribute('hidden', '');
+    return !!value;
+  }
+
+  /* Wipe every trace of the previous call. Actions are removed as NODES, so their
+     listeners go with them and no onSelect can leak into the next dialog. */
+  function reset() {
+    if (titleEl) titleEl.textContent = '';
+    setText(msgEl, '');
+    if (actionsEl) actionsEl.textContent = '';
+    if (copyEl) {
+      copyEl.value = '';
+      copyEl.setAttribute('hidden', '');
+    }
+    if (dlg) {
+      dlg.setAttribute('data-actions', '0');
+      dlg.setAttribute('data-copy', 'off');
+    }
+  }
+
+  function restoreFocus() {
+    var target = lastFocused;
+    lastFocused = null;
+    if (!target || typeof target.focus !== 'function') return;
+    /* Only if it is still on the page — the failing card may have been re-rendered. */
+    if (document.contains && !document.contains(target)) return;
+    try { target.focus(); } catch (e) { /* focus is a nicety, never a failure */ }
+  }
+
+  function close() {
+    if (!supported) return;
+    try {
+      if (dlg.open) dlg.close();
+      else { reset(); dlg.setAttribute('hidden', ''); restoreFocus(); }
+    } catch (e) { /* already closed */ }
+  }
+
+  function buildAction(spec) {
+    if (!spec || typeof spec !== 'object') return null;
+    var label = str(spec.label);
+    if (!label) return null;
+    var variant = spec.variant === 'quiet' ? 'quiet' : 'primary';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ue-dialog-action ue-dialog-action--' + variant;
+    btn.setAttribute('data-variant', variant);
+    btn.textContent = label;
+    btn.addEventListener('click', function () {
+      var result;
+      /* A throwing onSelect must still close the dialog — otherwise a bug in a caller
+         leaves a modal on screen with the page inert behind it. */
+      try {
+        result = typeof spec.onSelect === 'function' ? spec.onSelect() : undefined;
+      } catch (e) {
+        result = undefined;
+      }
+      /* Exactly `false` keeps it open (e.g. an action that swaps in new content). */
+      if (result !== false) close();
+    });
+    return btn;
+  }
+
+  function open(spec) {
+    spec = spec && typeof spec === 'object' ? spec : {};
+    var title = str(spec.title);
+    var message = str(spec.message);
+    var copyText = str(spec.copyText);
+    var actions = Object.prototype.toString.call(spec.actions) === '[object Array]' ? spec.actions : [];
+
+    /* Nothing to say and nothing to do — refuse rather than flash an empty box. */
+    if (!title && !message && !copyText && actions.length === 0) return false;
+
+    if (!supported) {
+      /* Degraded path: the copy fallback is the only case where the user still has
+         something to do, so hand them a prompt they can select out of. Everything
+         else simply does not appear — the caller has already handled its own state. */
+      if (copyText && typeof window.prompt === 'function') {
+        try {
+          window.prompt(message || title || 'Copy this text', copyText);
+          return true;
+        } catch (e) { return false; }
+      }
+      return false;
+    }
+
+    var wasOpen = dlg.open;
+    /* Calling open() on an already-open dialog REPLACES its content. Only capture the
+       return-focus target on the first open, or a replace would point focus at the
+       button inside the dialog we are about to throw away. */
+    if (!wasOpen) lastFocused = document.activeElement;
+
+    reset();
+
+    if (titleEl) titleEl.textContent = title;
+    setText(msgEl, message);
+
+    if (copyText && copyEl) {
+      copyEl.value = copyText;
+      copyEl.readOnly = true;
+      copyEl.removeAttribute('hidden');
+      dlg.setAttribute('data-copy', 'on');
+    }
+
+    var built = 0;
+    for (var i = 0; i < actions.length && built < 2; i++) {
+      var btn = buildAction(actions[i]);
+      if (!btn) continue;
+      actionsEl.appendChild(btn);
+      built++;
+    }
+    dlg.setAttribute('data-actions', String(built));
+
+    if (!wasOpen) {
+      dlg.removeAttribute('hidden');
+      try {
+        dlg.showModal();
+      } catch (e) {
+        /* Supported in principle, refused in practice (detached node, already open as
+           a non-modal). Put it back the way it was and tell the caller nothing showed. */
+        dlg.setAttribute('hidden', '');
+        reset();
+        lastFocused = null;
+        return false;
+      }
+    }
+
+    /* Focus: the copy field first (pre-selected so cmd/ctrl-C works immediately),
+       otherwise the first action, otherwise the ✕ — never nothing. */
+    try {
+      if (copyText && copyEl) {
+        copyEl.focus();
+        copyEl.select();
+        if (typeof copyEl.setSelectionRange === 'function') {
+          copyEl.setSelectionRange(0, copyEl.value.length);
+        }
+      } else {
+        var first = actionsEl.querySelector('.ue-dialog-action');
+        if (first) first.focus();
+        else if (closeBtn) closeBtn.focus();
+      }
+    } catch (e) { /* platform already focused something inside the dialog */ }
+
+    return true;
+  }
+
+  if (supported) {
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () { close(); });
+    }
+
+    /* Backdrop click. A click whose target is the dialog ELEMENT (rather than anything
+       inside #ue-dialog-panel) landed on the backdrop. Both the press and the release
+       must have landed there, so a text selection dragged out of the panel does not
+       close the dialog on mouseup. */
+    dlg.addEventListener('pointerdown', function (ev) {
+      pressedOnSelf = ev.target === dlg;
+    });
+    dlg.addEventListener('mousedown', function (ev) {
+      /* pointerdown covers every current engine; mousedown is the fallback for one
+         that fires only mouse events, and is harmless where both fire. */
+      pressedOnSelf = ev.target === dlg;
+    });
+    dlg.addEventListener('click', function (ev) {
+      if (ev.target === dlg && pressedOnSelf) close();
+      pressedOnSelf = false;
+    });
+
+    /* Esc closes via the platform's own `cancel` → `close`; we only clean up after. */
+    dlg.addEventListener('close', function () {
+      reset();
+      dlg.setAttribute('hidden', '');
+      pressedOnSelf = false;
+      restoreFocus();
+    });
+  }
+
+  window.ueDialog = { open: open, close: close, supported: supported };
+})();
+</script>

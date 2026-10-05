@@ -64,6 +64,86 @@
     return bars;
   }
 
+  /* ---------- waveform colours (theme tokens, resolved per canvas) ----------
+     Resolved from the CANVAS, not from <html>: in the light theme the chrome
+     stays dark, so the player bar / header / search overlay are near-black
+     islands that re-declare these tokens on their own subtree. The hero
+     waveform (on paper) and the player-bar waveform (on the dark chrome) must
+     therefore paint different colours at the same time. Custom properties
+     inherit down the tree, so getComputedStyle(canvas) sees whichever
+     declaration actually wins for that canvas.
+
+     The canvas redraws on every timeupdate while a mix plays, so getComputedStyle
+     must never run inside the bar loop or per frame. Each Waveform caches its own
+     resolved triplet on itself; a hit is three reads off a plain object. The
+     theme toggle's ue:themechange event bumps a module-level generation counter,
+     which invalidates every instance at once. A missing or empty custom property
+     falls back to the literal this file shipped with, keeping today's rendering. */
+  var WAVE_FALLBACK_PLAYED = '#e01e2b';
+  var WAVE_FALLBACK_UNPLAYED = 'rgba(242, 236, 228, 0.82)';
+  var WAVE_FALLBACK_REMAINING = 'rgba(154, 143, 138, 0.55)';
+  var waveThemeGeneration = 0;
+
+  function readToken(cs, name, fallback) {
+    if (!cs) return fallback;
+    var v = cs.getPropertyValue(name);
+    v = v ? v.trim() : '';
+    return v || fallback;
+  }
+
+  function currentThemeKey() {
+    var root = document.documentElement;
+    return (root && root.dataset && root.dataset.theme) || '';
+  }
+
+  /* Live waveform registry. Invalidating the caches is not enough on its own:
+     each canvas still holds pixels painted in the OLD theme's colours, and when
+     audio is idle nothing schedules a natural redraw — toggling to dark left the
+     hero waveform painting dark ink on a dark page until a seek forced a draw.
+     So the toggle has to repaint. Entries are WeakRefs, so registering an
+     instance never keeps it (or its canvas) alive; entries that have been
+     collected are compacted out while iterating, which bounds the array over a
+     long session. A detached-but-live instance is skipped for the redraw yet
+     KEPT in the registry, so a canvas that is re-attached later still repaints.
+     This page builds exactly two waveforms, both at boot, but Waveform is a
+     generic constructor and must not leak if that ever changes. */
+  var HAS_WEAKREF = typeof WeakRef === 'function';
+  var waveInstances = [];
+
+  function registerWaveform(wf) {
+    /* no WeakRef (older browsers) -> hold it strongly rather than lose the
+       repaint; the registry is still compacted, just never by collection */
+    waveInstances.push(HAS_WEAKREF ? new WeakRef(wf) : { deref: function () { return wf; } });
+  }
+
+  function redrawLiveWaveforms() {
+    var kept = [];
+    for (var i = 0; i < waveInstances.length; i++) {
+      var entry = waveInstances[i];
+      var wf = null;
+      try { wf = entry.deref(); } catch (err) { wf = null; }
+      if (!wf) continue; /* collected — drop the entry */
+      kept.push(entry);
+      var el = wf.canvas;
+      var connected = el && (typeof el.isConnected === 'boolean' ? el.isConnected : true);
+      if (!connected) continue; /* out of the document: nothing to repaint yet */
+      /* draw() takes no arguments and repaints purely from state the instance
+         already retains (bars, progress, active, w/h/dpr), so this reproduces
+         the current frame in the new colours — never a reset to zero and never
+         a lost progress position, even mid-playback. */
+      try { wf.draw(); } catch (err) { /* one bad canvas must not stop the rest */ }
+    }
+    waveInstances = kept;
+  }
+
+  window.addEventListener('ue:themechange', function () {
+    /* a throw in here would break the toggle itself, and the player with it */
+    try {
+      waveThemeGeneration++;
+      redrawLiveWaveforms();
+    } catch (err) { /* ignore */ }
+  });
+
   /* ---------- waveform renderer (canvas, progress display only) ---------- */
 
   function Waveform(container, opts) {
@@ -75,6 +155,12 @@
     this.seed = '';
     this.bars = [];
     this.active = false;
+    /* per-instance colour cache — see the waveform colours note above */
+    this.colors = null;
+    this.colorsTheme = null;
+    this.colorsGen = -1;
+    this.colorsConnected = null;
+    registerWaveform(this);
     var self = this;
     if (window.ResizeObserver) {
       this.ro = new ResizeObserver(function () { self.resize(); });
@@ -113,6 +199,33 @@
     this.active = !!active;
     this.draw();
   };
+  /* Resolves this canvas's three token colours, at most once per draw and in
+     practice once per theme change — the cache hit path touches no CSSOM. The
+     key is the theme, the invalidation generation, and whether the canvas was
+     in the document when the values were read (a canvas resolved while detached
+     inherits nothing, so it must re-resolve once it is attached). */
+  Waveform.prototype.resolveColors = function () {
+    var el = this.canvas;
+    var connected = typeof el.isConnected === 'boolean' ? el.isConnected : true;
+    var theme = currentThemeKey();
+    if (this.colors
+      && this.colorsTheme === theme
+      && this.colorsGen === waveThemeGeneration
+      && this.colorsConnected === connected) {
+      return this.colors;
+    }
+    var cs = null;
+    try { cs = getComputedStyle(el); } catch (err) { cs = null; }
+    this.colorsTheme = theme;
+    this.colorsGen = waveThemeGeneration;
+    this.colorsConnected = connected;
+    this.colors = {
+      played: readToken(cs, '--wave-played', WAVE_FALLBACK_PLAYED),
+      unplayed: readToken(cs, '--wave-unplayed', WAVE_FALLBACK_UNPLAYED),
+      remaining: readToken(cs, '--wave-remaining', WAVE_FALLBACK_REMAINING)
+    };
+    return this.colors;
+  };
   Waveform.prototype.draw = function () {
     var ctx = this.canvas.getContext('2d');
     if (!ctx || !this.w) return;
@@ -124,16 +237,17 @@
     var gap = this.opts.mini ? 1 : 1.4;
     var bw = (w - gap * (n - 1)) / n;
     var mid = h / 2;
+    var colors = this.resolveColors();
     for (var i = 0; i < n; i++) {
       var t = i / n;
       var bh = Math.max(2, this.bars[i] * h * 0.94);
       var x = i * (bw + gap);
       if (this.active && t <= this.progress) {
-        ctx.fillStyle = '#e01e2b';
+        ctx.fillStyle = colors.played;
       } else if (t < 0.66) {
-        ctx.fillStyle = 'rgba(242, 236, 228, 0.82)';
+        ctx.fillStyle = colors.unplayed;
       } else {
-        ctx.fillStyle = 'rgba(154, 143, 138, 0.55)';
+        ctx.fillStyle = colors.remaining;
       }
       ctx.fillRect(x, mid - bh / 2, Math.max(1, bw), bh);
     }
@@ -258,6 +372,14 @@
      candidate. Cleared by load() so it can never leak onto a later track. */
   var pendingStartTime = null;
 
+  /* A track OFFERED in the bar's now-playing slot without loading any audio
+     — "resume at 0:52", "a shared link that starts at 1:23". Presentation
+     plus one queued intent: no src, no probe, no controller, no autoplay.
+     The bar's own play button consumes it through the normal playIndexAt()
+     path. Null whenever nothing is primed. See the "primed player bar"
+     section (window.uePlayerBar) below for the full rules. */
+  var primed = null; /* { index, startSec, title, artist, img, href, filename, label, source } | null */
+
   var LOG_RING_SIZE = 100;
   var logRing = [];
   var lastRecoveryReason = null;
@@ -321,6 +443,137 @@
     }
   }
 
+  /* ---------- the hero follows whatever is playing ----------
+     The hero is not a fixed slot: play a mix from Latest Mixes and the hero
+     BECOMES that mix — its film, its title, its artist, its meta and its
+     transport.
+
+     Why this is one pointer and not a pile of updates: every hero-side
+     behaviour in this file already keys off `heroIdx` — the status region, the
+     progress paint, the play-state, and both scrubbers (which take a getter,
+     `function () { return heroIdx; }`, so they re-read it on every gesture).
+     Moving that one variable re-targets all of it. The rest of this function is
+     the visible copy and the featured anchor's own attributes, which MUST agree
+     with the pointer — otherwise the hero shows one mix and plays another.
+
+     The media itself (the mix's promo film, or its artwork wearing the
+     handwritten mark) is the hero script's job in the index template; it
+     listens for the `ue-hero-repointed` event fired at the end. */
+  function heroMetaChip(iconId, text) {
+    var span = document.createElement('span');
+    span.className = 'meta-chip';
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'icon-svg');
+    var use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', '#' + iconId);
+    svg.appendChild(use);
+    span.appendChild(svg);
+    span.appendChild(document.createTextNode(' ' + text));
+    return span;
+  }
+
+  function heroMetaDot() {
+    var dot = document.createElement('span');
+    dot.className = 'meta-dot';
+    dot.innerHTML = '&middot;';
+    return dot;
+  }
+
+  function heroTitleCase(name) {
+    return String(name || '').toLowerCase().replace(/(^|[\s_/])([a-z])/g, function (m, p, c) {
+      return p + c.toUpperCase();
+    });
+  }
+
+  /* The meta row is rebuilt from the CARD the track came from rather than from
+     artists.json: the card already displays this mix's genre, duration and date
+     in the same .meta-chip shape, so cloning them cannot disagree with the grid
+     and needs no second fetch. A track with no card (the featured anchor, or an
+     artist-page row) simply keeps the row it has. */
+  function heroMetaFromCard(card) {
+    if (!card) return null;
+    var row = document.createDocumentFragment();
+    var genreEl = card.querySelector('.mix-card-genres');
+    var wrote = false;
+    if (genreEl && genreEl.textContent.trim()) {
+      row.appendChild(heroMetaChip('i-wave', genreEl.textContent.trim()));
+      wrote = true;
+    }
+    var chips = card.querySelectorAll('.mix-card-meta .meta-chip, .catalog-row-meta-cell .meta-chip');
+    for (var i = 0; i < chips.length; i++) {
+      if (wrote) row.appendChild(heroMetaDot());
+      row.appendChild(chips[i].cloneNode(true));
+      wrote = true;
+    }
+    return wrote ? row : null;
+  }
+
+  function pointHeroAt(idx) {
+    if (!featuredAnchor || idx < 0 || idx === heroIdx) return;
+    var track = queue[idx];
+    if (!track || !track.el) return;
+    var a = track.el;
+    var card = a.closest ? a.closest('.mix-card, .catalog-row') : null;
+    var attr = function (n) { return a.getAttribute(n) || ''; };
+
+    var titleEl = document.getElementById('featured-mix-title');
+    if (titleEl) titleEl.textContent = track.title;
+
+    var sigEl = document.getElementById('featured-artist-signature');
+    if (sigEl) {
+      sigEl.textContent = heroTitleCase(track.artist);
+      if (attr('data-page')) sigEl.setAttribute('href', attr('data-page'));
+    }
+
+    var metaRow = document.getElementById('featured-meta-row');
+    var meta = heroMetaFromCard(card);
+    if (metaRow && meta) {
+      metaRow.innerHTML = '';
+      metaRow.appendChild(meta);
+    }
+
+    /* the featured anchor IS a queue entry, so repointing its index is what
+       makes the hero's own play button control this track */
+    heroIdx = idx;
+    featuredAnchor.setAttribute('data-queue-idx', String(idx));
+    featuredAnchor.setAttribute('href', track.url);
+    featuredAnchor.setAttribute('data-title', track.title);
+    featuredAnchor.setAttribute('data-artist', track.artist);
+    featuredAnchor.setAttribute('data-img', track.img);
+    featuredAnchor.setAttribute('data-duration-sec', String(track.durationSec || 0));
+    featuredAnchor.setAttribute('data-page', attr('data-page'));
+    featuredAnchor.setAttribute('data-video', attr('data-video'));
+
+    var filename = (track.artist ? track.artist + ' - ' : '') + track.title;
+    var dlBtn = document.getElementById('featured-download-button');
+    if (dlBtn) {
+      dlBtn.setAttribute('href', track.url);
+      dlBtn.setAttribute('data-filename', filename);
+    }
+    if (heroStatusRefs && heroStatusRefs.downloadLink) {
+      heroStatusRefs.downloadLink.href = track.url;
+      heroStatusRefs.downloadLink.setAttribute('data-filename', filename);
+    }
+
+    if (heroWave) heroWave.setTrack(track.url);
+    if (heroTimeTot) heroTimeTot.textContent = track.durationSec > 0 ? formatTime(track.durationSec) : '--:--';
+    if (heroTimeCur) heroTimeCur.textContent = '0:00';
+    /* syncButtons() and updateSeekDisabled() are not called here — loadIndex(),
+       the only caller, runs both a few lines later for this same track. */
+
+    try {
+      document.dispatchEvent(new CustomEvent('ue-hero-repointed', {
+        detail: {
+          title: track.title,
+          artist: track.artist,
+          image: track.img,
+          video: attr('data-video'),
+          page: attr('data-page')
+        }
+      }));
+    } catch (err) { /* older engines: the hero keeps the media it is showing */ }
+  }
+
   /* ---------- status / retry / error surface ----------
      Exact DOM tree, ids, copy, and class contract per UI-CONTRACT.md
      (agent C). Built once per surface at startup; degrades to null when the
@@ -371,7 +624,11 @@
     region.appendChild(actions);
     parentEl.appendChild(live);
     parentEl.appendChild(region);
-    return { live: live, region: region, text: text, retryBtn: retryBtn, downloadLink: dl, _lastCode: null };
+    return {
+      live: live, region: region, text: text,
+      actions: actions, retryBtn: retryBtn, downloadLink: dl,
+      _lastCode: null
+    };
   }
 
   var barStatusRefs = buildStatusRegion('player-bar', document.getElementById('player-bar-wave-wrap'));
@@ -456,12 +713,74 @@
     if (code === 'failed') {
       var terminal = !!(activeController && activeController.state === 'failed');
       if (!terminal) { showTransientNotice(message || ''); return; }
+      /* Terminal failure is the one playback state that asks the user for a
+         decision, so it moves to the shared centre-screen dialog (see
+         openFailureDialog below). Fire it only on the transition INTO the
+         terminal state — repeated `failed` statuses for the same dead load
+         must not reopen a dialog the user has just closed. Anything that
+         genuinely re-arms the failure (a retry, a new track, a transient
+         notice) writes a different _lastCode first, which is what makes the
+         next terminal failure open a dialog again. */
+      var alreadyTerminal = statusIsTerminal();
+      applySurfaceStatus(barStatusRefs, code);
+      if (state.index === heroIdx) applySurfaceStatus(heroStatusRefs, code);
+      if (!alreadyTerminal) openFailureDialog(message);
+      return;
     }
     applySurfaceStatus(barStatusRefs, code);
     if (state.index === heroIdx) applySurfaceStatus(heroStatusRefs, code);
   }
+  /* the bar is the single global status surface; the hero only mirrors it,
+     so the bar's code is the authoritative answer when it exists */
+  function statusIsTerminal() {
+    if (barStatusRefs) return barStatusRefs._lastCode === 'failed';
+    if (heroStatusRefs) return heroStatusRefs._lastCode === 'failed';
+    return false;
+  }
   function onRetryClick() {
     if (activeController) execCommands(activeController.retry());
+  }
+  /* Reuses the ONE download implementation in this file: the delegated
+     `a[data-download]` click listener near the bottom. The status region's
+     own link is only hidden (inline style), never detached, so this
+     synthetic click still bubbles to that listener — filename, blob fetch,
+     extension mapping and the open-in-a-tab fallback are all unchanged. */
+  function onDownloadClick() {
+    var refs = barStatusRefs || heroStatusRefs;
+    if (!refs || !refs.downloadLink) return;
+    if (!refs.downloadLink.getAttribute('href')) return;
+    refs.downloadLink.click();
+  }
+  /* The inline Retry/Download row is shown by a site.css rule
+     (`.is-failed .player-status-actions { display: inline-flex }`) that is
+     owned by the lead, so it is suppressed with an inline style here rather
+     than by editing that stylesheet. Nothing else in this file shows the
+     row — a non-failed region is display:none by CSS regardless. */
+  function setStatusActionsVisible(refs, visible) {
+    if (!refs || !refs.actions || !refs.actions.style) return;
+    refs.actions.style.display = visible ? '' : 'none';
+  }
+  function openFailureDialog(message) {
+    var shown = false;
+    if (window.ueDialog && typeof window.ueDialog.open === 'function') {
+      try {
+        window.ueDialog.open({
+          title: "This mix wouldn't load",
+          message: message || 'The gateway did not respond.',
+          actions: [
+            { label: 'Try again', variant: 'primary', onSelect: onRetryClick },
+            { label: 'Download', variant: 'quiet', onSelect: onDownloadClick }
+          ]
+        });
+        shown = true;
+      } catch (err) { shown = false; /* a broken dialog falls back, below */ }
+    }
+    /* REQUIRED fallback: with no dialog controller (a stripped page, a load
+       ordering problem, a controller that threw) the inline Retry/Download
+       buttons stay exactly as they shipped, so a failure is never silent
+       and never actionless. */
+    setStatusActionsVisible(barStatusRefs, !shown);
+    setStatusActionsVisible(heroStatusRefs, !shown);
   }
   if (barStatusRefs) barStatusRefs.retryBtn.addEventListener('click', onRetryClick);
   if (heroStatusRefs) heroStatusRefs.retryBtn.addEventListener('click', onRetryClick);
@@ -926,7 +1245,29 @@
         });
       });
       if (!picks.length) return;
-      var pick = picks[Math.floor(Math.random() * picks.length)];
+
+      /* Coordinate with the hero promo film: the homepage hero plays one of
+         this pipeline's own 30s mix promos, and it should be promoting the SAME
+         mix that is preloaded here. `window.__ueHeroPromos.index` is published
+         by the inline hero script (which runs before this file is lazily
+         loaded) and holds the mixes we actually have a promo for — about 39 of
+         the 45 playable mixes. Narrowing the random pick to that set makes ONE
+         random choice drive both, instead of two independent ones that would
+         agree by accident.
+         Strictly a narrowing: no index (any other page, empty catalog) or no
+         intersection falls straight back to picking from everything. */
+      var promoPicks = picks;
+      try {
+        var promoIndex = window.__ueHeroPromos && window.__ueHeroPromos.index;
+        if (promoIndex) {
+          var matched = picks.filter(function (p) {
+            return !!promoIndex[(p.artistName + '|' + p.title).toLowerCase()];
+          });
+          if (matched.length) promoPicks = matched;
+        }
+      } catch (err) { /* the hero must never decide whether playback works */ }
+
+      var pick = promoPicks[Math.floor(Math.random() * promoPicks.length)];
 
       heroTitleEl.textContent = pick.title;
       var sigEl = document.getElementById('featured-artist-signature');
@@ -971,6 +1312,16 @@
       if (heroWave) heroWave.setTrack(pick.audioUrl);
       if (heroTimeTot) heroTimeTot.textContent = pick.durationSec > 0 ? formatTime(pick.durationSec) : '--:--';
       if (heroTimeCur) heroTimeCur.textContent = '0:00';
+
+      /* Tell the hero which mix won. This resolves inside a fetch().then(), so
+         it lands AFTER `ue-player-ready` — a listener that reads the featured
+         anchor on that event still sees the build-time mix. Hence an explicit
+         event rather than asking the hero to guess when we are done. */
+      try {
+        document.dispatchEvent(new CustomEvent('ue-featured-changed', {
+          detail: { title: pick.title, artist: pick.artistName, image: pick.image }
+        }));
+      } catch (err) { /* older engines: hero simply keeps its own random pick */ }
     }).catch(function () { /* keep the build-time featured mix on failure */ });
   })();
 
@@ -997,6 +1348,11 @@
     }
   }
 
+  /* the bar's two static template states, kept here so the primed-bar code
+     below can put the slot back exactly as partials/player-bar.html ships it */
+  var BAR_FALLBACK_THUMB_HTML = '<img class="cover-fallback" src="img/square-ue.png" alt="">';
+  var BAR_IDLE_TITLE = 'Select a mix to play';
+
   function setBarTrack(track) {
     if (!bar) return;
     bar.classList.remove('is-idle');
@@ -1009,11 +1365,11 @@
         img.alt = '';
         img.src = track.img;
         img.onerror = function () {
-          barThumb.innerHTML = '<img class="cover-fallback" src="img/square-ue.png" alt="">';
+          barThumb.innerHTML = BAR_FALLBACK_THUMB_HTML;
         };
         barThumb.appendChild(img);
       } else {
-        barThumb.innerHTML = '<img class="cover-fallback" src="img/square-ue.png" alt="">';
+        barThumb.innerHTML = BAR_FALLBACK_THUMB_HTML;
       }
     }
     if (barWave) barWave.setTrack(track.url);
@@ -1082,6 +1438,11 @@
       ? window.UEPlayerCore.extractTxid(track.url)
       : null;
     setBarTrack(track);
+    /* the hero becomes this mix too — film, copy and transport (pointHeroAt) */
+    pointHeroAt(idx);
+    /* a real track now owns the slot setBarTrack just repainted — any
+       primed offer (this one included) is spent */
+    clearPrimed(false);
     syncButtons();
     updateDownloadLinks(track);
 
@@ -1261,6 +1622,175 @@
     return true;
   }
 
+  /* ---------- primed player bar (window.uePlayerBar) ----------
+     API 1 of the transient-UI contract. "Resume Love Manifesto 3 at 0:52"
+     and "shared link, start at 1:23" are the same shape — a track queued at
+     a position, press play — so instead of each module floating its own
+     slab over the grid, it fills the bar's idle now-playing slot.
+
+     Presentation + one queued intent ONLY. Nothing here touches the audio
+     element, the controller, candidates, ranges or seeking: consuming a
+     primed track calls playIndexAt(), the same host-bridge entry point
+     ue-resume.js/ue-links.js already used, so the start offset still runs
+     through pendingStartTime -> applyPendingStartTime() -> attemptSeek()
+     (the verified hold-until-range-confirmed path) exactly as before.
+
+     Rules:
+       - refuses while audio is playing, and refuses once a real track has
+         been loaded into the bar at all — a returning visitor who hits play
+         before a module initialises must never have the bar yanked out from
+         under them, and a paused track is still that visitor's track;
+       - refuses malformed specs and anything this page could not actually
+         play (no queue entry for that URL), so the play button is never
+         primed into a dead press;
+       - never survives a real play: load() and the native 'play' event both
+         drop it. */
+
+  var PRIMED_LABEL_CLASS = 'player-bar-primed-label';
+
+  function audioIsPlaying() {
+    /* state.playing only flips on the native play/pause events, so consult
+       the element too — between requestPlay() and the 'play' event the
+       element is already unpaused and that counts as playing. */
+    return !!(state.playing || (audio && audio.paused === false));
+  }
+
+  /* the slot is only free before any real track has taken it over */
+  function barSlotIsFree() {
+    return state.index < 0 && !audioIsPlaying();
+  }
+
+  function normalizePrimeSpec(spec) {
+    if (!spec || typeof spec !== 'object') return null;
+    var title = typeof spec.title === 'string' ? spec.title.trim() : '';
+    var href = typeof spec.href === 'string' ? spec.href.trim() : '';
+    if (!title || !href) return null;
+    var startSec = spec.startSec;
+    if (typeof startSec !== 'number' || !isFinite(startSec) || startSec < 0) return null;
+    return {
+      title: title,
+      artist: typeof spec.artist === 'string' ? spec.artist : '',
+      img: typeof spec.img === 'string' ? spec.img : '',
+      href: href,
+      filename: typeof spec.filename === 'string' ? spec.filename : '',
+      startSec: startSec,
+      label: typeof spec.label === 'string' ? spec.label.trim() : '',
+      source: typeof spec.source === 'string' ? spec.source : '',
+      index: -1
+    };
+  }
+
+  /* exact URL first (what a module read back from its own record), then the
+     txid — the same identity the rest of this file matches tracks on, so a
+     record saved against one gateway still resolves on another. */
+  function findIndexByHref(href) {
+    for (var i = 0; i < queue.length; i++) {
+      if (queue[i].url === href) return i;
+    }
+    var txid = (window.UEPlayerCore && typeof window.UEPlayerCore.extractTxid === 'function')
+      ? window.UEPlayerCore.extractTxid(href)
+      : null;
+    return findIndexByTxid(txid);
+  }
+
+  /* The label rides in the EXISTING #player-bar-artist line — no new slot,
+     no second row — but in its own span so site.css can mute it: that line
+     is accent-coloured for the artist name, and an unwrapped "resume 0:52"
+     would read as a second link rather than as a quiet status. The
+     separator lives INSIDE the span so removing the label can never leave
+     an orphaned "·", and is omitted when there is no artist name. */
+  function renderPrimedArtistLine(artist, label) {
+    if (!barArtist) return;
+    barArtist.textContent = artist || '';
+    if (!label) return;
+    var span = document.createElement('span');
+    span.className = PRIMED_LABEL_CLASS;
+    span.textContent = (artist ? ' · ' : '') + label;
+    barArtist.appendChild(span);
+  }
+
+  function removePrimedLabelEl() {
+    if (!barArtist || !barArtist.querySelectorAll) return;
+    var els = barArtist.querySelectorAll('.' + PRIMED_LABEL_CLASS);
+    for (var i = 0; i < els.length; i++) {
+      if (els[i].parentNode) els[i].parentNode.removeChild(els[i]);
+    }
+  }
+
+  /* put the slot back exactly as partials/player-bar.html ships it */
+  function restoreIdleBarSlot() {
+    if (bar) bar.classList.add('is-idle');
+    if (barTitle) barTitle.textContent = BAR_IDLE_TITLE;
+    if (barArtist) barArtist.textContent = '';
+    if (barThumb) barThumb.innerHTML = BAR_FALLBACK_THUMB_HTML;
+    if (barTimeTot) barTimeTot.textContent = '--:--';
+    if (barTimeCur) barTimeCur.textContent = '0:00';
+    if (barWave) barWave.setProgress(0, false);
+    updateScrubberAria(barWaveEl, 0, 0);
+  }
+
+  /* restoreIdle: only for an explicit clear() with nothing loaded — the
+     slot then has nothing else to show. Every internal caller passes false
+     because a real track is taking the slot over in the same turn. */
+  function clearPrimed(restoreIdle) {
+    if (!primed) return false;
+    primed = null;
+    if (bar) bar.classList.remove('is-primed');
+    removePrimedLabelEl(); /* leaves whatever the artist line holds now */
+    if (restoreIdle && state.index < 0) restoreIdleBarSlot();
+    return true;
+  }
+
+  function primeBar(spec) {
+    try {
+      if (!bar) return false;
+      var norm = normalizePrimeSpec(spec);
+      if (!norm) return false;
+      if (!barSlotIsFree()) return false;
+      var idx = findIndexByHref(norm.href);
+      if (idx < 0) return false;
+      norm.index = idx;
+      var track = queue[idx];
+      /* the real now-playing path — same thumb/title/artist elements, same
+         cover-error fallback, same waveform seed and duration readout */
+      setBarTrack({
+        title: norm.title,
+        artist: norm.artist,
+        img: norm.img,
+        url: norm.href,
+        durationSec: track ? track.durationSec : 0
+      });
+      renderPrimedArtistLine(norm.artist, norm.label);
+      bar.classList.add('is-primed');
+      primed = norm;
+      return true;
+    } catch (err) {
+      /* a bad spec or a missing element is a no-op, never a throw: this
+         runs off a storage read / a URL parameter, and neither may be able
+         to break the player */
+      return false;
+    }
+  }
+
+  /* Consume the primed track from the bar's play button. Must stay inside
+     the click's user-gesture window, so it is synchronous down to
+     playIndexAt() like every other transport control. */
+  function playPrimed() {
+    if (!primed) return false;
+    var idx = primed.index;
+    var startSec = primed.startSec;
+    /* drop the primed presentation BEFORE playing: load() repaints the same
+       slot with the real track and the label must not survive into it */
+    clearPrimed(false);
+    return playIndexAt(idx, startSec);
+  }
+
+  window.uePlayerBar = {
+    version: 1,
+    prime: primeBar,
+    clear: function () { return clearPrimed(true); }
+  };
+
   window.UEPlayer.host = {
     version: 1,
     getQueue: function () { return queue; },
@@ -1320,6 +1850,10 @@
   }
 
   audio.addEventListener('play', function () {
+    /* priming never survives an actual play — the primed track's own play
+       included (load() has already repainted the slot for it). Covers every
+       route into playback, not just the bar's button. */
+    clearPrimed(false);
     state.playing = true; syncButtons(); forwardMediaEvent('play');
     emitFeatureEvent('playback', { playing: true, index: state.index, track: queue[state.index] || null });
   });
@@ -1576,6 +2110,10 @@
   });
 
   if (barPlayBtn) barPlayBtn.addEventListener('click', function () {
+    /* a primed track is what this press means; if it could not be started
+       the primed state is already gone, so fall through to normal transport
+       rather than leave the press doing nothing */
+    if (primed && playPrimed()) return;
     state.playing ? pause() : play();
   });
   if (btnPrev) btnPrev.addEventListener('click', function () {

@@ -66,12 +66,149 @@
 <meta name="theme-color" content="#0a0606">
 <link rel="icon" type="image/png" href="icon/favicon-32x32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="icon/favicon-32x32.png">
+<!-- Unfurl card. A shared link is only worth as much as its preview: without
+     the twitter:* pair below, X/Discord/Slack rendered a UE link as a bare
+     text row and the artwork never appeared. `summary_large_image` is the
+     card the cover art deserves — every og:image here is a square skyline
+     still or an artist portrait, never a logo.
+
+     og:image:alt carries the same text the page's own <img alt> would, so the
+     preview is described for anyone reading it through a screen reader.
+
+     The OG_VIDEO_TAGS token below is a whole BLOCK of tags, empty on pages with
+     no canonical promo film (see ogVideoTags in lib/WebsitePageGenerator.cjs) —
+     never an empty og:video, which unfurls worse than no og:video at all.
+     Do NOT write that token's name in braces anywhere in this comment: the
+     generator's replace pass does not know what a comment is, and would inline
+     a second live copy of the tags in here.
+
+     NOTE the static-site limit: these tags are per PAGE, and a share link is
+     `<artist page>?mix=<txid>`. A crawler ignores the query, so the preview is
+     the ARTIST's card, not the individual mix's. That is why the share modal
+     points links at the artist page rather than at whatever page the listener
+     was on — the artist's own artwork is the closest honest preview a static
+     deploy can carry. Per-mix unfurls would need one HTML page per mix. -->
+<meta property="og:site_name" content="Underground Existence">
 <meta property="og:title" content="{{PAGE_TITLE}}">
 <meta property="og:description" content="{{PAGE_DESC}}">
 <meta property="og:image" content="{{OG_IMAGE}}">
+<meta property="og:image:alt" content="{{PAGE_TITLE}}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://undergroundexistence.info/{{PAGE_PATH}}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{PAGE_TITLE}}">
+<meta name="twitter:description" content="{{PAGE_DESC}}">
+<meta name="twitter:image" content="{{OG_IMAGE}}">
+<meta name="twitter:image:alt" content="{{PAGE_TITLE}}">{{OG_VIDEO_TAGS}}
 <link rel="canonical" href="https://undergroundexistence.info/{{PAGE_PATH}}">
+<!-- The site's permanent permaweb address, for the share modal's PERMAWEB link.
+     An ArNS name, not a manifest txid: the manifest id of the deploy being
+     generated cannot exist yet, and an older one would share a frozen archive.
+     See permawebBase() in lib/WebsitePageGenerator.cjs. -->
+<meta name="ue-permaweb-base" content="{{PERMAWEB_BASE}}">
 <link rel="preload" as="image" href="img/digging-hero.webp" type="image/webp" fetchpriority="high">
 <link rel="preload" as="font" href="fonts/rationale-v1-regular.woff2" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/site.css">
+<!-- UE theme switch (light/dark). Dark is the default and is expressed by the ABSENCE of
+     `data-theme` on <html>; light is `<html data-theme="light">`. See the light-theme token
+     contract — every colour lives in css/site.css under :root / :root[data-theme="light"].
+     WHY INLINE, AND WHY HERE:
+       * Inline because `REQUIRED_MANIFEST_PATHS` in lib/WebsiteDeployer.js is a hard 23-path
+         deploy gate; a new website/js/*.js file would need that gate plus the .gitignore
+         allow-list changed, and is out of scope for a theme toggle.
+       * In <head>, synchronous, no defer/async: it therefore runs to completion before <body>
+         is parsed, so `data-theme` is already on <html> when the first box is laid out. The
+         dark→light flash is structurally impossible — there is no paint before this line.
+       * localStorage reads are wrapped in try/catch: Safari private mode and the per-transaction
+         Arweave sandbox subdomain can throw on access, and an uncaught throw here would abort
+         the rest of the page's head scripts.
+     The toggle wiring lives in this same block (not in nav.html) so the storage key, the
+     theme-color values and the icon/aria mapping have exactly one definition and cannot drift;
+     the click handler is delegated off `document`, so it binds safely on pages where either
+     button is absent and needs no DOM to exist at this point. -->
+<script>
+(function () {
+  var KEY = 'ue-theme';
+  /* The mobile browser chrome is painted from --bg-base, READ FROM THE
+     STYLESHEET rather than duplicated here. This script runs after the
+     stylesheet link, so the cascade is already resolvable. Hardcoding the pair
+     drifted three times in one session as the palette changed, and the symptom
+     is a hairline of the wrong colour above the page — invisible on desktop,
+     obvious on a phone. The literals below are only a fallback for the case
+     where the stylesheet somehow has not applied. */
+  var GROUND_FALLBACK = { dark: '#0a0606', light: '#e8e4e0' };
+  function ground(theme) {
+    try {
+      var v = getComputedStyle(root).getPropertyValue('--bg-base').trim();
+      if (v) return v;
+    } catch (e) { /* fall through */ }
+    return GROUND_FALLBACK[theme] || GROUND_FALLBACK.dark;
+  }
+  var TOGGLE_IDS = ['nav-theme-toggle', 'mobile-theme-toggle'];
+  var root = document.documentElement;
+
+  function stored() {
+    try { return localStorage.getItem(KEY); } catch (e) { return null; }
+  }
+  function persist(theme) {
+    try {
+      if (theme === 'light') localStorage.setItem(KEY, 'light');
+      else localStorage.removeItem(KEY);
+    } catch (e) { /* private mode / sandboxed origin — theme still applies for this page */ }
+  }
+  function current() {
+    return root.dataset.theme === 'light' ? 'light' : 'dark';
+  }
+  function apply(theme) {
+    if (theme === 'light') root.dataset.theme = 'light';
+    else delete root.dataset.theme;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    /* read AFTER the attribute flip above, so the cascade already reflects the
+       new theme and --bg-base resolves to the theme we just applied */
+    if (meta) meta.setAttribute('content', ground(theme));
+  }
+
+  /* --- pre-paint --- */
+  apply(stored() === 'light' ? 'light' : 'dark');
+
+  /* Point each toggle at the theme it switches TO. */
+  function syncToggles() {
+    var toLight = current() !== 'light';
+    for (var i = 0; i < TOGGLE_IDS.length; i++) {
+      var btn = document.getElementById(TOGGLE_IDS[i]);
+      if (!btn) continue;
+      btn.setAttribute('aria-label', toLight ? 'Switch to light theme' : 'Switch to dark theme');
+      btn.setAttribute('aria-pressed', toLight ? 'false' : 'true');
+      var use = btn.querySelector('use');
+      if (use) use.setAttribute('href', toLight ? '#i-sun' : '#i-moon');
+    }
+  }
+  window.__ueThemeSync = syncToggles;
+
+  function toggle() {
+    var theme = current() === 'light' ? 'dark' : 'light';
+    apply(theme);
+    persist(theme);
+    syncToggles();
+    /* Required: website/js/player.js's waveform renderer listens for this to drop its
+       cached bar colours. Never remove or rename it. */
+    try {
+      window.dispatchEvent(new CustomEvent('ue:themechange', { detail: { theme: theme } }));
+    } catch (e) { /* no CustomEvent constructor — theme still applied */ }
+  }
+
+  document.addEventListener('click', function (ev) {
+    var node = ev.target;
+    if (!node || typeof node.closest !== 'function') return;
+    if (!node.closest('#nav-theme-toggle, #mobile-theme-toggle')) return;
+    ev.preventDefault();
+    toggle();
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncToggles);
+  } else {
+    syncToggles();
+  }
+})();
+</script>

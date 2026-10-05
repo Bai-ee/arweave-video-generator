@@ -611,9 +611,9 @@
       "width": 1280,
       "height": 720,
       "collection": "chicago-skyline-videos",
-      "enabled": true,
+      "enabled": false,
       "excludeRanges": [],
-      "notes": "kept: Veo sepia-toned skyline with Water Tower, architectural cityscape"
+      "notes": "rejected by owner 2026-10-04: obviously AI-generated building (white ornate tower in front of the black tower). Never re-enable."
     },
     {
       "id": "skyline-4e88d88f",

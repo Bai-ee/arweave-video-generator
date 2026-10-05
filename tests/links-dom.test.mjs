@@ -1,12 +1,13 @@
 // DOM-level behavior tests for website/js/ue-links.js, run against the
 // purpose-built fake window/document in tests/helpers/load-ue-links.mjs
 // (no jsdom in this repo). Covers the observable behavior the pure-logic
-// tests can't: the deep-link banner/highlight/scroll flow, the hard
-// "never autoplay from a deep link" invariant (playIndexAt is only ever
-// reached from a simulated click, gated through window.UEBoot.ensurePlayer
-// exactly like the integration contract requires), address-bar sync on
-// real playback events, and the share-button injection + fallback cascade
-// on both mix surfaces and the persistent player bar.
+// tests can't: the deep-link scroll/highlight flow and the player-bar
+// priming that replaced the deleted floating banner, the hard "never
+// autoplay from a deep link" invariant (this module now never reaches the
+// playback host at all — it primes the bar and the listener presses play),
+// address-bar sync on real playback events, and the share-button injection
+// + fallback cascade on both mix surfaces and the persistent player bar,
+// ending at window.ueDialog rather than an injected copy panel.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadUeLinks, makeUEEnvironment, makeFakeHost, el } from './helpers/load-ue-links.mjs';
@@ -14,17 +15,70 @@ import { loadUeLinks, makeUEEnvironment, makeFakeHost, el } from './helpers/load
 const TXID = 'xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM';
 const OTHER_TXID = 'AbCdEfGh12345678901234567890123456789012Axy';
 
+// Mirrors lib/WebsitePageGenerator.cjs: the play anchor carries
+// data-title/data-artist/data-img, and the filename lives on the card's own
+// download anchor — which is where the player-bar prime payload reads it.
 function buildMixCardFixture({ txid, playable = true, title = 'Test Mix', artist = 'DJ Test' } = {}) {
-  const anchorAttrs = { 'data-playlist': '', 'data-title': title, 'data-artist': artist, href: 'https://arweave.net/' + txid };
+  const anchorAttrs = {
+    'data-playlist': '', 'data-title': title, 'data-artist': artist,
+    'data-img': 'https://arweave.net/cover-' + txid, href: 'https://arweave.net/' + txid
+  };
   if (!playable) anchorAttrs['data-unplayable'] = 'true';
   const anchor = el('a', anchorAttrs);
   const playBtn = el('button', { class: 'play-circle play-circle--sm' });
-  const actions = el('div', { class: 'mix-card-actions' }, [playBtn]);
+  const downloadBtn = el('a', { class: 'download-btn', 'data-download': '', 'data-filename': artist + ' - ' + title, href: 'https://arweave.net/' + txid });
+  const actions = el('div', { class: 'mix-card-actions' }, [playBtn, downloadBtn]);
   const card = el('article', { class: 'mix-card' }, [
     el('div', { class: 'mix-card-cover' }, [anchor]),
     el('div', { class: 'mix-card-body' }, [el('div', { class: 'mix-card-title-row' }, [actions])])
   ]);
   return { card, anchor, actions };
+}
+
+/** Spy stand-in for window.uePlayerBar (implemented for real in player.js).
+ *
+ *  Deliberately NOT installed on the window up front: boot.js loads
+ *  ue-links.js in its EAGER chain (player-core -> ue-host-pref -> ue-warm ->
+ *  ue-links -> ue-resume) and loads player.js — which is what defines
+ *  window.uePlayerBar — LAZILY (requestIdleCallback timeout 3500ms, or the
+ *  first play-intent tap), announcing it with a document-level
+ *  'ue-player-ready'. A test that pre-stubs the bar before init is testing a
+ *  convenient order that never happens in a browser; `hydrate()` reproduces
+ *  the real one. */
+function latePlayerBar(env, { accepts = true, throws = false } = {}) {
+  const calls = [];
+  const bar = {
+    prime: (payload) => {
+      calls.push(payload);
+      if (throws) throw new Error('boom');
+      return accepts;
+    }
+  };
+  return {
+    calls,
+    hydrate: () => {
+      env.window.uePlayerBar = bar;
+      if (!env.window.UEPlayer) env.window.UEPlayer = { host: makeFakeHost() };
+      env.document.dispatchEvent({ type: 'ue-player-ready' });
+    }
+  };
+}
+
+/** The other real ordering: the player has ALREADY hydrated by the time the
+ *  deep link is handled (a re-init, or a play-intent tap that loaded
+ *  player.js before this module's own init ran), so the ready hook fires
+ *  synchronously. Requires the env to carry UEPlayer.host. */
+function alreadyHydratedPlayerBar(env, { accepts = true } = {}) {
+  const calls = [];
+  env.window.uePlayerBar = { prime: (payload) => { calls.push(payload); return accepts; } };
+  return calls;
+}
+
+/** Spy stand-in for window.ueDialog (implemented for real in partials/modal.html). */
+function fakeDialog(env) {
+  const calls = [];
+  env.window.ueDialog = { open: (opts) => calls.push(opts), close: () => {} };
+  return calls;
 }
 
 function buildCatalogRowFixture({ txid, title = 'Row Mix', artist = 'DJ Row' } = {}) {
@@ -50,8 +104,8 @@ function click(node) {
 }
 
 describe('deep link on load — never autoplays', () => {
-  test('a valid ?mix=&t= matching a track on this page highlights + shows a banner, but never calls playIndexAt on its own', () => {
-    const { card, anchor } = buildMixCardFixture({ txid: TXID });
+  test('a valid ?mix=&t= matching a track on this page highlights + scrolls + primes the bar, but never calls playIndexAt', () => {
+    const { card } = buildMixCardFixture({ txid: TXID });
     const playIndexAtCalls = [];
     const host = makeFakeHost({
       findIndexByTxid: (txid) => (txid === TXID ? 3 : -1),
@@ -59,6 +113,9 @@ describe('deep link on load — never autoplays', () => {
     });
     const env = makeUEEnvironment({ location: { search: '?mix=' + TXID + '&t=754' }, UEPlayer: { host } });
     env.document.body.appendChild(card);
+    // player already hydrated in this one (env carries UEPlayer.host), so the
+    // ready hook fires synchronously — see latePlayerBar for the common order
+    const primeCalls = alreadyHydratedPlayerBar(env);
 
     const scrollCalls = [];
     card.scrollIntoView = (opts) => scrollCalls.push(opts);
@@ -68,179 +125,223 @@ describe('deep link on load — never autoplays', () => {
     // highlight + scroll happened...
     assert.equal(card.classList.contains('ue-links-deep-link-highlight'), true);
     assert.equal(scrollCalls.length, 1);
+    // ...the timestamp offer went to the player bar...
+    assert.equal(primeCalls.length, 1);
+    assert.equal(primeCalls[0].startSec, 754);
     // ...but playback was never triggered just by loading the page.
     assert.equal(playIndexAtCalls.length, 0);
-
-    const banner = env.document.getElementById('ue-links-deep-link-banner');
-    assert.ok(banner, 'banner should be shown');
-    assert.match(banner.querySelector('.ue-links-banner-text').textContent, /Test Mix/);
-    const playFromBtn = banner.querySelector('.ue-links-banner-play');
-    assert.ok(playFromBtn, '"Play from" button should exist because t was present');
-    assert.equal(playFromBtn.textContent, 'Play from 12:34');
-
-    // Only an explicit click starts playback, and only then.
-    click(playFromBtn);
-    assert.deepEqual(playIndexAtCalls, [[3, 754]]);
   });
 
-  test('when the player has not hydrated yet, the "Play from" click goes through window.UEBoot.ensurePlayer first, and still never autoplays before that gesture', () => {
+  test('even with a fully hydrated player AND window.UEBoot present, a deep link only primes — it never plays, and never forces hydration', () => {
     const { card } = buildMixCardFixture({ txid: TXID });
     const ensurePlayerCalls = [];
-    let storedCallback = null;
-    const env = makeUEEnvironment({
-      location: { search: '?mix=' + TXID + '&t=90' },
-      UEBoot: { ensurePlayer: (cb) => { ensurePlayerCalls.push(cb); storedCallback = cb; }, isPlayerLoaded: () => false }
-      // UEPlayer intentionally undefined: player not hydrated yet
-    });
-    env.document.body.appendChild(card);
-
-    loadUeLinks(env);
-    const playFromBtn = env.document.getElementById('ue-links-deep-link-banner').querySelector('.ue-links-banner-play');
-
-    click(playFromBtn);
-    assert.equal(ensurePlayerCalls.length, 1, 'ensurePlayer must be called synchronously from the click');
-
-    // Simulate hydration completing some time later.
     const playIndexAtCalls = [];
+    const playCalls = [];
     const host = makeFakeHost({
       findIndexByTxid: (txid) => (txid === TXID ? 0 : -1),
-      playIndexAt: (idx, t) => { playIndexAtCalls.push([idx, t]); }
+      playIndexAt: (idx, t) => { playIndexAtCalls.push([idx, t]); },
+      play: () => { playCalls.push(true); }
     });
-    env.window.UEPlayer = { host };
-    assert.equal(playIndexAtCalls.length, 0, 'still nothing played before the ensurePlayer callback runs');
-    storedCallback();
-    assert.deepEqual(playIndexAtCalls, [[0, 90]]);
+    const env = makeUEEnvironment({
+      location: { search: '?mix=' + TXID + '&t=90' },
+      UEPlayer: { host },
+      UEBoot: { ensurePlayer: (cb) => { ensurePlayerCalls.push(cb); }, isPlayerLoaded: () => true }
+    });
+    env.document.body.appendChild(card);
+    const primeCalls = alreadyHydratedPlayerBar(env);
+
+    loadUeLinks(env);
+
+    assert.deepEqual(playIndexAtCalls, [], 'a deep link must never reach playIndexAt on its own');
+    assert.deepEqual(playCalls, []);
+    assert.equal(ensurePlayerCalls.length, 0, 'and must not force the player to hydrate either — priming is inert');
+    assert.equal(primeCalls.length, 1, 'the offer is handed to the bar, whose own play button is the gesture');
   });
 
-  test('no t -> banner has no "Play from" button (nothing to auto-seek to)', () => {
+  test('no t -> the highlight and scroll still happen (the outline, not the timestamp, is the "you were linked here" signal)', () => {
     const { card } = buildMixCardFixture({ txid: TXID });
     const env = makeUEEnvironment({ location: { search: '?mix=' + TXID } });
     env.document.body.appendChild(card);
+    const scrollCalls = [];
+    card.scrollIntoView = (opts) => scrollCalls.push(opts);
     loadUeLinks(env);
-    const banner = env.document.getElementById('ue-links-deep-link-banner');
-    assert.ok(banner);
-    assert.equal(banner.querySelector('.ue-links-banner-play'), null);
+    assert.equal(card.classList.contains('ue-links-deep-link-highlight'), true);
+    assert.equal(scrollCalls.length, 1);
   });
 
-  test('dismiss button removes the banner', () => {
+  test('injects no floating banner of any kind — the only element this adds to <body> is the visually-hidden announcer', () => {
     const { card } = buildMixCardFixture({ txid: TXID });
     const env = makeUEEnvironment({ location: { search: '?mix=' + TXID } });
     env.document.body.appendChild(card);
+    const before = env.document.body.children.length;
     loadUeLinks(env);
-    const banner = env.document.getElementById('ue-links-deep-link-banner');
-    click(banner.querySelector('.ue-links-banner-dismiss'));
+
     assert.equal(env.document.getElementById('ue-links-deep-link-banner'), null);
+    assert.equal(env.document.querySelectorAll('.ue-links-banner').length, 0);
+    const added = env.document.body.children.slice(before).map((n) => n.id);
+    assert.deepEqual(added, ['ue-links-announcer']);
+    assert.equal(card.classList.contains('ue-links-deep-link-highlight'), true, 'the highlight is the whole deep-link affordance');
   });
 
-  test('fails silently: unknown mix (not on this page) -> no banner, no throw, page otherwise intact', () => {
+  test('fails silently: unknown mix (not on this page) -> no highlight, no prime, no throw, page otherwise intact', () => {
     const { card } = buildMixCardFixture({ txid: TXID });
     const env = makeUEEnvironment({ location: { search: '?mix=' + OTHER_TXID } });
     env.document.body.appendChild(card);
+    const player = latePlayerBar(env);
     assert.doesNotThrow(() => loadUeLinks(env));
-    assert.equal(env.document.getElementById('ue-links-deep-link-banner'), null);
+    player.hydrate();
+    assert.equal(player.calls.length, 0, 'nothing to prime, even once the player hydrates');
     assert.equal(card.classList.contains('ue-links-deep-link-highlight'), false);
   });
 
-  test('fails silently: invalid mix value -> no banner, no throw', () => {
+  test('fails silently: invalid mix value -> no highlight, no prime, no throw', () => {
     const { card } = buildMixCardFixture({ txid: TXID });
     const env = makeUEEnvironment({ location: { search: '?mix=<script>alert(1)</script>' } });
     env.document.body.appendChild(card);
+    const player = latePlayerBar(env);
     assert.doesNotThrow(() => loadUeLinks(env));
-    assert.equal(env.document.getElementById('ue-links-deep-link-banner'), null);
+    player.hydrate();
+    assert.equal(player.calls.length, 0, 'nothing to prime, even once the player hydrates');
+    assert.equal(card.classList.contains('ue-links-deep-link-highlight'), false);
   });
 
-  test('fails silently: no ?mix= at all -> no banner', () => {
+  test('fails silently: no ?mix= at all -> nothing highlighted, nothing primed', () => {
     const { card } = buildMixCardFixture({ txid: TXID });
     const env = makeUEEnvironment({ location: { search: '' } });
     env.document.body.appendChild(card);
+    const player = latePlayerBar(env);
     loadUeLinks(env);
-    assert.equal(env.document.getElementById('ue-links-deep-link-banner'), null);
+    player.hydrate();
+    assert.equal(player.calls.length, 0, 'nothing to prime, even once the player hydrates');
+    assert.equal(card.classList.contains('ue-links-deep-link-highlight'), false);
   });
 
   test('an unplayable mix (data-unplayable="true") is treated as not-on-this-page', () => {
     const { card } = buildMixCardFixture({ txid: TXID, playable: false });
     const env = makeUEEnvironment({ location: { search: '?mix=' + TXID } });
     env.document.body.appendChild(card);
+    const player = latePlayerBar(env);
     loadUeLinks(env);
-    assert.equal(env.document.getElementById('ue-links-deep-link-banner'), null);
+    player.hydrate();
+    assert.equal(player.calls.length, 0, 'nothing to prime, even once the player hydrates');
+    assert.equal(card.classList.contains('ue-links-deep-link-highlight'), false);
   });
 });
 
-describe('deep link banner clears the sticky site nav (#site-header)', () => {
-  test('positions below a live-measured #site-header rather than the CSS default top:14px', () => {
-    const { card } = buildMixCardFixture({ txid: TXID });
-    const header = el('div', { id: 'site-header' });
-    header.getBoundingClientRect = () => ({ bottom: 86 });
-    const env = makeUEEnvironment({ location: { search: '?mix=' + TXID } });
-    env.document.body.appendChild(header);
+describe('deep link primes the player bar instead of showing a banner', () => {
+  // REGRESSION (found in a real browser): this module is in boot.js's eager
+  // chain and window.uePlayerBar comes from the LAZILY-loaded player.js, so
+  // priming at init time silently did nothing on every real page load. The
+  // reveal must stay immediate; only the prime waits for 'ue-player-ready'.
+  test('boot.js order — the bar is absent when the deep link is handled, so the prime waits for "ue-player-ready" while the reveal does not', () => {
+    const { card } = buildMixCardFixture({ txid: TXID, title: 'Love Manifesto 3', artist: 'BAI-EE' });
+    const env = makeUEEnvironment({ location: { search: '?mix=' + TXID + '&t=754' } });
     env.document.body.appendChild(card);
-    loadUeLinks(env);
-    const banner = env.document.getElementById('ue-links-deep-link-banner');
-    assert.equal(banner.style.top, '100px', 'header.bottom (86) + the 14px gap');
-  });
-
-  test('falls back to the CSS default top when #site-header is absent', () => {
-    const { card } = buildMixCardFixture({ txid: TXID });
-    const env = makeUEEnvironment({ location: { search: '?mix=' + TXID } });
-    env.document.body.appendChild(card);
-    loadUeLinks(env);
-    const banner = env.document.getElementById('ue-links-deep-link-banner');
-    assert.equal(banner.style.top, '14px');
-  });
-
-  test('falls back to the CSS default when #site-header has no getBoundingClientRect (e.g. a non-Element stand-in)', () => {
-    const { card } = buildMixCardFixture({ txid: TXID });
-    const header = el('div', { id: 'site-header' });
-    delete header.getBoundingClientRect;
-    const env = makeUEEnvironment({ location: { search: '?mix=' + TXID } });
-    env.document.body.appendChild(header);
-    env.document.body.appendChild(card);
-    assert.doesNotThrow(() => loadUeLinks(env));
-    const banner = env.document.getElementById('ue-links-deep-link-banner');
-    assert.equal(banner.style.top, '14px');
-  });
-
-  test('a throwing getBoundingClientRect degrades to the CSS default, never throws', () => {
-    const { card } = buildMixCardFixture({ txid: TXID });
-    const header = el('div', { id: 'site-header' });
-    header.getBoundingClientRect = () => { throw new Error('boom'); };
-    const env = makeUEEnvironment({ location: { search: '?mix=' + TXID } });
-    env.document.body.appendChild(header);
-    env.document.body.appendChild(card);
-    assert.doesNotThrow(() => loadUeLinks(env));
-    const banner = env.document.getElementById('ue-links-deep-link-banner');
-    assert.equal(banner.style.top, '14px');
-  });
-
-  test('repositions on window resize while shown, and stops listening once dismissed', () => {
-    const { card } = buildMixCardFixture({ txid: TXID });
-    const header = el('div', { id: 'site-header' });
-    let headerBottom = 86;
-    header.getBoundingClientRect = () => ({ bottom: headerBottom });
-    const env = makeUEEnvironment({ location: { search: '?mix=' + TXID } });
-    env.document.body.appendChild(header);
-    env.document.body.appendChild(card);
-
-    const resizeListeners = [];
-    env.window.addEventListener = (type, cb) => { if (type === 'resize') resizeListeners.push(cb); };
-    env.window.removeEventListener = (type, cb) => {
-      if (type !== 'resize') return;
-      const i = resizeListeners.indexOf(cb);
-      if (i !== -1) resizeListeners.splice(i, 1);
-    };
+    const scrollCalls = [];
+    card.scrollIntoView = (opts) => scrollCalls.push(opts);
+    // NOTE: no uePlayerBar and no UEPlayer on the window yet — exactly the
+    // state boot.js leaves us in while player.js is still pending.
+    const player = latePlayerBar(env);
 
     loadUeLinks(env);
-    const banner = env.document.getElementById('ue-links-deep-link-banner');
-    assert.equal(banner.style.top, '100px');
-    assert.equal(resizeListeners.length, 1);
 
-    // simulate a breakpoint change shrinking the nav (e.g. rotating a phone)
-    headerBottom = 60;
-    resizeListeners[0]();
-    assert.equal(banner.style.top, '74px');
+    // the reveal is immediate and does NOT wait on hydration
+    assert.equal(card.classList.contains('ue-links-deep-link-highlight'), true, 'highlight must not wait for the player');
+    assert.equal(scrollCalls.length, 1, 'scroll must not wait for the player');
+    assert.equal(env.document.getElementById('ue-links-announcer').textContent, 'Shared mix: Love Manifesto 3 — BAI-EE');
+    assert.equal(player.calls.length, 0, 'nothing to prime yet — the bar does not exist');
 
-    click(banner.querySelector('.ue-links-banner-dismiss'));
-    assert.equal(resizeListeners.length, 0, 'the resize listener must be removed once the banner is gone');
+    // ...then player.js finishes loading and boot.js announces it
+    player.hydrate();
+
+    assert.equal(player.calls.length, 1, 'primed exactly once, after hydration');
+    assert.deepEqual(player.calls[0], {
+      title: 'Love Manifesto 3',
+      artist: 'BAI-EE',
+      img: 'https://arweave.net/cover-' + TXID,
+      href: 'https://arweave.net/' + TXID,
+      filename: 'BAI-EE - Love Manifesto 3',
+      startSec: 754,
+      label: 'shared from 12:34',
+      source: 'deep-link'
+    });
+
+    // one-shot: a second ue-player-ready must not prime again
+    env.document.dispatchEvent({ type: 'ue-player-ready' });
+    assert.equal(player.calls.length, 1, 'single call, no polling, no retry');
+  });
+
+  test('no t -> primes at 0 with the plain "shared link" label (the bar still names the mix you were sent)', () => {
+    const { card } = buildMixCardFixture({ txid: TXID });
+    const env = makeUEEnvironment({ location: { search: '?mix=' + TXID } });
+    env.document.body.appendChild(card);
+    const player = latePlayerBar(env);
+    loadUeLinks(env);
+    player.hydrate();
+
+    assert.equal(player.calls.length, 1);
+    assert.equal(player.calls[0].startSec, 0);
+    assert.equal(player.calls[0].label, 'shared link');
+    assert.equal(player.calls[0].source, 'deep-link');
+  });
+
+  test('the player never hydrates (no ue-player-ready ever fires) -> highlight and scroll still happen, nothing primed, nothing thrown', () => {
+    const { card } = buildMixCardFixture({ txid: TXID });
+    const env = makeUEEnvironment({ location: { search: '?mix=' + TXID + '&t=30' } });
+    env.document.body.appendChild(card);
+    const scrollCalls = [];
+    card.scrollIntoView = (opts) => scrollCalls.push(opts);
+    const player = latePlayerBar(env);
+
+    assert.doesNotThrow(() => loadUeLinks(env)); // and hydrate() is never called
+    assert.equal(card.classList.contains('ue-links-deep-link-highlight'), true);
+    assert.equal(scrollCalls.length, 1);
+    assert.equal(player.calls.length, 0);
+  });
+
+  test('the player hydrates but exposes no uePlayerBar at all (a stripped page) -> quiet no-op', () => {
+    const { card } = buildMixCardFixture({ txid: TXID });
+    const env = makeUEEnvironment({ location: { search: '?mix=' + TXID + '&t=30' } });
+    env.document.body.appendChild(card);
+    const scrollCalls = [];
+    card.scrollIntoView = (opts) => scrollCalls.push(opts);
+
+    loadUeLinks(env);
+    env.window.UEPlayer = { host: makeFakeHost() }; // player.js loaded, but no bar API
+    assert.doesNotThrow(() => env.document.dispatchEvent({ type: 'ue-player-ready' }));
+    assert.equal(card.classList.contains('ue-links-deep-link-highlight'), true);
+    assert.equal(scrollCalls.length, 1);
+  });
+
+  test('a bar that refuses (prime returns false, e.g. audio is already playing) changes nothing else', () => {
+    const { card } = buildMixCardFixture({ txid: TXID });
+    const env = makeUEEnvironment({ location: { search: '?mix=' + TXID + '&t=30' } });
+    env.document.body.appendChild(card);
+    const player = latePlayerBar(env, { accepts: false });
+    const scrollCalls = [];
+    card.scrollIntoView = (opts) => scrollCalls.push(opts);
+
+    loadUeLinks(env);
+    assert.doesNotThrow(() => player.hydrate());
+    assert.equal(player.calls.length, 1, 'it still asks — the bar owns the refusal');
+    assert.equal(card.classList.contains('ue-links-deep-link-highlight'), true);
+    assert.equal(scrollCalls.length, 1);
+  });
+
+  test('a throwing prime() never breaks the page', () => {
+    const { card } = buildMixCardFixture({ txid: TXID });
+    const env = makeUEEnvironment({ location: { search: '?mix=' + TXID + '&t=30' } });
+    env.document.body.appendChild(card);
+    const player = latePlayerBar(env, { throws: true });
+    const scrollCalls = [];
+    card.scrollIntoView = (opts) => scrollCalls.push(opts);
+
+    loadUeLinks(env);
+    assert.doesNotThrow(() => player.hydrate());
+    assert.equal(player.calls.length, 1);
+    assert.equal(card.classList.contains('ue-links-deep-link-highlight'), true);
+    assert.equal(scrollCalls.length, 1);
+    assert.equal(env.document.getElementById('ue-links-announcer').textContent, 'Shared mix: Test Mix — DJ Test');
   });
 });
 
@@ -265,15 +366,14 @@ describe('deep link scroll timing', () => {
       loadUeLinks(env);
       // boot()'s own DOMContentLoaded gate: nothing runs yet while "loading"
       assert.equal(scrollCalls.length, 0);
-      assert.equal(env.document.getElementById('ue-links-deep-link-banner'), null);
+      assert.equal(card.classList.contains('ue-links-deep-link-highlight'), false);
 
       // parsing completes (readyState now "interactive"), subresources (mix
       // thumbnails/hero art) still pending
       env.document.readyState = 'interactive';
       env.document.dispatchEvent({ type: 'DOMContentLoaded' });
 
-      assert.equal(card.classList.contains('ue-links-deep-link-highlight'), true, 'highlight/banner are immediate');
-      assert.ok(env.document.getElementById('ue-links-deep-link-banner'));
+      assert.equal(card.classList.contains('ue-links-deep-link-highlight'), true, 'the highlight is immediate');
       assert.equal(scrollCalls.length, 0, 'must not scroll against a not-yet-settled layout');
       assert.equal(loadListeners.length, 1, 'exactly one window "load" listener registered');
 
@@ -425,6 +525,7 @@ describe('share buttons on mix surfaces', () => {
     const { card, actions } = buildMixCardFixture({ txid: TXID });
     const env = makeUEEnvironment({ navigator: null, location: { pathname: '/baiee.html', search: '' } });
     env.document.body.appendChild(card);
+    const dialogCalls = fakeDialog(env);
     loadUeLinks(env);
 
     const btn = actions.children.find((c) => c.getAttribute('aria-label') === 'Share this mix');
@@ -433,15 +534,16 @@ describe('share buttons on mix surfaces', () => {
 
     const live = env.document.getElementById('ue-links-announcer');
     assert.equal(live.textContent, 'Link copied to clipboard.');
-    // no manual-copy panel needed since execCommand "succeeded" (fake doc.execCommand -> true)
-    assert.equal(env.document.getElementById('ue-links-manual-copy-panel'), null);
+    // no dialog needed since execCommand "succeeded" (fake doc.execCommand -> true)
+    assert.equal(dialogCalls.length, 0);
   });
 
-  test('when every copy path fails, a visible read-only URL fallback is shown', async () => {
+  test('when every copy path fails, the URL goes to the shared dialog as copyText — not an injected panel', async () => {
     const { card, actions } = buildMixCardFixture({ txid: TXID });
     const env = makeUEEnvironment({ navigator: null, location: { pathname: '/baiee.html', search: '' } });
     env.document.execCommand = () => false; // simulate every automatic copy path failing
     env.document.body.appendChild(card);
+    const dialogCalls = fakeDialog(env);
     loadUeLinks(env);
 
     const btn = actions.children.find((c) => c.getAttribute('aria-label') === 'Share this mix');
@@ -449,51 +551,47 @@ describe('share buttons on mix surfaces', () => {
     await flushMicrotasks();
 
     const live = env.document.getElementById('ue-links-announcer');
-    assert.equal(live.textContent, 'Could not copy automatically. Link shown below.');
-    const panel = env.document.getElementById('ue-links-manual-copy-panel');
-    assert.ok(panel, 'a manual copy panel should appear');
-    const input = panel.querySelector('.ue-links-manual-copy-input');
-    assert.match(input.value, new RegExp('mix=' + TXID));
+    assert.equal(live.textContent, 'Could not copy automatically. The link is shown so you can copy it.');
+    assert.equal(dialogCalls.length, 1);
+    assert.ok(dialogCalls[0].title, 'the dialog needs a title per the contract');
+    assert.match(dialogCalls[0].copyText, new RegExp('mix=' + TXID));
+    // the old injected panel must not come back
+    assert.equal(env.document.getElementById('ue-links-manual-copy-panel'), null);
+    assert.equal(env.document.querySelectorAll('.ue-links-manual-copy-panel').length, 0);
   });
 
-  test('the manual copy panel is positioned top-anchored (clearing the nav), never the old bottom:100px that collided with the resume bar', async () => {
+  test('no window.ueDialog -> degrades to the platform prompt() so the link is never lost', async () => {
     const { card, actions } = buildMixCardFixture({ txid: TXID });
-    const header = el('div', { id: 'site-header' });
-    header.getBoundingClientRect = () => ({ bottom: 86 });
     const env = makeUEEnvironment({ navigator: null, location: { pathname: '/baiee.html', search: '' } });
     env.document.execCommand = () => false;
-    env.document.body.appendChild(header);
     env.document.body.appendChild(card);
-    loadUeLinks(env);
+    const promptCalls = [];
+    env.window.prompt = (message, value) => { promptCalls.push([message, value]); return value; };
+    loadUeLinks(env); // no env.window.ueDialog at all
 
     const btn = actions.children.find((c) => c.getAttribute('aria-label') === 'Share this mix');
     click(btn);
     await flushMicrotasks();
 
-    const panel = env.document.getElementById('ue-links-manual-copy-panel');
-    assert.equal(panel.style.top, '100px', 'header.bottom (86) + the 14px nav gap, same as the deep-link banner');
-    assert.equal('bottom' in panel.style && panel.style.bottom, false, 'must not also carry a bottom offset (would stretch a fixed box between two anchors)');
+    assert.equal(promptCalls.length, 1);
+    assert.match(promptCalls[0][1], new RegExp('mix=' + TXID), 'the prompt carries the real share URL');
+    assert.equal(env.document.getElementById('ue-links-manual-copy-panel'), null);
   });
 
-  test('the manual copy panel stacks below an already-shown deep-link banner rather than overlapping it', async () => {
+  test('no ueDialog and no prompt (or a throwing dialog) -> announced, never thrown', async () => {
     const { card, actions } = buildMixCardFixture({ txid: TXID });
-    const { card: otherCard } = buildMixCardFixture({ txid: OTHER_TXID });
-    const env = makeUEEnvironment({ navigator: null, location: { pathname: '/baiee.html', search: '?mix=' + OTHER_TXID } });
+    const env = makeUEEnvironment({ navigator: null, location: { pathname: '/baiee.html', search: '' } });
     env.document.execCommand = () => false;
     env.document.body.appendChild(card);
-    env.document.body.appendChild(otherCard);
-    loadUeLinks(env);
-
-    const banner = env.document.getElementById('ue-links-deep-link-banner');
-    assert.ok(banner, 'sanity: the deep-link banner is showing for OTHER_TXID');
-    banner.getBoundingClientRect = () => ({ bottom: 64 });
+    env.window.ueDialog = { open: () => { throw new Error('dialog markup missing'); } };
+    loadUeLinks(env); // and no env.window.prompt either
 
     const btn = actions.children.find((c) => c.getAttribute('aria-label') === 'Share this mix');
-    click(btn);
+    assert.doesNotThrow(() => click(btn));
     await flushMicrotasks();
 
-    const panel = env.document.getElementById('ue-links-manual-copy-panel');
-    assert.equal(panel.style.top, '74px', 'banner.bottom (64) + the 10px stacking gap, below the banner rather than under/behind it');
+    const live = env.document.getElementById('ue-links-announcer');
+    assert.equal(live.textContent, 'Could not copy automatically. The link is shown so you can copy it.');
   });
 
   test('native share is preferred and receives the built share URL', async () => {
