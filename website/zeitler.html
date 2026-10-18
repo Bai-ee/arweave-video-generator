@@ -179,7 +179,11 @@
   }
 
   /* --- pre-paint --- */
-  apply(stored() === 'light' ? 'light' : 'dark');
+  /* The toggle is hidden for now (partials/nav.html), so the site is always
+     dark: a visitor who once chose light must not be stuck there with no way
+     back. Their saved choice is left in storage; restore with:
+     apply(stored() === 'light' ? 'light' : 'dark'); */
+  apply('dark');
 
   /* Point each toggle at the theme it switches TO. */
   function syncToggles() {
@@ -244,18 +248,19 @@
   <symbol id="i-wave" viewBox="0 0 24 24"><path d="M3 10h2v4H3zM7 7h2v10H7zM11 4h2v16h-2zM15 8h2v8h-2zM19 10h2v4h-2z"/></symbol>
   <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M9 5.5 15.5 12 9 18.5l-1.4-1.4 5.1-5.1-5.1-5.1L9 5.5Z"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M11 3h2v9.2l3.1-3.1 1.4 1.4L12 16 6.5 10.5l1.4-1.4L11 12.2V3ZM4 18h16v2H4v-2Z"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm1 2v9.6l4-4 3.5 3.5 2.5-2.5 4 4V6H5Zm10 2.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM11.2 2.8h1.6v2.8h-1.6zM11.2 18.4h1.6v2.8h-1.6zM2.8 11.2h2.8v1.6H2.8zM18.4 11.2h2.8v1.6h-2.8zM15.96 6.9 17.94 4.92 19.08 6.06 17.1 8.04ZM8.04 6.9 6.06 4.92 4.92 6.06 6.9 8.04ZM15.96 17.1 17.94 19.08 19.08 17.94 17.1 15.96ZM8.04 17.1 6.06 19.08 4.92 17.94 6.9 15.96Z"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1Z"/></symbol>
 </svg>
 
 <header id="site-header">
   <div id="site-header-inner">
-    <a id="site-wordmark" href="index.html"><img id="site-wordmark-logo" src="img/square-ue.png" alt="Underground Existence"></a>
+    <a id="site-wordmark" href="index.html"><img id="site-wordmark-logo" src="img/square-ue.png" alt="Underground Existence"><span id="site-wordmark-tagline">Mixtapes from Chicago</span></a>
     <nav id="primary-nav" aria-label="Primary">
       <a class="primary-nav-link" href="index.html">Mixes</a>
       <a class="primary-nav-link is-active" href="residents.html">Selectors</a>
       <a class="primary-nav-link" href="archive.html">Archive</a>
-      <a class="primary-nav-link" href="about.html">About</a>
+      <!-- About hidden from nav for now (owner request 2026-10-17): <a class="primary-nav-link" href="about.html">About</a> -->
     </nav>
     <div id="nav-desktop-actions">
       <span id="nav-search-divider"></span>
@@ -266,17 +271,19 @@
       <!-- Theme toggle. Markup is the DARK default (sun = "switch to light"); the inline
            theme block in partials/head.html rewrites the <use> href, aria-label and
            aria-pressed when light is active. Styling belongs to css/site.css. -->
+      <!-- light/dark toggle hidden for now (owner 2026-10-05; head.html forces dark):
       <button id="nav-theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
         <svg class="icon-svg"><use href="#i-sun"></use></svg>
-      </button>
+      </button> -->
     </div>
     <div id="mobile-nav-actions">
       <button id="mobile-search-toggle" type="button" aria-label="Search">
         <svg class="icon-svg" style="width:20px;height:20px"><use href="#i-search"></use></svg>
       </button>
+      <!-- light/dark toggle hidden for now (see #nav-theme-toggle above):
       <button id="mobile-theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
         <svg class="icon-svg" style="width:20px;height:20px"><use href="#i-sun"></use></svg>
-      </button>
+      </button> -->
       <button id="mobile-menu-toggle" type="button" aria-label="Menu">
         <svg class="icon-svg" style="width:22px;height:22px"><use href="#i-menu"></use></svg>
       </button>
@@ -286,7 +293,7 @@
     <a class="mobile-menu-link" href="index.html">Mixes</a>
     <a class="mobile-menu-link is-active" href="residents.html">Selectors</a>
     <a class="mobile-menu-link" href="archive.html">Archive</a>
-    <a class="mobile-menu-link" href="about.html">About</a>
+    <!-- About hidden from nav for now (owner request 2026-10-17): <a class="mobile-menu-link" href="about.html">About</a> -->
   </div>
 </header>
 <!-- Runs the moment the two toggles have been parsed, so a returning light-theme visitor never
@@ -300,7 +307,8 @@
     <div id="artist-detail-portrait">
       <div class="hero-image-clip">
         <img src="https://arweave.net/D7QsuJ9bl4ze6ci6kOctGBm8F0joW9uUXb4YWg96N1c" alt="BLUE JAY (AKA Josh Zeitler)" decoding="async" loading="eager" fetchpriority="high" data-fallback-initial="BJ">
-        <img id="artist-detail-portrait-logo" src="img/ue-white-horiz.png" alt="" aria-hidden="true">
+        <!-- logo overlay off the portrait for now (owner 2026-10-05):
+        <img id="artist-detail-portrait-logo" src="img/ue-white-horiz.png" alt="" aria-hidden="true"> -->
       </div>
     </div>
     <div id="artist-detail-content">
@@ -308,7 +316,8 @@
       <h1 id="artist-detail-name">BLUE JAY (AKA Josh Zeitler)</h1>
       <span id="artist-detail-signature" aria-hidden="true">Blue Jay (aka Josh Zeitler)</span>
       <div id="artist-detail-meta">
-        <span class="meta-chip"><svg class="icon-svg"><use href="#i-wave"></use></svg> ACID</span>
+        <!-- genre hidden for now (see metaChips in lib/WebsitePageGenerator.cjs):
+        <span class="meta-chip"><svg class="icon-svg"><use href="#i-wave"></use></svg> ACID</span> -->
         <span class="meta-chip">2 MIXES</span>
       </div>
     </div>
@@ -321,33 +330,33 @@
     </div>
     <div id="artist-mix-list" class="catalog-list">
 
-<div class="catalog-row" data-mix-number="034">
-  <span class="catalog-row-number">034</span>
+<div class="catalog-row catalog-row--play-first" data-mix-number="051">
+  <span class="catalog-row-lead"><button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button></span>
+  <span class="catalog-row-number">051</span>
   <a class="catalog-row-cover" data-playlist data-title="Live at Studio409 New York (2024)" data-artist="BLUE JAY (AKA Josh Zeitler)" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/6f647a005d6fcce2-v1t2.webp" data-duration-sec="10680" data-page="zeitler.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BLUE_JAY__AKA_Josh_Zeitler__video_1768149134391.mp4" href="https://uzh5clhxybxsww3li3gmcodyxok7dwa46vfq7etzn6owprhujdea.arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg" aria-label="Play Live at Studio409 New York (2024)"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/6f647a005d6fcce2-v1t2.webp" alt="BLUE JAY (AKA Josh Zeitler) — Live at Studio409 New York (2024)" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="BJ"></a>
   <div class="catalog-row-main">
     <h3 class="catalog-row-title"><a href="zeitler.html">Live at Studio409 New York (2024)</a></h3>
     <a class="catalog-row-artist" href="zeitler.html">BLUE JAY (AKA Josh Zeitler)</a>
-    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 178 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
   </div>
-  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 178 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
   <div class="catalog-row-actions">
-    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
     <a class="download-btn" data-download href="https://uzh5clhxybxsww3li3gmcodyxok7dwa46vfq7etzn6owprhujdea.arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg" data-filename="BLUE JAY (AKA Josh Zeitler) - Live at Studio409 New York (2024)" aria-label="Download Live at Studio409 New York (2024)"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
   </div>
 </div>
 
-<div class="catalog-row" data-mix-number="033">
-  <span class="catalog-row-number">033</span>
-  <a class="catalog-row-cover" data-playlist data-title="Blue Jay Live at Hush 2024 in San Francisco" data-artist="BLUE JAY (AKA Josh Zeitler)" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/881d529d4cde69ae-v1t2.webp" data-duration-sec="3600" data-page="zeitler.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BLUE_JAY__AKA_Josh_Zeitler__video_1781805095949.mp4" href="https://icvl3qhmdkbyqm626rqj44qeu32iyswsx5s4pndqrfao46bw4iuq.arweave.net/QKq9wOwag4gz2vRgnnIEpvSMStK_Zce0cIlA7ng24ik" aria-label="Play Blue Jay Live at Hush 2024 in San Francisco"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/881d529d4cde69ae-v1t2.webp" alt="BLUE JAY (AKA Josh Zeitler) — Blue Jay Live at Hush 2024 in San Francisco" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="BJ"></a>
+<div class="catalog-row catalog-row--play-first" data-mix-number="002">
+  <span class="catalog-row-lead"><button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button></span>
+  <span class="catalog-row-number">002</span>
+  <a class="catalog-row-cover" data-playlist data-title="Live at Hush" data-artist="BLUE JAY (AKA Josh Zeitler)" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/881d529d4cde69ae-v1t2.webp" data-duration-sec="3600" data-page="zeitler.html" href="https://icvl3qhmdkbyqm626rqj44qeu32iyswsx5s4pndqrfao46bw4iuq.arweave.net/QKq9wOwag4gz2vRgnnIEpvSMStK_Zce0cIlA7ng24ik" aria-label="Play Live at Hush"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/881d529d4cde69ae-v1t2.webp" alt="BLUE JAY (AKA Josh Zeitler) — Live at Hush" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="BJ"></a>
   <div class="catalog-row-main">
-    <h3 class="catalog-row-title"><a href="zeitler.html">Blue Jay Live at Hush 2024 in San Francisco</a></h3>
+    <h3 class="catalog-row-title"><a href="zeitler.html">Live at Hush</a></h3>
     <a class="catalog-row-artist" href="zeitler.html">BLUE JAY (AKA Josh Zeitler)</a>
-    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+    <div class="catalog-row-meta catalog-row-meta--inline"></div>
   </div>
-  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip">ACID</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> 60 MIN</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> 2024</span></div>
+  <div class="catalog-row-meta catalog-row-meta-cell"></div>
   <div class="catalog-row-actions">
-    <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
-    <a class="download-btn" data-download href="https://icvl3qhmdkbyqm626rqj44qeu32iyswsx5s4pndqrfao46bw4iuq.arweave.net/QKq9wOwag4gz2vRgnnIEpvSMStK_Zce0cIlA7ng24ik" data-filename="BLUE JAY (AKA Josh Zeitler) - Blue Jay Live at Hush 2024 in San Francisco" aria-label="Download Blue Jay Live at Hush 2024 in San Francisco"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    <a class="download-btn" data-download href="https://icvl3qhmdkbyqm626rqj44qeu32iyswsx5s4pndqrfao46bw4iuq.arweave.net/QKq9wOwag4gz2vRgnnIEpvSMStK_Zce0cIlA7ng24ik" data-filename="BLUE JAY (AKA Josh Zeitler) - Live at Hush" aria-label="Download Live at Hush"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
   </div>
 </div>
     </div>
@@ -366,7 +375,7 @@
       <a href="index.html">Mixes</a>
       <a href="residents.html">Selectors</a>
       <a href="archive.html">Archive</a>
-      <a href="about.html">About</a>
+      <!-- About hidden from footer for now (owner request 2026-10-17): <a href="about.html">About</a> -->
       <a href="https://docs.google.com/forms/d/e/1FAIpQLSfnuTItd-QSZkgPwIy9baGBZ8nyC_6Y3JxsXLSLywJfuwrXYw/viewform?usp=sf_link" target="_blank" rel="noopener">Contribute</a>
     </div>
   </div>
@@ -505,14 +514,16 @@
 })();
 </script>
 
-<div id="persistent-player-bar" class="is-idle">
+<div id="persistent-player-bar" class="is-idle" data-mix-credits="{&quot;xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM&quot;:{&quot;title&quot;:&quot;ANDREW EMIL B2B RED EYE&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;},&quot;3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg&quot;:{&quot;title&quot;:&quot;BAI-EE&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;},&quot;aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU&quot;:{&quot;title&quot;:&quot;TYREL WILLIAMS&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;},&quot;o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0&quot;:{&quot;title&quot;:&quot;SASSMOUTH&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;}}">
   <div id="player-bar-now-playing">
     <div id="player-bar-thumb"><img class="cover-fallback" src="img/square-ue.png" alt=""></div>
     <div id="player-bar-track-meta">
-      <div id="player-bar-title">Select a mix to play</div>
+      <div id="player-bar-title"><a href="">Select a mix to play</a></div>
       <div id="player-bar-artist"></div>
     </div>
   </div>
+  <!-- film / cover / artist chips (homepage: the hero script moves #hero-source-thumbs here) -->
+  <div id="player-bar-source-slot"></div>
   <div id="player-bar-transport">
     <button class="transport-btn" id="player-bar-shuffle" type="button" aria-label="Shuffle">
       <svg class="icon-svg"><use href="#i-shuffle"></use></svg>
@@ -544,6 +555,26 @@
     <svg class="icon-svg"><use href="#i-kebab"></use></svg>
   </button>
 </div>
+<script>
+/* Fade the bar's live parts in once the player has set them up, instead of
+   showing the idle placeholder and then swapping (a visible content shift).
+   css: #persistent-player-bar[data-bar-boot]. `ue-player-ready` fires after
+   player.js has synced the bar (and ue-resume.js primes on that same event),
+   so a short beat after it the bar is final. The fallback covers a player that
+   never loads; no JS means no attribute and the bar simply shows. */
+(function () {
+  var bar = document.getElementById('persistent-player-bar');
+  if (!bar) return;
+  bar.setAttribute('data-bar-boot', 'pending');
+  function ready() {
+    if (bar.getAttribute('data-bar-boot') !== 'pending') return;
+    void bar.offsetWidth;   /* flush 'pending' so the fade runs */
+    bar.setAttribute('data-bar-boot', 'ready');
+  }
+  document.addEventListener('ue-player-ready', function () { setTimeout(ready, 80); }, { once: true });
+  setTimeout(ready, 6000);
+})();
+</script>
 
 <div id="search-overlay" role="dialog" aria-label="Search">
   <button id="search-overlay-close" type="button">Close</button>
@@ -555,8 +586,8 @@
 
 <!-- UE shared dialog (transient-UI rework).
      ONE centre-screen dialog for the whole site, reserved for genuine decisions:
-     a terminal playback failure (retry / download) and the clipboard-blocked copy
-     fallback. Transient states (starting / buffering / seeking) keep the existing
+     a terminal playback failure (retry / download), the clipboard-blocked copy
+     fallback, and a mix's original artwork (artist page, "View original artwork"). Transient states (starting / buffering / seeking) keep the existing
      inline pill on the waveform and must NOT come through here.
 
      WHY THIS MARKUP IS STATIC, AND WHY THE CONTROLLER IS INLINE:
@@ -578,6 +609,7 @@
          [open]                       shown
          [data-actions="0|1|2"]       how many action buttons are rendered
          [data-copy="on|off"]         whether the copy input is showing
+         [data-image="on|off"]        whether the image slot is showing
        #ue-dialog-panel              inner panel — put PADDING HERE, not on #ue-dialog:
                                      a backdrop click is detected as "target is the
                                      dialog element", so padding on the dialog itself
@@ -585,6 +617,7 @@
        #ue-dialog-close              the ✕ button   (.ue-dialog-close-glyph inside)
        #ue-dialog-title              title line
        #ue-dialog-message            body copy (carries [hidden] when unused)
+       #ue-dialog-image              open({ image: { src, alt } }) (carries [hidden])
        #ue-dialog-copy-input         read-only copy fallback field (carries [hidden])
        #ue-dialog-actions            actions row
        .ue-dialog-action             an action button
@@ -595,13 +628,14 @@
      otherwise paint the panel inline on every page. The controller removes `hidden`
      right before showModal() and restores it on close, so the UA rule
      `[hidden] { display: none }` can never fight an open dialog. -->
-<dialog id="ue-dialog" aria-labelledby="ue-dialog-title" aria-describedby="ue-dialog-message" data-actions="0" data-copy="off" hidden>
+<dialog id="ue-dialog" aria-labelledby="ue-dialog-title" aria-describedby="ue-dialog-message" data-actions="0" data-copy="off" data-image="off" hidden>
   <div id="ue-dialog-panel">
     <button id="ue-dialog-close" type="button" aria-label="Close">
       <span class="ue-dialog-close-glyph" aria-hidden="true">&#10005;</span>
     </button>
     <h2 id="ue-dialog-title"></h2>
     <p id="ue-dialog-message" hidden></p>
+    <img id="ue-dialog-image" alt="" decoding="async" hidden>
     <input id="ue-dialog-copy-input" type="text" readonly spellcheck="false" autocomplete="off" aria-label="Copy this text" hidden>
     <div id="ue-dialog-actions"></div>
   </div>
@@ -613,6 +647,7 @@
   var titleEl = document.getElementById('ue-dialog-title');
   var msgEl = document.getElementById('ue-dialog-message');
   var copyEl = document.getElementById('ue-dialog-copy-input');
+  var imageEl = document.getElementById('ue-dialog-image');
   var actionsEl = document.getElementById('ue-dialog-actions');
   var closeBtn = document.getElementById('ue-dialog-close');
 
@@ -648,9 +683,15 @@
       copyEl.value = '';
       copyEl.setAttribute('hidden', '');
     }
+    if (imageEl) {
+      imageEl.removeAttribute('src');
+      imageEl.alt = '';
+      imageEl.setAttribute('hidden', '');
+    }
     if (dlg) {
       dlg.setAttribute('data-actions', '0');
       dlg.setAttribute('data-copy', 'off');
+      dlg.setAttribute('data-image', 'off');
     }
   }
 
@@ -702,9 +743,13 @@
     var message = str(spec.message);
     var copyText = str(spec.copyText);
     var actions = Object.prototype.toString.call(spec.actions) === '[object Array]' ? spec.actions : [];
+    /* http(s) only: the one caller passes a stored artwork URL, and nothing else
+       (javascript:, data:) should ever reach an <img src> from here. */
+    var image = spec.image && typeof spec.image === 'object' && /^https?:\/\//i.test(str(spec.image.src))
+      ? { src: str(spec.image.src), alt: str(spec.image.alt) } : null;
 
     /* Nothing to say and nothing to do — refuse rather than flash an empty box. */
-    if (!title && !message && !copyText && actions.length === 0) return false;
+    if (!title && !message && !copyText && !image && actions.length === 0) return false;
 
     if (!supported) {
       /* Degraded path: the copy fallback is the only case where the user still has
@@ -729,6 +774,13 @@
 
     if (titleEl) titleEl.textContent = title;
     setText(msgEl, message);
+
+    if (image && imageEl) {
+      imageEl.alt = image.alt;
+      imageEl.src = image.src;
+      imageEl.removeAttribute('hidden');
+      dlg.setAttribute('data-image', 'on');
+    }
 
     if (copyText && copyEl) {
       copyEl.value = copyText;
@@ -1417,6 +1469,32 @@
 })();
 </script>
 
+<script>
+/* "View original artwork" (generator originalArtBtnHtml). Every list shows a
+   mix's generated render; its own custom cover is viewable only here, in the
+   shared dialog. A ?mix=<txid> share link to a mix that has one opens it on
+   load. Inline (not a js/ file) for the same REQUIRED_MANIFEST_PATHS reason the
+   dialog partial gives. */
+(function () {
+  function openArt(btn) {
+    if (!btn || !window.ueDialog || typeof window.ueDialog.open !== 'function') return;
+    var title = btn.getAttribute('data-original-art-title') || '';
+    window.ueDialog.open({
+      title: title,
+      image: { src: btn.getAttribute('data-original-art') || '', alt: 'Original artwork — ' + title }
+    });
+  }
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest('.original-art-btn') : null;
+    if (btn) openArt(btn);
+  });
+  var m = /[?&]mix=([A-Za-z0-9_-]{43})(?:&|$)/.exec(location.search || '');
+  if (m) {
+    var btn = document.querySelector('.original-art-btn[data-mix-txid="' + m[1] + '"]');
+    if (btn) openArt(btn);
+  }
+})();
+</script>
 <script src="js/boot.js" defer></script>
 </body>
 </html>

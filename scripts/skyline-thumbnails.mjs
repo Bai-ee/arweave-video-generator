@@ -22,6 +22,9 @@
  *                               successful --apply batch only; never runs on its own, never in dry-run
  *   --rerender                 re-grade already-generated thumbnails with the current treatment:
  *                              same frame, same assignmentVersion, new treatment-versioned asset path
+ *   --render-uploaded          render for mixes WITHOUT a generated cover, shown in place of it: writes
+ *                              mix.renderImageFilename/renderImageMeta, never the cover itself
+ *                              (implies --target mix; not combinable with --rerender)
  *   --ignore-used-index        maintenance override (Job B amendment, not in §3.10): skip seeding the
  *                               `used` collision-avoidance set from store.readUsedIndex() entirely, so
  *                               every entity is selected as if no prior run ever happened. Prints a loud
@@ -84,7 +87,8 @@ export function parseArgs(argv) {
     json: false,
     sync: false,
     ignoreUsedIndex: false,
-    rerender: false
+    rerender: false,
+    renderUploaded: false
   };
   const errors = [];
 
@@ -119,6 +123,9 @@ export function parseArgs(argv) {
         break;
       case '--rerender':
         options.rerender = true;
+        break;
+      case '--render-uploaded':
+        options.renderUploaded = true;
         break;
       case '--target': {
         const value = argv[i + 1];
@@ -167,6 +174,14 @@ export function parseArgs(argv) {
       default:
         errors.push(`Unknown argument: ${arg}`);
     }
+  }
+
+  if (options.renderUploaded) {
+    // These renders are per mix, and a regrade reuses a stored frame that
+    // this mode does not track.
+    if (options.target === 'both') options.target = 'mix';
+    if (options.target !== 'mix') errors.push('--render-uploaded only applies to --target mix');
+    if (options.rerender) errors.push('--render-uploaded cannot be combined with --rerender');
   }
 
   return { options, errors };
@@ -373,7 +388,8 @@ export async function runCli(argv, deps = {}) {
         mixKey: options.mixKey,
         includeUploaded: options.includeUploaded,
         regenerate: options.regenerate || options.rerender,
-        assignmentVersion: options.assignmentVersion
+        assignmentVersion: options.assignmentVersion,
+        renderUploaded: options.renderUploaded
       }
     });
   } catch (err) {
@@ -462,7 +478,10 @@ export async function runCli(argv, deps = {}) {
       continue;
     }
 
-    const dedupeKey = `${entity.entityType}:${entity.entityKey}:v${options.rerender && entity.existingMeta ? entity.existingMeta.assignmentVersion : entity.nextAssignmentVersion}`;
+    // --render-uploaded renders under its own entityType ('render'): own seed, own
+    // storage folder, never the mix's cover path.
+    const renderType = options.renderUploaded ? 'render' : entity.entityType;
+    const dedupeKey = `${renderType}:${entity.entityKey}:v${options.rerender && entity.existingMeta ? entity.existingMeta.assignmentVersion : entity.nextAssignmentVersion}`;
     const alreadyGenerated = generatedByKey.get(dedupeKey);
 
     let genResult;
@@ -477,7 +496,7 @@ export async function runCli(argv, deps = {}) {
         // candidate is forced, so a regrade can never change the imagery.
         const rerenderMeta = options.rerender ? entity.existingMeta : null;
         genResult = await media.service.generate({
-          entityType: entity.entityType,
+          entityType: renderType,
           stableKey: entity.entityKey,
           assignmentVersion: rerenderMeta ? rerenderMeta.assignmentVersion : entity.nextAssignmentVersion,
           used,
@@ -525,7 +544,15 @@ export async function runCli(argv, deps = {}) {
       });
       let applyResult;
       try {
-        applyResult = await store.applyEntityAssignment({
+        applyResult = options.renderUploaded
+          ? await store.applyRenderAssignment({
+            entityKey: entity.entityKey,
+            artistFilename: entity.artistFilename,
+            mixIndex: entity.mixIndex,
+            imageUrl: genResult.imageUrl,
+            meta
+          })
+          : await store.applyEntityAssignment({
           entityKey: entity.entityKey,
           entityType: entity.entityType,
           artistFilename: entity.artistFilename,

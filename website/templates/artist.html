@@ -12,7 +12,8 @@
     <div id="artist-detail-portrait">
       <div class="hero-image-clip">
         {{ARTIST_IMAGE}}
-        <img id="artist-detail-portrait-logo" src="img/ue-white-horiz.png" alt="" aria-hidden="true">
+        <!-- logo overlay off the portrait for now (owner 2026-10-05):
+        <img id="artist-detail-portrait-logo" src="img/ue-white-horiz.png" alt="" aria-hidden="true"> -->
       </div>
     </div>
     <div id="artist-detail-content">
@@ -20,7 +21,8 @@
       <h1 id="artist-detail-name">{{ARTIST_NAME}}</h1>
       <span id="artist-detail-signature" aria-hidden="true">{{ARTIST_SIGNATURE}}</span>
       <div id="artist-detail-meta">
-        <span class="meta-chip"><svg class="icon-svg"><use href="#i-wave"></use></svg> {{ARTIST_GENRE}}</span>
+        <!-- genre hidden for now (see metaChips in lib/WebsitePageGenerator.cjs):
+        <span class="meta-chip"><svg class="icon-svg"><use href="#i-wave"></use></svg> {{ARTIST_GENRE}}</span> -->
         <span class="meta-chip">{{MIX_COUNT}} {{MIX_COUNT_LABEL}}</span>
       </div>
     </div>
@@ -42,6 +44,32 @@
 {{> search-overlay}}
 {{> modal}}
 {{> share-modal}}
+<script>
+/* "View original artwork" (generator originalArtBtnHtml). Every list shows a
+   mix's generated render; its own custom cover is viewable only here, in the
+   shared dialog. A ?mix=<txid> share link to a mix that has one opens it on
+   load. Inline (not a js/ file) for the same REQUIRED_MANIFEST_PATHS reason the
+   dialog partial gives. */
+(function () {
+  function openArt(btn) {
+    if (!btn || !window.ueDialog || typeof window.ueDialog.open !== 'function') return;
+    var title = btn.getAttribute('data-original-art-title') || '';
+    window.ueDialog.open({
+      title: title,
+      image: { src: btn.getAttribute('data-original-art') || '', alt: 'Original artwork — ' + title }
+    });
+  }
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest('.original-art-btn') : null;
+    if (btn) openArt(btn);
+  });
+  var m = /[?&]mix=([A-Za-z0-9_-]{43})(?:&|$)/.exec(location.search || '');
+  if (m) {
+    var btn = document.querySelector('.original-art-btn[data-mix-txid="' + m[1] + '"]');
+    if (btn) openArt(btn);
+  }
+})();
+</script>
 <script src="js/boot.js" defer></script>
 </body>
 </html>

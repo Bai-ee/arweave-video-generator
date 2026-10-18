@@ -170,23 +170,24 @@ test('generated square asset gets explicit width/height on every surface that re
   assert.ok(html['skyline-test-one.html'].includes(needle), 'artist-page mix row must render width/height for the generated asset');
 });
 
-test('locked/uploaded mix image renders unchanged: no width/height added', () => {
-  const uploadedImgTag = /<img src="https:\/\/arweave\.net\/uploaded-cover-locked\.jpg"[^>]*>/;
-  const m1 = html['archive.html'].match(uploadedImgTag);
-  const m2 = html['skyline-test-one.html'].match(uploadedImgTag);
-  assert.ok(m1, 'locked/uploaded mix image must still render in archive.html');
-  assert.ok(m2, 'locked/uploaded mix image must still render in the artist page');
-  assert.ok(!m1[0].includes('width='), 'locked/uploaded image must not gain a width attribute');
-  assert.ok(!m2[0].includes('width='), 'locked/uploaded image must not gain a width attribute');
-  assert.ok(m1[0].includes('alt="Skyline Test One — Locked Uploaded Mix"'), 'alt text still applies to locked/uploaded mix images');
+// Only generated renders are ever shown as a mix thumbnail (shownMixImage).
+// Uploaded art stays in the data but is hidden behind the .cover-fallback panel.
+test('locked/uploaded mix image is never shown as a mix thumbnail', () => {
+  for (const file of ['index.html', 'archive.html', 'skyline-test-one.html']) {
+    // (the artist page may carry it in the "View original artwork" button's
+    // data-original-art — that is the one place it is viewable, not a thumbnail)
+    assert.ok(!/(src|data-img)="https:\/\/arweave\.net\/uploaded-cover-locked\.jpg"/.test(html[file]), file + ' must not show the uploaded cover as a thumbnail');
+  }
+  const fallbacks = html['skyline-test-one.html'].split('<img class="cover-fallback" src="img/square-ue.png" alt="">').length - 1;
+  assert.ok(fallbacks >= 2, 'the hidden uploaded cover and the hidden artist-image fallback both render the cover-fallback');
 });
 
-test('missing mix image falls back to artist image (plain, no meta -> no dims)', () => {
-  const fallbackImgTag = /<img src="https:\/\/arweave\.net\/uploaded-artist-one-img\.jpg"[^>]*>/;
-  const m = html['archive.html'].match(fallbackImgTag);
-  assert.ok(m, 'archive row for the fallback mix must render the artist image url');
-  assert.ok(!m[0].includes('width='), 'plain uploaded artist image (no meta) must not gain width/height');
-  assert.ok(m[0].includes('alt="Skyline Test One — Fallback To Artist Mix"'), 'alt text uses mix context even though the image resolved from the artist fallback');
+test('missing mix image never falls back to a plain (uploaded) artist image', () => {
+  assert.ok(!html['archive.html'].includes('uploaded-artist-one-img.jpg'), 'archive must not use the plain artist image as a mix thumbnail');
+  // (Homepage Latest Mixes tiles DO show the artist picture as <img src> —
+  // see homepage-artist-tiles.test.mjs — but it must never become a play
+  // anchor's data-img, which carries the resolved mix image.)
+  assert.ok(!/data-img="https:\/\/arweave\.net\/uploaded-artist-one-img\.jpg"/.test(html['index.html']), 'homepage data-img must not use the plain artist image');
 });
 
 test('missing mix image falling back to a GENERATED artist image still carries dims (meta follows the resolved URL)', () => {

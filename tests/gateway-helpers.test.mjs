@@ -67,6 +67,23 @@ describe('buildCandidates', () => {
     assert.deepEqual(UEPlayerCore.buildCandidates('https://example.com/nope'), []);
     assert.deepEqual(UEPlayerCore.buildCandidates(''), []);
   });
+
+  test('a direct Firebase Storage mix URL is its own single candidate', () => {
+    const url = UEPlayerCore.DIRECT_PREFIX + TXID;
+    assert.equal(UEPlayerCore.isDirectUrl(url), true);
+    assert.equal(UEPlayerCore.extractTxid(url), TXID);
+    const candidates = UEPlayerCore.buildCandidates(url);
+    assert.equal(candidates.length, 1);
+    assert.equal(candidates[0].url, url);
+    assert.equal(candidates[0].host, UEPlayerCore.DIRECT_PREFIX);
+    assert.equal(candidates[0].rangeConfirmed, false);
+  });
+
+  test('other storage.googleapis.com URLs are not treated as direct mixes', () => {
+    const other = 'https://storage.googleapis.com/some-other-bucket/website/mixes/' + TXID;
+    assert.equal(UEPlayerCore.isDirectUrl(other), false);
+    assert.equal(UEPlayerCore.isDirectUrl(UEPlayerCore.DIRECT_PREFIX + 'short'), false);
+  });
 });
 
 describe('parseContentRange', () => {

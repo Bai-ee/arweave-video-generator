@@ -65,7 +65,7 @@
      that redirect, not the final image/download host. -->
 <link rel="preconnect" href="https://arweave.net">
 <title>Underground Existence — Mixtapes From Chicago</title>
-<meta name="description" content="Chicago house & techno mixtapes, archived in permanence on Arweave. 44 mixes from 18 residents.">
+<meta name="description" content="Chicago house & techno mixtapes, archived in permanence on Arweave. 64 mixes from 18 residents.">
 <meta name="theme-color" content="#0a0606">
 <link rel="icon" type="image/png" href="icon/favicon-32x32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="icon/favicon-32x32.png">
@@ -93,14 +93,14 @@
      deploy can carry. Per-mix unfurls would need one HTML page per mix. -->
 <meta property="og:site_name" content="Underground Existence">
 <meta property="og:title" content="Underground Existence — Mixtapes From Chicago">
-<meta property="og:description" content="Chicago house & techno mixtapes, archived in permanence on Arweave. 44 mixes from 18 residents.">
+<meta property="og:description" content="Chicago house & techno mixtapes, archived in permanence on Arweave. 64 mixes from 18 residents.">
 <meta property="og:image" content="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1t2.webp">
 <meta property="og:image:alt" content="Underground Existence — Mixtapes From Chicago">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://undergroundexistence.info/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Underground Existence — Mixtapes From Chicago">
-<meta name="twitter:description" content="Chicago house & techno mixtapes, archived in permanence on Arweave. 44 mixes from 18 residents.">
+<meta name="twitter:description" content="Chicago house & techno mixtapes, archived in permanence on Arweave. 64 mixes from 18 residents.">
 <meta name="twitter:image" content="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1t2.webp">
 <meta name="twitter:image:alt" content="Underground Existence — Mixtapes From Chicago">
 <meta property="og:video" content="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/LORELEI_video_1785479197900.mp4">
@@ -179,7 +179,11 @@
   }
 
   /* --- pre-paint --- */
-  apply(stored() === 'light' ? 'light' : 'dark');
+  /* The toggle is hidden for now (partials/nav.html), so the site is always
+     dark: a visitor who once chose light must not be stuck there with no way
+     back. Their saved choice is left in storage; restore with:
+     apply(stored() === 'light' ? 'light' : 'dark'); */
+  apply('dark');
 
   /* Point each toggle at the theme it switches TO. */
   function syncToggles() {
@@ -244,18 +248,19 @@
   <symbol id="i-wave" viewBox="0 0 24 24"><path d="M3 10h2v4H3zM7 7h2v10H7zM11 4h2v16h-2zM15 8h2v8h-2zM19 10h2v4h-2z"/></symbol>
   <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M9 5.5 15.5 12 9 18.5l-1.4-1.4 5.1-5.1-5.1-5.1L9 5.5Z"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M11 3h2v9.2l3.1-3.1 1.4 1.4L12 16 6.5 10.5l1.4-1.4L11 12.2V3ZM4 18h16v2H4v-2Z"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm1 2v9.6l4-4 3.5 3.5 2.5-2.5 4 4V6H5Zm10 2.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM11.2 2.8h1.6v2.8h-1.6zM11.2 18.4h1.6v2.8h-1.6zM2.8 11.2h2.8v1.6H2.8zM18.4 11.2h2.8v1.6h-2.8zM15.96 6.9 17.94 4.92 19.08 6.06 17.1 8.04ZM8.04 6.9 6.06 4.92 4.92 6.06 6.9 8.04ZM15.96 17.1 17.94 19.08 19.08 17.94 17.1 15.96ZM8.04 17.1 6.06 19.08 4.92 17.94 6.9 15.96Z"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1Z"/></symbol>
 </svg>
 
 <header id="site-header">
   <div id="site-header-inner">
-    <a id="site-wordmark" href="index.html"><img id="site-wordmark-logo" src="img/square-ue.png" alt="Underground Existence"></a>
+    <a id="site-wordmark" href="index.html"><img id="site-wordmark-logo" src="img/square-ue.png" alt="Underground Existence"><span id="site-wordmark-tagline">Mixtapes from Chicago</span></a>
     <nav id="primary-nav" aria-label="Primary">
       <a class="primary-nav-link is-active" href="index.html">Mixes</a>
       <a class="primary-nav-link" href="residents.html">Selectors</a>
       <a class="primary-nav-link" href="archive.html">Archive</a>
-      <a class="primary-nav-link" href="about.html">About</a>
+      <!-- About hidden from nav for now (owner request 2026-10-17): <a class="primary-nav-link" href="about.html">About</a> -->
     </nav>
     <div id="nav-desktop-actions">
       <span id="nav-search-divider"></span>
@@ -266,17 +271,19 @@
       <!-- Theme toggle. Markup is the DARK default (sun = "switch to light"); the inline
            theme block in partials/head.html rewrites the <use> href, aria-label and
            aria-pressed when light is active. Styling belongs to css/site.css. -->
+      <!-- light/dark toggle hidden for now (owner 2026-10-05; head.html forces dark):
       <button id="nav-theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
         <svg class="icon-svg"><use href="#i-sun"></use></svg>
-      </button>
+      </button> -->
     </div>
     <div id="mobile-nav-actions">
       <button id="mobile-search-toggle" type="button" aria-label="Search">
         <svg class="icon-svg" style="width:20px;height:20px"><use href="#i-search"></use></svg>
       </button>
+      <!-- light/dark toggle hidden for now (see #nav-theme-toggle above):
       <button id="mobile-theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
         <svg class="icon-svg" style="width:20px;height:20px"><use href="#i-sun"></use></svg>
-      </button>
+      </button> -->
       <button id="mobile-menu-toggle" type="button" aria-label="Menu">
         <svg class="icon-svg" style="width:22px;height:22px"><use href="#i-menu"></use></svg>
       </button>
@@ -286,7 +293,7 @@
     <a class="mobile-menu-link is-active" href="index.html">Mixes</a>
     <a class="mobile-menu-link" href="residents.html">Selectors</a>
     <a class="mobile-menu-link" href="archive.html">Archive</a>
-    <a class="mobile-menu-link" href="about.html">About</a>
+    <!-- About hidden from nav for now (owner request 2026-10-17): <a class="mobile-menu-link" href="about.html">About</a> -->
   </div>
 </header>
 <!-- Runs the moment the two toggles have been parsed, so a returning light-theme visitor never
@@ -298,8 +305,8 @@
 <main class="page-shell">
   <section id="featured-mix-hero" data-section="featured-hero">
     <div id="hero-collage-frame">
-      <div class="hero-image-clip" id="hero-media" data-hero-clips="[{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ACIDMAN_video_1767968481306.mp4&quot;,&quot;a&quot;:&quot;ACIDMAN&quot;,&quot;t&quot;:&quot;Live @ Smartbar&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ACIDMAN_video_1768227885009.mp4&quot;,&quot;a&quot;:&quot;ACIDMAN&quot;,&quot;t&quot;:&quot;Loft Livin&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ACIDMAN_video_1767797495033.mp4&quot;,&quot;a&quot;:&quot;ACIDMAN&quot;,&quot;t&quot;:&quot;Stargazers vs Sunbathers&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/AKILA_video_1768196994070.mp4&quot;,&quot;a&quot;:&quot;AKILA&quot;,&quot;t&quot;:&quot;...Head Ass!!!&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/AKILA_video_1768196987219.mp4&quot;,&quot;a&quot;:&quot;AKILA&quot;,&quot;t&quot;:&quot;A drink and a smoke on the veranda&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ANDREW_EMIL_video_1765952363392.mp4&quot;,&quot;a&quot;:&quot;ANDREW EMIL&quot;,&quot;t&quot;:&quot;Live @ Flammable &#39;19&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ANDREW_EMIL_video_1781807047403.mp4&quot;,&quot;a&quot;:&quot;ANDREW EMIL&quot;,&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1768340577456.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;12 Step Music Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1765774755986.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Fathers Day Jazz Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1785085184690.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1783193511982.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Live in Hawaii (Asylum)&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1765920638553.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Live Performance&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1768095808044.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Love Manifesto (2) V-Day Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1782616312485.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Love Manifesto #3&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1782340836852.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Love Manifesto 3&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1781811378662.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Love Manifesto V-Day Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1784243417951.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Music Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1781808196583.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Naree Bday Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1770045298784.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Rough Times&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1781808959521.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Sounds From the Divide Mix 19&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BERNARD_BADIE_video_1784140332673.mp4&quot;,&quot;a&quot;:&quot;BERNARD BADIE&quot;,&quot;t&quot;:&quot;Live at UE (B2B Sean Smith)&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BLUE_JAY__AKA_Josh_Zeitler__video_1781805095949.mp4&quot;,&quot;a&quot;:&quot;BLUE JAY (AKA Josh Zeitler)&quot;,&quot;t&quot;:&quot;Blue Jay Live at Hush 2024 in San Francisco&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BLUE_JAY__AKA_Josh_Zeitler__video_1768149134391.mp4&quot;,&quot;a&quot;:&quot;BLUE JAY (AKA Josh Zeitler)&quot;,&quot;t&quot;:&quot;Live at Studio409 New York (2024)&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/CESAR_RAMIREZ_video_1782661718553.mp4&quot;,&quot;a&quot;:&quot;CESAR RAMIREZ&quot;,&quot;t&quot;:&quot;Let Yourself Go&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1781810252835.mp4&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;t&quot;:&quot;Chubby Podcast&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1785392796652.mp4&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;t&quot;:&quot;For Hakim&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1768347441841.mp4&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;t&quot;:&quot;Little White Earbuds Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1782616308387.mp4&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;t&quot;:&quot;Playing to the Wall&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1768106724157.mp4&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;t&quot;:&quot;WWFM&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/DJ_RELEASE_AKA_IKE_video_1782584531400.mp4&quot;,&quot;a&quot;:&quot;DJ RELEASE AKA IKE&quot;,&quot;t&quot;:&quot;Live @ UE.info ??&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/JEVON_JACKSON_video_1784243311890.mp4&quot;,&quot;a&quot;:&quot;JEVON JACKSON&quot;,&quot;t&quot;:&quot;Frankie Vega B2B Jevon Jackson&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/JOHN_SIMMONS_video_1768086968012.mp4&quot;,&quot;a&quot;:&quot;JOHN SIMMONS&quot;,&quot;t&quot;:&quot;Live @ UE.info ??&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/LORELEI_video_1785479197900.mp4&quot;,&quot;a&quot;:&quot;LORELEI&quot;,&quot;t&quot;:&quot;Lorelei Live at Podlasie 7/18/25&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/RED_EYE_video_1781806602571.mp4&quot;,&quot;a&quot;:&quot;RED EYE&quot;,&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/SASSMOUTH_video_1785306399852.mp4&quot;,&quot;a&quot;:&quot;SASSMOUTH&quot;,&quot;t&quot;:&quot;Live at Podlasie&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/SEAN_SMITH_video_1768093375494.mp4&quot;,&quot;a&quot;:&quot;SEAN SMITH&quot;,&quot;t&quot;:&quot;Martians Mixtape&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/STAR_TRAXX_video_1782822787776.mp4&quot;,&quot;a&quot;:&quot;STAR TRAXX&quot;,&quot;t&quot;:&quot;Mix Tape&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/TYREL_WILLIAMS_video_1789109308945.mp4&quot;,&quot;a&quot;:&quot;TYREL WILLIAMS&quot;,&quot;t&quot;:&quot;Live at Podlasie&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/VIVA_ACID_video_1768339012401.mp4&quot;,&quot;a&quot;:&quot;VIVA ACID&quot;,&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;}]" data-hero-artists="{&quot;acidman&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/acidman.jpg&quot;,&quot;page&quot;:&quot;acidman.html&quot;},&quot;akila&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/akila.jpg&quot;,&quot;page&quot;:&quot;akila.html&quot;},&quot;andrew emil&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/andrew_emil.jpg&quot;,&quot;page&quot;:&quot;andrewemil.html&quot;},&quot;bai-ee&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/bai-ee2.jpg&quot;,&quot;page&quot;:&quot;baiee.html&quot;},&quot;blue jay (aka josh zeitler)&quot;:{&quot;img&quot;:&quot;https://arweave.net/D7QsuJ9bl4ze6ci6kOctGBm8F0joW9uUXb4YWg96N1c&quot;,&quot;page&quot;:&quot;zeitler.html&quot;},&quot;cesar ramirez&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/cesarramirez.jpg&quot;,&quot;page&quot;:&quot;cesarramirez.html&quot;},&quot;john simmons&quot;:{&quot;img&quot;:&quot;https://arweave.net/jTID0iQiLffUIft9t4aRnXANGMi_0xKoNso_4wwbhcc&quot;,&quot;page&quot;:&quot;johnsimmons.html&quot;},&quot;red eye&quot;:{&quot;img&quot;:&quot;https://arweave.net/n_UpDMJVzl1EreTTlb4-lubx_aDtOsidIC2KmqcPeJk&quot;,&quot;page&quot;:&quot;redeye.html&quot;},&quot;dj release aka ike&quot;:{&quot;img&quot;:&quot;https://arweave.net/iooeHM6ipGw_iUvx6_rlFZnjl3XkprLX1v_VmMogOHU&quot;,&quot;page&quot;:&quot;release.html&quot;},&quot;sassmouth&quot;:{&quot;img&quot;:&quot;https://xnc6efkurp75ca5ikzln7a43ndgv3rqga2pwtytggitumwh3jpoa.arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/sassmouth.jpg&quot;,&quot;page&quot;:&quot;sassmouth.html&quot;},&quot;sean smith&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/sean_smith.jpg&quot;,&quot;page&quot;:&quot;seansmith.html&quot;},&quot;star traxx&quot;:{&quot;img&quot;:&quot;https://7utlvsnf5pwxyvghgmypkzmcvm6skupeup5cj5ogdaygu5rzjtca.ardrive.net/_Sa6yaXr7XxUxzMw9WWCqz0lUeSj-iT1xhgwanY5TMQ/img/artists/startraxxthumb.jpg&quot;,&quot;page&quot;:&quot;Startraxx.html&quot;},&quot;tyrel williams&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/tyrelwilliams.jpg&quot;,&quot;page&quot;:&quot;tyrel.html&quot;},&quot;viva acid&quot;:{&quot;img&quot;:&quot;https://arweave.net/GJdXDHdXg39QayQSvsX41IXND3VOow7Tq6XgWskB6xU&quot;,&quot;page&quot;:&quot;vivaacid.html&quot;},&quot;chicago skyway&quot;:{&quot;img&quot;:&quot;https://arweave.net/J430CY2mNKY9Qy87n1EcOg1G8Qi05kqwTRUPiFr-uzg&quot;,&quot;page&quot;:&quot;chicagoskyway.html&quot;},&quot;lorelei&quot;:{&quot;img&quot;:&quot;https://arweave.net/ufUDeqU1SVNtQiHa3y8acajE65XoyYNxFe0nY_plqjQ&quot;,&quot;page&quot;:&quot;lorelei.html&quot;},&quot;jevon jackson&quot;:{&quot;img&quot;:&quot;https://arweave.net/JKwj45bHoaWwj4lpXZlfx3bO_eBYLnwV18ZXSNJu0qU&quot;,&quot;page&quot;:&quot;jevonjackson.html&quot;},&quot;bernard badie&quot;:{&quot;img&quot;:&quot;https://arweave.net/xMui0L3inJF8NX8b3ydrzuLjNHrtBSjBvqxV0lOoBAo&quot;,&quot;page&quot;:&quot;bernardbadie.html&quot;}}">
-        <picture><source srcset="img/digging-hero.webp" type="image/webp"><img id="hero-still" src="img/digging-hero.jpg" alt="" loading="eager" fetchpriority="high" decoding="async"></picture><video id="hero-promo-video" muted loop playsinline preload="none" poster="img/digging-hero.jpg" aria-hidden="true"></video><img id="hero-mix-art" alt="" decoding="async" hidden><div id="hero-art-mark" class="cover-script" aria-hidden="true"></div><div id="hero-mix-plate" aria-hidden="true"><img id="hero-plate-logo" src="img/ue-white-horiz.png" alt=""><div id="hero-plate-meta"><p id="hero-plate-title"></p><p id="hero-plate-artist"></p></div></div><div id="hero-media-controls"><button id="hero-mute-toggle" type="button" aria-label="Unmute promo video" aria-pressed="false"><svg class="icon-svg icon-muted"><use href="#i-volume-off"></use></svg><svg class="icon-svg icon-unmuted"><use href="#i-volume"></use></svg></button><button id="hero-share" type="button" aria-label="Share this mix"><svg class="icon-svg"><use href="#i-share"></use></svg></button></div>
+      <div class="hero-image-clip" id="hero-media" data-hero-clips="[{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ACIDMAN_video_1767968481306.mp4&quot;,&quot;a&quot;:&quot;ACIDMAN&quot;,&quot;t&quot;:&quot;Live @ Smartbar&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ACIDMAN_video_1768227885009.mp4&quot;,&quot;a&quot;:&quot;ACIDMAN&quot;,&quot;t&quot;:&quot;Loft Livin&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ACIDMAN_video_1767797495033.mp4&quot;,&quot;a&quot;:&quot;ACIDMAN&quot;,&quot;t&quot;:&quot;Stargazers vs Sunbathers&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/AKILA_video_1768196994070.mp4&quot;,&quot;a&quot;:&quot;AKILA&quot;,&quot;t&quot;:&quot;...Head Ass!!!&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/AKILA_video_1768196987219.mp4&quot;,&quot;a&quot;:&quot;AKILA&quot;,&quot;t&quot;:&quot;A drink and a smoke on the veranda&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ANDREW_EMIL_video_1765952363392.mp4&quot;,&quot;a&quot;:&quot;ANDREW EMIL&quot;,&quot;t&quot;:&quot;Live @ Flammable &#39;19&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ANDREW_EMIL_video_1781807047403.mp4&quot;,&quot;a&quot;:&quot;ANDREW EMIL&quot;,&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1768340577456.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;12 Step Music Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1765774755986.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Fathers Day Jazz Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1785085184690.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1783193511982.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Live in Hawaii (Asylum)&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1765920638553.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Live Performance&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1768095808044.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Love Manifesto (2) V-Day Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1782616312485.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Love Manifesto #3&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1782340836852.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Love Manifesto 3&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1781811378662.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Love Manifesto V-Day Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1784243417951.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Music Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1781808196583.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Naree Bday Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1770045298784.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Rough Times&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1781808959521.mp4&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;t&quot;:&quot;Sounds From the Divide Mix 19&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BERNARD_BADIE_video_1784140332673.mp4&quot;,&quot;a&quot;:&quot;BERNARD BADIE&quot;,&quot;t&quot;:&quot;Live at UE (B2B Sean Smith)&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BLUE_JAY__AKA_Josh_Zeitler__video_1781805095949.mp4&quot;,&quot;a&quot;:&quot;BLUE JAY (AKA Josh Zeitler)&quot;,&quot;t&quot;:&quot;Blue Jay Live at Hush 2024 in San Francisco&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BLUE_JAY__AKA_Josh_Zeitler__video_1768149134391.mp4&quot;,&quot;a&quot;:&quot;BLUE JAY (AKA Josh Zeitler)&quot;,&quot;t&quot;:&quot;Live at Studio409 New York (2024)&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/CESAR_RAMIREZ_video_1782661718553.mp4&quot;,&quot;a&quot;:&quot;CESAR RAMIREZ&quot;,&quot;t&quot;:&quot;Let Yourself Go&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1781810252835.mp4&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;t&quot;:&quot;Chubby Podcast&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1785392796652.mp4&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;t&quot;:&quot;For Hakim&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1768347441841.mp4&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;t&quot;:&quot;Little White Earbuds Mix&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1782616308387.mp4&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;t&quot;:&quot;Playing to the Wall&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1768106724157.mp4&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;t&quot;:&quot;WWFM&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/DJ_RELEASE_AKA_IKE_video_1782584531400.mp4&quot;,&quot;a&quot;:&quot;DJ RELEASE AKA IKE&quot;,&quot;t&quot;:&quot;Live @ UE.info ??&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/JEVON_JACKSON_video_1784243311890.mp4&quot;,&quot;a&quot;:&quot;JEVON JACKSON&quot;,&quot;t&quot;:&quot;Frankie Vega B2B Jevon Jackson&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/JOHN_SIMMONS_video_1768086968012.mp4&quot;,&quot;a&quot;:&quot;JOHN SIMMONS&quot;,&quot;t&quot;:&quot;Live @ UE.info ??&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/LORELEI_video_1785479197900.mp4&quot;,&quot;a&quot;:&quot;LORELEI&quot;,&quot;t&quot;:&quot;Lorelei Live at Podlasie 7/18/25&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/RED_EYE_video_1781806602571.mp4&quot;,&quot;a&quot;:&quot;RED EYE&quot;,&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/SASSMOUTH_video_1785306399852.mp4&quot;,&quot;a&quot;:&quot;SASSMOUTH&quot;,&quot;t&quot;:&quot;Live at Podlasie&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/SEAN_SMITH_video_1768093375494.mp4&quot;,&quot;a&quot;:&quot;SEAN SMITH&quot;,&quot;t&quot;:&quot;Martians Mixtape&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/STAR_TRAXX_video_1782822787776.mp4&quot;,&quot;a&quot;:&quot;STAR TRAXX&quot;,&quot;t&quot;:&quot;Mix Tape&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/TYREL_WILLIAMS_video_1789109308945.mp4&quot;,&quot;a&quot;:&quot;TYREL WILLIAMS&quot;,&quot;t&quot;:&quot;Live at Podlasie&quot;},{&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/VIVA_ACID_video_1768339012401.mp4&quot;,&quot;a&quot;:&quot;VIVA ACID&quot;,&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;}]" data-hero-artists="{&quot;acidman&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/acidman.jpg&quot;,&quot;page&quot;:&quot;acidman.html&quot;},&quot;akila&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/akila.jpg&quot;,&quot;page&quot;:&quot;akila.html&quot;},&quot;andrew emil&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/andrew_emil.jpg&quot;,&quot;page&quot;:&quot;andrewemil.html&quot;},&quot;bai-ee&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/bai-ee2.jpg&quot;,&quot;page&quot;:&quot;baiee.html&quot;},&quot;blue jay (aka josh zeitler)&quot;:{&quot;img&quot;:&quot;https://arweave.net/D7QsuJ9bl4ze6ci6kOctGBm8F0joW9uUXb4YWg96N1c&quot;,&quot;page&quot;:&quot;zeitler.html&quot;},&quot;cesar ramirez&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/cesarramirez.jpg&quot;,&quot;page&quot;:&quot;cesarramirez.html&quot;},&quot;john simmons&quot;:{&quot;img&quot;:&quot;https://arweave.net/jTID0iQiLffUIft9t4aRnXANGMi_0xKoNso_4wwbhcc&quot;,&quot;page&quot;:&quot;johnsimmons.html&quot;},&quot;red eye&quot;:{&quot;img&quot;:&quot;https://arweave.net/n_UpDMJVzl1EreTTlb4-lubx_aDtOsidIC2KmqcPeJk&quot;,&quot;page&quot;:&quot;redeye.html&quot;},&quot;dj release aka ike&quot;:{&quot;img&quot;:&quot;https://arweave.net/iooeHM6ipGw_iUvx6_rlFZnjl3XkprLX1v_VmMogOHU&quot;,&quot;page&quot;:&quot;release.html&quot;},&quot;sassmouth&quot;:{&quot;img&quot;:&quot;https://xnc6efkurp75ca5ikzln7a43ndgv3rqga2pwtytggitumwh3jpoa.arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/sassmouth.jpg&quot;,&quot;page&quot;:&quot;sassmouth.html&quot;},&quot;sean smith&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/sean_smith.jpg&quot;,&quot;page&quot;:&quot;seansmith.html&quot;},&quot;star traxx&quot;:{&quot;img&quot;:&quot;https://7utlvsnf5pwxyvghgmypkzmcvm6skupeup5cj5ogdaygu5rzjtca.ardrive.net/_Sa6yaXr7XxUxzMw9WWCqz0lUeSj-iT1xhgwanY5TMQ/img/artists/startraxxthumb.jpg&quot;,&quot;page&quot;:&quot;Startraxx.html&quot;},&quot;tyrel williams&quot;:{&quot;img&quot;:&quot;https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/tyrelwilliams.jpg&quot;,&quot;page&quot;:&quot;tyrel.html&quot;},&quot;viva acid&quot;:{&quot;img&quot;:&quot;&quot;,&quot;page&quot;:&quot;vivaacid.html&quot;},&quot;chicago skyway&quot;:{&quot;img&quot;:&quot;https://arweave.net/J430CY2mNKY9Qy87n1EcOg1G8Qi05kqwTRUPiFr-uzg&quot;,&quot;page&quot;:&quot;chicagoskyway.html&quot;},&quot;lorelei&quot;:{&quot;img&quot;:&quot;https://arweave.net/ufUDeqU1SVNtQiHa3y8acajE65XoyYNxFe0nY_plqjQ&quot;,&quot;page&quot;:&quot;lorelei.html&quot;},&quot;jevon jackson&quot;:{&quot;img&quot;:&quot;https://arweave.net/JKwj45bHoaWwj4lpXZlfx3bO_eBYLnwV18ZXSNJu0qU&quot;,&quot;page&quot;:&quot;jevonjackson.html&quot;},&quot;bernard badie&quot;:{&quot;img&quot;:&quot;https://arweave.net/xMui0L3inJF8NX8b3ydrzuLjNHrtBSjBvqxV0lOoBAo&quot;,&quot;page&quot;:&quot;bernardbadie.html&quot;}}" data-hero-picks="[{&quot;t&quot;:&quot;Live at UE (B2B Sean Smith)&quot;,&quot;a&quot;:&quot;BERNARD BADIE&quot;,&quot;u&quot;:&quot;https://arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/38c7dbfa896f8a89-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;bernardbadie.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BERNARD_BADIE_video_1784140332673.mp4&quot;,&quot;l1&quot;:&quot;BERNARD BADIE&quot;,&quot;l2&quot;:&quot;Live at UE (B2B Sean Smith)&quot;},{&quot;t&quot;:&quot;Live at Hush&quot;,&quot;a&quot;:&quot;BLUE JAY (AKA Josh Zeitler)&quot;,&quot;u&quot;:&quot;https://icvl3qhmdkbyqm626rqj44qeu32iyswsx5s4pndqrfao46bw4iuq.arweave.net/QKq9wOwag4gz2vRgnnIEpvSMStK_Zce0cIlA7ng24ik&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/881d529d4cde69ae-v1t2.webp&quot;,&quot;d&quot;:3600,&quot;p&quot;:&quot;zeitler.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BLUE JAY (AKA Josh Zeitler)&quot;,&quot;l2&quot;:&quot;Live at Hush&quot;},{&quot;t&quot;:&quot;Chubby Podcast&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;u&quot;:&quot;https://zcxekfuulha26hweqntyez4egu4baliajqdrfcu7xc2wvtnuef4q.arweave.net/yK5FFpRZwa8exINngmeENTgQLQBMBxKKn7i1as20IXk&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/11d106493e3bfcec-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;chicagoskyway.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1781810252835.mp4&quot;,&quot;l1&quot;:&quot;Chicago Skyway&quot;,&quot;l2&quot;:&quot;Chubby Podcast&quot;},{&quot;t&quot;:&quot;For Hakim&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;u&quot;:&quot;https://4zj2ozjipdt4lqx3be24koilrjqt4l7igs7hfhumrha7g7qvabaa.arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a5ffe359b0e48cee-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;chicagoskyway.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1785392796652.mp4&quot;,&quot;l1&quot;:&quot;Chicago Skyway&quot;,&quot;l2&quot;:&quot;For Hakim&quot;},{&quot;t&quot;:&quot;For Hakim&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;u&quot;:&quot;https://arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a5ffe359b0e48cee-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;chicagoskyway.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1785392796652.mp4&quot;,&quot;l1&quot;:&quot;Chicago Skyway&quot;,&quot;l2&quot;:&quot;For Hakim&quot;},{&quot;t&quot;:&quot;Little White Earbuds Mix&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;u&quot;:&quot;https://4zj2ozjipdt4lqx3be24koilrjqt4l7igs7hfhumrha7g7qvabaa.arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/9710af8b39671656-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;chicagoskyway.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1768347441841.mp4&quot;,&quot;l1&quot;:&quot;Chicago Skyway&quot;,&quot;l2&quot;:&quot;Little White Earbuds Mix&quot;},{&quot;t&quot;:&quot;Playing to the Wall&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;u&quot;:&quot;https://gdzput7zxnda3rncbjctigt424v2sza3chbo5e4tltdfs53tjm5a.arweave.net/MPL6T_m7Rg3FogpFNBp81yupZBsRwu6Tk1zGWXdzSzo&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/bd7d5063b27e1d82-v7t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;chicagoskyway.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1782616308387.mp4&quot;,&quot;l1&quot;:&quot;Chicago Skyway&quot;,&quot;l2&quot;:&quot;Playing to the Wall&quot;},{&quot;t&quot;:&quot;Live @ UE.info ??&quot;,&quot;a&quot;:&quot;DJ RELEASE AKA IKE&quot;,&quot;u&quot;:&quot;https://embbv2sphugsxwzrx222jkjpcqbj2unqbn5yaiqh4rgoacvigycq.arweave.net/IwIa6k89DSvbMb61pKkvFAKdUbALe4AiB-RM4AqoNgU&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1b1ce66a9c30e98a-v1t2.webp&quot;,&quot;d&quot;:3600,&quot;p&quot;:&quot;release.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/DJ_RELEASE_AKA_IKE_video_1782584531400.mp4&quot;,&quot;l1&quot;:&quot;DJ RELEASE AKA IKE&quot;,&quot;l2&quot;:&quot;Live @ UE.info ??&quot;},{&quot;t&quot;:&quot;Frankie Vega B2B Jevon Jackson&quot;,&quot;a&quot;:&quot;JEVON JACKSON&quot;,&quot;u&quot;:&quot;https://arweave.net/26lgzySQrL0NGDnPiHvpA89UFK15x4JxF_YLo0jDI1Y&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/f2bc27ba45e5c85a-v2t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;jevonjackson.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/JEVON_JACKSON_video_1784243311890.mp4&quot;,&quot;l1&quot;:&quot;JEVON JACKSON&quot;,&quot;l2&quot;:&quot;Frankie Vega B2B Jevon Jackson&quot;},{&quot;t&quot;:&quot;Live @ UE.info ??&quot;,&quot;a&quot;:&quot;JOHN SIMMONS&quot;,&quot;u&quot;:&quot;https://us52zeiw62ei2egubws4huywpyw4nzvjxueism7pkt32pcjyoizq.arweave.net/pLuskRb2iI0Q1A2lw9MWfi3G5qm9CIkz71T3p4k4cjM&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/c8ac39e7b9dd1fa4-v1t2.webp&quot;,&quot;d&quot;:7200,&quot;p&quot;:&quot;johnsimmons.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/JOHN_SIMMONS_video_1768086968012.mp4&quot;,&quot;l1&quot;:&quot;JOHN SIMMONS&quot;,&quot;l2&quot;:&quot;Live @ UE.info ??&quot;},{&quot;t&quot;:&quot;Mix Tape&quot;,&quot;a&quot;:&quot;STAR TRAXX&quot;,&quot;u&quot;:&quot;https://3t4xoq2sswghgedqxsojzckllnq4oay6p4xrte7tl5mfm5ia7cka.arweave.net/3Pl3Q1KVjHMQcLycnIlLW2HHAx5_LxmT819YVnUA-JQ&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/819391882d0bfdee-v1t2.webp&quot;,&quot;d&quot;:1800,&quot;p&quot;:&quot;Startraxx.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/STAR_TRAXX_video_1782822787776.mp4&quot;,&quot;l1&quot;:&quot;STAR TRAXX&quot;,&quot;l2&quot;:&quot;Mix Tape&quot;},{&quot;t&quot;:&quot;A Love Hate Relationship&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/c47uBeIkgA236PIoJvnrqoWRxAOTNGtX7jeMo_iYyt0&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/7c266492bb22f240-v1t2.webp&quot;,&quot;d&quot;:3360,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;A Love Hate Relationship&quot;},{&quot;t&quot;:&quot;The Gusto&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/kpTjOiJgHjwQisq_xkZbHXY-nJ7vEsu3FldJv9Vidwc&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/f611c8644a6bbebf-v1t2.webp&quot;,&quot;d&quot;:3180,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;The Gusto&quot;},{&quot;t&quot;:&quot;Let Yourself Go&quot;,&quot;a&quot;:&quot;CESAR RAMIREZ&quot;,&quot;u&quot;:&quot;https://wqyhof73vki2hs5mwj6tm4godenmlg7b24jik2ovjtnfhzosizbq.arweave.net/tDB3F_uqkaPLrLJ9NnDOGRrFm-HXEoVp1UzaU-XSRkM&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/84c1c230da3d175f-v1t2.webp&quot;,&quot;d&quot;:5580,&quot;p&quot;:&quot;cesarramirez.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/CESAR_RAMIREZ_video_1782661718553.mp4&quot;,&quot;l1&quot;:&quot;CESAR RAMIREZ&quot;,&quot;l2&quot;:&quot;Let Yourself Go&quot;},{&quot;t&quot;:&quot;Loft Livin&quot;,&quot;a&quot;:&quot;ACIDMAN&quot;,&quot;u&quot;:&quot;https://2a3ilgvxa3h3qnbgs5kcfr3tclfsuf6w2qztps4igikcwczf2uba.arweave.net/0DaFmrcGz7g0JpdUIsdzEssqF9bUMzfLiDIUKwsl1QI&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/7c27965980e6f063-v1t2.webp&quot;,&quot;d&quot;:4320,&quot;p&quot;:&quot;acidman.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ACIDMAN_video_1768227885009.mp4&quot;,&quot;l1&quot;:&quot;ACIDMAN&quot;,&quot;l2&quot;:&quot;Loft Livin&quot;},{&quot;t&quot;:&quot;Barack Mix&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/sRVy0VvQ8qaRrMvpejjxG8zp_a4D-FovsVldDstLUY8&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/44a49383040468f7-v1t2.webp&quot;,&quot;d&quot;:4320,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Barack Mix&quot;},{&quot;t&quot;:&quot;Loft Livin&#39;&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://2a3ilgvxa3h3qnbgs5kcfr3tclfsuf6w2qztps4igikcwczf2uba.arweave.net/0DaFmrcGz7g0JpdUIsdzEssqF9bUMzfLiDIUKwsl1QI&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/7c27965980e6f063-v1t2.webp&quot;,&quot;d&quot;:4320,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Loft Livin&#39;&quot;},{&quot;t&quot;:&quot;Live at Fame (Millennium Park)&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/mnRlhQ3J4VexZUivOgXCg_NeFMGHI5BtLGHTrBrT9Qc&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/9cbf0465b31b32f0-v1t2.webp&quot;,&quot;d&quot;:1860,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Live at Fame (Millennium Park)&quot;},{&quot;t&quot;:&quot;Live @ 7/20 Underground&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/vfa6G8w5Fdbn2VBkuj_8vdhLspJh7M_DBv7AyywoPas&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/466593789d3b122b-v1t2.webp&quot;,&quot;d&quot;:4020,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Live @ 7/20 Underground&quot;},{&quot;t&quot;:&quot;Stargazers vs Sunbathers&quot;,&quot;a&quot;:&quot;ACIDMAN&quot;,&quot;u&quot;:&quot;https://pq4y62fmg2rlmdprylwbzvhf6weeg265x6wpdoknwfosey3pb7ua.arweave.net/fDmPaKw2orYN8cLsHNTl9YhDa92_rPG5TbFdImNvD-g&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1f7227fc861d2d09-v1t2.webp&quot;,&quot;d&quot;:3600,&quot;p&quot;:&quot;acidman.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ACIDMAN_video_1767797495033.mp4&quot;,&quot;l1&quot;:&quot;ACIDMAN&quot;,&quot;l2&quot;:&quot;Stargazers vs Sunbathers&quot;},{&quot;t&quot;:&quot;Martians Mixtape&quot;,&quot;a&quot;:&quot;SEAN SMITH&quot;,&quot;u&quot;:&quot;https://bzihmbcqda77zu2zf6xgurrcwke37xbcewvg5xovs45znnt5bnda.arweave.net/DlB2BFAYP_zTWS-uakYisom_3CIlqm7d1Zc7lrZ9C0Y&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/2ba89fdd3ef068c7-v1t2.webp&quot;,&quot;d&quot;:7200,&quot;p&quot;:&quot;seansmith.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/SEAN_SMITH_video_1768093375494.mp4&quot;,&quot;l1&quot;:&quot;SEAN SMITH&quot;,&quot;l2&quot;:&quot;Martians Mixtape&quot;},{&quot;t&quot;:&quot;Live @ Smartbar&quot;,&quot;a&quot;:&quot;ACIDMAN&quot;,&quot;u&quot;:&quot;https://tsksz4eeemr4tlq46gvx2j3ikuv2xvzv7pzxft4dcc76qn3g3frq.arweave.net/nJUs8IQjI8muHPGrfSdoVSur1zX783LPgxC_6Ddm2WM&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/a22444ccc014b8ba-v3t2.webp&quot;,&quot;d&quot;:4320,&quot;p&quot;:&quot;acidman.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ACIDMAN_video_1767968481306.mp4&quot;,&quot;l1&quot;:&quot;ACIDMAN&quot;,&quot;l2&quot;:&quot;Live @ Smartbar&quot;},{&quot;t&quot;:&quot;Live @ Smartbar (w/ Acidman)&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://tsksz4eeemr4tlq46gvx2j3ikuv2xvzv7pzxft4dcc76qn3g3frq.arweave.net/nJUs8IQjI8muHPGrfSdoVSur1zX783LPgxC_6Ddm2WM&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/a22444ccc014b8ba-v3t2.webp&quot;,&quot;d&quot;:4320,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Live @ Smartbar (w/ Acidman)&quot;},{&quot;t&quot;:&quot;Music Mix&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/qmOWTuGHuf7-ed5jb9KD8NFE2ARXCZFGG6bk5Na-ZJ8&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/5c5ef3b4b81982c9-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1784243417951.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Music Mix&quot;},{&quot;t&quot;:&quot;WWFM&quot;,&quot;a&quot;:&quot;Chicago Skyway&quot;,&quot;u&quot;:&quot;https://2pgnqqeqgn7ric25tb3jy3lbmo4jfnjn4ljyhjmx7xaybtt35qvq.arweave.net/08zYQJAzfxQLXZh2nG1hY7iStS3i04Oll_3BgM577Cs&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/549a02fd799e97cc-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;chicagoskyway.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1768106724157.mp4&quot;,&quot;l1&quot;:&quot;Chicago Skyway&quot;,&quot;l2&quot;:&quot;WWFM&quot;},{&quot;t&quot;:&quot;Loft Livin 2&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/mqNUzO51zSc7r_hrVFEzYnSG1XeixPGu-lnBDfWH1x0&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a7652de963dbf722-v1t2.webp&quot;,&quot;d&quot;:4140,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Loft Livin 2&quot;},{&quot;t&quot;:&quot;Mix for Naree&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/0HFzzEkWzsn_wilPlVGka6PSDbormrGyfJqELKWkKdc&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/d5ad2261a370cfc7-v1t2.webp&quot;,&quot;d&quot;:4200,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Mix for Naree&quot;},{&quot;t&quot;:&quot;Housepitality 3-Year Anniversary w/ KiNK&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/LOYsfi2laNRDoUAOBJKOrsnV4bbGHHfqtgtY3OmCQmw&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/860539f4dd041c71-v1t2.webp&quot;,&quot;d&quot;:5760,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Housepitality 3-Year Anniversary w/ KiNK&quot;},{&quot;t&quot;:&quot;Live in the Groove Lounge (Housepitality)&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/g0n3Ce2cIaxeHW3XpvdV3tG2jv3C2vxEpbbMjtulwmI&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/8d56a9ce6c634946-v1t2.webp&quot;,&quot;d&quot;:5040,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Live in the Groove Lounge (Housepitality)&quot;},{&quot;t&quot;:&quot;Secret Studio — Live 1&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/TSAGGOVTvcdrwOmZfyuZpBk2WGox4SU1cJXHod0Pj8k&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/05418dc59009fa1d-v1t2.webp&quot;,&quot;d&quot;:1680,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Secret Studio — Live 1&quot;},{&quot;t&quot;:&quot;Live at Housepitality w/ The Black Madonna&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/0u1ncQleDxaDrc61L6M508KtOBzlnC2JhsBykpcNDCQ&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/7a94f136e9425bcd-v1t2.webp&quot;,&quot;d&quot;:9840,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Live at Housepitality w/ The Black Madonna&quot;},{&quot;t&quot;:&quot;Secret Studio — Live at Hush SF&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/eD_6nPCLA6jE4_pTLRh_RFkhV-k-OcNmKZFm2zLSQag&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/92e831f24649a7a8-v1t2.webp&quot;,&quot;d&quot;:6300,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Secret Studio — Live at Hush SF&quot;},{&quot;t&quot;:&quot;Live at Housepitality w/ Johnny Fiasco&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/gjfJQo_90MivD4JGM_F0NOuUCpcKM8BaC8vtsSkrG9Y&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/798bf88c77415806-v1t2.webp&quot;,&quot;d&quot;:3120,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Live at Housepitality w/ Johnny Fiasco&quot;},{&quot;t&quot;:&quot;Mix 10.20&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/7QnYI7fA0tbrWYgbDFhxOp09lHt6VSg6U2agFsJcW9A&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/3402b0ca0fb34250-v1t2.webp&quot;,&quot;d&quot;:5160,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Mix 10.20&quot;},{&quot;t&quot;:&quot;Rough Times&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://ynfuoawcqrbjqsood6erdnboyvcy7p7ndipmphftwtehjy2to5xq.arweave.net/w0tHAsKEQphJzh-JEbQuxUWPv-0aHsecs7TIdONTd28&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/664a8a77d052ba80-v2t2.webp&quot;,&quot;d&quot;:3660,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1770045298784.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Rough Times&quot;},{&quot;t&quot;:&quot;Secret Studio — HSS Mix&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/mDXNPGuJA96x3OjvqicModGrHk3vzao9ppag1Zdz36A&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/aaf5432f77d60a9a-v1t2.webp&quot;,&quot;d&quot;:3900,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Secret Studio — HSS Mix&quot;},{&quot;t&quot;:&quot;Live in Hawaii (Asylum)&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/9LUIqtUo6qbpnVKJWQc87xQ5iROjWVVJao-8nhasndU&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/3fa96fb8957c4ef0-v1t2.webp&quot;,&quot;d&quot;:3600,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1783193511982.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Live in Hawaii (Asylum)&quot;},{&quot;t&quot;:&quot;Live Performance&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/e7vfpyZKSyUOv_oro5FnO8Wuyf1wIKq9S4EhlvV8o18&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a7f29497b2bb5b2f-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1765920638553.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Live Performance&quot;},{&quot;t&quot;:&quot;Live @ Flammable &#39;19&quot;,&quot;a&quot;:&quot;ANDREW EMIL&quot;,&quot;u&quot;:&quot;https://i3iyj63muibfla4rgtxiuis72fy6iwbg3rcz7vda2try7xr3kzia.arweave.net/RtGE-2yiAlWDkTTuiiJf0XHkWCbcRZ_UYNTjj947VlA&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/cc6b55fa3f2dedb6-v1t2.webp&quot;,&quot;d&quot;:7200,&quot;p&quot;:&quot;andrewemil.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ANDREW_EMIL_video_1765952363392.mp4&quot;,&quot;l1&quot;:&quot;ANDREW EMIL&quot;,&quot;l2&quot;:&quot;Live @ Flammable &#39;19&quot;},{&quot;t&quot;:&quot;12 Step Music Mix&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/uOXdDRYvNv2OUm6tdEuyZvL1_1O8FtL7KvYBisNEg2o&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/68a7fd1dffd09adb-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1768340577456.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;12 Step Music Mix&quot;},{&quot;t&quot;:&quot;Sounds From the Divide Mix 19&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/M-3TZEkPlLTvsI7NVHsqYZFuBZXcJQCm1tMkaj_f_v4&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/3779e09b5bc87f4e-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1781808959521.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Sounds From the Divide Mix 19&quot;},{&quot;t&quot;:&quot;HPIT Promo Mix&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/HwmSQMRK-H-PrcWXd71JCZayTXN44tBxpeVmyj8Qjhk&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/191e77c184347e9c-v1t2.webp&quot;,&quot;d&quot;:3600,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;HPIT Promo Mix&quot;},{&quot;t&quot;:&quot;Naree Bday Mix&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/lcEj4KEz6SbHL8f3veGO4DJJmz4ECsItIwaJ3XMAiDo&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/44010795424ffcd7-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1781808196583.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Naree Bday Mix&quot;},{&quot;t&quot;:&quot;Sounds From the Divide Mix 18&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/y-Lik8vT2L8XUxjPrUEd6METNjYXJfDY52DspUNEJf0&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/cdfb3ebadd9f5354-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Sounds From the Divide Mix 18&quot;},{&quot;t&quot;:&quot;Love Manifesto V-Day Mix&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://p4oglbpmdcjtobggvj7xgpeoo7nhllg43pmqlaqxs2sbtb5dnxwa.arweave.net/fxxlhewYkzcExqp_czyOd9p1rNzb2QWCF5akGYejbew&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/80ab51f6c7de27eb-v1t2.webp&quot;,&quot;d&quot;:4980,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1781811378662.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Love Manifesto V-Day Mix&quot;},{&quot;t&quot;:&quot;A drink and a smoke on the veranda&quot;,&quot;a&quot;:&quot;AKILA&quot;,&quot;u&quot;:&quot;https://tooixiwxvkzimj2b73dialzlat7biwllaelsvcjucgnot2wgpgaq.arweave.net/m5yLoteqsoYnQf7GgC8rBP4UWWsBFyqJNBGa6erGeYE&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e6e5bf3efc53b4c9-v1t2.webp&quot;,&quot;d&quot;:3600,&quot;p&quot;:&quot;akila.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/AKILA_video_1768196987219.mp4&quot;,&quot;l1&quot;:&quot;AKILA&quot;,&quot;l2&quot;:&quot;A drink and a smoke on the veranda&quot;},{&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;,&quot;a&quot;:&quot;ANDREW EMIL&quot;,&quot;u&quot;:&quot;https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/ecd948852cb17b86-v1t2.webp&quot;,&quot;d&quot;:7200,&quot;p&quot;:&quot;andrewemil.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ANDREW_EMIL_video_1781807047403.mp4&quot;,&quot;l1&quot;:&quot;ANDREW EMIL B2B RED EYE&quot;,&quot;l2&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;t&quot;:&quot;Fathers Day Jazz Mix&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://tote4rvkmrw7hor2y3utj4nmyi2akuth7mzitqkelabv2wgipdca.arweave.net/m6ZORqpkbfO6OsbpNPGswjQFUmf7MonBRFgDXVjIeMQ&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/6d1a62df898ff563-v1t2.webp&quot;,&quot;d&quot;:3660,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1765774755986.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Fathers Day Jazz Mix&quot;},{&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/4b37b2f37a45f863-v2t2.webp&quot;,&quot;d&quot;:3600,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1785085184690.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;t&quot;:&quot;Love Manifesto (2) V-Day Mix&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://avbaf4pajrqslakfjysssiaqk266x6wkmjm3fnf3cz4yhoxf6aoa.arweave.net/BUIC8eBMYSWBRU4lKSAQVr3r-spiWbK0uxZ5g7rl8Bw&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/1184a8504845c0bf-v1t2.webp&quot;,&quot;d&quot;:4320,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1768095808044.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Love Manifesto (2) V-Day Mix&quot;},{&quot;t&quot;:&quot;Live at Studio409 New York (2024)&quot;,&quot;a&quot;:&quot;BLUE JAY (AKA Josh Zeitler)&quot;,&quot;u&quot;:&quot;https://uzh5clhxybxsww3li3gmcodyxok7dwa46vfq7etzn6owprhujdea.arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/6f647a005d6fcce2-v1t2.webp&quot;,&quot;d&quot;:10680,&quot;p&quot;:&quot;zeitler.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BLUE_JAY__AKA_Josh_Zeitler__video_1768149134391.mp4&quot;,&quot;l1&quot;:&quot;BLUE JAY (AKA Josh Zeitler)&quot;,&quot;l2&quot;:&quot;Live at Studio409 New York (2024)&quot;},{&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;,&quot;a&quot;:&quot;RED EYE&quot;,&quot;u&quot;:&quot;https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/af3a376cdc48ca73-v1t2.webp&quot;,&quot;d&quot;:7200,&quot;p&quot;:&quot;redeye.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/RED_EYE_video_1781806602571.mp4&quot;,&quot;l1&quot;:&quot;ANDREW EMIL B2B RED EYE&quot;,&quot;l2&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;t&quot;:&quot;Live at Podlasie&quot;,&quot;a&quot;:&quot;SASSMOUTH&quot;,&quot;u&quot;:&quot;https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1734d1b4ae911269-v2t2.webp&quot;,&quot;d&quot;:7200,&quot;p&quot;:&quot;sassmouth.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/SASSMOUTH_video_1785306399852.mp4&quot;,&quot;l1&quot;:&quot;SASSMOUTH&quot;,&quot;l2&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;t&quot;:&quot;Live at Podlasie&quot;,&quot;a&quot;:&quot;TYREL WILLIAMS&quot;,&quot;u&quot;:&quot;https://nbdlqhjegffe2b43r4pz5dbnnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a6ac343e51e3a993-v1t2.webp&quot;,&quot;d&quot;:7200,&quot;p&quot;:&quot;tyrel.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/TYREL_WILLIAMS_video_1789109308945.mp4&quot;,&quot;l1&quot;:&quot;TYREL WILLIAMS&quot;,&quot;l2&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;,&quot;a&quot;:&quot;VIVA ACID&quot;,&quot;u&quot;:&quot;https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/f43d2f8ec861499d-v4t2.webp&quot;,&quot;d&quot;:3600,&quot;p&quot;:&quot;vivaacid.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/VIVA_ACID_video_1768339012401.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;,&quot;a&quot;:&quot;VIVA ACID&quot;,&quot;u&quot;:&quot;https://nbdlqhjegffe2b43r4pz5db2nnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e8d8fe5fa505d76d-v1t2.webp&quot;,&quot;d&quot;:7200,&quot;p&quot;:&quot;vivaacid.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/VIVA_ACID_video_1768339012401.mp4&quot;,&quot;l1&quot;:&quot;TYREL WILLIAMS&quot;,&quot;l2&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;,&quot;a&quot;:&quot;VIVA ACID&quot;,&quot;u&quot;:&quot;https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/063fc964a155ede8-v2t2.webp&quot;,&quot;d&quot;:7200,&quot;p&quot;:&quot;vivaacid.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/VIVA_ACID_video_1768339012401.mp4&quot;,&quot;l1&quot;:&quot;SASSMOUTH&quot;,&quot;l2&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;t&quot;:&quot;Live @ Viva Acid &#39;24&quot;,&quot;a&quot;:&quot;VIVA ACID&quot;,&quot;u&quot;:&quot;https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/61239f57a030e6d5-v1t2.webp&quot;,&quot;d&quot;:7200,&quot;p&quot;:&quot;vivaacid.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/VIVA_ACID_video_1768339012401.mp4&quot;,&quot;l1&quot;:&quot;ANDREW EMIL B2B RED EYE&quot;,&quot;l2&quot;:&quot;Live @ Viva Acid &#39;24&quot;},{&quot;t&quot;:&quot;303 Day Mix&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/9x-NgzS63J6EPubaiWxaR2lvD1z5ORZzU2FF7Ep4or4&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/721dec036297489a-v1t2.webp&quot;,&quot;d&quot;:4560,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;303 Day Mix&quot;},{&quot;t&quot;:&quot;...Head Ass!!!&quot;,&quot;a&quot;:&quot;AKILA&quot;,&quot;u&quot;:&quot;https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/0969e007a5dc1ae3-v3t2.webp&quot;,&quot;d&quot;:3600,&quot;p&quot;:&quot;akila.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/AKILA_video_1768196994070.mp4&quot;,&quot;l1&quot;:&quot;AKILA&quot;,&quot;l2&quot;:&quot;...Head Ass!!!&quot;},{&quot;t&quot;:&quot;Love Manifesto 3&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/obNw2Z8Iqiyb20nWRLGzLD0zeHQyoyPVkM7J7KpEGRc&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/7cafda6fb931e2ab-v1t2.webp&quot;,&quot;d&quot;:3600,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1782340836852.mp4&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Love Manifesto 3&quot;},{&quot;t&quot;:&quot;JoshZ &amp; Bai-ee (ONES) B2B — Live at Podlasie&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/r14of_KCIHFq6jcvck3kzjbQ-_sYI1cY_xVHc252c_o&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/10fb8cb0dd846140-v1t2.webp&quot;,&quot;d&quot;:4080,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;JoshZ &amp; Bai-ee (ONES) B2B — Live at Podlasie&quot;},{&quot;t&quot;:&quot;Viva Acid at Podlasie — Lorelei, JoshZ, Bai-ee &amp; Tyrel (full night)&quot;,&quot;a&quot;:&quot;BAI-EE&quot;,&quot;u&quot;:&quot;https://arweave.net/xDaMKgz3vWI919a4urmlIeNHoJS9qlFuAwk8AURATA0&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e4ec03dabac13438-v1t2.webp&quot;,&quot;d&quot;:10800,&quot;p&quot;:&quot;baiee.html&quot;,&quot;v&quot;:&quot;&quot;,&quot;l1&quot;:&quot;BAI-EE&quot;,&quot;l2&quot;:&quot;Viva Acid at Podlasie — Lorelei, JoshZ, Bai-ee &amp; Tyrel (full night)&quot;},{&quot;t&quot;:&quot;Lorelei Live at Podlasie 7/18/25&quot;,&quot;a&quot;:&quot;LORELEI&quot;,&quot;u&quot;:&quot;https://arweave.net/Y5DfJ54VC_2-gKJ90Ts_RJZhhDKsV869SdsYB0n9GqM&quot;,&quot;i&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1t2.webp&quot;,&quot;d&quot;:0,&quot;p&quot;:&quot;lorelei.html&quot;,&quot;v&quot;:&quot;https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/LORELEI_video_1785479197900.mp4&quot;,&quot;l1&quot;:&quot;LORELEI&quot;,&quot;l2&quot;:&quot;Lorelei Live at Podlasie 7/18/25&quot;}]">
+        <img id="hero-still" src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1t2.webp" alt="" loading="eager" fetchpriority="high" decoding="async"><video id="hero-promo-video" muted loop playsinline preload="none" poster="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1t2.webp" aria-hidden="true"></video><img id="hero-mix-art" alt="" decoding="async" hidden><div id="hero-art-mark" class="cover-script" aria-hidden="true"></div><div id="hero-mix-plate" aria-hidden="true"><img id="hero-plate-logo" src="img/ue-white-horiz.png" alt=""><div id="hero-plate-meta"><p id="hero-plate-title"><a href=""></a></p><p id="hero-plate-artist"></p></div></div><div id="hero-media-controls"><button id="hero-mute-toggle" type="button" aria-label="Unmute promo video" aria-pressed="false"><svg class="icon-svg icon-muted"><use href="#i-volume-off"></use></svg><svg class="icon-svg icon-unmuted"><use href="#i-volume"></use></svg></button><button id="hero-refresh-mix" type="button" aria-label="Play a different mix" title="Play a different mix"><svg class="icon-svg" aria-hidden="true"><use href="#i-shuffle"></use></svg></button><button id="hero-share" type="button" aria-label="Share this mix"><svg class="icon-svg"><use href="#i-share"></use></svg></button></div>
       </div>
       <!-- What the big frame above shows. Three sources for the featured mix —
            its promo film, its cover, and the selector's portrait — and the
@@ -308,20 +315,20 @@
            thumbs rather than a dead one. The strip is inert without JS (the
            frame keeps its still), and the inline hero script below wires it. -->
       <div id="hero-source-thumbs" role="group" aria-label="Choose what the hero shows">
-        <button class="hero-thumb" type="button" data-hero-source="promo" aria-pressed="false" hidden>
+        <button id="hero-thumb-film" class="hero-thumb" type="button" data-hero-source="promo" aria-pressed="false" hidden>
           <span class="hero-thumb-frame">
             <img class="hero-thumb-img" alt="" decoding="async">
             <span class="hero-thumb-badge" aria-hidden="true"><svg class="icon-svg"><use href="#i-play"></use></svg></span>
           </span>
           <span class="hero-thumb-label">Film</span>
         </button>
-        <button class="hero-thumb" type="button" data-hero-source="art" aria-pressed="false" hidden>
+        <button id="hero-thumb-cover" class="hero-thumb" type="button" data-hero-source="art" aria-pressed="false" hidden>
           <span class="hero-thumb-frame">
             <img class="hero-thumb-img" alt="" decoding="async">
           </span>
           <span class="hero-thumb-label">Cover</span>
         </button>
-        <button class="hero-thumb" type="button" data-hero-source="artist" aria-pressed="false" hidden>
+        <button id="hero-thumb-artist" class="hero-thumb" type="button" data-hero-source="artist" aria-pressed="false" hidden>
           <span class="hero-thumb-frame">
             <img class="hero-thumb-img" alt="" decoding="async">
           </span>
@@ -331,12 +338,13 @@
     </div>
     <div id="featured-mix-content">
       <span class="section-eyebrow">Featured Mix</span>
-      <h1 id="featured-mix-title">Lorelei Live at Podlasie 7/18/25</h1>
-      <a id="featured-artist-signature" href="lorelei.html">Lorelei</a>
+      <h1 id="featured-mix-title"><a href="lorelei.html">LORELEI</a></h1>
+      <a id="featured-artist-signature" href="lorelei.html">Lorelei Live at Podlasie 7/18/25</a>
       <div id="featured-meta-row">
-        <span class="meta-chip"><svg class="icon-svg"><use href="#i-wave"></use></svg> TECHNO</span>
+        <!-- genre hidden for now (see metaChips in lib/WebsitePageGenerator.cjs):
+        <span class="meta-chip"><svg class="icon-svg"><use href="#i-wave"></use></svg> TECHNO</span> -->
         
-        <span class="meta-dot">&middot;</span><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> JUL 18, 2025</span>
+        
       </div>
       <div id="featured-player-row">
         <a id="featured-play-button" class="play-circle play-circle--lg" data-featured-mix data-playlist data-title="Lorelei Live at Podlasie 7/18/25" data-artist="LORELEI" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1t2.webp" data-duration-sec="0" data-page="lorelei.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/LORELEI_video_1785479197900.mp4" href="https://arweave.net/Y5DfJ54VC_2-gKJ90Ts_RJZhhDKsV869SdsYB0n9GqM" aria-label="Play featured mix">
@@ -361,36 +369,36 @@
     </div>
   </section>
 
-  <section id="latest-mixes-section" data-section="latest-mixes">
+  <section id="homepage-selectors-section" data-section="homepage-selectors">
     <div class="section-header-row">
-      <span class="section-eyebrow section-eyebrow--plain">Latest Mixes</span>
-      <a class="section-view-all" href="archive.html">View All Mixes <svg class="icon-svg"><use href="#i-arrow-right"></use></svg></a>
+      <span class="section-eyebrow section-eyebrow--plain">Selectors</span>
+      <a class="section-view-all" href="residents.html">View All Selectors <svg class="icon-svg"><use href="#i-arrow-right"></use></svg></a>
     </div>
-    <div id="latest-mixes-grid" class="mix-card-grid">
+    <div id="homepage-selectors-grid" class="mix-card-grid">
 
-<article class="mix-card" data-mix-number="043">
+<article class="mix-card selector-tile" data-selector-index="01">
   <div class="mix-card-cover">
-    <span class="mix-card-number">043</span>
-    <a data-playlist data-title="Love Manifesto 3" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/7cafda6fb931e2ab-v1t2.webp" data-duration-sec="3600" data-page="baiee.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BAI_EE_video_1782340836852.mp4" href="https://arweave.net/obNw2Z8Iqiyb20nWRLGzLD0zeHQyoyPVkM7J7KpEGRc" aria-label="Play Love Manifesto 3"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/7cafda6fb931e2ab-v1t2.webp" alt="BAI-EE — Love Manifesto 3" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+    <span class="mix-card-number">01</span>
+    <a data-playlist data-title="Live @ Smartbar" data-artist="ACIDMAN" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/a22444ccc014b8ba-v3t2.webp" data-duration-sec="4320" data-page="acidman.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ACIDMAN_video_1767968481306.mp4" href="https://tsksz4eeemr4tlq46gvx2j3ikuv2xvzv7pzxft4dcc76qn3g3frq.arweave.net/nJUs8IQjI8muHPGrfSdoVSur1zX783LPgxC_6Ddm2WM" aria-label="Play ACIDMAN’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/a22444ccc014b8ba-v3t2.webp" alt="ACIDMAN" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="A"></a>
   </div>
   <div class="mix-card-body">
-    <h3 class="mix-card-title"><a href="baiee.html">Love Manifesto 3</a></h3>
-    <a class="mix-card-artist" href="baiee.html">BAI-EE</a>
+    <h3 class="mix-card-title"><a href="acidman.html">ACIDMAN</a></h3>
+    <a class="mix-card-artist" href="acidman.html">3 mixes</a>
     <div class="mix-card-actions">
       <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
-      <a class="download-btn download-btn--sm" data-download href="https://arweave.net/obNw2Z8Iqiyb20nWRLGzLD0zeHQyoyPVkM7J7KpEGRc" data-filename="BAI-EE - Love Manifesto 3" aria-label="Download Love Manifesto 3"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+      <a class="download-btn download-btn--sm" data-download href="https://tsksz4eeemr4tlq46gvx2j3ikuv2xvzv7pzxft4dcc76qn3g3frq.arweave.net/nJUs8IQjI8muHPGrfSdoVSur1zX783LPgxC_6Ddm2WM" data-filename="ACIDMAN - Live @ Smartbar" aria-label="Download Live @ Smartbar"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
     </div>
   </div>
 </article>
 
-<article class="mix-card" data-mix-number="042">
+<article class="mix-card selector-tile" data-selector-index="02">
   <div class="mix-card-cover">
-    <span class="mix-card-number">042</span>
-    <a data-playlist data-title="...Head Ass!!!" data-artist="AKILA" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/0969e007a5dc1ae3-v1t2.webp" data-duration-sec="3600" data-page="akila.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/AKILA_video_1768196994070.mp4" href="https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg" aria-label="Play ...Head Ass!!!"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/0969e007a5dc1ae3-v1t2.webp" alt="AKILA — ...Head Ass!!!" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="A"></a>
+    <span class="mix-card-number">02</span>
+    <a data-playlist data-title="...Head Ass!!!" data-artist="AKILA" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/0969e007a5dc1ae3-v3t2.webp" data-duration-sec="3600" data-page="akila.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/AKILA_video_1768196994070.mp4" href="https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg" aria-label="Play AKILA’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/0969e007a5dc1ae3-v3t2.webp" alt="AKILA" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="A"></a>
   </div>
   <div class="mix-card-body">
-    <h3 class="mix-card-title"><a href="akila.html">...Head Ass!!!</a></h3>
-    <a class="mix-card-artist" href="akila.html">AKILA</a>
+    <h3 class="mix-card-title"><a href="akila.html">AKILA</a></h3>
+    <a class="mix-card-artist" href="akila.html">2 mixes</a>
     <div class="mix-card-actions">
       <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
       <a class="download-btn download-btn--sm" data-download href="https://c2ejenrz2h6ng4vmnd73p5hhyvilkp4qhbcnwjhnjjwminyndq4a.arweave.net/FoiSNjnR_NNyrGj_t_TnxVC1P5A4RNsk7UpsxDcNHDg" data-filename="AKILA - ...Head Ass!!!" aria-label="Download ...Head Ass!!!"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
@@ -398,14 +406,179 @@
   </div>
 </article>
 
-<article class="mix-card" data-mix-number="041">
+<article class="mix-card selector-tile" data-selector-index="03">
   <div class="mix-card-cover">
-    <span class="mix-card-number">041</span>
-    <a data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="VIVA ACID" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/61239f57a030e6d5-v1t2.webp" data-duration-sec="7200" data-page="vivaacid.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/VIVA_ACID_video_1768339012401.mp4" href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" aria-label="Play Live @ Viva Acid &#39;24"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/61239f57a030e6d5-v1t2.webp" alt="VIVA ACID — Live @ Viva Acid &#39;24" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="VA"></a>
+    <span class="mix-card-number">03</span>
+    <a data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="ANDREW EMIL" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/ecd948852cb17b86-v1t2.webp" data-duration-sec="7200" data-page="andrewemil.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/ANDREW_EMIL_video_1781807047403.mp4" href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" aria-label="Play ANDREW EMIL’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/ecd948852cb17b86-v1t2.webp" alt="ANDREW EMIL" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="AE"></a>
   </div>
   <div class="mix-card-body">
-    <h3 class="mix-card-title"><a href="vivaacid.html">Live @ Viva Acid &#39;24</a></h3>
-    <a class="mix-card-artist" href="vivaacid.html">VIVA ACID</a>
+    <h3 class="mix-card-title"><a href="andrewemil.html">ANDREW EMIL</a></h3>
+    <a class="mix-card-artist" href="andrewemil.html">2 mixes</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" data-filename="ANDREW EMIL - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="04">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">04</span>
+    <a data-playlist data-title="Viva Acid at Podlasie — Lorelei, JoshZ, Bai-ee &amp; Tyrel (full night)" data-artist="BAI-EE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e4ec03dabac13438-v1t2.webp" data-duration-sec="10800" data-page="baiee.html" href="https://arweave.net/xDaMKgz3vWI919a4urmlIeNHoJS9qlFuAwk8AURATA0" aria-label="Play BAI-EE’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e4ec03dabac13438-v1t2.webp" alt="BAI-EE" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="B"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="baiee.html">BAI-EE</a></h3>
+    <a class="mix-card-artist" href="baiee.html">34 mixes</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://arweave.net/xDaMKgz3vWI919a4urmlIeNHoJS9qlFuAwk8AURATA0" data-filename="BAI-EE - Viva Acid at Podlasie — Lorelei, JoshZ, Bai-ee &amp; Tyrel (full night)" aria-label="Download Viva Acid at Podlasie — Lorelei, JoshZ, Bai-ee &amp; Tyrel (full night)"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="05">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">05</span>
+    <a data-playlist data-title="Live at Studio409 New York (2024)" data-artist="BLUE JAY (AKA Josh Zeitler)" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/6f647a005d6fcce2-v1t2.webp" data-duration-sec="10680" data-page="zeitler.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BLUE_JAY__AKA_Josh_Zeitler__video_1768149134391.mp4" href="https://uzh5clhxybxsww3li3gmcodyxok7dwa46vfq7etzn6owprhujdea.arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg" aria-label="Play BLUE JAY (AKA Josh Zeitler)’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/6f647a005d6fcce2-v1t2.webp" alt="BLUE JAY (AKA Josh Zeitler)" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="BJ"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="zeitler.html">BLUE JAY (AKA Josh Zeitler)</a></h3>
+    <a class="mix-card-artist" href="zeitler.html">2 mixes</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://uzh5clhxybxsww3li3gmcodyxok7dwa46vfq7etzn6owprhujdea.arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg" data-filename="BLUE JAY (AKA Josh Zeitler) - Live at Studio409 New York (2024)" aria-label="Download Live at Studio409 New York (2024)"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="06">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">06</span>
+    <a data-playlist data-title="Let Yourself Go" data-artist="CESAR RAMIREZ" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/84c1c230da3d175f-v1t2.webp" data-duration-sec="5580" data-page="cesarramirez.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/CESAR_RAMIREZ_video_1782661718553.mp4" href="https://wqyhof73vki2hs5mwj6tm4godenmlg7b24jik2ovjtnfhzosizbq.arweave.net/tDB3F_uqkaPLrLJ9NnDOGRrFm-HXEoVp1UzaU-XSRkM" aria-label="Play CESAR RAMIREZ’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/84c1c230da3d175f-v1t2.webp" alt="CESAR RAMIREZ" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="CR"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="cesarramirez.html">CESAR RAMIREZ</a></h3>
+    <a class="mix-card-artist" href="cesarramirez.html">1 mix</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://wqyhof73vki2hs5mwj6tm4godenmlg7b24jik2ovjtnfhzosizbq.arweave.net/tDB3F_uqkaPLrLJ9NnDOGRrFm-HXEoVp1UzaU-XSRkM" data-filename="CESAR RAMIREZ - Let Yourself Go" aria-label="Download Let Yourself Go"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="07">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">07</span>
+    <a data-playlist data-title="Live @ UE.info ??" data-artist="JOHN SIMMONS" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/c8ac39e7b9dd1fa4-v1t2.webp" data-duration-sec="7200" data-page="johnsimmons.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/JOHN_SIMMONS_video_1768086968012.mp4" href="https://us52zeiw62ei2egubws4huywpyw4nzvjxueism7pkt32pcjyoizq.arweave.net/pLuskRb2iI0Q1A2lw9MWfi3G5qm9CIkz71T3p4k4cjM" aria-label="Play JOHN SIMMONS’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/c8ac39e7b9dd1fa4-v1t2.webp" alt="JOHN SIMMONS" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="JS"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="johnsimmons.html">JOHN SIMMONS</a></h3>
+    <a class="mix-card-artist" href="johnsimmons.html">1 mix</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://us52zeiw62ei2egubws4huywpyw4nzvjxueism7pkt32pcjyoizq.arweave.net/pLuskRb2iI0Q1A2lw9MWfi3G5qm9CIkz71T3p4k4cjM" data-filename="JOHN SIMMONS - Live @ UE.info ??" aria-label="Download Live @ UE.info ??"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="08">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">08</span>
+    <a data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="RED EYE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/af3a376cdc48ca73-v1t2.webp" data-duration-sec="7200" data-page="redeye.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/RED_EYE_video_1781806602571.mp4" href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" aria-label="Play RED EYE’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/af3a376cdc48ca73-v1t2.webp" alt="RED EYE" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="RE"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="redeye.html">RED EYE</a></h3>
+    <a class="mix-card-artist" href="redeye.html">1 mix</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" data-filename="RED EYE - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="09">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">09</span>
+    <a data-playlist data-title="Live @ UE.info ??" data-artist="DJ RELEASE AKA IKE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1b1ce66a9c30e98a-v1t2.webp" data-duration-sec="3600" data-page="release.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/DJ_RELEASE_AKA_IKE_video_1782584531400.mp4" href="https://embbv2sphugsxwzrx222jkjpcqbj2unqbn5yaiqh4rgoacvigycq.arweave.net/IwIa6k89DSvbMb61pKkvFAKdUbALe4AiB-RM4AqoNgU" aria-label="Play DJ RELEASE AKA IKE’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1b1ce66a9c30e98a-v1t2.webp" alt="DJ RELEASE AKA IKE" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="DR"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="release.html">DJ RELEASE AKA IKE</a></h3>
+    <a class="mix-card-artist" href="release.html">1 mix</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://embbv2sphugsxwzrx222jkjpcqbj2unqbn5yaiqh4rgoacvigycq.arweave.net/IwIa6k89DSvbMb61pKkvFAKdUbALe4AiB-RM4AqoNgU" data-filename="DJ RELEASE AKA IKE - Live @ UE.info ??" aria-label="Download Live @ UE.info ??"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="10">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">10</span>
+    <a data-playlist data-title="Live at Podlasie" data-artist="SASSMOUTH" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1734d1b4ae911269-v2t2.webp" data-duration-sec="7200" data-page="sassmouth.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/SASSMOUTH_video_1785306399852.mp4" href="https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0" aria-label="Play SASSMOUTH’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/1734d1b4ae911269-v2t2.webp" alt="SASSMOUTH" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="S"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="sassmouth.html">SASSMOUTH</a></h3>
+    <a class="mix-card-artist" href="sassmouth.html">1 mix</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0" data-filename="SASSMOUTH - Live at Podlasie" aria-label="Download Live at Podlasie"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="11">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">11</span>
+    <a data-playlist data-title="Martians Mixtape" data-artist="SEAN SMITH" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/2ba89fdd3ef068c7-v1t2.webp" data-duration-sec="7200" data-page="seansmith.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/SEAN_SMITH_video_1768093375494.mp4" href="https://bzihmbcqda77zu2zf6xgurrcwke37xbcewvg5xovs45znnt5bnda.arweave.net/DlB2BFAYP_zTWS-uakYisom_3CIlqm7d1Zc7lrZ9C0Y" aria-label="Play SEAN SMITH’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/2ba89fdd3ef068c7-v1t2.webp" alt="SEAN SMITH" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="SS"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="seansmith.html">SEAN SMITH</a></h3>
+    <a class="mix-card-artist" href="seansmith.html">1 mix</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://bzihmbcqda77zu2zf6xgurrcwke37xbcewvg5xovs45znnt5bnda.arweave.net/DlB2BFAYP_zTWS-uakYisom_3CIlqm7d1Zc7lrZ9C0Y" data-filename="SEAN SMITH - Martians Mixtape" aria-label="Download Martians Mixtape"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="12">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">12</span>
+    <a data-playlist data-title="Mix Tape" data-artist="STAR TRAXX" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/819391882d0bfdee-v1t2.webp" data-duration-sec="1800" data-page="Startraxx.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/STAR_TRAXX_video_1782822787776.mp4" href="https://3t4xoq2sswghgedqxsojzckllnq4oay6p4xrte7tl5mfm5ia7cka.arweave.net/3Pl3Q1KVjHMQcLycnIlLW2HHAx5_LxmT819YVnUA-JQ" aria-label="Play STAR TRAXX’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/819391882d0bfdee-v1t2.webp" alt="STAR TRAXX" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="ST"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="Startraxx.html">STAR TRAXX</a></h3>
+    <a class="mix-card-artist" href="Startraxx.html">1 mix</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://3t4xoq2sswghgedqxsojzckllnq4oay6p4xrte7tl5mfm5ia7cka.arweave.net/3Pl3Q1KVjHMQcLycnIlLW2HHAx5_LxmT819YVnUA-JQ" data-filename="STAR TRAXX - Mix Tape" aria-label="Download Mix Tape"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="13">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">13</span>
+    <a data-playlist data-title="Live at Podlasie" data-artist="TYREL WILLIAMS" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a6ac343e51e3a993-v1t2.webp" data-duration-sec="7200" data-page="tyrel.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/TYREL_WILLIAMS_video_1789109308945.mp4" href="https://nbdlqhjegffe2b43r4pz5dbnnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU" aria-label="Play TYREL WILLIAMS’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/a6ac343e51e3a993-v1t2.webp" alt="TYREL WILLIAMS" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="TW"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="tyrel.html">TYREL WILLIAMS</a></h3>
+    <a class="mix-card-artist" href="tyrel.html">1 mix</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://nbdlqhjegffe2b43r4pz5dbnnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU" data-filename="TYREL WILLIAMS - Live at Podlasie" aria-label="Download Live at Podlasie"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="14">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">14</span>
+    <a data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="VIVA ACID" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/61239f57a030e6d5-v1t2.webp" data-duration-sec="7200" data-page="vivaacid.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/VIVA_ACID_video_1768339012401.mp4" href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" aria-label="Play VIVA ACID’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/61239f57a030e6d5-v1t2.webp" alt="VIVA ACID" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="VA"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="vivaacid.html">VIVA ACID</a></h3>
+    <a class="mix-card-artist" href="vivaacid.html">4 mixes</a>
     <div class="mix-card-actions">
       <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
       <a class="download-btn download-btn--sm" data-download href="https://yr7svqh3h2l5ka7nlu5sehndf5ekaytclzaje5z4b7of3xs4g3zq.arweave.net/xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM" data-filename="VIVA ACID - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
@@ -413,47 +586,62 @@
   </div>
 </article>
 
-<article class="mix-card" data-mix-number="040">
+<article class="mix-card selector-tile" data-selector-index="15">
   <div class="mix-card-cover">
-    <span class="mix-card-number">040</span>
-    <a data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="VIVA ACID" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/063fc964a155ede8-v2t2.webp" data-duration-sec="7200" data-page="vivaacid.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/VIVA_ACID_video_1768339012401.mp4" href="https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0" aria-label="Play Live @ Viva Acid &#39;24"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/063fc964a155ede8-v2t2.webp" alt="VIVA ACID — Live @ Viva Acid &#39;24" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="VA"></a>
+    <span class="mix-card-number">15</span>
+    <a data-playlist data-title="WWFM" data-artist="Chicago Skyway" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/549a02fd799e97cc-v1t2.webp" data-duration-sec="0" data-page="chicagoskyway.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/Chicago_Skyway_video_1768106724157.mp4" href="https://2pgnqqeqgn7ric25tb3jy3lbmo4jfnjn4ljyhjmx7xaybtt35qvq.arweave.net/08zYQJAzfxQLXZh2nG1hY7iStS3i04Oll_3BgM577Cs" aria-label="Play Chicago Skyway’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/549a02fd799e97cc-v1t2.webp" alt="Chicago Skyway" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="CS"></a>
   </div>
   <div class="mix-card-body">
-    <h3 class="mix-card-title"><a href="vivaacid.html">Live @ Viva Acid &#39;24</a></h3>
-    <a class="mix-card-artist" href="vivaacid.html">VIVA ACID</a>
+    <h3 class="mix-card-title"><a href="chicagoskyway.html">Chicago Skyway</a></h3>
+    <a class="mix-card-artist" href="chicagoskyway.html">6 mixes</a>
     <div class="mix-card-actions">
       <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
-      <a class="download-btn download-btn--sm" data-download href="https://unauv36jd54gznlsom5ojf27qw52nxush5txy4psfdyosjexr26q.arweave.net/o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0" data-filename="VIVA ACID - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+      <a class="download-btn download-btn--sm" data-download href="https://2pgnqqeqgn7ric25tb3jy3lbmo4jfnjn4ljyhjmx7xaybtt35qvq.arweave.net/08zYQJAzfxQLXZh2nG1hY7iStS3i04Oll_3BgM577Cs" data-filename="Chicago Skyway - WWFM" aria-label="Download WWFM"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
     </div>
   </div>
 </article>
 
-<article class="mix-card" data-mix-number="039">
+<article class="mix-card selector-tile" data-selector-index="16">
   <div class="mix-card-cover">
-    <span class="mix-card-number">039</span>
-    <a data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="VIVA ACID" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e8d8fe5fa505d76d-v1t2.webp" data-duration-sec="7200" data-page="vivaacid.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/VIVA_ACID_video_1768339012401.mp4" href="https://nbdlqhjegffe2b43r4pz5db2nnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU" aria-label="Play Live @ Viva Acid &#39;24"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/e8d8fe5fa505d76d-v1t2.webp" alt="VIVA ACID — Live @ Viva Acid &#39;24" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="VA"></a>
+    <span class="mix-card-number">16</span>
+    <a data-playlist data-title="Lorelei Live at Podlasie 7/18/25" data-artist="LORELEI" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1t2.webp" data-duration-sec="0" data-page="lorelei.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/LORELEI_video_1785479197900.mp4" href="https://arweave.net/Y5DfJ54VC_2-gKJ90Ts_RJZhhDKsV869SdsYB0n9GqM" aria-label="Play LORELEI’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/fc9e91785de73abc-v1t2.webp" alt="LORELEI" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="L"></a>
   </div>
   <div class="mix-card-body">
-    <h3 class="mix-card-title"><a href="vivaacid.html">Live @ Viva Acid &#39;24</a></h3>
-    <a class="mix-card-artist" href="vivaacid.html">VIVA ACID</a>
+    <h3 class="mix-card-title"><a href="lorelei.html">LORELEI</a></h3>
+    <a class="mix-card-artist" href="lorelei.html">1 mix</a>
     <div class="mix-card-actions">
       <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
-      <a class="download-btn download-btn--sm" data-download href="https://nbdlqhjegffe2b43r4pz5db2nnluh6b6osbilcbqrlsc7e3ecxasq.arweave.net/aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU" data-filename="VIVA ACID - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+      <a class="download-btn download-btn--sm" data-download href="https://arweave.net/Y5DfJ54VC_2-gKJ90Ts_RJZhhDKsV869SdsYB0n9GqM" data-filename="LORELEI - Lorelei Live at Podlasie 7/18/25" aria-label="Download Lorelei Live at Podlasie 7/18/25"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
     </div>
   </div>
 </article>
 
-<article class="mix-card" data-mix-number="038">
+<article class="mix-card selector-tile" data-selector-index="17">
   <div class="mix-card-cover">
-    <span class="mix-card-number">038</span>
-    <a data-playlist data-title="Live @ Viva Acid &#39;24" data-artist="VIVA ACID" data-img="https://arweave.net/uqBNvxk9bd-LETdZOD_O-QaKPiP6TYWi-9aP1zQZ4nY" data-duration-sec="3600" data-page="vivaacid.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/VIVA_ACID_video_1768339012401.mp4" href="https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg" aria-label="Play Live @ Viva Acid &#39;24"><img src="https://arweave.net/uqBNvxk9bd-LETdZOD_O-QaKPiP6TYWi-9aP1zQZ4nY" alt="VIVA ACID — Live @ Viva Acid &#39;24" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="VA"></a>
+    <span class="mix-card-number">17</span>
+    <a data-playlist data-title="Frankie Vega B2B Jevon Jackson" data-artist="JEVON JACKSON" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/f2bc27ba45e5c85a-v2t2.webp" data-duration-sec="0" data-page="jevonjackson.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/JEVON_JACKSON_video_1784243311890.mp4" href="https://arweave.net/26lgzySQrL0NGDnPiHvpA89UFK15x4JxF_YLo0jDI1Y" aria-label="Play JEVON JACKSON’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/f2bc27ba45e5c85a-v2t2.webp" alt="JEVON JACKSON" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="JJ"></a>
   </div>
   <div class="mix-card-body">
-    <h3 class="mix-card-title"><a href="vivaacid.html">Live @ Viva Acid &#39;24</a></h3>
-    <a class="mix-card-artist" href="vivaacid.html">VIVA ACID</a>
+    <h3 class="mix-card-title"><a href="jevonjackson.html">JEVON JACKSON</a></h3>
+    <a class="mix-card-artist" href="jevonjackson.html">1 mix</a>
     <div class="mix-card-actions">
       <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
-      <a class="download-btn download-btn--sm" data-download href="https://3qgfoqfegdfo74j57wn7qnv6ghz4fq5fiv4ml3vgrmjwhgvqrvea.arweave.net/3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg" data-filename="VIVA ACID - Live @ Viva Acid &#39;24" aria-label="Download Live @ Viva Acid &#39;24"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+      <a class="download-btn download-btn--sm" data-download href="https://arweave.net/26lgzySQrL0NGDnPiHvpA89UFK15x4JxF_YLo0jDI1Y" data-filename="JEVON JACKSON - Frankie Vega B2B Jevon Jackson" aria-label="Download Frankie Vega B2B Jevon Jackson"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+    </div>
+  </div>
+</article>
+
+<article class="mix-card selector-tile" data-selector-index="18">
+  <div class="mix-card-cover">
+    <span class="mix-card-number">18</span>
+    <a data-playlist data-title="Live at UE (B2B Sean Smith)" data-artist="BERNARD BADIE" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/38c7dbfa896f8a89-v1t2.webp" data-duration-sec="0" data-page="bernardbadie.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/BERNARD_BADIE_video_1784140332673.mp4" href="https://arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg" aria-label="Play BERNARD BADIE’s newest mix"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/38c7dbfa896f8a89-v1t2.webp" alt="BERNARD BADIE" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="BB"></a>
+  </div>
+  <div class="mix-card-body">
+    <h3 class="mix-card-title"><a href="bernardbadie.html">BERNARD BADIE</a></h3>
+    <a class="mix-card-artist" href="bernardbadie.html">1 mix</a>
+    <div class="mix-card-actions">
+      <button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button>
+      <a class="download-btn download-btn--sm" data-download href="https://arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg" data-filename="BERNARD BADIE - Live at UE (B2B Sean Smith)" aria-label="Download Live at UE (B2B Sean Smith)"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
     </div>
   </div>
 </article>
@@ -473,7 +661,7 @@
       <a href="index.html">Mixes</a>
       <a href="residents.html">Selectors</a>
       <a href="archive.html">Archive</a>
-      <a href="about.html">About</a>
+      <!-- About hidden from footer for now (owner request 2026-10-17): <a href="about.html">About</a> -->
       <a href="https://docs.google.com/forms/d/e/1FAIpQLSfnuTItd-QSZkgPwIy9baGBZ8nyC_6Y3JxsXLSLywJfuwrXYw/viewform?usp=sf_link" target="_blank" rel="noopener">Contribute</a>
     </div>
   </div>
@@ -612,14 +800,16 @@
 })();
 </script>
 
-<div id="persistent-player-bar" class="is-idle">
+<div id="persistent-player-bar" class="is-idle" data-mix-credits="{&quot;xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM&quot;:{&quot;title&quot;:&quot;ANDREW EMIL B2B RED EYE&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;},&quot;3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg&quot;:{&quot;title&quot;:&quot;BAI-EE&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;},&quot;aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU&quot;:{&quot;title&quot;:&quot;TYREL WILLIAMS&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;},&quot;o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0&quot;:{&quot;title&quot;:&quot;SASSMOUTH&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;}}">
   <div id="player-bar-now-playing">
     <div id="player-bar-thumb"><img class="cover-fallback" src="img/square-ue.png" alt=""></div>
     <div id="player-bar-track-meta">
-      <div id="player-bar-title">Select a mix to play</div>
+      <div id="player-bar-title"><a href="">Select a mix to play</a></div>
       <div id="player-bar-artist"></div>
     </div>
   </div>
+  <!-- film / cover / artist chips (homepage: the hero script moves #hero-source-thumbs here) -->
+  <div id="player-bar-source-slot"></div>
   <div id="player-bar-transport">
     <button class="transport-btn" id="player-bar-shuffle" type="button" aria-label="Shuffle">
       <svg class="icon-svg"><use href="#i-shuffle"></use></svg>
@@ -651,6 +841,26 @@
     <svg class="icon-svg"><use href="#i-kebab"></use></svg>
   </button>
 </div>
+<script>
+/* Fade the bar's live parts in once the player has set them up, instead of
+   showing the idle placeholder and then swapping (a visible content shift).
+   css: #persistent-player-bar[data-bar-boot]. `ue-player-ready` fires after
+   player.js has synced the bar (and ue-resume.js primes on that same event),
+   so a short beat after it the bar is final. The fallback covers a player that
+   never loads; no JS means no attribute and the bar simply shows. */
+(function () {
+  var bar = document.getElementById('persistent-player-bar');
+  if (!bar) return;
+  bar.setAttribute('data-bar-boot', 'pending');
+  function ready() {
+    if (bar.getAttribute('data-bar-boot') !== 'pending') return;
+    void bar.offsetWidth;   /* flush 'pending' so the fade runs */
+    bar.setAttribute('data-bar-boot', 'ready');
+  }
+  document.addEventListener('ue-player-ready', function () { setTimeout(ready, 80); }, { once: true });
+  setTimeout(ready, 6000);
+})();
+</script>
 
 <div id="search-overlay" role="dialog" aria-label="Search">
   <button id="search-overlay-close" type="button">Close</button>
@@ -662,8 +872,8 @@
 
 <!-- UE shared dialog (transient-UI rework).
      ONE centre-screen dialog for the whole site, reserved for genuine decisions:
-     a terminal playback failure (retry / download) and the clipboard-blocked copy
-     fallback. Transient states (starting / buffering / seeking) keep the existing
+     a terminal playback failure (retry / download), the clipboard-blocked copy
+     fallback, and a mix's original artwork (artist page, "View original artwork"). Transient states (starting / buffering / seeking) keep the existing
      inline pill on the waveform and must NOT come through here.
 
      WHY THIS MARKUP IS STATIC, AND WHY THE CONTROLLER IS INLINE:
@@ -685,6 +895,7 @@
          [open]                       shown
          [data-actions="0|1|2"]       how many action buttons are rendered
          [data-copy="on|off"]         whether the copy input is showing
+         [data-image="on|off"]        whether the image slot is showing
        #ue-dialog-panel              inner panel — put PADDING HERE, not on #ue-dialog:
                                      a backdrop click is detected as "target is the
                                      dialog element", so padding on the dialog itself
@@ -692,6 +903,7 @@
        #ue-dialog-close              the ✕ button   (.ue-dialog-close-glyph inside)
        #ue-dialog-title              title line
        #ue-dialog-message            body copy (carries [hidden] when unused)
+       #ue-dialog-image              open({ image: { src, alt } }) (carries [hidden])
        #ue-dialog-copy-input         read-only copy fallback field (carries [hidden])
        #ue-dialog-actions            actions row
        .ue-dialog-action             an action button
@@ -702,13 +914,14 @@
      otherwise paint the panel inline on every page. The controller removes `hidden`
      right before showModal() and restores it on close, so the UA rule
      `[hidden] { display: none }` can never fight an open dialog. -->
-<dialog id="ue-dialog" aria-labelledby="ue-dialog-title" aria-describedby="ue-dialog-message" data-actions="0" data-copy="off" hidden>
+<dialog id="ue-dialog" aria-labelledby="ue-dialog-title" aria-describedby="ue-dialog-message" data-actions="0" data-copy="off" data-image="off" hidden>
   <div id="ue-dialog-panel">
     <button id="ue-dialog-close" type="button" aria-label="Close">
       <span class="ue-dialog-close-glyph" aria-hidden="true">&#10005;</span>
     </button>
     <h2 id="ue-dialog-title"></h2>
     <p id="ue-dialog-message" hidden></p>
+    <img id="ue-dialog-image" alt="" decoding="async" hidden>
     <input id="ue-dialog-copy-input" type="text" readonly spellcheck="false" autocomplete="off" aria-label="Copy this text" hidden>
     <div id="ue-dialog-actions"></div>
   </div>
@@ -720,6 +933,7 @@
   var titleEl = document.getElementById('ue-dialog-title');
   var msgEl = document.getElementById('ue-dialog-message');
   var copyEl = document.getElementById('ue-dialog-copy-input');
+  var imageEl = document.getElementById('ue-dialog-image');
   var actionsEl = document.getElementById('ue-dialog-actions');
   var closeBtn = document.getElementById('ue-dialog-close');
 
@@ -755,9 +969,15 @@
       copyEl.value = '';
       copyEl.setAttribute('hidden', '');
     }
+    if (imageEl) {
+      imageEl.removeAttribute('src');
+      imageEl.alt = '';
+      imageEl.setAttribute('hidden', '');
+    }
     if (dlg) {
       dlg.setAttribute('data-actions', '0');
       dlg.setAttribute('data-copy', 'off');
+      dlg.setAttribute('data-image', 'off');
     }
   }
 
@@ -809,9 +1029,13 @@
     var message = str(spec.message);
     var copyText = str(spec.copyText);
     var actions = Object.prototype.toString.call(spec.actions) === '[object Array]' ? spec.actions : [];
+    /* http(s) only: the one caller passes a stored artwork URL, and nothing else
+       (javascript:, data:) should ever reach an <img src> from here. */
+    var image = spec.image && typeof spec.image === 'object' && /^https?:\/\//i.test(str(spec.image.src))
+      ? { src: str(spec.image.src), alt: str(spec.image.alt) } : null;
 
     /* Nothing to say and nothing to do — refuse rather than flash an empty box. */
-    if (!title && !message && !copyText && actions.length === 0) return false;
+    if (!title && !message && !copyText && !image && actions.length === 0) return false;
 
     if (!supported) {
       /* Degraded path: the copy fallback is the only case where the user still has
@@ -836,6 +1060,13 @@
 
     if (titleEl) titleEl.textContent = title;
     setText(msgEl, message);
+
+    if (image && imageEl) {
+      imageEl.alt = image.alt;
+      imageEl.src = image.src;
+      imageEl.removeAttribute('hidden');
+      dlg.setAttribute('data-image', 'on');
+    }
 
     if (copyText && copyEl) {
       copyEl.value = copyText;
@@ -1539,6 +1770,74 @@
   var still = document.getElementById('hero-still');
   if (!media || !video || !art) return;
 
+  /* FADE FROM BLACK. The page is built with one featured mix, and player.js
+     re-rolls a random one a moment later — showing the built one first was a
+     visible flash of the wrong image and copy. So while booting the stage is
+     black (css: #featured-mix-hero[data-hero-boot]) and the first real mix
+     fades in once prePick (below) has chosen it — the copy on the next frame,
+     the cover as soon as its image loads. No JS means no attribute, and the
+     built still simply shows. */
+  var stage = document.getElementById('featured-mix-hero');
+  if (stage) stage.setAttribute('data-hero-boot', 'pending');
+
+  /* The homepage always opens at the top, on the hero. The browser's default
+     scroll restoration put a reload back wherever you had scrolled to, which
+     read as the page scrolling itself down on load. A shared ?mix= link
+     (ue-links.js scrolls to its card) or a #anchor keeps its own target. */
+  if (!/[?&]mix=/.test(location.search) && !location.hash) {
+    try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  function heroReady() {
+    if (stage && stage.getAttribute('data-hero-boot') === 'pending') stage.setAttribute('data-hero-boot', 'ready');
+  }
+
+  /* PICK BEFORE FIRST PAINT. The random featured mix is chosen right here, from
+     the generator's data-hero-picks, and written into the featured anchor and
+     the hero copy before anything is drawn — everything downstream (the seed
+     below, player.js hydration, the bar) reads the anchor, so they all start
+     on this mix. data-hero-prepicked tells player.js to adopt it instead of
+     rolling again. Any failure leaves the built-in mix in place. */
+  (function prePick() {
+    var fa = document.getElementById('featured-play-button');
+    var picks = [];
+    try { picks = JSON.parse(media.getAttribute('data-hero-picks') || '[]'); } catch (e) { picks = []; }
+    if (!fa || !picks.length) return;
+    var p = picks[Math.floor(Math.random() * picks.length)];
+    if (!p || !p.u) return;
+    fa.setAttribute('href', p.u);
+    fa.setAttribute('data-title', p.t);
+    fa.setAttribute('data-artist', p.a);
+    fa.setAttribute('data-img', p.i);
+    fa.setAttribute('data-duration-sec', String(p.d || 0));
+    fa.setAttribute('data-page', p.p || '');
+    fa.setAttribute('data-video', p.v || '');
+    fa.setAttribute('data-hero-prepicked', '1');
+    var dl = document.getElementById('featured-download-button');
+    if (dl) { dl.setAttribute('href', p.u); dl.setAttribute('data-filename', p.a + ' - ' + p.t); }
+    var titleEl = document.getElementById('featured-mix-title');
+    if (titleEl) {
+      var titleLink = titleEl.querySelector('a') || titleEl;
+      titleLink.textContent = p.l1;
+      if (titleLink !== titleEl && p.p) titleLink.setAttribute('href', p.p);
+    }
+    var sigEl = document.getElementById('featured-artist-signature');
+    if (sigEl) { sigEl.textContent = p.l2; if (p.p) sigEl.setAttribute('href', p.p); }
+    var metaRow = document.getElementById('featured-meta-row');
+    if (metaRow) {
+      /* genre, date and length are hidden for now (generator metaChips); the
+         length chip was:
+         '<span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> ' + Math.round(p.d / 60) + ' MIN</span>' */
+      metaRow.innerHTML = '';
+    }
+    var tot = document.querySelector('#featured-waveform .time-total');
+    if (tot && p.d > 0) {
+      var h = Math.floor(p.d / 3600), m = Math.floor((p.d % 3600) / 60), sec = Math.floor(p.d % 60);
+      tot.textContent = (h ? h + ':' + (m < 10 ? '0' : '') : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+    if (still) still.setAttribute('src', p.i);
+  })();
+
   function reducedMotion() {
     try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
   }
@@ -1598,6 +1897,23 @@
   }
 
   function startPromo() {
+    /* The default (and any listener's) choice wins: the cover unless they
+       picked the film. Nothing is painted yet — the first real mix arrives
+       with `ue-featured-changed` (which applies the pinned source); this is
+       only the fallback for when it never comes. */
+    if (pinned && pinned !== 'promo') {
+      /* prePick already chose the mix, so its cover can start loading now and
+         fade in from black (#hero-mix-art); the copy fades in on the next frame */
+      applyPinned();
+      /* a timer, not requestAnimationFrame: rAF never fires in a background
+         tab, which left the copy hidden until the tab was focused. Reading
+         offsetWidth flushes the 'pending' style first, so the stagger runs. */
+      setTimeout(function () {
+        if (stage) void stage.offsetWidth;
+        heroReady();
+      }, 30);
+      return;
+    }
     /* Honour the two cases where an autoplaying 30s video is the wrong answer,
        and simply keep the still: reduced-motion, and Save-Data. */
     if (reducedMotion() || saveData() || !CLIPS.length) return;
@@ -1617,10 +1933,45 @@
   }
 
   /* ---- 2. the playing mix's artwork, wearing the branded plate ---- */
+  /* Homepage credits (generator homepageCredits): a "Live @ Viva Acid" set
+     shows its DJs as the title and the event title as the small line. Keyed
+     by audio txid, read off the featured anchor's href, which player.js
+     always repoints to the hero's current mix before it updates the text.
+     The map rides on the player bar (data-mix-credits), which every page has;
+     read on first use, because the bar is parsed after this script. */
+  var CREDITS = null;
+  function currentCredit() {
+    if (!CREDITS) {
+      var creditsHost = document.getElementById('persistent-player-bar');
+      if (!creditsHost) return null;   /* not parsed yet — try again next call */
+      try { CREDITS = JSON.parse(creditsHost.getAttribute('data-mix-credits') || '{}'); } catch (e) { CREDITS = {}; }
+    }
+    var fa = document.getElementById('featured-play-button');
+    var m = /\/([A-Za-z0-9_-]{43})(?:[/?#]|$)/.exec((fa && fa.getAttribute('href')) || '');
+    return (m && CREDITS[m[1]]) || null;
+  }
+
   function setPlate(title, artistName) {
+    // Artist first, like the tiles: artist (or credited DJs) on the title
+    // line, the mix title on the small line.
+    var rawArtist = artistName; // before the line1/line2 reassignment below
+    var credit = currentCredit();
+    var line1 = credit ? credit.title : artistName;
+    var line2 = credit ? credit.sub : title;
+    title = line1; artistName = line2;
     var t = document.getElementById('hero-plate-title');
     var a = document.getElementById('hero-plate-artist');
-    if (t) t.textContent = title || '';
+    if (t) {
+      var titleLink = t.querySelector('a') || t;
+      titleLink.textContent = title || '';
+      // Same convention as #featured-artist-signature: link via this one
+      // artist's own page even under a B2B credit line.
+      if (titleLink !== t) {
+        var meta = artistMeta(rawArtist);
+        if (meta && meta.page) titleLink.setAttribute('href', meta.page);
+        else titleLink.removeAttribute('href');
+      }
+    }
     if (a) a.textContent = artistName || '';
   }
 
@@ -1634,9 +1985,20 @@
     setPlate(title, artistName);
     if (media.dataset.heroMode === mode && art.getAttribute('src') === src) return true;
     art.onload = function () { media.dataset.heroMode = mode; renderThumbs(); };
-    art.onerror = function () { /* keep whatever is showing */ };
+    /* a portrait that fails (gateway 429, missing file) must not leave the
+       stage black: fall back to the generated cover */
+    art.onerror = function () {
+      if (mode === 'artist' && SOURCES.art && art.getAttribute('src') !== SOURCES.art) showArt(SOURCES.art, title, artistName);
+    };
     art.hidden = false;
-    art.setAttribute('src', src);
+    /* same file already loaded (a mix change can land on the same cover):
+       re-setting src fires no load event, so reveal it directly */
+    if (art.getAttribute('src') === src && art.complete && art.naturalWidth) {
+      media.dataset.heroMode = mode;
+      renderThumbs();
+    } else {
+      art.setAttribute('src', src);
+    }
     try { video.pause(); } catch (e) {}
     return true;
   }
@@ -1653,8 +2015,10 @@
      `pinned` is the listener's choice, and it pins a KIND, not a URL — so when
      the featured mix changes or a different mix starts playing, the hero
      re-resolves that same kind for the new record rather than freezing on an
-     image of the old one. Until they touch a thumb, `pinned` stays null and the
-     page behaves exactly as it did before this strip existed. */
+     image of the old one. It starts as 'artist': the hero opens on the
+     selector's photo; a mix whose artist has none (and VIVA ACID, whose image
+     the generator leaves out) falls back to the generated cover via
+     applyPinned, and so does a photo that fails to load (showStill). */
   var ARTISTS = {};
   try { ARTISTS = JSON.parse(media.getAttribute('data-hero-artists') || '{}'); } catch (e) { ARTISTS = {}; }
 
@@ -1670,7 +2034,7 @@
   var thumbsEl = document.getElementById('hero-source-thumbs');
   var SOURCES = { promo: '', art: '', artist: '' };
   var CURRENT = { title: '', artist: '' };
-  var pinned = null;
+  var pinned = 'artist';
 
   function updateSources(d) {
     d = d || {};
@@ -1688,7 +2052,7 @@
   }
 
   /* The handwritten artist mark, laid across the hero cover exactly as it is
-     across every card in Latest Mixes — same renderer, same splitting and
+     across every selector tile — same renderer, same splitting and
      sizing rules (window.ueScriptMark, in partials/footer.html). Drawn at
      runtime because the hero's mix changes on every load and every click.
      CSS reveals it only in `art` mode: over a film it would fight the
@@ -1733,6 +2097,10 @@
     return applySource(pinned) || applySource('art');
   }
 
+  /* Previously relocated into the player bar's #player-bar-source-slot once
+     the DOM was ready. Removed: the chip strip now stays put in the hero
+     where it's declared — the bottom bar no longer carries this UI at all. */
+
   if (thumbsEl) {
     thumbsEl.addEventListener('click', function (e) {
       var btn = e.target && e.target.closest ? e.target.closest('.hero-thumb') : null;
@@ -1769,6 +2137,7 @@
   function wireControls() {
     var muteBtn = document.getElementById('hero-mute-toggle');
     var shareBtn = document.getElementById('hero-share');
+    var refreshBtn = document.getElementById('hero-refresh-mix');   /* generator FEATURED_IMAGE markup */
 
     if (muteBtn) {
       muteBtn.addEventListener('click', function () {
@@ -1779,6 +2148,21 @@
         muteBtn.setAttribute('aria-pressed', video.muted ? 'false' : 'true');
         muteBtn.setAttribute('aria-label', video.muted ? 'Unmute promo video' : 'Mute promo video');
         if (!video.muted && video.paused) { try { video.play(); } catch (e) {} }
+      });
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function () {
+        /* player.js owns the roll (host.rerollFeatured — same code as the
+           load-time re-roll, picks a DIFFERENT mix, repoints the hero and
+           fires ue-featured-changed, so the film/plate/thumbs below follow).
+           The player loads lazily; a click before it is ready is queued and
+           runs the moment it hydrates. */
+        var go = function () {
+          try { window.UEPlayer.host.rerollFeatured(); } catch (e) { /* no player */ }
+        };
+        if (window.UEPlayer && window.UEPlayer.host) go();
+        else document.addEventListener('ue-player-ready', go, { once: true });
       });
     }
 
@@ -1918,19 +2302,43 @@
     if (meta && meta.page) a.setAttribute('data-page', meta.page);
   }
 
+  /* A NEW MIX REPLAYS THE INTRO. Whenever the hero lands on a different mix
+     (refresh, a tile click, the player moving to the next track) the stage
+     goes back to black and runs the same sequence as page load: the cover
+     fades in, the copy staggers in top to bottom. The reset itself is instant
+     (data-hero-resetting switches transitions off for one frame), so nothing
+     fades OUT first. Play/pause and same-mix re-syncs change nothing. */
+  function heroKey() { return CURRENT.artist + '|' + CURRENT.title; }
+  function heroSwap(d, apply) {
+    var before = heroKey();
+    updateSources(d);
+    var changed = !!before.replace('|', '') && heroKey() !== before;
+    if (changed && stage) {
+      stage.setAttribute('data-hero-resetting', '');
+      stage.setAttribute('data-hero-boot', 'pending');
+      media.removeAttribute('data-hero-mode');   // cover/film layers drop to 0 at once
+      void stage.offsetWidth;
+      stage.removeAttribute('data-hero-resetting');
+    }
+    apply();   // starts the new cover/film; it fades in as soon as it can paint
+    if (changed) setTimeout(function () { if (stage) void stage.offsetWidth; heroReady(); }, 30);
+    else heroReady();
+  }
+
   document.addEventListener('ue-featured-changed', function (ev) {
     var d = (ev && ev.detail) || {};
-    updateSources(d);
-    restampFeaturedAnchor();
-    setPlate(CURRENT.title, CURRENT.artist);   // ready for the moment a mix starts
-    /* A listener who has picked a source keeps it — re-resolved for the mix
-       that just won, never overridden by it. */
-    if (pinned) { applyPinned(); return; }
-    if (SOURCES.promo) {
-      if (media.dataset.heroMode !== 'art') applySource('promo');
-    } else if (SOURCES.art && media.dataset.heroMode !== 'art') {
-      applySource('art');
-    }
+    heroSwap(d, function () {
+      restampFeaturedAnchor();
+      setPlate(CURRENT.title, CURRENT.artist);   // ready for the moment a mix starts
+      /* A listener who has picked a source keeps it — re-resolved for the mix
+         that just won, never overridden by it. */
+      if (pinned) { applyPinned(); return; }
+      if (SOURCES.promo) {
+        if (media.dataset.heroMode !== 'art') applySource('promo');
+      } else if (SOURCES.art && media.dataset.heroMode !== 'art') {
+        applySource('art');
+      }
+    });
   });
 
   wireControls();
@@ -1942,11 +2350,12 @@
      wearing the mark, is the fallback for a mix with no film. */
   document.addEventListener('ue-hero-repointed', function (ev) {
     var d = (ev && ev.detail) || {};
-    updateSources(d);
-    restampFeaturedAnchor();
-    setPlate(CURRENT.title, CURRENT.artist);
-    if (pinned) { applyPinned(); return; }
-    if (!applySource('promo')) applySource('art');
+    heroSwap(d, function () {
+      restampFeaturedAnchor();
+      setPlate(CURRENT.title, CURRENT.artist);
+      if (pinned) { applyPinned(); return; }
+      if (!applySource('promo')) applySource('art');
+    });
   });
 
   whenPlayerReady(function () {
@@ -1954,13 +2363,14 @@
     var sync = function () {
       var t = currentTrack();
       if (!t) return;
-      updateSources({ title: t.title, artist: t.artist, image: t.img });
-      if (pinned) { applyPinned(); return; }
-      /* same order as the repoint above: the playing mix's film, then its
-         cover. Reached when a track starts by a route that did not repoint the
-         hero (a restored position, a deep link) — otherwise this agrees with
-         what the repoint already did and changes nothing. */
-      if (!applySource('promo')) applySource('art');
+      heroSwap({ title: t.title, artist: t.artist, image: t.img }, function () {
+        if (pinned) { applyPinned(); return; }
+        /* same order as the repoint above: the playing mix's film, then its
+           cover. Reached when a track starts by a route that did not repoint the
+           hero (a restored position, a deep link) — otherwise this agrees with
+           what the repoint already did and changes nothing. */
+        if (!applySource('promo')) applySource('art');
+      });
     };
     try {
       host.on('track', sync);
@@ -1969,6 +2379,34 @@
     sync();
   });
 }());
+</script>
+<script>
+/* Selector tile images fade in once loaded (css: #homepage-selectors-grid
+   [data-fade="on"]). Marked loaded on `load` or straight away if already
+   complete; a failed image is marked too, so it never stays invisible.
+   Playing a tile (its picture or play button) also scrolls back up to the
+   hero, which is now showing that mix. Name links, download and share don't. */
+(function () {
+  var grid = document.getElementById('homepage-selectors-grid');
+  if (!grid) return;
+  grid.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('a[data-playlist], .play-circle') : null;
+    if (!t || !grid.contains(t)) return;
+    var reduce = false;
+    try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (err) {}
+    var from = window.scrollY;
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    /* smooth scrolling is suspended where frames don't run (a background
+       tab); if the page hasn't moved at all, just jump */
+    setTimeout(function () { if (window.scrollY >= from && from > 0) window.scrollTo(0, 0); }, 1000);
+  });
+  grid.setAttribute('data-fade', 'on');
+  Array.prototype.forEach.call(grid.querySelectorAll('.mix-card-cover img:not(.cover-fallback)'), function (img) {
+    function done() { img.classList.add('is-loaded'); }
+    if (img.complete) done();
+    else { img.addEventListener('load', done, { once: true }); img.addEventListener('error', done, { once: true }); }
+  });
+})();
 </script>
 <script src="js/boot.js" defer></script>
 </body>

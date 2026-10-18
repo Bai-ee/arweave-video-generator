@@ -1,11 +1,13 @@
-<div id="persistent-player-bar" class="is-idle">
+<div id="persistent-player-bar" class="is-idle" data-mix-credits="{{MIX_CREDITS}}">
   <div id="player-bar-now-playing">
     <div id="player-bar-thumb"><img class="cover-fallback" src="img/square-ue.png" alt=""></div>
     <div id="player-bar-track-meta">
-      <div id="player-bar-title">Select a mix to play</div>
+      <div id="player-bar-title"><a href="">Select a mix to play</a></div>
       <div id="player-bar-artist"></div>
     </div>
   </div>
+  <!-- film / cover / artist chips (homepage: the hero script moves #hero-source-thumbs here) -->
+  <div id="player-bar-source-slot"></div>
   <div id="player-bar-transport">
     <button class="transport-btn" id="player-bar-shuffle" type="button" aria-label="Shuffle">
       <svg class="icon-svg"><use href="#i-shuffle"></use></svg>
@@ -37,3 +39,23 @@
     <svg class="icon-svg"><use href="#i-kebab"></use></svg>
   </button>
 </div>
+<script>
+/* Fade the bar's live parts in once the player has set them up, instead of
+   showing the idle placeholder and then swapping (a visible content shift).
+   css: #persistent-player-bar[data-bar-boot]. `ue-player-ready` fires after
+   player.js has synced the bar (and ue-resume.js primes on that same event),
+   so a short beat after it the bar is final. The fallback covers a player that
+   never loads; no JS means no attribute and the bar simply shows. */
+(function () {
+  var bar = document.getElementById('persistent-player-bar');
+  if (!bar) return;
+  bar.setAttribute('data-bar-boot', 'pending');
+  function ready() {
+    if (bar.getAttribute('data-bar-boot') !== 'pending') return;
+    void bar.offsetWidth;   /* flush 'pending' so the fade runs */
+    bar.setAttribute('data-bar-boot', 'ready');
+  }
+  document.addEventListener('ue-player-ready', function () { setTimeout(ready, 80); }, { once: true });
+  setTimeout(ready, 6000);
+})();
+</script>

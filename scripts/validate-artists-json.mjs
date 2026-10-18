@@ -83,7 +83,15 @@ function selfCheckBase32() {
 // URL / txid parsing
 // ---------------------------------------------------------------------------
 
+// Mixes not yet on Arweave: Firebase Storage objects named by a 43-char content
+// id (see DIRECT_PREFIX in website/js/player-core.js). The id plays the txid role.
+const DIRECT_AUDIO_PREFIX = 'https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/';
+
 function parseArweaveUrl(rawUrl) {
+  if (typeof rawUrl === 'string' && rawUrl.startsWith(DIRECT_AUDIO_PREFIX)) {
+    return { ok: true, host: 'storage.googleapis.com', isBareGateway: false, isSubdomain: false, isDirect: true,
+      subdomain: null, txid: rawUrl.slice(DIRECT_AUDIO_PREFIX.length), extraPath: '' };
+  }
   let u;
   try {
     u = new URL(rawUrl);
@@ -210,7 +218,9 @@ function validateRecords(artists) {
         }
         if (TXID_RE.test(parsed.txid)) {
           if (!txidOwners.has(parsed.txid)) txidOwners.set(parsed.txid, []);
-          txidOwners.get(parsed.txid).push({ artistName: artist.artistName, mixTitle: mix.mixTitle, allowlisted });
+          // mixCoListed: a shared set deliberately listed on each artist's page — explained, like a mirror.
+          txidOwners.get(parsed.txid).push({ artistName: artist.artistName, mixTitle: mix.mixTitle,
+            allowlisted: allowlisted || mix.mixCoListed === true });
         }
       }
 

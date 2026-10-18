@@ -51,23 +51,39 @@
     return m ? m[1] : null;
   }
 
+  /* Mixes not yet on Arweave are served straight from the site's Firebase
+     Storage bucket as content-addressed objects named by a 43-char id
+     (base64url sha256), so extractTxid keys them exactly like a txid. GCS
+     answers Range requests with 206, so the URL itself is the one candidate. */
+  var DIRECT_PREFIX = 'https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/';
+
+  function isDirectUrl(url) {
+    return String(url || '').indexOf(DIRECT_PREFIX) === 0 && !!extractTxid(url);
+  }
+
+  function makeCandidate(url, host) {
+    return {
+      url: url,
+      host: host,
+      rangeConfirmed: false,
+      rangeRejected: false,
+      failures: 0,
+      tried: false,
+      unhealthy: false
+    };
+  }
+
   /* One candidate per range gateway, in RANGE_HOSTS order. Never includes
      the original/raw URL — raw arweave.net is download-only, enforced here
-     by construction rather than by a runtime check anywhere downstream. */
+     by construction rather than by a runtime check anywhere downstream.
+     The one exception is a direct Storage URL (above), which is range-capable. */
   function buildCandidates(url) {
+    if (isDirectUrl(url)) return [makeCandidate(String(url), DIRECT_PREFIX)];
     var txid = extractTxid(url);
     if (!txid) return [];
     var out = [];
     for (var i = 0; i < RANGE_HOSTS.length; i++) {
-      out.push({
-        url: RANGE_HOSTS[i] + txid,
-        host: RANGE_HOSTS[i],
-        rangeConfirmed: false,
-        rangeRejected: false,
-        failures: 0,
-        tried: false,
-        unhealthy: false
-      });
+      out.push(makeCandidate(RANGE_HOSTS[i] + txid, RANGE_HOSTS[i]));
     }
     return out;
   }
@@ -872,7 +888,9 @@
 
   var UEPlayerCore = {
     RANGE_HOSTS: RANGE_HOSTS,
+    DIRECT_PREFIX: DIRECT_PREFIX,
     extractTxid: extractTxid,
+    isDirectUrl: isDirectUrl,
     buildCandidates: buildCandidates,
     evaluateProbe: evaluateProbe,
     parseContentRange: parseContentRange,

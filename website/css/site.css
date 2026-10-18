@@ -61,8 +61,8 @@
   --bg-panel: #140d0d;
   --bg-card: #150e0e;
   --bg-elevated: #1c1212;
-  --accent: #c1121f;
-  --accent-bright: #e01e2b;
+  --accent: #ffffff;
+  --accent-bright: #ffffff;
   --accent-dim: #7a0e16;
   --on-accent: #ffffff;
   --paper: #e8e0d0;
@@ -71,7 +71,7 @@
   --text-secondary: #b7aaa3;
   --text-muted: #8a7d77;
   --hairline: rgba(255, 255, 255, 0.08);
-  --hairline-accent: rgba(193, 18, 31, 0.45); /* was --hairline-red; renamed because
+  --hairline-accent: rgba(255, 255, 255, 0.45); /* was --hairline-red; renamed because
      light theme's equivalent is not red. Do NOT reinstate the old name as an alias:
      `--hairline-red: var(--hairline-accent)` substitutes at :root, so inside the dark
      island it would resolve to the PAPER hairline, not the red one. */
@@ -94,15 +94,19 @@
   --track-empty-strong: rgba(255, 255, 255, 0.18);
 
   /* accent-derived washes and glows */
-  --accent-veil: rgba(193, 18, 31, 0.08);
-  --accent-veil-strong: rgba(193, 18, 31, 0.14);
-  --accent-glow: rgba(224, 30, 43, 0.7);
-  --accent-glow-soft: rgba(224, 30, 43, 0.4);
+  --accent-veil: rgba(255, 255, 255, 0.08);
+  --accent-veil-strong: rgba(255, 255, 255, 0.14);
+  --accent-glow: rgba(255, 255, 255, 0.7);
+  --accent-glow-soft: rgba(255, 255, 255, 0.4);
 
   /* composite shadows */
-  --shadow-card-hover: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 24px rgba(193, 18, 31, 0.12);
-  --shadow-frame: 0 0 0 1px rgba(193, 18, 31, 0.15), 0 0 44px rgba(193, 18, 31, 0.16), 0 24px 60px rgba(0, 0, 0, 0.55);
-  --shadow-portrait: 0 0 34px rgba(193, 18, 31, 0.14), 0 20px 48px rgba(0, 0, 0, 0.5);
+  --shadow-card-hover: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 24px rgba(255, 255, 255, 0.12);
+  --shadow-frame: 0 0 0 1px rgba(255, 255, 255, 0.15), 0 0 44px rgba(255, 255, 255, 0.16), 0 24px 60px rgba(0, 0, 0, 0.55);
+  /* the homepage stage + selector cards: a quiet grey hairline and a plain
+     drop shadow, so the frames blend into the page instead of glowing red */
+  --frame-border-soft: rgba(255, 255, 255, 0.09);
+  --shadow-frame-soft: 0 18px 44px rgba(0, 0, 0, 0.45);
+  --shadow-portrait: 0 0 34px rgba(255, 255, 255, 0.14), 0 20px 48px rgba(0, 0, 0, 0.5);
   --shadow-panel: 0 8px 20px rgba(0, 0, 0, 0.4);
   /* floating runtime UI (share popover, deep-link banner, resume bar — all
      injected by ue-links.js / ue-resume.js, which read these same tokens) */
@@ -127,13 +131,13 @@
      been sized to keep four stacked lines legible, and against the new
      two-element plate it was darkening a third of the artwork for nothing. */
   --cover-scrim: linear-gradient(180deg, rgba(10, 6, 6, 0.45) 0%, transparent 22%, transparent 50%, rgba(6, 4, 4, 0.84) 100%);
-  --hero-scrim: linear-gradient(160deg, rgba(193, 18, 31, 0.14), transparent 45%), linear-gradient(0deg, rgba(10, 6, 6, 0.35), transparent 40%);
+  --hero-scrim: linear-gradient(160deg, rgba(255, 255, 255, 0.14), transparent 45%), linear-gradient(0deg, rgba(10, 6, 6, 0.35), transparent 40%);
   --portrait-scrim: linear-gradient(180deg, transparent 55%, rgba(10, 6, 6, 0.55));
   --img-filter: contrast(1.05) saturate(1.02);
   --img-filter-hero: contrast(1.06) saturate(1.05);
 
   /* waveform canvases — read from player.js as well as from CSS */
-  --wave-played: #e01e2b;
+  --wave-played: #ffffff;
   --wave-unplayed: rgba(242, 236, 228, 0.82);
   --wave-remaining: rgba(154, 143, 138, 0.55);
 
@@ -148,8 +152,9 @@
   --font-body: 'Rationale', Arial, sans-serif;
   --font-display: 'Special Elite', 'Courier New', serif;
   --font-script: 'Gately', cursive;
-  --radius-card: 12px;
-  --radius-frame: 16px;
+  /* square edges for now (owner 2026-10-05) — were 12px / 16px */
+  --radius-card: 0;
+  --radius-frame: 0;
   --player-bar-height: 84px;
   --page-max: 1560px;
   --page-pad: clamp(16px, 4vw, 56px);
@@ -257,6 +262,16 @@ ul { list-style: none; }
 }
 #site-wordmark { display: inline-flex; align-items: center; flex: none; min-width: 0; }
 #site-wordmark-logo { height: clamp(32px, 3vw, 44px); width: auto; display: block; }
+/* the tagline beside the UE mark: small white script */
+#site-wordmark { gap: clamp(8px, 1vw, 12px); }
+#site-wordmark-tagline {
+  font-family: var(--font-script);
+  font-size: clamp(18px, 1.7vw, 23px);
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+  transform: translateY(1px) rotate(-2deg);
+}
 #primary-nav { display: flex; align-items: center; gap: clamp(18px, 3vw, 42px); }
 .primary-nav-link {
   font-size: 14px;
@@ -395,8 +410,8 @@ ul { list-style: none; }
 #hero-collage-frame {
   position: relative;
   border-radius: var(--radius-frame);
-  border: 1px solid var(--hairline-accent);
-  box-shadow: var(--shadow-frame);
+  border: 1px solid var(--frame-border-soft);
+  box-shadow: var(--shadow-frame-soft);
 }
 #hero-collage-frame .hero-image-clip {
   /* MUST stay positioned: the still/video/artwork layers inside are absolute,
@@ -439,7 +454,9 @@ ul { list-style: none; }
 #hero-promo-video,
 #hero-mix-art {
   opacity: 0;
-  transition: opacity 0.5s var(--ease-out-expo);
+  /* a soft cross-fade, not a cut: every switch (film / cover / portrait, a
+     refresh, a tile click) eases in under the visitor's eye */
+  transition: opacity 0.9s ease;
 }
 /* The promo film is CONTAINED, not cropped: these are 16:9 renders and the
    hero frame is ~4/3.4, so `cover` was cutting the sides off a composition
@@ -489,7 +506,7 @@ ul { list-style: none; }
   display: block;
   width: 64px;
   height: 64px;
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   background: var(--bg-panel);
   border: 1px solid var(--hairline);
@@ -630,6 +647,8 @@ ul { list-style: none; }
 #hero-media[data-hero-mode="art"] #hero-media-controls,
 #hero-media:hover #hero-media-controls,
 #hero-media-controls:focus-within { opacity: 1; }
+/* touch screens have no hover to reveal them, and the refresh button lives here */
+@media (hover: none) { #hero-media-controls { opacity: 1; } }
 #hero-media-controls button {
   width: 38px;
   height: 38px;
@@ -686,7 +705,9 @@ ul { list-style: none; }
   font-family: var(--font-script);
   font-size: clamp(40px, 4.4vw, 62px);
   line-height: 1.15;
-  color: var(--accent-bright);
+  /* exempt from the site-wide accent recolor: the mix title keeps the brand
+     red regardless of what --accent-bright now points to elsewhere */
+  color: #e01e2b;
   display: inline-block;
   transform: rotate(-2deg);
   margin: 2px 0 10px;
@@ -810,9 +831,169 @@ ul { list-style: none; }
 }
 
 /* ==========================================================================
-   Mix cards (Latest Mixes / grids)
+   Featured hero — Signal stage
+   The media frame and the copy share ONE grid cell: the film / cover /
+   portrait is the stage's backdrop and the title, artist, meta and waveform
+   sit over its lower edge, so the page opens as a player. This block only
+   re-lays-out the hero above — the markup, every id and the inline hero
+   script are unchanged, so a selector-tile click still repoints the copy
+   (player.js pointHeroAt) and the media (ue-hero-repointed).
+   Height follows the viewport so the Selectors header and the top of its
+   cards stay above the fold; tune --hero-stage-reserve to show more or less.
+   In light theme the stage is still artwork, so it joins the dark island.
    ========================================================================== */
-#latest-mixes-section {
+#featured-mix-hero {
+  /* FULL-VIEWPORT STAGE: the section is exactly the visible window between the
+     sticky nav and the fixed player bar (nav 72 + 1px border, 61 at <=1020;
+     bar 84, 68 at <=900), so the stage fills the screen on arrival and nothing
+     sits behind the bar. vh first, dvh over it where supported, so mobile
+     browser chrome never leaves a gap or a hidden strip. min-height keeps a
+     usable stage in short landscape windows (the page then just scrolls). */
+  --hero-nav-h: 73px;
+  --hero-bar-h: var(--player-bar-height);
+  --hero-stage-pad: clamp(8px, 1.4vw, 16px);
+  height: calc(100vh - var(--hero-nav-h) - var(--hero-bar-h));
+  height: calc(100dvh - var(--hero-nav-h) - var(--hero-bar-h));
+  min-height: 420px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
+  padding: var(--hero-stage-pad) 0;
+}
+@media (max-width: 1020px) { #featured-mix-hero { --hero-nav-h: 61px; } }
+@media (max-width: 900px)  { #featured-mix-hero { --hero-bar-h: 68px; } }
+#featured-mix-hero #hero-collage-frame,
+#featured-mix-hero #featured-mix-content { grid-area: 1 / 1; }
+/* Fade from black on load (hero script, data-hero-boot): the built-in still is
+   never shown once JS runs — it may be a different mix than the one the player
+   picks — so the clip is black and the copy is hidden until the first real mix
+   lands; then the copy fades in here and the cover fades in via #hero-mix-art. */
+#featured-mix-hero[data-hero-boot] #hero-still { opacity: 0; }
+/* a mix change resets the stage instantly before replaying the intro */
+#featured-mix-hero[data-hero-resetting] #featured-mix-content > *,
+#featured-mix-hero[data-hero-resetting] #hero-promo-video,
+#featured-mix-hero[data-hero-resetting] #hero-mix-art { transition: none !important; }
+#featured-mix-hero[data-hero-boot] #hero-collage-frame .hero-image-clip { background: #000; }
+/* ...and the copy then rises in top to bottom, one line after another:
+   eyebrow, artist, mix title, duration, waveform — 120ms apart, starting just
+   after the cover begins its own fade. */
+#featured-mix-hero[data-hero-boot] #featured-mix-content > * {
+  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+#featured-mix-hero[data-hero-boot="pending"] #featured-mix-content > * {
+  opacity: 0;
+  transform: translateY(10px);
+}
+#featured-mix-hero[data-hero-boot] #featured-mix-content > :nth-child(1) { transition-delay: 0.15s; }
+#featured-mix-hero[data-hero-boot] #featured-mix-content > :nth-child(2) { transition-delay: 0.27s; }
+#featured-mix-hero[data-hero-boot] #featured-mix-content > :nth-child(3) { transition-delay: 0.39s; }
+#featured-mix-hero[data-hero-boot] #featured-mix-content > :nth-child(4) { transition-delay: 0.51s; }
+#featured-mix-hero[data-hero-boot] #featured-mix-content > :nth-child(5) { transition-delay: 0.63s; }
+@media (prefers-reduced-motion: reduce) {
+  #featured-mix-hero[data-hero-boot] #featured-mix-content > * { transition: opacity 0.3s ease; transition-delay: 0s; }
+  #featured-mix-hero[data-hero-boot="pending"] #featured-mix-content > * { transform: none; }
+}
+#featured-mix-hero #hero-collage-frame { height: 100%; min-height: 0; overflow: hidden; }
+#featured-mix-hero #hero-collage-frame .hero-image-clip { aspect-ratio: auto; height: 100%; }
+/* a backdrop fills the stage: the film and the portrait are cropped to it
+   rather than letterboxed (the portrait keeps the face in the upper third) */
+#featured-mix-hero #hero-collage-frame .hero-image-clip #hero-promo-video { object-fit: cover; }
+#featured-mix-hero #hero-media[data-hero-mode="artist"] #hero-mix-art { object-fit: cover; object-position: 50% 25%; }
+/* the stage's own copy names the mix, so the cover's plate and the script
+   mark would say it twice — kept in the DOM (the script still writes them) */
+#featured-mix-hero #hero-mix-plate,
+#featured-mix-hero #hero-art-mark { display: none; }
+/* the scrim the copy reads against: the stage deepens toward its lower-left */
+#featured-mix-hero #hero-collage-frame .hero-image-clip::after {
+  background:
+    linear-gradient(180deg, transparent 8%, color-mix(in srgb, var(--bg-panel) 55%, transparent) 42%, color-mix(in srgb, var(--bg-panel) 94%, transparent) 88%),
+    linear-gradient(90deg, color-mix(in srgb, var(--bg-panel) 72%, transparent) 0%, transparent 64%);
+}
+/* film / cover / artist chooser: lives in the player bar, beside the
+   now-playing thumbnail (the homepage hero script moves #hero-source-thumbs
+   into #player-bar-source-slot). Small square chips, no visible labels (the
+   text stays in the button for screen readers and tooltips). */
+@keyframes ue-soft-in { from { opacity: 0; } to { opacity: 1; } }
+/* each chip eases in when its source resolves (the script un-hides it) */
+#player-bar-source-slot .hero-thumb:not([hidden]) { animation: ue-soft-in 0.6s ease both; }
+#player-bar-source-slot #hero-source-thumbs {
+  position: static;
+  gap: 6px;
+  border-top: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+}
+#player-bar-source-slot .hero-thumb,
+#player-bar-source-slot .hero-thumb-frame { width: 34px; }
+#player-bar-source-slot .hero-thumb-frame { height: 34px; border-radius: 0; }
+#player-bar-source-slot .hero-thumb-badge .icon-svg { width: 12px; height: 12px; }
+/* visually hidden, still announced */
+#player-bar-source-slot .hero-thumb-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+@media (max-width: 540px) {
+  #player-bar-source-slot #hero-source-thumbs { gap: 4px; }
+  #player-bar-source-slot .hero-thumb,
+  #player-bar-source-slot .hero-thumb-frame { width: 26px; }
+  #player-bar-source-slot .hero-thumb-frame { height: 26px; border-radius: 0; }
+  #player-bar-source-slot .hero-thumb-badge .icon-svg { width: 10px; height: 10px; }
+}
+#featured-mix-hero #hero-media-controls { top: clamp(12px, 2vw, 20px); right: clamp(12px, 2vw, 20px); bottom: auto; }
+
+#featured-mix-hero #featured-mix-content {
+  z-index: 2;
+  align-self: end;
+  display: grid;
+  gap: clamp(6px, 1.2svh, 14px);
+  padding: clamp(18px, min(3.5vw, 4svh), 52px) clamp(20px, 3.5vw, 52px);
+  text-align: left;
+  /* the copy only covers the lower part of the stage; let clicks through its
+     empty box to the frame, and catch them again on the copy itself */
+  pointer-events: none;
+}
+#featured-mix-hero #featured-mix-content > * { pointer-events: auto; }
+#featured-mix-hero #featured-mix-content .section-eyebrow { justify-self: start; }
+#featured-mix-hero #featured-mix-title {
+  margin: 0;
+  font-size: clamp(34px, min(7vw, 7svh), 128px);
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#featured-mix-hero #featured-artist-signature {
+  justify-self: start;
+  margin: 0;
+  font-size: clamp(26px, min(3.6vw, 4.2svh), 54px);
+}
+#featured-mix-hero #featured-meta-row { justify-content: flex-start; margin-bottom: 0; }
+#featured-mix-hero #featured-meta-row { flex-wrap: wrap; row-gap: 6px; }
+/* genre / date / length are hidden for now, so the row is empty — take no room */
+#featured-mix-hero #featured-meta-row:not(:has(*)) { display: none; }
+#featured-mix-hero .waveform-track { height: clamp(48px, min(9vw, 8svh), 120px); }
+/* The hero has no play button of its own: the player bar's play button plays
+   the hero's mix, and the waveform (click/drag) starts it too. The anchor stays
+   in the DOM — it is the hero's queue entry (player.js featuredAnchor: href,
+   data-title/-artist/-img, data-queue-idx) — it is only never shown, so the
+   waveform takes the row. The download button is hidden the same way (player.js
+   still repoints #featured-download-button by id; it just never shows). */
+#featured-mix-hero #featured-play-button,
+#featured-mix-hero #featured-download-button { display: none; }
+
+/* ==========================================================================
+   Mix cards (homepage selector tiles / grids)
+   ========================================================================== */
+#homepage-selectors-section {
   padding-bottom: clamp(12px, 2vw, 24px);
   content-visibility: auto;
   contain-intrinsic-size: 900px;
@@ -851,8 +1032,8 @@ ul { list-style: none; }
   --text-primary: #f6f3ee;
   --text-secondary: rgba(246, 243, 238, 0.84);
   --text-muted: rgba(246, 243, 238, 0.6);
-  --accent: #c1121f;
-  --accent-bright: #e01e2b;
+  --accent: #ffffff;
+  --accent-bright: #ffffff;
   --hairline: rgba(255, 255, 255, 0.22);
   /* An EDGE, not a background. On paper the resting shadow separates the tile,
      but in dark the scrimmed bottom of the image is within a few percent of the
@@ -879,6 +1060,53 @@ ul { list-style: none; }
   background: var(--bg-panel);
   overflow: hidden;
   border-radius: var(--radius-card);
+}
+/* HOMEPAGE LATEST MIXES: every tile is a perfect square, the picture filling
+   it edge to edge (object-fit: cover, below) with the overlay on top. Scoped
+   to the homepage grid so other .mix-card uses keep their own proportions. */
+#homepage-selectors-grid .mix-card-cover { aspect-ratio: 1 / 1; }
+
+/* Each selector card wears the hero card's look: the soft grey hairline, the
+   plain drop shadow (--shadow-frame-soft) and the hero's warm scrim (--bg-panel tones, the
+   same two gradients as the hero's .hero-image-clip::after) instead of the
+   neutral black cover scrim — so the tiles read as small copies of the stage. */
+#homepage-selectors-grid .selector-tile {
+  border: 1px solid var(--frame-border-soft);
+  border-radius: var(--radius-frame);
+  box-shadow: var(--shadow-frame-soft);
+}
+#homepage-selectors-grid .selector-tile .mix-card-cover::after {
+  background:
+    linear-gradient(180deg, transparent 8%, color-mix(in srgb, var(--bg-panel) 55%, transparent) 42%, color-mix(in srgb, var(--bg-panel) 94%, transparent) 88%),
+    linear-gradient(90deg, color-mix(in srgb, var(--bg-panel) 72%, transparent) 0%, transparent 64%);
+}
+
+/* Tile images fade in once they have actually loaded (they are lazy, so they
+   arrive while you scroll). The homepage's inline script sets data-fade="on"
+   on the grid and .is-loaded on each image; without JS neither exists and the
+   images simply show. */
+#homepage-selectors-grid[data-fade="on"] .mix-card-cover img:not(.cover-fallback) {
+  opacity: 0;
+  transition: opacity 0.8s ease, transform 0.42s var(--ease-out-expo);
+}
+#homepage-selectors-grid[data-fade="on"] .mix-card-cover img.is-loaded { opacity: 1; }
+
+/* Selector tiles: bare icons for play / download / share — no ring, no fill.
+   (The share button is added by js/ue-links.js as .ue-links-share-btn.)
+   Colour still carries hover/active; everything else keeps its circles. */
+#homepage-selectors-grid .mix-card-actions .play-circle,
+#homepage-selectors-grid .mix-card-actions .download-btn,
+#homepage-selectors-grid .mix-card-actions .ue-links-share-btn {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+#homepage-selectors-grid .mix-card-actions .play-circle:hover,
+#homepage-selectors-grid .mix-card-actions .download-btn:hover,
+#homepage-selectors-grid .mix-card-actions .ue-links-share-btn:hover {
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent-bright);
 }
 .mix-card-cover img, .mix-card-cover .cover-fallback {
   width: 100%;
@@ -1049,7 +1277,7 @@ ul { list-style: none; }
      a near-black skyline. The `color` line is required, not decorative: tokens
      alone do not reach an element that only inherits its colour. */
   --text-primary: #f6f3ee;
-  --accent-bright: #e01e2b;
+  --accent-bright: #ffffff;
   color: var(--text-primary);
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5), 0 0 3px rgba(0, 0, 0, 0.4);
   /* the same signature tilt the hero's artist line wears */
@@ -1152,6 +1380,10 @@ ul { list-style: none; }
   transition: background 0.2s ease;
 }
 .catalog-row:hover { background: var(--veil-hover); }
+/* artist pages: the play button leads the row (generator catalogRowHtml
+   playFirst) — one extra column at the far left */
+.catalog-row--play-first { grid-template-columns: 42px 58px 64px minmax(0, 1.7fr) minmax(0, 1fr) auto; }
+.catalog-row-lead { display: flex; align-items: center; justify-content: center; }
 .catalog-row-number {
   font-size: 15px;
   font-weight: 700;
@@ -1161,7 +1393,7 @@ ul { list-style: none; }
 .catalog-row-cover {
   width: 64px;
   height: 64px;
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   background: var(--bg-panel);
   flex: none;
@@ -1201,6 +1433,8 @@ ul { list-style: none; }
   /* narrow number column + stacked action buttons free ~80px for the
      title column so mix titles stop breaking mid-word */
   .catalog-row { grid-template-columns: 28px 52px minmax(0, 1fr) auto; gap: 10px 12px; }
+  .catalog-row--play-first { grid-template-columns: 36px 28px 52px minmax(0, 1fr) auto; }
+  .catalog-row--play-first .catalog-row-lead .play-circle { width: 36px; height: 36px; }
   .catalog-row-number { font-size: 13px; }
   .catalog-row-cover { width: 52px; height: 52px; }
   .catalog-row-meta-cell { display: none; }
@@ -1358,24 +1592,61 @@ ul { list-style: none; }
    About page
    ========================================================================== */
 #about-content-panel {
-  max-width: 780px;
+  position: relative;
+  isolation: isolate;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: clamp(28px, 4vw, 56px) 0 64px;
+  padding: clamp(28px, 4vw, 56px) 0 clamp(40px, 5vw, 64px);
 }
+/* Street backdrop: full-bleed behind the hero. The radial mask is both the
+   vignette and the spotlight: fully lit at the top right, fading to nothing
+   toward the left and bottom, so it never needs a theme-specific colour. */
+#about-hero-backdrop {
+  --about-hero-opacity: 0.62;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;
+  height: min(86vh, 760px);
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  -webkit-mask-image: radial-gradient(ellipse 62% 96% at 90% 2%, #000 0%, rgba(0,0,0,0.62) 30%, rgba(0,0,0,0.2) 55%, transparent 78%);
+  mask-image: radial-gradient(ellipse 62% 96% at 90% 2%, #000 0%, rgba(0,0,0,0.62) 30%, rgba(0,0,0,0.2) 55%, transparent 78%);
+}
+:root[data-theme="light"] #about-hero-backdrop { --about-hero-opacity: 0.34; }
+#about-hero-backdrop-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 100% 0%;
+  opacity: var(--about-hero-opacity);
+  filter: grayscale(0.45) contrast(1.05);
+}
+#about-lead-block { max-width: 860px; }
 #about-content-panel .about-lead {
   font-family: var(--font-body);
-  font-size: clamp(22px, 3vw, 34px);
-  line-height: 1.35;
-  margin: 22px 0 26px;
+  font-weight: 400;
+  font-size: clamp(24px, 3.4vw, 40px);
+  line-height: 1.25;
+  color: var(--text-primary);
+  text-wrap: balance;
 }
-#about-content-panel p { color: var(--text-secondary); margin-bottom: 18px; font-size: 15.5px; line-height: 1.7; }
-#about-content-panel strong { color: var(--text-primary); }
+#about-content-panel #about-signature {
+  margin: 18px 0 0;
+  max-width: none;
+  font-family: var(--font-script);
+  font-size: clamp(56px, 8vw, 96px);
+  line-height: 0.9;
+  color: var(--accent-bright);
+}
 #about-receipt-strip {
   display: flex;
   flex-wrap: wrap;
   gap: 12px 28px;
   align-items: center;
-  margin: 30px 0;
+  margin: clamp(28px, 4vw, 48px) 0;
   padding: 16px 20px;
   background: var(--paper);
   color: var(--paper-ink);
@@ -1385,27 +1656,80 @@ ul { list-style: none; }
   clip-path: polygon(0 8%, 3% 0, 8% 5%, 14% 0, 21% 7%, 29% 2%, 37% 7%, 46% 0, 54% 5%, 62% 0, 70% 7%, 78% 2%, 86% 7%, 93% 0, 100% 5%, 100% 92%, 96% 100%, 89% 95%, 81% 100%, 72% 93%, 63% 100%, 54% 95%, 45% 100%, 36% 93%, 28% 100%, 20% 95%, 12% 100%, 5% 93%, 0 100%);
 }
 #about-receipt-strip .receipt-strip-script { font-family: var(--font-script); font-size: 22px; text-transform: none; letter-spacing: 0; }
+#about-story-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(32px, 5vw, 72px) clamp(32px, 5vw, 72px);
+}
+#about-story-columns section { min-width: 0; }
+.about-h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(20px, 2.2vw, 26px);
+  line-height: 1.2;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+  text-wrap: balance;
+}
+#about-content-panel p {
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  font-size: 15.5px;
+  line-height: 1.7;
+  max-width: 62ch;
+  text-wrap: pretty;
+}
+#about-content-panel em { color: var(--text-primary); font-style: italic; }
+#about-tapes-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--hairline);
+}
+#about-tapes-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  align-items: baseline;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+#about-tapes-list .tape-artist { color: var(--text-primary); min-width: 8.5em; }
+#about-actions-section {
+  margin-top: clamp(40px, 6vw, 72px);
+  padding-top: clamp(24px, 3vw, 36px);
+  border-top: 1px solid var(--hairline-accent);
+}
+#about-actions-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+#about-play-cta,
 #about-contribute-cta {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 8px;
   padding: 13px 26px;
   border: 2px solid var(--accent-bright);
   border-radius: 999px;
-  color: var(--accent-bright);
   font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  letter-spacing: 0.08em;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.16s ease-out;
 }
-#about-contribute-cta:hover {
-  background: var(--accent);
-  color: var(--on-accent);
-  box-shadow: 0 0 24px var(--accent-glow-soft);
-}
+#about-play-cta { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+#about-contribute-cta { color: var(--accent-bright); }
+#about-play-cta:active,
 #about-contribute-cta:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  #about-play-cta:hover { background: var(--accent-bright); border-color: var(--accent-bright); }
+  #about-contribute-cta:hover { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+}
+@media (max-width: 760px) {
+  #about-story-columns { grid-template-columns: 1fr; }
+  #about-tapes-list .tape-artist { min-width: 0; flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #about-play-cta, #about-contribute-cta { transition: none; }
+}
 
 #about-flyers-section { padding: 0 0 clamp(48px, 6vw, 80px); }
 #about-flyers-grid {
@@ -1491,7 +1815,7 @@ ul { list-style: none; }
 #player-bar-now-playing { display: flex; align-items: center; gap: 12px; min-width: 0; }
 #player-bar-thumb {
   width: 52px; height: 52px;
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   background: var(--bg-panel);
   border: 1px solid var(--hairline);
@@ -1508,7 +1832,9 @@ ul { list-style: none; }
 }
 #player-bar-artist {
   font-size: 13px;
-  color: var(--accent-bright);
+  /* exempt, same as #featured-artist-signature: this is the same mix title,
+     just repeated in the bar */
+  color: #e01e2b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1524,11 +1850,47 @@ ul { list-style: none; }
 .transport-btn:active { transform: scale(0.9); transition-duration: 0.1s; }
 .transport-btn .icon-svg { width: 17px; height: 17px; }
 .transport-btn.is-on { color: var(--accent-bright); }
-#player-bar-play { width: 46px; height: 46px; }
+/* Rectangle, solid colour, simple icon, white border — the first obvious play
+   cue on the page (the hero carries none), styled to echo the badge border on
+   the site's own logo mark rather than a quiet ghost circle.
+   Hardcoded, not var(--accent-bright): this is one of the two elements
+   exempt from the site-wide accent-to-white recolor (the other is the mix
+   title), so it must not move when that token changes. */
+#player-bar-play {
+  width: 144px;
+  height: 46px;
+  border-radius: 0;
+  background: #470f0f;
+  border: 1px solid var(--on-accent);
+  color: var(--on-accent);
+}
 #player-bar-wave-wrap { display: flex; align-items: center; gap: 14px; min-width: 0; }
 #player-bar-waveform { flex: 1; min-width: 0; height: 36px; position: relative; cursor: pointer; touch-action: none; }
 #player-bar-waveform canvas { width: 100%; height: 100%; display: block; }
 .player-bar-time { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.05em; white-space: nowrap; }
+/* fixed width so "--:--" -> "1:00:00" never nudges the waveform */
+.player-bar-time { min-width: 7ch; font-variant-numeric: tabular-nums; }
+.player-bar-time.time-current { text-align: right; }
+
+/* Bar boot fade (partials/player-bar.html script): the parts the player fills
+   in — waveform, what's playing, the film/cover/artist chips — stay invisible
+   until it has, then fade in left to right. Transport and volume are static,
+   so they show from the start. */
+#persistent-player-bar[data-bar-boot] #player-bar-wave-wrap,
+#persistent-player-bar[data-bar-boot] #player-bar-now-playing,
+#persistent-player-bar[data-bar-boot] #player-bar-source-slot {
+  transition: opacity 0.6s ease;
+}
+#persistent-player-bar[data-bar-boot] #player-bar-now-playing { transition-delay: 0.1s; }
+#persistent-player-bar[data-bar-boot] #player-bar-source-slot { transition-delay: 0.2s; }
+#persistent-player-bar[data-bar-boot="pending"] #player-bar-wave-wrap,
+#persistent-player-bar[data-bar-boot="pending"] #player-bar-now-playing,
+#persistent-player-bar[data-bar-boot="pending"] #player-bar-source-slot { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  #persistent-player-bar[data-bar-boot] #player-bar-wave-wrap,
+  #persistent-player-bar[data-bar-boot] #player-bar-now-playing,
+  #persistent-player-bar[data-bar-boot] #player-bar-source-slot { transition-duration: 0.2s; transition-delay: 0s; }
+}
 .player-bar-time.time-current { color: var(--accent-bright); }
 .player-bar-time.time-total { color: var(--text-muted); }
 #player-bar-volume { display: flex; align-items: center; gap: 10px; }
@@ -1573,33 +1935,10 @@ ul { list-style: none; }
   letter-spacing: 0.06em;
   color: var(--text-muted);
 }
-/* the play button is the only thing to do here, so it gets the one cue —
-   a slow ring, not a colour change, so it reads as "waiting" not "error" */
-#persistent-player-bar.is-primed #player-bar-play {
-  position: relative;
-  border-color: var(--accent-bright);
-}
-#persistent-player-bar.is-primed #player-bar-play::after {
-  content: '';
-  position: absolute;
-  inset: -5px;
-  border-radius: 50%;
-  border: 1px solid var(--accent-bright);
-  opacity: 0;
-  animation: primed-ring 2.6s var(--ease-out-expo) infinite;
-  pointer-events: none;
-}
-@keyframes primed-ring {
-  0%   { transform: scale(0.9); opacity: 0; }
-  35%  { opacity: 0.55; }
-  100% { transform: scale(1.25); opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  /* the global reduced-motion rule already kills the animation; without it the
-     ring would sit at opacity 0 and the cue would vanish entirely, so pin it
-     to a static ring instead */
-  #persistent-player-bar.is-primed #player-bar-play::after { opacity: 0.4; }
-}
+/* Primed state no longer touches #player-bar-play at all — it used to get a
+   pulsing ring + border-colour swap, removed because the button must never
+   animate or change its border. The muted .player-bar-primed-label line above
+   is still the cue for "resume at 0:52" / a shared link. */
 
 /* breathing live-dot while audio is playing */
 #player-bar-title { position: relative; }
@@ -1629,12 +1968,57 @@ ul { list-style: none; }
     gap: 12px;
   }
   #player-bar-transport .transport-btn { display: none; }
-  #player-bar-transport #player-bar-play { display: inline-flex; width: 42px; height: 42px; }
+  #player-bar-transport #player-bar-play { display: inline-flex; width: 128px; height: 42px; border-radius: 0; }
   #player-bar-wave-wrap .player-bar-time { display: none; }
   #player-bar-waveform { height: 30px; }
   #player-bar-volume #volume-slider { display: none; }
   #player-bar-thumb { width: 44px; height: 44px; }
   body { padding-bottom: 92px; }
+
+  /* Idle-only full-width PLAY CTA: before a track is chosen there is no other
+     play affordance on the page, so the bar collapses to one obvious red
+     rectangle spanning the full width instead of sharing the row. Any track
+     load removes .is-idle (player.js setBarTrack), restoring the normal
+     compact control row above. */
+  #persistent-player-bar.is-idle { padding: 0; }
+  #persistent-player-bar.is-idle #player-bar-wave-wrap,
+  #persistent-player-bar.is-idle #player-bar-now-playing,
+  #persistent-player-bar.is-idle #player-bar-source-slot,
+  #persistent-player-bar.is-idle #player-bar-volume,
+  #persistent-player-bar.is-idle #player-bar-menu-btn {
+    display: none;
+  }
+  #persistent-player-bar.is-idle #player-bar-transport { flex: 1 1 100%; }
+  #persistent-player-bar.is-idle #player-bar-play {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+  #persistent-player-bar.is-idle #player-bar-play .icon-svg { width: 22px; height: 22px; }
+}
+
+/* Bar order: play + waveform on the LEFT, then what's playing (thumbnail +
+   title) and the film / cover / artist chips on the RIGHT, then volume + menu.
+   Flex rather than the grid above, so the chip slot (homepage only) simply
+   takes no room on every other page. The markup order is unchanged; `order`
+   does the rearranging. */
+#persistent-player-bar { display: flex; }
+#player-bar-transport   { order: 1; flex: none; }
+#player-bar-transport #player-bar-play { order: -1; } /* play leads, far left */
+#player-bar-wave-wrap   { order: 2; flex: 1 1 auto; min-width: 120px; }
+#player-bar-now-playing { order: 3; flex: 0 1 300px; min-width: 0; }
+#player-bar-source-slot { order: 4; flex: none; display: flex; align-items: center; }
+#player-bar-source-slot:empty { display: none; }
+#player-bar-volume      { order: 5; flex: none; }
+#player-bar-menu-btn    { order: 6; flex: none; }
+@media (max-width: 900px) {
+  #player-bar-wave-wrap   { min-width: 60px; }
+  #player-bar-now-playing { flex-basis: 220px; }
+}
+@media (max-width: 540px) {
+  /* phones: the title block gives way first, the chips stay tappable */
+  #player-bar-now-playing { flex-basis: 0; flex-grow: 0.6; }
+  #player-bar-volume { display: none; }
 }
 
 /* ==========================================================================
@@ -2016,6 +2400,20 @@ ul { list-style: none; }
   letter-spacing: 0.02em;
 }
 #ue-dialog[data-copy="on"] #ue-dialog-copy-input { display: block; }
+
+/* image slot — a mix's original artwork (artist page "View original artwork").
+   The dialog widens for it; no `display` on the img itself, for the same
+   [hidden] reason as the copy field above. */
+#ue-dialog[data-image="on"] { max-width: min(720px, calc(100vw - 32px)); }
+#ue-dialog[data-image="on"] #ue-dialog-image {
+  display: block;
+  margin-top: 14px;
+  width: 100%;
+  height: auto;
+  max-height: calc(100dvh - 160px);
+  object-fit: contain;
+  border-radius: var(--radius-frame);
+}
 
 #ue-dialog-actions {
   display: flex;
@@ -2465,8 +2863,13 @@ ul { list-style: none; }
        2. as deep oxblood TYPE on paper, dark enough to read as ink-with-blood
           rather than as a pink accent.
      Every wash token below is therefore neutral ink, not red. */
-  --accent: #8c0f18;
-  --accent-bright: #6e0c13;
+  --frame-border-soft: rgba(0, 0, 0, 0.1);
+  --shadow-frame-soft: 0 14px 34px rgba(30, 20, 14, 0.18);
+  /* NOT whitened like the dark-chrome islands: this is on-paper text, and
+     white-on-paper would be invisible. Kept at the oxblood this site already
+     uses for "deep oxblood TYPE on paper" (see comment above). */
+  --accent: #470f0f;
+  --accent-bright: #470f0f;
   --accent-dim: #7b6a64;
   --on-accent: #f6f3f0;
   /* the about-page receipt strip inverts with everything else: a near-black
@@ -2541,7 +2944,7 @@ ul { list-style: none; }
   /* these are the HERO waveform's values, on paper. The player-bar waveform
      sits on the dark chrome and gets the brand values from the dark-island
      block below — player.js resolves these per canvas, not off :root. */
-  --wave-played: #6e0c13;
+  --wave-played: #470f0f;
   --wave-unplayed: rgba(20, 15, 13, 0.6);
   --wave-remaining: rgba(20, 15, 13, 0.5);
 
@@ -2563,7 +2966,8 @@ ul { list-style: none; }
 :root[data-theme="light"] #site-header,
 :root[data-theme="light"] #mobile-menu,
 :root[data-theme="light"] #persistent-player-bar,
-:root[data-theme="light"] #search-overlay {
+:root[data-theme="light"] #search-overlay,
+:root[data-theme="light"] #featured-mix-hero {
   /* Re-declaring the tokens is not enough on its own. `color` INHERITS, and
      elements that never declare their own (e.g. #player-bar-title) inherit the
      value computed on <body> — outside this island — so the token said
@@ -2574,19 +2978,19 @@ ul { list-style: none; }
   --text-primary: #f2ece4;
   --text-secondary: #b7aaa3;
   --text-muted: #8a7d77;
-  --accent: #c1121f;
-  --accent-bright: #e01e2b;
+  --accent: #ffffff;
+  --accent-bright: #ffffff;
   --on-accent: #ffffff;
   --hairline: rgba(255, 255, 255, 0.1);
-  --hairline-accent: rgba(193, 18, 31, 0.45);
+  --hairline-accent: rgba(255, 255, 255, 0.45);
   --veil-hover: rgba(255, 255, 255, 0.04);
   --track-empty: rgba(255, 255, 255, 0.18);
   --track-empty-strong: rgba(255, 255, 255, 0.22);
-  --accent-veil: rgba(193, 18, 31, 0.08);
-  --accent-veil-strong: rgba(193, 18, 31, 0.14);
-  --accent-glow: rgba(224, 30, 43, 0.7);
+  --accent-veil: rgba(255, 255, 255, 0.08);
+  --accent-veil-strong: rgba(255, 255, 255, 0.14);
+  --accent-glow: rgba(255, 255, 255, 0.7);
   --bg-elevated: #1c1212;
-  --wave-played: #e01e2b;
+  --wave-played: #ffffff;
   --wave-unplayed: rgba(242, 236, 228, 0.82);
   --wave-remaining: rgba(154, 143, 138, 0.55);
 }
@@ -2680,4 +3084,9 @@ body::before, body::after {
 @media (prefers-reduced-motion: reduce) {
   /* the scanline layer is static, so it stays; nothing here animates */
   :root[data-theme="light"] body::before { opacity: var(--scanline-opacity); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #player-bar-source-slot .hero-thumb:not([hidden]) { animation: none; }
+  #homepage-selectors-grid[data-fade="on"] .mix-card-cover img:not(.cover-fallback) { transition: none; }
 }

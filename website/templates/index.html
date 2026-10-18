@@ -10,7 +10,7 @@
 <main class="page-shell">
   <section id="featured-mix-hero" data-section="featured-hero">
     <div id="hero-collage-frame">
-      <div class="hero-image-clip" id="hero-media" data-hero-clips="{{HERO_PROMO_CLIPS}}" data-hero-artists="{{HERO_ARTIST_IMAGES}}">
+      <div class="hero-image-clip" id="hero-media" data-hero-clips="{{HERO_PROMO_CLIPS}}" data-hero-artists="{{HERO_ARTIST_IMAGES}}" data-hero-picks="{{HERO_PICKS}}">
         {{FEATURED_IMAGE}}
       </div>
       <!-- What the big frame above shows. Three sources for the featured mix —
@@ -20,20 +20,20 @@
            thumbs rather than a dead one. The strip is inert without JS (the
            frame keeps its still), and the inline hero script below wires it. -->
       <div id="hero-source-thumbs" role="group" aria-label="Choose what the hero shows">
-        <button class="hero-thumb" type="button" data-hero-source="promo" aria-pressed="false" hidden>
+        <button id="hero-thumb-film" class="hero-thumb" type="button" data-hero-source="promo" aria-pressed="false" hidden>
           <span class="hero-thumb-frame">
             <img class="hero-thumb-img" alt="" decoding="async">
             <span class="hero-thumb-badge" aria-hidden="true"><svg class="icon-svg"><use href="#i-play"></use></svg></span>
           </span>
           <span class="hero-thumb-label">Film</span>
         </button>
-        <button class="hero-thumb" type="button" data-hero-source="art" aria-pressed="false" hidden>
+        <button id="hero-thumb-cover" class="hero-thumb" type="button" data-hero-source="art" aria-pressed="false" hidden>
           <span class="hero-thumb-frame">
             <img class="hero-thumb-img" alt="" decoding="async">
           </span>
           <span class="hero-thumb-label">Cover</span>
         </button>
-        <button class="hero-thumb" type="button" data-hero-source="artist" aria-pressed="false" hidden>
+        <button id="hero-thumb-artist" class="hero-thumb" type="button" data-hero-source="artist" aria-pressed="false" hidden>
           <span class="hero-thumb-frame">
             <img class="hero-thumb-img" alt="" decoding="async">
           </span>
@@ -43,10 +43,11 @@
     </div>
     <div id="featured-mix-content">
       <span class="section-eyebrow">Featured Mix</span>
-      <h1 id="featured-mix-title">{{FEATURED_TITLE}}</h1>
+      <h1 id="featured-mix-title"><a href="{{FEATURED_ARTIST_PAGE}}">{{FEATURED_TITLE}}</a></h1>
       <a id="featured-artist-signature" href="{{FEATURED_ARTIST_PAGE}}">{{FEATURED_ARTIST}}</a>
       <div id="featured-meta-row">
-        <span class="meta-chip"><svg class="icon-svg"><use href="#i-wave"></use></svg> {{FEATURED_GENRE}}</span>
+        <!-- genre hidden for now (see metaChips in lib/WebsitePageGenerator.cjs):
+        <span class="meta-chip"><svg class="icon-svg"><use href="#i-wave"></use></svg> {{FEATURED_GENRE}}</span> -->
         {{FEATURED_DURATION_CHIP}}
         {{FEATURED_DATE_CHIP}}
       </div>
@@ -73,13 +74,13 @@
     </div>
   </section>
 
-  <section id="latest-mixes-section" data-section="latest-mixes">
+  <section id="homepage-selectors-section" data-section="homepage-selectors">
     <div class="section-header-row">
-      <span class="section-eyebrow section-eyebrow--plain">Latest Mixes</span>
-      <a class="section-view-all" href="archive.html">View All Mixes <svg class="icon-svg"><use href="#i-arrow-right"></use></svg></a>
+      <span class="section-eyebrow section-eyebrow--plain">Selectors</span>
+      <a class="section-view-all" href="residents.html">View All Selectors <svg class="icon-svg"><use href="#i-arrow-right"></use></svg></a>
     </div>
-    <div id="latest-mixes-grid" class="mix-card-grid">
-{{LATEST_MIX_CARDS}}
+    <div id="homepage-selectors-grid" class="mix-card-grid">
+{{SELECTOR_TILES}}
     </div>
   </section>
 </main>
@@ -103,6 +104,74 @@
   var art = document.getElementById('hero-mix-art');
   var still = document.getElementById('hero-still');
   if (!media || !video || !art) return;
+
+  /* FADE FROM BLACK. The page is built with one featured mix, and player.js
+     re-rolls a random one a moment later — showing the built one first was a
+     visible flash of the wrong image and copy. So while booting the stage is
+     black (css: #featured-mix-hero[data-hero-boot]) and the first real mix
+     fades in once prePick (below) has chosen it — the copy on the next frame,
+     the cover as soon as its image loads. No JS means no attribute, and the
+     built still simply shows. */
+  var stage = document.getElementById('featured-mix-hero');
+  if (stage) stage.setAttribute('data-hero-boot', 'pending');
+
+  /* The homepage always opens at the top, on the hero. The browser's default
+     scroll restoration put a reload back wherever you had scrolled to, which
+     read as the page scrolling itself down on load. A shared ?mix= link
+     (ue-links.js scrolls to its card) or a #anchor keeps its own target. */
+  if (!/[?&]mix=/.test(location.search) && !location.hash) {
+    try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  function heroReady() {
+    if (stage && stage.getAttribute('data-hero-boot') === 'pending') stage.setAttribute('data-hero-boot', 'ready');
+  }
+
+  /* PICK BEFORE FIRST PAINT. The random featured mix is chosen right here, from
+     the generator's data-hero-picks, and written into the featured anchor and
+     the hero copy before anything is drawn — everything downstream (the seed
+     below, player.js hydration, the bar) reads the anchor, so they all start
+     on this mix. data-hero-prepicked tells player.js to adopt it instead of
+     rolling again. Any failure leaves the built-in mix in place. */
+  (function prePick() {
+    var fa = document.getElementById('featured-play-button');
+    var picks = [];
+    try { picks = JSON.parse(media.getAttribute('data-hero-picks') || '[]'); } catch (e) { picks = []; }
+    if (!fa || !picks.length) return;
+    var p = picks[Math.floor(Math.random() * picks.length)];
+    if (!p || !p.u) return;
+    fa.setAttribute('href', p.u);
+    fa.setAttribute('data-title', p.t);
+    fa.setAttribute('data-artist', p.a);
+    fa.setAttribute('data-img', p.i);
+    fa.setAttribute('data-duration-sec', String(p.d || 0));
+    fa.setAttribute('data-page', p.p || '');
+    fa.setAttribute('data-video', p.v || '');
+    fa.setAttribute('data-hero-prepicked', '1');
+    var dl = document.getElementById('featured-download-button');
+    if (dl) { dl.setAttribute('href', p.u); dl.setAttribute('data-filename', p.a + ' - ' + p.t); }
+    var titleEl = document.getElementById('featured-mix-title');
+    if (titleEl) {
+      var titleLink = titleEl.querySelector('a') || titleEl;
+      titleLink.textContent = p.l1;
+      if (titleLink !== titleEl && p.p) titleLink.setAttribute('href', p.p);
+    }
+    var sigEl = document.getElementById('featured-artist-signature');
+    if (sigEl) { sigEl.textContent = p.l2; if (p.p) sigEl.setAttribute('href', p.p); }
+    var metaRow = document.getElementById('featured-meta-row');
+    if (metaRow) {
+      /* genre, date and length are hidden for now (generator metaChips); the
+         length chip was:
+         '<span class="meta-chip"><svg class="icon-svg"><use href="#i-clock"></use></svg> ' + Math.round(p.d / 60) + ' MIN</span>' */
+      metaRow.innerHTML = '';
+    }
+    var tot = document.querySelector('#featured-waveform .time-total');
+    if (tot && p.d > 0) {
+      var h = Math.floor(p.d / 3600), m = Math.floor((p.d % 3600) / 60), sec = Math.floor(p.d % 60);
+      tot.textContent = (h ? h + ':' + (m < 10 ? '0' : '') : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+    if (still) still.setAttribute('src', p.i);
+  })();
 
   function reducedMotion() {
     try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
@@ -163,6 +232,23 @@
   }
 
   function startPromo() {
+    /* The default (and any listener's) choice wins: the cover unless they
+       picked the film. Nothing is painted yet — the first real mix arrives
+       with `ue-featured-changed` (which applies the pinned source); this is
+       only the fallback for when it never comes. */
+    if (pinned && pinned !== 'promo') {
+      /* prePick already chose the mix, so its cover can start loading now and
+         fade in from black (#hero-mix-art); the copy fades in on the next frame */
+      applyPinned();
+      /* a timer, not requestAnimationFrame: rAF never fires in a background
+         tab, which left the copy hidden until the tab was focused. Reading
+         offsetWidth flushes the 'pending' style first, so the stagger runs. */
+      setTimeout(function () {
+        if (stage) void stage.offsetWidth;
+        heroReady();
+      }, 30);
+      return;
+    }
     /* Honour the two cases where an autoplaying 30s video is the wrong answer,
        and simply keep the still: reduced-motion, and Save-Data. */
     if (reducedMotion() || saveData() || !CLIPS.length) return;
@@ -182,10 +268,45 @@
   }
 
   /* ---- 2. the playing mix's artwork, wearing the branded plate ---- */
+  /* Homepage credits (generator homepageCredits): a "Live @ Viva Acid" set
+     shows its DJs as the title and the event title as the small line. Keyed
+     by audio txid, read off the featured anchor's href, which player.js
+     always repoints to the hero's current mix before it updates the text.
+     The map rides on the player bar (data-mix-credits), which every page has;
+     read on first use, because the bar is parsed after this script. */
+  var CREDITS = null;
+  function currentCredit() {
+    if (!CREDITS) {
+      var creditsHost = document.getElementById('persistent-player-bar');
+      if (!creditsHost) return null;   /* not parsed yet — try again next call */
+      try { CREDITS = JSON.parse(creditsHost.getAttribute('data-mix-credits') || '{}'); } catch (e) { CREDITS = {}; }
+    }
+    var fa = document.getElementById('featured-play-button');
+    var m = /\/([A-Za-z0-9_-]{43})(?:[/?#]|$)/.exec((fa && fa.getAttribute('href')) || '');
+    return (m && CREDITS[m[1]]) || null;
+  }
+
   function setPlate(title, artistName) {
+    // Artist first, like the tiles: artist (or credited DJs) on the title
+    // line, the mix title on the small line.
+    var rawArtist = artistName; // before the line1/line2 reassignment below
+    var credit = currentCredit();
+    var line1 = credit ? credit.title : artistName;
+    var line2 = credit ? credit.sub : title;
+    title = line1; artistName = line2;
     var t = document.getElementById('hero-plate-title');
     var a = document.getElementById('hero-plate-artist');
-    if (t) t.textContent = title || '';
+    if (t) {
+      var titleLink = t.querySelector('a') || t;
+      titleLink.textContent = title || '';
+      // Same convention as #featured-artist-signature: link via this one
+      // artist's own page even under a B2B credit line.
+      if (titleLink !== t) {
+        var meta = artistMeta(rawArtist);
+        if (meta && meta.page) titleLink.setAttribute('href', meta.page);
+        else titleLink.removeAttribute('href');
+      }
+    }
     if (a) a.textContent = artistName || '';
   }
 
@@ -199,9 +320,20 @@
     setPlate(title, artistName);
     if (media.dataset.heroMode === mode && art.getAttribute('src') === src) return true;
     art.onload = function () { media.dataset.heroMode = mode; renderThumbs(); };
-    art.onerror = function () { /* keep whatever is showing */ };
+    /* a portrait that fails (gateway 429, missing file) must not leave the
+       stage black: fall back to the generated cover */
+    art.onerror = function () {
+      if (mode === 'artist' && SOURCES.art && art.getAttribute('src') !== SOURCES.art) showArt(SOURCES.art, title, artistName);
+    };
     art.hidden = false;
-    art.setAttribute('src', src);
+    /* same file already loaded (a mix change can land on the same cover):
+       re-setting src fires no load event, so reveal it directly */
+    if (art.getAttribute('src') === src && art.complete && art.naturalWidth) {
+      media.dataset.heroMode = mode;
+      renderThumbs();
+    } else {
+      art.setAttribute('src', src);
+    }
     try { video.pause(); } catch (e) {}
     return true;
   }
@@ -218,8 +350,10 @@
      `pinned` is the listener's choice, and it pins a KIND, not a URL — so when
      the featured mix changes or a different mix starts playing, the hero
      re-resolves that same kind for the new record rather than freezing on an
-     image of the old one. Until they touch a thumb, `pinned` stays null and the
-     page behaves exactly as it did before this strip existed. */
+     image of the old one. It starts as 'artist': the hero opens on the
+     selector's photo; a mix whose artist has none (and VIVA ACID, whose image
+     the generator leaves out) falls back to the generated cover via
+     applyPinned, and so does a photo that fails to load (showStill). */
   var ARTISTS = {};
   try { ARTISTS = JSON.parse(media.getAttribute('data-hero-artists') || '{}'); } catch (e) { ARTISTS = {}; }
 
@@ -235,7 +369,7 @@
   var thumbsEl = document.getElementById('hero-source-thumbs');
   var SOURCES = { promo: '', art: '', artist: '' };
   var CURRENT = { title: '', artist: '' };
-  var pinned = null;
+  var pinned = 'artist';
 
   function updateSources(d) {
     d = d || {};
@@ -253,7 +387,7 @@
   }
 
   /* The handwritten artist mark, laid across the hero cover exactly as it is
-     across every card in Latest Mixes — same renderer, same splitting and
+     across every selector tile — same renderer, same splitting and
      sizing rules (window.ueScriptMark, in partials/footer.html). Drawn at
      runtime because the hero's mix changes on every load and every click.
      CSS reveals it only in `art` mode: over a film it would fight the
@@ -298,6 +432,10 @@
     return applySource(pinned) || applySource('art');
   }
 
+  /* Previously relocated into the player bar's #player-bar-source-slot once
+     the DOM was ready. Removed: the chip strip now stays put in the hero
+     where it's declared — the bottom bar no longer carries this UI at all. */
+
   if (thumbsEl) {
     thumbsEl.addEventListener('click', function (e) {
       var btn = e.target && e.target.closest ? e.target.closest('.hero-thumb') : null;
@@ -334,6 +472,7 @@
   function wireControls() {
     var muteBtn = document.getElementById('hero-mute-toggle');
     var shareBtn = document.getElementById('hero-share');
+    var refreshBtn = document.getElementById('hero-refresh-mix');   /* generator FEATURED_IMAGE markup */
 
     if (muteBtn) {
       muteBtn.addEventListener('click', function () {
@@ -344,6 +483,21 @@
         muteBtn.setAttribute('aria-pressed', video.muted ? 'false' : 'true');
         muteBtn.setAttribute('aria-label', video.muted ? 'Unmute promo video' : 'Mute promo video');
         if (!video.muted && video.paused) { try { video.play(); } catch (e) {} }
+      });
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function () {
+        /* player.js owns the roll (host.rerollFeatured — same code as the
+           load-time re-roll, picks a DIFFERENT mix, repoints the hero and
+           fires ue-featured-changed, so the film/plate/thumbs below follow).
+           The player loads lazily; a click before it is ready is queued and
+           runs the moment it hydrates. */
+        var go = function () {
+          try { window.UEPlayer.host.rerollFeatured(); } catch (e) { /* no player */ }
+        };
+        if (window.UEPlayer && window.UEPlayer.host) go();
+        else document.addEventListener('ue-player-ready', go, { once: true });
       });
     }
 
@@ -483,19 +637,43 @@
     if (meta && meta.page) a.setAttribute('data-page', meta.page);
   }
 
+  /* A NEW MIX REPLAYS THE INTRO. Whenever the hero lands on a different mix
+     (refresh, a tile click, the player moving to the next track) the stage
+     goes back to black and runs the same sequence as page load: the cover
+     fades in, the copy staggers in top to bottom. The reset itself is instant
+     (data-hero-resetting switches transitions off for one frame), so nothing
+     fades OUT first. Play/pause and same-mix re-syncs change nothing. */
+  function heroKey() { return CURRENT.artist + '|' + CURRENT.title; }
+  function heroSwap(d, apply) {
+    var before = heroKey();
+    updateSources(d);
+    var changed = !!before.replace('|', '') && heroKey() !== before;
+    if (changed && stage) {
+      stage.setAttribute('data-hero-resetting', '');
+      stage.setAttribute('data-hero-boot', 'pending');
+      media.removeAttribute('data-hero-mode');   // cover/film layers drop to 0 at once
+      void stage.offsetWidth;
+      stage.removeAttribute('data-hero-resetting');
+    }
+    apply();   // starts the new cover/film; it fades in as soon as it can paint
+    if (changed) setTimeout(function () { if (stage) void stage.offsetWidth; heroReady(); }, 30);
+    else heroReady();
+  }
+
   document.addEventListener('ue-featured-changed', function (ev) {
     var d = (ev && ev.detail) || {};
-    updateSources(d);
-    restampFeaturedAnchor();
-    setPlate(CURRENT.title, CURRENT.artist);   // ready for the moment a mix starts
-    /* A listener who has picked a source keeps it — re-resolved for the mix
-       that just won, never overridden by it. */
-    if (pinned) { applyPinned(); return; }
-    if (SOURCES.promo) {
-      if (media.dataset.heroMode !== 'art') applySource('promo');
-    } else if (SOURCES.art && media.dataset.heroMode !== 'art') {
-      applySource('art');
-    }
+    heroSwap(d, function () {
+      restampFeaturedAnchor();
+      setPlate(CURRENT.title, CURRENT.artist);   // ready for the moment a mix starts
+      /* A listener who has picked a source keeps it — re-resolved for the mix
+         that just won, never overridden by it. */
+      if (pinned) { applyPinned(); return; }
+      if (SOURCES.promo) {
+        if (media.dataset.heroMode !== 'art') applySource('promo');
+      } else if (SOURCES.art && media.dataset.heroMode !== 'art') {
+        applySource('art');
+      }
+    });
   });
 
   wireControls();
@@ -507,11 +685,12 @@
      wearing the mark, is the fallback for a mix with no film. */
   document.addEventListener('ue-hero-repointed', function (ev) {
     var d = (ev && ev.detail) || {};
-    updateSources(d);
-    restampFeaturedAnchor();
-    setPlate(CURRENT.title, CURRENT.artist);
-    if (pinned) { applyPinned(); return; }
-    if (!applySource('promo')) applySource('art');
+    heroSwap(d, function () {
+      restampFeaturedAnchor();
+      setPlate(CURRENT.title, CURRENT.artist);
+      if (pinned) { applyPinned(); return; }
+      if (!applySource('promo')) applySource('art');
+    });
   });
 
   whenPlayerReady(function () {
@@ -519,13 +698,14 @@
     var sync = function () {
       var t = currentTrack();
       if (!t) return;
-      updateSources({ title: t.title, artist: t.artist, image: t.img });
-      if (pinned) { applyPinned(); return; }
-      /* same order as the repoint above: the playing mix's film, then its
-         cover. Reached when a track starts by a route that did not repoint the
-         hero (a restored position, a deep link) — otherwise this agrees with
-         what the repoint already did and changes nothing. */
-      if (!applySource('promo')) applySource('art');
+      heroSwap({ title: t.title, artist: t.artist, image: t.img }, function () {
+        if (pinned) { applyPinned(); return; }
+        /* same order as the repoint above: the playing mix's film, then its
+           cover. Reached when a track starts by a route that did not repoint the
+           hero (a restored position, a deep link) — otherwise this agrees with
+           what the repoint already did and changes nothing. */
+        if (!applySource('promo')) applySource('art');
+      });
     };
     try {
       host.on('track', sync);
@@ -534,6 +714,34 @@
     sync();
   });
 }());
+</script>
+<script>
+/* Selector tile images fade in once loaded (css: #homepage-selectors-grid
+   [data-fade="on"]). Marked loaded on `load` or straight away if already
+   complete; a failed image is marked too, so it never stays invisible.
+   Playing a tile (its picture or play button) also scrolls back up to the
+   hero, which is now showing that mix. Name links, download and share don't. */
+(function () {
+  var grid = document.getElementById('homepage-selectors-grid');
+  if (!grid) return;
+  grid.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('a[data-playlist], .play-circle') : null;
+    if (!t || !grid.contains(t)) return;
+    var reduce = false;
+    try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (err) {}
+    var from = window.scrollY;
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    /* smooth scrolling is suspended where frames don't run (a background
+       tab); if the page hasn't moved at all, just jump */
+    setTimeout(function () { if (window.scrollY >= from && from > 0) window.scrollTo(0, 0); }, 1000);
+  });
+  grid.setAttribute('data-fade', 'on');
+  Array.prototype.forEach.call(grid.querySelectorAll('.mix-card-cover img:not(.cover-fallback)'), function (img) {
+    function done() { img.classList.add('is-loaded'); }
+    if (img.complete) done();
+    else { img.addEventListener('load', done, { once: true }); img.addEventListener('error', done, { once: true }); }
+  });
+})();
 </script>
 <script src="js/boot.js" defer></script>
 </body>

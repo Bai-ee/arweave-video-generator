@@ -8,9 +8,14 @@
 {{> nav}}
 
 <main class="page-shell">
-  <section id="about-content-panel" data-section="about-content">
-    <span class="section-eyebrow">About</span>
-    <p class="about-lead">Underground Existence is a living archive of Chicago house &amp; techno mixtapes — recorded in basements, lofts and clubs, and preserved forever on the permaweb.</p>
+  <article id="about-content-panel" data-section="about-content">
+    <div id="about-hero-backdrop" aria-hidden="true">
+      <img id="about-hero-backdrop-image" src="img/about-hero-street.svg" alt="" width="1600" height="900" decoding="async">
+    </div>
+    <header id="about-lead-block">
+      <h1 id="about-lead" class="about-lead">Underground Existence started as a block party. Summer 2007, Fridays, the corner of Western and Armitage in Chicago: free, open-air, and full of the DJs and crews driving the city&rsquo;s scene that year.</h1>
+      <p id="about-signature" class="about-signature" aria-label="Bai-ee, curator">Bai-ee</p>
+    </header>
 
     <div id="about-receipt-strip" aria-hidden="true">
       <span class="receipt-strip-script">Hosted on Arweave</span>
@@ -19,19 +24,49 @@
       <span>{{MIX_TOTAL}} mixes &middot; {{ARTIST_TOTAL}} residents</span>
     </div>
 
-    <p><strong>Est. 2007.</strong> What started as a crew of Chicago DJs trading tapes and recordings became a catalog of the city's underground — acid, house, techno and everything between, mixed live by the residents who lived it.</p>
+    <div id="about-story-columns">
+      <section id="about-origin-section" data-section="about-origin">
+        <h2 class="about-h2">Where it came from</h2>
+        <p>I was DJing and promoting with Adonis Childs and Turbotic under True Family Unit Productions. Underground Existence was the solo version of that work: one corner, one night a week, featuring artists who were active in Chicago right then.</p>
+        <p>The block parties grew into underground events, and I recorded audio from as many of them as I could. That is how the archive started.</p>
+      </section>
 
-    <p><strong>Archived in permanence.</strong> Every mix on this site is stored on <strong>Arweave</strong>, a permanent, decentralized storage network. There is no server to shut down and no host to disappear — each recording is written to the permaweb and served from it directly. This site itself is deployed the same way.</p>
+      <section id="about-collection-section" data-section="about-collection">
+        <h2 class="about-h2">What&rsquo;s in it</h2>
+        <p>Beyond the live recordings, I digitized older mixtapes that mattered to me and to the scene, mostly ones that were lesser known or never digitized. Friends added their own tapes to mine and donated them to be digitized and hosted.</p>
+        <p>Mark Almaria&rsquo;s first demo, <em>SOL</em>, came to me from Georgie Saunders (RIP). It was highly influential, I had lost track of it, and I couldn&rsquo;t find it anywhere. I&rsquo;m preserving it here. <em>STARTRXX</em> was a classic and among my first tapes. It is still very obscure, and you can hear it on this site.</p>
+      </section>
 
-    <p><strong>Play-only by design.</strong> Mixes stream straight from the permaweb. Press play, let it run — the waveform tracks your progress through the tape.</p>
+      <section id="about-tapes-section" data-section="about-tapes">
+        <h2 class="about-h2">Tapes from &rsquo;99</h2>
+        <p>These were passed around the Chicago rave scene around 1999, and they shaped me and my friends. I&rsquo;m working to preserve them. Not all of them are on the site yet.</p>
+        <ul id="about-tapes-list">
+          <li><span class="tape-artist">Paul Johnson</span> <em>I Need Another Plan</em></li>
+          <li><span class="tape-artist">Terry Mullan</span> <em>New School Fusion</em></li>
+          <li><span class="tape-artist">Justin Long</span> <em>Live at Silly Rabbit</em></li>
+          <li><span class="tape-artist">Mark Farina</span> <em>San Francisco Sessions</em></li>
+          <li><span class="tape-artist">DJ Sneak</span> <em>Signature Sounds</em></li>
+        </ul>
+      </section>
 
-    <p>Have a mix that belongs in the archive? Get in touch.</p>
+      <section id="about-permanence-section" data-section="about-permanence">
+        <h2 class="about-h2">Why it&rsquo;s on Arweave</h2>
+        <p>This is a personal archive, curated from my own vision and experience. It documents my journey and no one else&rsquo;s. I built it directly on the permaweb so I would never have to archive this content again.</p>
+        <p>Every mix is stored permanently on Arweave. There are no hosting bills that carry on into the future, and no need to depend on Google, Mixcloud or any other host. The mixes are permanent. UndergroundExistence.info points to them.</p>
+      </section>
+    </div>
 
-    <a id="about-contribute-cta" href="https://docs.google.com/forms/d/e/1FAIpQLSfnuTItd-QSZkgPwIy9baGBZ8nyC_6Y3JxsXLSLywJfuwrXYw/viewform?usp=sf_link" target="_blank" rel="noopener">Contribute Here</a>
-  </section>
+    <section id="about-actions-section" data-section="about-actions">
+      <p id="about-actions-copy">This is an ongoing project. If you have a mix that belongs here, you can submit it. There is a fee to host a mix permanently.</p>
+      <div id="about-actions-row">
+        <a id="about-play-cta" href="archive.html">Press play</a>
+        <a id="about-contribute-cta" href="https://docs.google.com/forms/d/e/1FAIpQLSfnuTItd-QSZkgPwIy9baGBZ8nyC_6Y3JxsXLSLywJfuwrXYw/viewform?usp=sf_link" target="_blank" rel="noopener">Submit a mix</a>
+      </div>
+    </section>
+  </article>
 
   <section id="about-flyers-section" data-section="about-flyers">
-    <span class="section-eyebrow section-eyebrow--plain">Flyers</span>
+    <h2 class="about-h2">Flyers</h2>
     <div id="about-flyers-grid">
       <img class="flyer-grid-item" src="img/flyers/flyer1.jpg" alt="Underground Existence event flyer" loading="lazy">
       <img class="flyer-grid-item" src="img/flyers/flyer2.jpg" alt="Underground Existence event flyer" loading="lazy">

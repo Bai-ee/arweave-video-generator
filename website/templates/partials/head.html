@@ -169,7 +169,11 @@
   }
 
   /* --- pre-paint --- */
-  apply(stored() === 'light' ? 'light' : 'dark');
+  /* The toggle is hidden for now (partials/nav.html), so the site is always
+     dark: a visitor who once chose light must not be stuck there with no way
+     back. Their saved choice is left in storage; restore with:
+     apply(stored() === 'light' ? 'light' : 'dark'); */
+  apply('dark');
 
   /* Point each toggle at the theme it switches TO. */
   function syncToggles() {

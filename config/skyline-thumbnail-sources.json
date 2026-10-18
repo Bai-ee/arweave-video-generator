@@ -597,9 +597,9 @@
       "width": 1920,
       "height": 1080,
       "collection": "skyline",
-      "enabled": true,
+      "enabled": false,
       "excludeRanges": [],
-      "notes": "kept: Chicago River skyline view with boats"
+      "notes": "disabled 2026-10-17: object no longer in Storage (No such object). Same clip as skyline-fba93cc2."
     },
     {
       "id": "skyline-4b8433fa",
@@ -1428,9 +1428,9 @@
       "width": 1920,
       "height": 1080,
       "collection": "skyline",
-      "enabled": true,
+      "enabled": false,
       "excludeRanges": [],
-      "notes": "kept: moody hazy night skyline silhouette"
+      "notes": "rejected 2026-10-04: ghosted, semi-transparent tower (AI artifact). Never re-enable."
     },
     {
       "id": "skyline-c07de2a2",
@@ -1540,9 +1540,9 @@
       "width": 1920,
       "height": 1080,
       "collection": "skyline",
-      "enabled": true,
+      "enabled": false,
       "excludeRanges": [],
-      "notes": "kept: dramatic skyscraper facade looking up, blue sky"
+      "notes": "rejected 2026-10-04: warped building geometry (AI artifact). Never re-enable."
     },
     {
       "id": "skyline-cacbab64",

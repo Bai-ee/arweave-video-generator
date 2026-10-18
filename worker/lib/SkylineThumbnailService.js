@@ -538,15 +538,20 @@ export function createSkylineThumbnailService({ catalog, storage, runFfmpeg, tmp
 
   /**
    * @param {{
-   *   entityType: 'mix'|'artist', stableKey: string, assignmentVersion: number,
+   *   entityType: 'mix'|'artist'|'render', stableKey: string, assignmentVersion: number,
    *   used: { candidateIds: Set<string>, dHashes: string[] },
    *   dryRun?: boolean, previewDir?: string
    * }} params
+   *
+   * 'render' is the render shown in place of a mix's uploaded cover (mix.renderImageFilename, for
+   * a mix whose own cover is uploaded art). It takes the mix's stableKey but
+   * its own entityType, so its seed and its storage folder never coincide
+   * with a later main-cover render of the same mix.
    */
   async function generate({ entityType, stableKey, assignmentVersion, used, dryRun, previewDir, forceCandidate }) {
     try {
-      if (entityType !== 'mix' && entityType !== 'artist') {
-        return fail('catalog-invalid', `entityType must be 'mix' or 'artist', got "${entityType}"`);
+      if (entityType !== 'mix' && entityType !== 'artist' && entityType !== 'render') {
+        return fail('catalog-invalid', `entityType must be 'mix', 'artist' or 'render', got "${entityType}"`);
       }
       if (!stableKey || typeof stableKey !== 'string') {
         return fail('catalog-invalid', 'stableKey is required');

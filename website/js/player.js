@@ -79,7 +79,7 @@
      theme toggle's ue:themechange event bumps a module-level generation counter,
      which invalidates every instance at once. A missing or empty custom property
      falls back to the literal this file shipped with, keeping today's rendering. */
-  var WAVE_FALLBACK_PLAYED = '#e01e2b';
+  var WAVE_FALLBACK_PLAYED = '#ffffff';
   var WAVE_FALLBACK_UNPLAYED = 'rgba(242, 236, 228, 0.82)';
   var WAVE_FALLBACK_REMAINING = 'rgba(154, 143, 138, 0.55)';
   var waveThemeGeneration = 0;
@@ -316,6 +316,7 @@
       title: el.getAttribute('data-title') || 'Untitled Mix',
       artist: el.getAttribute('data-artist') || '',
       img: el.getAttribute('data-img') || '',
+      page: el.getAttribute('data-page') || '',
       durationSec: parseInt(el.getAttribute('data-duration-sec') || '0', 10) || 0
     };
   });
@@ -444,7 +445,7 @@
   }
 
   /* ---------- the hero follows whatever is playing ----------
-     The hero is not a fixed slot: play a mix from Latest Mixes and the hero
+     The hero is not a fixed slot: play a mix from a selector tile and the hero
      BECOMES that mix — its film, its title, its artist, its meta and its
      transport.
 
@@ -479,12 +480,6 @@
     return dot;
   }
 
-  function heroTitleCase(name) {
-    return String(name || '').toLowerCase().replace(/(^|[\s_/])([a-z])/g, function (m, p, c) {
-      return p + c.toUpperCase();
-    });
-  }
-
   /* The meta row is rebuilt from the CARD the track came from rather than from
      artists.json: the card already displays this mix's genre, duration and date
      in the same .meta-chip shape, so cloning them cannot disagree with the grid
@@ -508,6 +503,29 @@
     return wrote ? row : null;
   }
 
+  /* Mix credits (generator homepageCredits, shipped as data-mix-credits on the
+     player bar every page carries): a "Live @ Viva Acid" set shows its DJs on
+     the title line and the event title on the small line. Visible text only —
+     every anchor's data-title/-artist stay the real record. Null for every mix
+     without a credit. */
+  var mixCredits;
+  function heroCreditFor(url) {
+    if (!mixCredits) {
+      mixCredits = {};
+      var host = document.getElementById('persistent-player-bar');
+      try { mixCredits = JSON.parse((host && host.getAttribute('data-mix-credits')) || '{}'); } catch (err) { mixCredits = {}; }
+    }
+    var m = /\/([A-Za-z0-9_-]{43})(?:[/?#]|$)/.exec(url || '');
+    return (m && mixCredits[m[1]]) || null;
+  }
+
+  /* The two visible lines for a mix, everywhere it is shown: artist (or the
+     credited DJs) first, the mix title second — the homepage tiles' order. */
+  function displayLines(url, title, artist) {
+    var credit = heroCreditFor(url);
+    return credit ? { line1: credit.title, line2: credit.sub } : { line1: artist || '', line2: title || '' };
+  }
+
   function pointHeroAt(idx) {
     if (!featuredAnchor || idx < 0 || idx === heroIdx) return;
     var track = queue[idx];
@@ -516,12 +534,21 @@
     var card = a.closest ? a.closest('.mix-card, .catalog-row') : null;
     var attr = function (n) { return a.getAttribute(n) || ''; };
 
+    var credit = heroCreditFor(track.url);
     var titleEl = document.getElementById('featured-mix-title');
-    if (titleEl) titleEl.textContent = track.title;
+    // Homepage reads artist first: artist (or credited DJs) as the title,
+    // the mix title as the signature line. The name is a link to the DJ's
+    // own page (same href #featured-artist-signature gets below) — update
+    // the inner <a>, not the <h1>, so the link survives every repoint.
+    if (titleEl) {
+      var titleLink = titleEl.querySelector('a') || titleEl;
+      titleLink.textContent = credit ? credit.title : track.artist;
+      if (titleLink !== titleEl && attr('data-page')) titleLink.setAttribute('href', attr('data-page'));
+    }
 
     var sigEl = document.getElementById('featured-artist-signature');
     if (sigEl) {
-      sigEl.textContent = heroTitleCase(track.artist);
+      sigEl.textContent = credit ? credit.sub : track.title;
       if (attr('data-page')) sigEl.setAttribute('href', attr('data-page'));
     }
 
@@ -1185,12 +1212,22 @@
     /* still unresolved — keep holding, 'seeking' status already shown */
   }
 
-  /* ---------- randomize the featured mix on every load ----------
+  /* ---------- randomize / re-roll the featured mix ----------
      hero image stays the fixed digging.jpg backdrop (see index.html
      template); only the title/artist/meta/audio swap to a random pick
      from the full catalog, fetched client-side. Duration parsing
      mirrors lib/WebsitePageGenerator.cjs parseDurationSec exactly —
-     short leading numbers ("1:30") mean H:MM, not MM:SS. */
+     short leading numbers ("1:30") mean H:MM, not MM:SS.
+
+     One implementation, two callers: the automatic roll on every load, and
+     the hero's refresh button (#hero-refresh-mix → host.rerollFeatured()).
+     `featuredIdx0` is the queue entry the build-time featured anchor owns;
+     a tile click can later repoint heroIdx at some other entry
+     (pointHeroAt), so a re-roll must always write to ITS OWN entry and
+     point heroIdx back at it — never mutate whatever heroIdx happens to be. */
+  var featuredIdx0 = heroIdx;
+  var rerollFeatured = function () { return false; };
+
   (function randomizeFeatured() {
     var heroTitleEl = document.getElementById('featured-mix-title');
     if (!heroTitleEl || !featuredAnchor) return;
@@ -1201,11 +1238,6 @@
       var a = parseInt(m[1], 10), b = parseInt(m[2], 10);
       if (a === 0 && b === 0) return 0;
       return a <= 10 ? (a * 60 + b) * 60 : a * 60 + b;
-    }
-    function titleCase(name) {
-      return String(name || '').toLowerCase().replace(/(^|[\s_/])([a-z])/g, function (m, p, c) {
-        return p + c.toUpperCase();
-      });
     }
     function metaChip(iconId, text) {
       var span = document.createElement('span');
@@ -1226,25 +1258,55 @@
       return dot;
     }
 
-    fetch('artists.json').then(function (r) { return r.json(); }).then(function (data) {
-      var picks = [];
-      (data || []).forEach(function (a) {
-        (a.mixes || []).forEach(function (m) {
-          if (/^https?:\/\//i.test(m.mixArweaveURL || '')) {
-            picks.push({
-              artistName: a.artistName || '',
-              artistPage: a.artistFilename || '#',
-              artistGenre: (a.artistGenre || 'other').toUpperCase(),
-              title: m.mixTitle || 'Untitled Mix',
-              audioUrl: m.mixArweaveURL,
-              durationSec: parseDurSec(m.mixDuration),
-              dateDisplay: m.mixDateYear || '',
-              image: m.mixImageFilename || a.artistImageFilename || ''
-            });
-          }
+    /* Only generated renders are shown (generator shownMixImage, same rule):
+       the mix's generated cover, else its render made in place of uploaded
+       art, else — with no cover at all — a generated artist image, else ''. */
+    function shownMixImage(m, a) {
+      var gen = function (url, meta) {
+        return !!(meta && meta.origin === 'generated-skyline' && /^https?:\/\//i.test(url || ''));
+      };
+      if (gen(m.mixImageFilename, m.mixImageMeta)) return m.mixImageFilename;
+      if (gen(m.renderImageFilename, m.renderImageMeta)) return m.renderImageFilename;
+      if (!m.mixImageFilename && gen(a.artistImageFilename, a.artistImageMeta)) return a.artistImageFilename;
+      return '';
+    }
+
+    /* the catalog is fetched once and shared by the load-time roll and every
+       refresh click */
+    var picksPromise = null;
+    function loadPicks() {
+      if (picksPromise) return picksPromise;
+      picksPromise = fetch('artists.json').then(function (r) { return r.json(); }).then(function (data) {
+        var picks = [];
+        (data || []).forEach(function (a) {
+          (a.mixes || []).forEach(function (m) {
+            if (/^https?:\/\//i.test(m.mixArweaveURL || '')) {
+              picks.push({
+                artistName: a.artistName || '',
+                artistPage: a.artistFilename || '#',
+                artistGenre: (a.artistGenre || 'other').toUpperCase(),
+                title: m.mixTitle || 'Untitled Mix',
+                audioUrl: m.mixArweaveURL,
+                durationSec: parseDurSec(m.mixDuration),
+                dateDisplay: m.mixDateYear || '',
+                image: shownMixImage(m, a)
+              });
+            }
+          });
         });
+        return picks;
       });
-      if (!picks.length) return;
+      picksPromise.catch(function () { picksPromise = null; }); /* let a later click retry */
+      return picksPromise;
+    }
+
+    /* One random pick. `excludeUrl` (refresh only) keeps the new mix
+       different from the one on screen. */
+    function choosePick(picks, excludeUrl) {
+      if (excludeUrl) {
+        var others = picks.filter(function (p) { return !sameMixUrl(p.audioUrl, excludeUrl); });
+        if (others.length) picks = others;
+      }
 
       /* Coordinate with the hero promo film: the homepage hero plays one of
          this pipeline's own 30s mix promos, and it should be promoting the SAME
@@ -1267,26 +1329,39 @@
         }
       } catch (err) { /* the hero must never decide whether playback works */ }
 
-      var pick = promoPicks[Math.floor(Math.random() * promoPicks.length)];
+      return promoPicks[Math.floor(Math.random() * promoPicks.length)];
+    }
 
-      heroTitleEl.textContent = pick.title;
+    function applyPick(pick) {
+      var pickCredit = heroCreditFor(pick.audioUrl);
+      var heroTitleLink = heroTitleEl.querySelector('a') || heroTitleEl;
+      heroTitleLink.textContent = pickCredit ? pickCredit.title : pick.artistName;
+      if (heroTitleLink !== heroTitleEl && pick.artistPage) heroTitleLink.setAttribute('href', pick.artistPage);
       var sigEl = document.getElementById('featured-artist-signature');
       if (sigEl) {
-        sigEl.textContent = titleCase(pick.artistName);
+        sigEl.textContent = pickCredit ? pickCredit.sub : pick.title;
         sigEl.setAttribute('href', pick.artistPage);
       }
       var metaRow = document.getElementById('featured-meta-row');
       if (metaRow) {
         metaRow.innerHTML = '';
-        metaRow.appendChild(metaChip('i-wave', pick.artistGenre));
-        if (pick.durationSec > 0) {
-          metaRow.appendChild(metaDot());
-          metaRow.appendChild(metaChip('i-clock', Math.round(pick.durationSec / 60) + ' MIN'));
-        }
-        if (pick.dateDisplay) {
-          metaRow.appendChild(metaDot());
-          metaRow.appendChild(metaChip('i-calendar', pick.dateDisplay));
-        }
+        // genre and date are hidden for now (generator metaChips has the note);
+        // duration leads the row, so no separator dot before it.
+        // metaRow.appendChild(metaChip('i-wave', pick.artistGenre));
+        // length is hidden for now too:
+        // if (pick.durationSec > 0) {
+        //   metaRow.appendChild(metaChip('i-clock', Math.round(pick.durationSec / 60) + ' MIN'));
+        // }
+        // if (pick.dateDisplay) {
+        //   metaRow.appendChild(metaDot());
+        //   metaRow.appendChild(metaChip('i-calendar', pick.dateDisplay));
+        // }
+      }
+      /* the hero's transport is the featured entry again (a tile click may
+         have pointed it elsewhere) */
+      if (featuredIdx0 >= 0) {
+        heroIdx = featuredIdx0;
+        featuredAnchor.setAttribute('data-queue-idx', String(featuredIdx0));
       }
       featuredAnchor.setAttribute('data-title', pick.title);
       featuredAnchor.setAttribute('data-artist', pick.artistName);
@@ -1322,7 +1397,50 @@
           detail: { title: pick.title, artist: pick.artistName, image: pick.image }
         }));
       } catch (err) { /* older engines: hero simply keeps its own random pick */ }
-    }).catch(function () { /* keep the build-time featured mix on failure */ });
+    }
+
+    /* load-time roll: the bar then mirrors the hero (homepage only; no-op
+       elsewhere and whenever audio already owns the bar) */
+    /* The homepage hero script already picked the mix before first paint
+       (data-hero-prepicked on the featured anchor) and the queue hydrated
+       from it — adopt it rather than rolling again, which used to swap the
+       hero to a second random mix a few seconds after load. */
+    if (featuredAnchor.getAttribute('data-hero-prepicked') === '1') {
+      syncBarToHero(false);
+    } else {
+      loadPicks().then(function (picks) {
+        if (!picks.length) return;
+        applyPick(choosePick(picks, null));
+        syncBarToHero(false);
+      }).catch(function () { /* keep the build-time featured mix on failure */ });
+    }
+
+    /* Refresh button. Choice when audio is involved (the bar must never be
+       yanked by a LOAD-time roll, but a click is an explicit request):
+         - nothing loaded yet -> swap hero + bar to the new mix, silent;
+         - a mix is loaded and PAUSED -> swap hero + bar to the new mix and
+           load it, still paused (we never start audio the listener did not
+           ask for);
+         - a mix is PLAYING -> the click is a user gesture, so playback
+           continues on the new mix (loaded + play(), exactly like "next").
+       Returns a promise-ish true when a roll was started. */
+    rerollFeatured = function () {
+      if (featuredIdx0 < 0) return false;
+      loadPicks().then(function (picks) {
+        if (!picks.length) return;
+        var wasPlaying = audioIsPlaying();   /* read at apply time, not click time */
+        var wasLoaded = state.index >= 0;
+        var cur = queue[heroIdx];
+        applyPick(choosePick(picks, cur ? cur.url : null));
+        if (wasLoaded) {
+          load(featuredIdx0);
+          if (wasPlaying) play();
+        } else {
+          syncBarToHero(true);
+        }
+      }).catch(function () { /* keep the current mix on failure */ });
+      return true;
+    };
   })();
 
   /* ---------- rendering helpers ---------- */
@@ -1356,8 +1474,20 @@
   function setBarTrack(track) {
     if (!bar) return;
     bar.classList.remove('is-idle');
-    if (barTitle) barTitle.textContent = track.title;
-    if (barArtist) barArtist.textContent = track.artist;
+    // Artist first, like every tile (displayLines).
+    var lines = displayLines(track.url, track.title, track.artist);
+    if (barTitle) {
+      var barTitleLink = barTitle.querySelector('a') || barTitle;
+      barTitleLink.textContent = lines.line1;
+      // Same convention as #featured-artist-signature: link via the entry's
+      // own data-page even for a B2B credit line (it still names one of the
+      // credited DJs), rather than leaving it unclickable.
+      if (barTitleLink !== barTitle) {
+        if (track.page) barTitleLink.setAttribute('href', track.page);
+        else barTitleLink.removeAttribute('href');
+      }
+    }
+    if (barArtist) barArtist.textContent = lines.line2;
     if (barThumb) {
       if (track.img) {
         barThumb.innerHTML = '';
@@ -1699,13 +1829,13 @@
      would read as a second link rather than as a quiet status. The
      separator lives INSIDE the span so removing the label can never leave
      an orphaned "·", and is omitted when there is no artist name. */
-  function renderPrimedArtistLine(artist, label) {
+  function renderPrimedArtistLine(subLine, label) {
     if (!barArtist) return;
-    barArtist.textContent = artist || '';
+    barArtist.textContent = subLine || '';
     if (!label) return;
     var span = document.createElement('span');
     span.className = PRIMED_LABEL_CLASS;
-    span.textContent = (artist ? ' · ' : '') + label;
+    span.textContent = (subLine ? ' · ' : '') + label;
     barArtist.appendChild(span);
   }
 
@@ -1717,10 +1847,72 @@
     }
   }
 
+  /* ---------- homepage: bar = hero ----------
+     On the homepage the fixed bar must show the SAME mix the hero shows
+     (title/artist lines via displayLines, thumbnail = the hero entry's img)
+     whenever nothing owns the bar yet. Called after the build-time render,
+     after the load-time re-roll, after every refresh click and after a tile
+     click repoints the hero. Rules:
+       - only while barSlotIsFree() (nothing loaded, nothing playing): once a
+         track is loaded/playing, playback wins and the hero follows it via
+         pointHeroAt, so the two already agree;
+       - resume: the remembered offer (ue-resume.js -> prime()) keeps its
+         "resume m:ss" label and start position ONLY when it is the hero's
+         mix; any other mix shows no resume label (the record itself is left
+         alone in storage, so it comes back if that mix is the hero again);
+       - a non-resume primed offer (deep link) is a deliberate user target,
+         so a passive sync leaves it alone; `force` (refresh click) replaces it;
+       - the primed index is always heroIdx, so the bar's play button and the
+         hero's play button drive the very same queue entry. */
+  var lastResumeSpec = null; /* normalized resume spec seen on the homepage */
+
+  function isHomeHero() {
+    return !!(bar && featuredAnchor && document.getElementById('hero-media') &&
+      heroIdx >= 0 && queue[heroIdx]);
+  }
+
+  function sameMixUrl(a, b) {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    var core = window.UEPlayerCore;
+    var ta = core && typeof core.extractTxid === 'function' ? core.extractTxid(a) : null;
+    return !!ta && ta === core.extractTxid(b);
+  }
+
+  function syncBarToHero(force) {
+    try {
+      if (!isHomeHero() || !barSlotIsFree()) return false;
+      if (primed && primed.source !== 'resume' && !force) return false;
+      var track = queue[heroIdx];
+      clearPrimed(false);
+      setBarTrack(track); /* also paints the plain two lines, wiping any old label */
+      var rs = lastResumeSpec;
+      if (rs && rs.label && sameMixUrl(rs.href, track.url)) {
+        renderPrimedArtistLine(displayLines(track.url, track.title, track.artist).line2, rs.label);
+        bar.classList.add('is-primed');
+        primed = {
+          title: track.title, artist: track.artist, img: track.img, href: track.url,
+          filename: rs.filename, startSec: rs.startSec, label: rs.label,
+          source: 'resume', index: heroIdx
+        };
+      }
+      return true;
+    } catch (err) {
+      return false; /* the bar mirroring the hero must never break playback */
+    }
+  }
+
   /* put the slot back exactly as partials/player-bar.html ships it */
   function restoreIdleBarSlot() {
     if (bar) bar.classList.add('is-idle');
-    if (barTitle) barTitle.textContent = BAR_IDLE_TITLE;
+    if (barTitle) {
+      // rebuild the <a> (not just textContent) so setBarTrack's
+      // querySelector('a') keeps finding a link to populate afterwards
+      barTitle.innerHTML = '';
+      var idleLink = document.createElement('a');
+      idleLink.textContent = BAR_IDLE_TITLE;
+      barTitle.appendChild(idleLink);
+    }
     if (barArtist) barArtist.textContent = '';
     if (barThumb) barThumb.innerHTML = BAR_FALLBACK_THUMB_HTML;
     if (barTimeTot) barTimeTot.textContent = '--:--';
@@ -1749,6 +1941,15 @@
       if (!barSlotIsFree()) return false;
       var idx = findIndexByHref(norm.href);
       if (idx < 0) return false;
+      /* Homepage: the bar mirrors the hero (see syncBarToHero). A resume
+         offer is only REMEMBERED here; it is shown iff it is the hero's own
+         mix, otherwise the bar keeps mirroring the hero with no resume label.
+         Other pages and other sources (deep links) prime exactly as before. */
+      if (norm.source === 'resume' && isHomeHero()) {
+        lastResumeSpec = norm;
+        syncBarToHero(false);
+        return !!(primed && primed.source === 'resume');
+      }
       norm.index = idx;
       var track = queue[idx];
       /* the real now-playing path — same thumb/title/artist elements, same
@@ -1756,11 +1957,13 @@
       setBarTrack({
         title: norm.title,
         artist: norm.artist,
-        img: norm.img,
+        // the page's own record wins over the remembered thumb, so a resume
+        // saved before a cover changed never brings the old image back
+        img: (track && track.img) || norm.img,
         url: norm.href,
         durationSec: track ? track.durationSec : 0
       });
-      renderPrimedArtistLine(norm.artist, norm.label);
+      renderPrimedArtistLine(displayLines(norm.href, norm.title, norm.artist).line2, norm.label);
       bar.classList.add('is-primed');
       primed = norm;
       return true;
@@ -1790,6 +1993,9 @@
     prime: primeBar,
     clear: function () { return clearPrimed(true); }
   };
+
+  /* build-time render: the bar mirrors the hero from the first hydrated frame */
+  syncBarToHero(false);
 
   window.UEPlayer.host = {
     version: 1,
@@ -1823,7 +2029,9 @@
       if (typeof deltaSec !== 'number' || !isFinite(deltaSec)) return;
       window.UEPlayer.host.seek((audio.currentTime || 0) + deltaSec);
     },
-    on: onFeatureEvent
+    on: onFeatureEvent,
+    /* the hero's refresh button: pick a different random mix (see rerollFeatured) */
+    rerollFeatured: function () { return rerollFeatured(); }
   };
 
   /* ---------- audio events -> controller ----------
@@ -2114,6 +2322,9 @@
        the primed state is already gone, so fall through to normal transport
        rather than leave the press doing nothing */
     if (primed && playPrimed()) return;
+    /* homepage, nothing loaded yet: the bar is showing the hero's mix, so its
+       play button plays THAT entry (heroIdx) — not play()'s default queue[0] */
+    if (state.index < 0 && isHomeHero()) { playIndexAt(heroIdx); return; }
     state.playing ? pause() : play();
   });
   if (btnPrev) btnPrev.addEventListener('click', function () {
