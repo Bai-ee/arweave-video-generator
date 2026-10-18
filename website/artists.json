@@ -1117,10 +1117,12 @@
       {
         "mixTitle": "Live at Hush",
         "mixArweaveURL": "https://icvl3qhmdkbyqm626rqj44qeu32iyswsx5s4pndqrfao46bw4iuq.arweave.net/QKq9wOwag4gz2vRgnnIEpvSMStK_Zce0cIlA7ng24ik",
-        "mixDateYear": "",
+        "mixDateYear": "10/18/14",
         "mixDuration": "60:00",
-        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/881d529d4cde69ae-v1t2.webp",
-        "mixImageMeta": {
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/flyers/1997b7b00fca808b.jpg",
+        "previousMixImageFilename": "https://arweave.net/D7QsuJ9bl4ze6ci6kOctGBm8F0joW9uUXb4YWg96N1c",
+        "renderImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/881d529d4cde69ae-v1t2.webp",
+        "renderImageMeta": {
           "origin": "generated-skyline",
           "assignmentVersion": 1,
           "treatmentVersion": 2,
@@ -1137,8 +1139,7 @@
           "locked": false,
           "serviceVersion": 1,
           "idempotencyKey": "mix:881d529d4cde69ae:v1t2"
-        },
-        "previousMixImageFilename": "https://arweave.net/D7QsuJ9bl4ze6ci6kOctGBm8F0joW9uUXb4YWg96N1c"
+        }
       }
     ]
   },
