@@ -1344,6 +1344,33 @@
           "idempotencyKey": "mix:2ba89fdd3ef068c7:v1t2"
         },
         "previousMixImageFilename": "https://arweave.net/u0XiFVSL_9EDqFZW34ObaM1dxgYGn2niZjInRlj7S9w/img/artists/sean_smith.jpg"
+      },
+      {
+        "mixTitle": "Live @ UE Block Party (B2B Bernard Badie)",
+        "mixArweaveURL": "https://arweave.net/QBIYGHbuJNH7wIVklXn5sV80be4xPhmNtiBYespycmg",
+        "mixDateYear": "2007",
+        "mixDuration": "1:09",
+        "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/38c7dbfa896f8a89-v1t2.webp",
+        "mixImageMeta": {
+          "origin": "generated-skyline",
+          "assignmentVersion": 1,
+          "treatmentVersion": 2,
+          "sourceVideoId": "skyline-bd3342ac",
+          "sourceTimeSec": 7.76,
+          "candidateId": "skyline-bd3342ac@7.76",
+          "dHash": "716141a7a62e8424",
+          "generatedAt": "2026-09-13T04:55:18.465Z",
+          "contentHash": "db26a6ab4ee4dd1cadd422a6a01378d139afd1aa588cf400738a7bc9ded097d7",
+          "storagePath": "website/generated-thumbnails/v1/mix/38c7dbfa896f8a89-v1t2.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 69484,
+          "locked": false,
+          "serviceVersion": 1,
+          "idempotencyKey": "mix:38c7dbfa896f8a89:v1t2"
+        },
+        "mixCoListed": true,
+        "mixNote": "Bernard Badie & Sean Smith B2B, live at the UndergroundExistence.info Block Party (owner, 2026-10-17)."
       }
     ]
   },
@@ -1758,10 +1785,10 @@
     "artistGenre": "house",
     "mixes": [
       {
-        "mixTitle": "Live at UE (B2B Sean Smith)",
-        "mixArweaveURL": "https://arweave.net/pk_RLPfAbytba0bMwTh4u5Xx2Bz1Sw-SeW-dZ8T0SMg",
-        "mixDateYear": "??",
-        "mixDuration": "0:00",
+        "mixTitle": "Live @ UE Block Party (B2B Sean Smith)",
+        "mixArweaveURL": "https://arweave.net/QBIYGHbuJNH7wIVklXn5sV80be4xPhmNtiBYespycmg",
+        "mixDateYear": "2007",
+        "mixDuration": "1:09",
         "mixImageFilename": "https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/mix/38c7dbfa896f8a89-v1t2.webp",
         "mixImageMeta": {
           "origin": "generated-skyline",
@@ -1780,7 +1807,9 @@
           "locked": false,
           "serviceVersion": 1,
           "idempotencyKey": "mix:38c7dbfa896f8a89:v1t2"
-        }
+        },
+        "mixCoListed": true,
+        "mixNote": "Bernard Badie & Sean Smith B2B, live at the UndergroundExistence.info Block Party (owner, 2026-10-17)."
       }
     ]
   }
