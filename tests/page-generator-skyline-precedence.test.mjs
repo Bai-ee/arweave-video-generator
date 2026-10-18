@@ -256,3 +256,11 @@ test('output stays relative-path/manifest compatible: no "../" survives into the
     assert.ok(!html[file].includes('../'), file + ' must not contain a parent-relative path segment');
   }
 });
+
+// Artist pages unfurl as the selector's photo only — never a promo film (owner, 2026-10-17).
+test('artist pages carry no og:video tags', () => {
+  for (const file of ['skyline-test-one.html', 'skyline-test-two.html', 'skyline-test-three.html']) {
+    assert.ok(!html[file].includes('<meta property="og:video"'), file + ' must not emit og:video');
+    assert.ok(!html[file].includes('twitter:player:stream'), file + ' must not emit twitter:player:stream');
+  }
+});
