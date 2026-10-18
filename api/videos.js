@@ -372,10 +372,14 @@ async function handleVideoDownload(req, res) {
     const finalBuffer = Buffer.isBuffer(videoBuffer) ? videoBuffer : Buffer.from(videoBuffer);
     console.log('[Video Download] Final buffer size:', finalBuffer.length, 'bytes');
     
-    // Set download headers
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    // Set download headers.
+    // Use the real video MIME type so iOS recognizes it as a video and offers
+    // "Save Video" (camera roll). application/octet-stream only offers "Save to Files".
+    const isInline = req.query.inline === 'true';
+    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Content-Disposition', `${isInline ? 'inline' : 'attachment'}; filename="${filename}"`);
     res.setHeader('Content-Length', finalBuffer.length);
+    res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'no-cache');
     
     console.log('[Video Download] Sending video buffer to client...');

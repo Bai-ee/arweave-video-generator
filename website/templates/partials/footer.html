@@ -1,0 +1,150 @@
+<footer id="site-footer">
+  <div id="site-footer-inner">
+    <div id="footer-brand-block">
+      <div class="footer-tagline">
+        <svg class="icon-svg"><use href="#i-globe"></use></svg>
+        <span>Hosted on Arweave &middot; Est. 2007</span>
+      </div>
+    </div>
+    <div class="footer-links">
+      <a href="index.html">Home</a>
+      <a href="residents.html">Selectors</a>
+      <a href="archive.html">Archive</a>
+      <!-- About hidden from footer for now (owner request 2026-10-17): <a href="about.html">About</a> -->
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSfnuTItd-QSZkgPwIy9baGBZ8nyC_6Y3JxsXLSLywJfuwrXYw/viewform?usp=sf_link" target="_blank" rel="noopener">Contribute</a>
+    </div>
+  </div>
+</footer>
+<!-- The handwritten artist mark: measuring, splitting, and drawing one.
+     `window.ueScriptMark` is the single implementation of the mark's rules —
+     the generator emits marks at build time for every card and portrait, and
+     the hero draws one at runtime for whichever mix is playing; both must split
+     and size a name identically or the hero would not match the grid.
+
+     Two jobs:
+       refine() — the generator sizes each line from a per-character advance
+         table, which cannot see Gately's kerning and so deliberately
+         underestimates (details in WebsitePageGenerator.cjs). Once the face has
+         loaded, measure the real string and write the exact width back.
+       render() — build a mark from scratch for a name the build never saw.
+
+     Inline, in the shared footer, because it belongs to every page that has
+     marks and a new website/js/*.js would need the 23-path
+     REQUIRED_MANIFEST_PATHS deploy gate changed. Degrades quietly: with no
+     canvas or no font-loading API the generator's padded estimate stands, and
+     a runtime mark simply never appears. -->
+<script>
+(function () {
+  var FALLBACK_EM_PER_CHAR = 0.55;
+  var ctx = null;
+
+  function context() {
+    if (ctx) return ctx;
+    try { ctx = document.createElement('canvas').getContext('2d'); } catch (e) { ctx = null; }
+    if (ctx) {
+      var face = getComputedStyle(document.documentElement).getPropertyValue('--font-script').trim()
+        || "'Gately', cursive";
+      ctx.font = '100px ' + face;
+    }
+    return ctx;
+  }
+
+  /* natural width of a string in em of the script face */
+  function measure(text) {
+    if (!text) return 0;
+    var c = context();
+    if (!c) return String(text).length * FALLBACK_EM_PER_CHAR;
+    var w = c.measureText(text).width / 100;
+    return w > 0.1 ? w : String(text).length * FALLBACK_EM_PER_CHAR;
+  }
+
+  /* The mark is a signature, so it wears the stage name: a parenthetical or an
+     "AKA …" tail is display-only noise here. Mirrors scriptDisplayName() in
+     lib/WebsitePageGenerator.cjs. */
+  function displayName(name) {
+    var s = String(name == null ? '' : name)
+      .replace(/\s*[([{].*$/, '')
+      .replace(/\s+(AKA|A\.K\.A\.?)\b.*$/i, '')
+      .trim();
+    return s || String(name == null ? '' : name).trim();
+  }
+
+  /* One word on one line; two or three words stack onto two ("TYREL WILLIAMS"
+     on one line would be half the size of "AKILA" on the same tile); four or
+     more take three. The split minimises the WIDEST line, since that line is
+     what sizes every other one. Mirrors splitScriptLines() in the generator —
+     measured here rather than estimated. */
+  function lines(name) {
+    var words = displayName(name).split(/\s+/).filter(Boolean);
+    if (words.length <= 1) return words;
+    var lineCount = words.length <= 3 ? 2 : 3;
+    var best = null;
+    var cuts = [];
+    (function walk(start, remaining) {
+      if (remaining === 1) {
+        var parts = [];
+        var prev = 0;
+        cuts.forEach(function (c) { parts.push(words.slice(prev, c)); prev = c; });
+        parts.push(words.slice(prev));
+        var widest = 0;
+        parts.forEach(function (p) { widest = Math.max(widest, measure(p.join(' '))); });
+        if (!best || widest < best.widest) best = { widest: widest, parts: parts };
+        return;
+      }
+      for (var c = start + 1; c <= words.length - remaining + 1; c++) {
+        cuts.push(c);
+        walk(c, remaining - 1);
+        cuts.pop();
+      }
+    }(0, lineCount));
+    return best.parts.map(function (p) { return p.join(' '); });
+  }
+
+  /* Draw the mark for `name` into `el` (a .cover-script container). Same shape
+     the generator emits, so site.css sizes it with the same one division. */
+  function render(el, name) {
+    if (!el) return false;
+    var parts = lines(name);
+    if (!parts.length) { el.textContent = ''; el.removeAttribute('style'); return false; }
+    if (el.getAttribute('data-script-name') === String(name)) return true;   // already drawn
+    el.textContent = '';
+    el.style.setProperty('--script-lines', String(parts.length));
+    parts.forEach(function (line) {
+      var span = document.createElement('span');
+      span.className = 'cover-script-line';
+      span.style.setProperty('--script-w', measure(line).toFixed(3));
+      span.textContent = line;
+      el.appendChild(span);
+    });
+    el.setAttribute('data-script-name', String(name));
+    return true;
+  }
+
+  function refine() {
+    var marks = document.querySelectorAll('.cover-script-line');
+    var widths = {};
+    for (var i = 0; i < marks.length; i++) {
+      var node = marks[i];
+      var text = node.textContent;
+      if (!text) continue;
+      if (widths[text] === undefined) widths[text] = measure(text);
+      if (widths[text]) node.style.setProperty('--script-w', widths[text].toFixed(3));
+    }
+  }
+
+  window.ueScriptMark = { measure: measure, lines: lines, render: render, refine: refine };
+
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('100px Gately').then(function () {
+      ctx = null;        /* re-create with the real face now that it has loaded */
+      refine();
+      /* redraw anything the hero drew before the font arrived */
+      Array.prototype.forEach.call(document.querySelectorAll('.cover-script[data-script-name]'), function (el) {
+        var name = el.getAttribute('data-script-name');
+        el.removeAttribute('data-script-name');
+        render(el, name);
+      });
+    }).catch(function () { /* estimates stand */ });
+  }
+})();
+</script>

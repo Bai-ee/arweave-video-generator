@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{> head}}
+</head>
+<body>
+{{> icons}}
+{{> nav}}
+
+<main class="page-shell">
+  <section class="page-title-block" data-section="residents-header">
+    <span class="section-eyebrow">Selectors</span>
+    <h1>The Selectors</h1>
+    <p class="page-title-sub">{{ARTIST_TOTAL}} selectors. {{MIX_TOTAL}} mixes. Chicago house &amp; techno, archived in permanence.</p>
+  </section>
+
+  <section data-section="residents-directory">
+    <div id="residents-grid">
+{{RESIDENT_CARDS}}
+    </div>
+  </section>
+</main>
+
+{{> footer}}
+{{> player-bar}}
+{{> search-overlay}}
+{{> modal}}
+{{> share-modal}}
+<script src="js/boot.js" defer></script>
+</body>
+</html>

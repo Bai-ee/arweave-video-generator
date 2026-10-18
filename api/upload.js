@@ -27,6 +27,12 @@ import fs from 'fs-extra';
 import path from 'path';
 import { createRequire } from 'module';
 
+// Skyline thumbnail pipeline (contract §3.12) — this is the real mix/artist creation path used
+// by the admin UI (public/index.html handleMixUpload -> POST /api/upload), so the automatic
+// enqueue-after-persist hook lives here, not just in api/manage-artists.js's addMix/addTrack
+// actions (which the current UI never calls). Never runs ffmpeg or touches Storage/Arweave.
+import { THUMBNAIL_STATUS, requestThumbnailGeneration } from '../lib/SkylineThumbnailJobs.js';
+
 const require = createRequire(import.meta.url);
 
 // Note: Vercel serverless functions don't use Next.js config
@@ -293,21 +299,27 @@ export default async function handler(req, res) {
           });
           
           if (imageUploadResult.success) {
-            await updateArtistImage(db, artistName, imageUploadResult.arweaveUrl);
+            // Pre-existing bug fix: `updateArtistImage` was neither defined nor imported in this
+            // file, so supplying an artist image threw a ReferenceError and 500'd the whole
+            // upload (after the Arweave image spend had already happened). `addArtistThumbnail`
+            // is the real sibling function, and it also stamps artistImageMeta with
+            // origin:'uploaded', locked:true — which is what makes "explicitly uploaded artwork
+            // wins and is never auto-overwritten" actually hold for a brand new artist.
+            await addArtistThumbnail(db, artistName, imageUploadResult.arweaveUrl);
             console.log(`[Upload] ✅ Artist image uploaded to Arweave: ${imageUploadResult.arweaveUrl}`);
           }
         }
       }
       
       // Add to artists JSON in Firebase
-      await addMixToArtist(db, artistName, {
+      const addResult = await addMixToArtist(db, artistName, {
         mixTitle: mixTitle || (isTrack ? 'Untitled Track' : 'Untitled Mix'),
         mixArweaveURL: arweaveUrl,
         mixDateYear: mixDateYear || new Date().getFullYear().toString(),
         mixDuration: mixDuration || '0:00',
         mixImageFilename: '',
         isTrack: isTrack
-      });
+      }, { skipArtistThumbnail: !!artistImagePath });
 
       // Don't auto-deploy - let user decide via frontend prompt
       // Website deployment is now handled by user prompt in frontend
@@ -319,7 +331,9 @@ export default async function handler(req, res) {
         fileName: fileName,
         fileSize: fileSize,
         artistName: artistName,
-        message: 'Audio uploaded and added to artist database'
+        message: 'Audio uploaded and added to artist database',
+        thumbnail: addResult.thumbnail,
+        artistThumbnail: addResult.artistThumbnail
       });
 
     } else if (type === 'image') {
@@ -484,13 +498,21 @@ export default async function handler(req, res) {
 }
 
 /**
- * Add mix/track to artist in Firebase artists JSON
+ * Add mix/track to artist in Firebase artists JSON.
+ *
+ * mixImageFilename is optional (contract §3.12): a mix saved without one gets a skyline
+ * thumbnail generation job enqueued after the write succeeds. A brand new artist created here
+ * gets the same treatment for its artist image, unless the caller already supplied one
+ * (`skipArtistThumbnail` — set by the caller when an explicit artistImagePath was provided;
+ * "explicitly uploaded artwork wins... enqueue nothing"). A thumbnail enqueue failure is caught
+ * and reported via the returned `thumbnail`/`artistThumbnail` fields — it never fails this write
+ * or the audio upload that triggered it.
  */
-async function addMixToArtist(db, artistName, mixData) {
+export async function addMixToArtist(db, artistName, mixData, { skipArtistThumbnail = false } = {}) {
   try {
     const artistsRef = db.collection('system').doc('artists');
     const artistsDoc = await artistsRef.get();
-    
+
     let artistsData = [];
     if (artistsDoc.exists) {
       artistsData = artistsDoc.data().artists || [];
@@ -498,7 +520,8 @@ async function addMixToArtist(db, artistName, mixData) {
 
     // Find or create artist
     let artist = artistsData.find(a => a.artistName === artistName);
-    
+    let isNewArtist = false;
+
     if (!artist) {
       // Create new artist
       artist = {
@@ -510,6 +533,7 @@ async function addMixToArtist(db, artistName, mixData) {
         trax: []
       };
       artistsData.push(artist);
+      isNewArtist = true;
       console.log(`[Upload] Created new artist: ${artistName}`);
     }
 
@@ -522,6 +546,7 @@ async function addMixToArtist(db, artistName, mixData) {
       mixImageFilename: mixData.mixImageFilename || ''
     };
 
+    let mixIndex = -1;
     if (mixData.isTrack) {
       // Add as track
       if (!artist.trax) {
@@ -542,13 +567,52 @@ async function addMixToArtist(db, artistName, mixData) {
         artist.mixes = [];
       }
       artist.mixes.push(mixEntry);
+      mixIndex = artist.mixes.length - 1;
       console.log(`[Upload] Added mix "${mixData.mixTitle}" to ${artistName}`);
     }
 
     // Save back to Firebase
     await artistsRef.set({ artists: artistsData }, { merge: false });
     console.log(`[Upload] ✅ Updated artists JSON in Firebase`);
-    
+
+    // Skyline thumbnails: never let a missing/failed thumbnail affect this write's success.
+    let thumbnail = { status: THUMBNAIL_STATUS.NOT_REQUESTED };
+    if (!mixData.isTrack && !mixEntry.mixImageFilename) {
+      try {
+        thumbnail = await requestThumbnailGeneration({
+          db,
+          entityType: 'mix',
+          artistFilename: artist.artistFilename,
+          mixIndex,
+          mixTitle: mixEntry.mixTitle,
+          mixArweaveURL: mixEntry.mixArweaveURL,
+          assignmentVersion: 1,
+          requestedBy: 'ingestion',
+        });
+      } catch (thumbError) {
+        console.warn(`[Upload] Mix thumbnail enqueue failed for "${artistName}":`, thumbError.message);
+        thumbnail = { status: 'failed', reason: thumbError.message };
+      }
+    }
+
+    let artistThumbnail = { status: THUMBNAIL_STATUS.NOT_REQUESTED };
+    if (isNewArtist && !skipArtistThumbnail) {
+      try {
+        artistThumbnail = await requestThumbnailGeneration({
+          db,
+          entityType: 'artist',
+          artistFilename: artist.artistFilename,
+          assignmentVersion: 1,
+          requestedBy: 'ingestion',
+        });
+      } catch (thumbError) {
+        console.warn(`[Upload] Artist thumbnail enqueue failed for "${artistName}":`, thumbError.message);
+        artistThumbnail = { status: 'failed', reason: thumbError.message };
+      }
+    }
+
+    return { added: true, isNewArtist, mixIndex, thumbnail, artistThumbnail };
+
   } catch (error) {
     console.error('[Upload] Error updating artists JSON:', error.message);
     throw error;
@@ -603,20 +667,27 @@ async function updateWebsite(db) {
 /**
  * Add artist thumbnail URL to Firebase artists JSON
  * Artists can have multiple thumbnails stored in artistThumbnails array
+ *
+ * This is an explicit artwork upload, so it stamps artistImageMeta with
+ * origin:'uploaded', locked:true (contract §3.12/master-plan Phase 3 item 2) — this is what
+ * lets the rest of the skyline pipeline (classify.js/isProtected) recognize the image as
+ * protected and never overwrite it automatically.
  */
-async function addArtistThumbnail(db, artistName, imageUrl) {
+export async function addArtistThumbnail(db, artistName, imageUrl) {
   try {
     const artistsRef = db.collection('system').doc('artists');
     const artistsDoc = await artistsRef.get();
-    
+
     let artistsData = [];
     if (artistsDoc.exists) {
       artistsData = artistsDoc.data().artists || [];
     }
 
+    const uploadedMeta = { origin: 'uploaded', locked: true, generatedAt: new Date().toISOString() };
+
     // Find artist
     let artist = artistsData.find(a => a.artistName === artistName);
-    
+
     if (!artist) {
       // Create new artist if doesn't exist
       artist = {
@@ -624,6 +695,7 @@ async function addArtistThumbnail(db, artistName, imageUrl) {
         artistFilename: artistName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.html',
         artistThumbnails: [imageUrl], // Array of thumbnail URLs
         artistImageFilename: imageUrl, // Keep for backward compatibility
+        artistImageMeta: uploadedMeta,
         artistGenre: 'electronic',
         mixes: [],
         trax: []
@@ -636,7 +708,7 @@ async function addArtistThumbnail(db, artistName, imageUrl) {
         // Migrate from old artistImageFilename if it exists
         artist.artistThumbnails = artist.artistImageFilename ? [artist.artistImageFilename] : [];
       }
-      
+
       // Add new thumbnail if it's not already in the array
       if (!artist.artistThumbnails.includes(imageUrl)) {
         artist.artistThumbnails.push(imageUrl);
@@ -644,17 +716,18 @@ async function addArtistThumbnail(db, artistName, imageUrl) {
       } else {
         console.log(`[Upload] Thumbnail already exists for artist: ${artistName}`);
       }
-      
+
       // Update artistImageFilename for backward compatibility (use first thumbnail)
       if (artist.artistThumbnails.length > 0) {
         artist.artistImageFilename = artist.artistThumbnails[0];
+        artist.artistImageMeta = uploadedMeta;
       }
     }
 
     // Save back to Firebase
     await artistsRef.set({ artists: artistsData }, { merge: false });
     console.log(`[Upload] ✅ Updated artists JSON in Firebase`);
-    
+
   } catch (error) {
     console.error('[Upload] Error updating artists JSON:', error.message);
     throw error;
@@ -663,16 +736,21 @@ async function addArtistThumbnail(db, artistName, imageUrl) {
 
 /**
  * Create a new artist in Firebase artists JSON
+ *
+ * Explicit artwork upload — stamps artistImageMeta origin:'uploaded', locked:true, same as
+ * addArtistThumbnail above.
  */
-async function createNewArtist(db, artistName, genre, imageUrl) {
+export async function createNewArtist(db, artistName, genre, imageUrl) {
   try {
     const artistsRef = db.collection('system').doc('artists');
     const artistsDoc = await artistsRef.get();
-    
+
     let artistsData = [];
     if (artistsDoc.exists) {
       artistsData = artistsDoc.data().artists || [];
     }
+
+    const uploadedMeta = { origin: 'uploaded', locked: true, generatedAt: new Date().toISOString() };
 
     // Check if artist already exists
     const existingArtist = artistsData.find(a => a.artistName.toLowerCase() === artistName.toLowerCase());
@@ -685,6 +763,7 @@ async function createNewArtist(db, artistName, genre, imageUrl) {
         existingArtist.artistThumbnails.push(imageUrl);
       }
       existingArtist.artistImageFilename = existingArtist.artistThumbnails[0]; // Backward compatibility
+      existingArtist.artistImageMeta = uploadedMeta;
       if (genre) existingArtist.artistGenre = genre;
       console.log(`[Upload] Artist "${artistName}" already exists, added thumbnail`);
     } else {
@@ -694,6 +773,7 @@ async function createNewArtist(db, artistName, genre, imageUrl) {
         artistFilename: artistName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.html',
         artistThumbnails: [imageUrl], // Array of thumbnail URLs
         artistImageFilename: imageUrl, // Keep for backward compatibility
+        artistImageMeta: uploadedMeta,
         artistGenre: genre || 'electronic',
         artistFolder: artistName.toLowerCase().replace(/[^a-z0-9]/g, ''),
         mixes: [],
@@ -706,7 +786,7 @@ async function createNewArtist(db, artistName, genre, imageUrl) {
     // Save back to Firebase
     await artistsRef.set({ artists: artistsData }, { merge: false });
     console.log(`[Upload] ✅ Saved artists JSON to Firebase`);
-    
+
   } catch (error) {
     console.error('[Upload] Error creating new artist:', error.message);
     throw error;

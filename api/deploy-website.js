@@ -6,7 +6,7 @@
  * Uses incremental uploads - only uploads changed/new files
  */
 
-import { deployWebsiteToArweave } from '../lib/WebsiteDeployer.js';
+import { deployWebsiteToArweave, REQUIRED_MANIFEST_PATHS } from '../lib/WebsiteDeployer.js';
 import { initializeFirebaseAdmin, getFirestore, getStorage } from '../lib/firebase-admin.js';
 import { syncFirebaseToWebsiteJSON } from '../lib/WebsiteSync.js';
 import { updateArNSRecord } from '../lib/ArNSUpdater.js';
@@ -190,7 +190,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, external: true, error: 'zip has no index.html at its root' });
       }
       console.log(`[Deploy External Site] Deploying ${safeId} to Arweave…`);
-      const extResult = await deployWebsiteToArweave(workDir, null);
+      // requireUEPaths:false — an external cloned site has none of our runtime
+      // files and must not be measured against the UE manifest contract.
+      const extResult = await deployWebsiteToArweave(workDir, null, { requireUEPaths: false });
       await fs.remove(workDir).catch(() => {});
       if (!extResult.success) {
         return res.status(500).json({ success: false, external: true, error: extResult.error || 'deploy failed' });
@@ -319,14 +321,10 @@ export default async function handler(req, res) {
       
       // Verify source files exist before copying — all committed in website/
       // (fonts/css/js ship with the repo; nothing is fetched from Firebase)
-      const criticalFiles = [
-        'css/site.css',
-        'js/player.js',
-        'fonts/ibm-plex-mono-v20-latin-regular.woff2',
-        'fonts/special-elite-v20-latin-regular.woff2',
-        'fonts/mr-dafoe-v15-latin-regular.woff2',
-        'templates/index.html'
-      ];
+      // Single source of truth — see REQUIRED_MANIFEST_PATHS in WebsiteDeployer.
+      // templates/ is never deployed but must survive the copy, because page
+      // generation runs from /tmp.
+      const criticalFiles = [...REQUIRED_MANIFEST_PATHS, 'templates/index.html'];
       console.log(`[Deploy Website] Checking source files in ${sourceWebsiteRoot}...`);
       for (const criticalFile of criticalFiles) {
         const sourcePath = path.join(sourceWebsiteRoot, criticalFile);

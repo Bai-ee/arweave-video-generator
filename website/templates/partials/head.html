@@ -1,0 +1,218 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- UE gateway connection warming (gateway-warming phase, connection-hints deliverable).
+     The two APPROVED range-capable Arweave gateways for mix audio are
+     arweave.fllstck.dev and frostor.xyz (website/js/player-core.js RANGE_HOSTS;
+     see MIX_AUDIO_SCRUBBING.md for the measured evidence). This origin issues
+     TWO different request types at each host, and Chrome/Firefox key a
+     preconnected socket by (origin, credentials-mode) — so a `preconnect`
+     WITHOUT `crossorigin` and one WITH `crossorigin` open two DIFFERENT
+     connection pools:
+       1) the <audio> element's own media load (player.js sets `audio.src`
+          directly; no `crossorigin` attribute is ever set on it anywhere in
+          this codebase) — a credentialed, no-CORS request;
+       2) the background Range-header probe (`fetch(url, {headers:{Range:
+          'bytes=0-127'}}, ...)` in player.js) — a CORS-mode fetch, answered
+          with `Access-Control-Allow-Origin: *` per MIX_AUDIO_SCRUBBING.md.
+     Both requests happen close together on a real play (setSrc+play fires
+     synchronously on the user gesture while both candidates are probed in
+     the background), so both pools are genuinely used here — this is a
+     deliberate "both" per host, not a guess at which one is needed.
+     `dns-prefetch` is included alongside `preconnect` (not just as legacy
+     fallback): these are third-party ar.io nodes whose DNS and availability
+     have been observed to fluctuate within a single day (a 30s cold
+     timeout, a 404 carrying plausible-looking headers, and a total local
+     DNS resolution failure for arweave.fllstck.dev have all been observed).
+     Resolving early surfaces a dead host sooner so the player's existing
+     verified-failover (player-core.js) can move on faster; a host that
+     fails to resolve makes the hint a silent, harmless no-op — no error, no
+     console noise, no effect on page load.
+     LIMITATION (verified 2026-09-08 via curl): both hosts 302-redirect
+     EVERY request — including these apex requests — to a per-transaction
+     sandbox subdomain (e.g. https://<43-char-base32>.arweave.fllstck.dev/
+     <txid>), so this apex preconnect does NOT pre-open the socket that
+     actually serves the mix bytes; that socket is per-mix and cannot be
+     hinted statically. This only shaves the DNS+TCP+TLS cost of the
+     mandatory first hop (the 302 itself), nothing more.
+     WHY ONLY dns-prefetch IS STATIC: this partial is shared by EVERY
+     generated page, including about.html and residents.html, which contain
+     zero playable mixes and will never load audio. A `preconnect` costs a
+     real DNS+TCP+TLS handshake and holds a socket, and — per the LIMITATION
+     above — an apex preconnect only saves the mandatory 302 hop anyway;
+     spending four of them on a page that will never play a mix is waste.
+     `dns-prefetch` is close to free and its benefit (surfacing a dead
+     gateway sooner, so failover starts sooner) is page-independent, so it
+     stays static. The expensive `preconnect` — including the `crossorigin`
+     variant needed for the CORS probe/warm pool described above — is
+     injected at RUNTIME by website/js/ue-warm.js, and only on pages that
+     actually have playable mixes to warm. -->
+<link rel="dns-prefetch" href="https://arweave.fllstck.dev">
+<link rel="dns-prefetch" href="https://frostor.xyz">
+<!-- arweave.net apex is NEVER an interactive playback source — raw
+     arweave.net ignores Range on these bundled items (MIX_AUDIO_SCRUBBING.md)
+     and player-core.js's buildCandidates() never emits it as a candidate by
+     construction. This hint exists ONLY for the artwork <img> tags (og:image,
+     mix/artist thumbnails — none carry a `crossorigin` attribute anywhere in
+     the generated markup, so only the no-CORS pool is needed) and the
+     canonical download links, both of which point at arweave.net on nearly
+     every generated page (residents.html alone: 18 artist-avatar images).
+     Same sandbox-subdomain redirect limitation applies here too (verified
+     2026-09-08 via curl: arweave.net apex also 302s every request to a
+     per-content sandbox subdomain) — this only warms the apex hop before
+     that redirect, not the final image/download host. -->
+<link rel="preconnect" href="https://arweave.net">
+<title>{{PAGE_TITLE}}</title>
+<meta name="description" content="{{PAGE_DESC}}">
+<meta name="theme-color" content="#0a0606">
+<link rel="icon" type="image/png" href="icon/favicon-32x32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icon/favicon-32x32.png">
+<!-- Unfurl card. A shared link is only worth as much as its preview: without
+     the twitter:* pair below, X/Discord/Slack rendered a UE link as a bare
+     text row and the artwork never appeared. `summary_large_image` is the
+     card the cover art deserves — every og:image here is a square skyline
+     still or an artist portrait, never a logo.
+
+     og:image:alt carries the same text the page's own <img alt> would, so the
+     preview is described for anyone reading it through a screen reader.
+
+     The OG_VIDEO_TAGS token below is a whole BLOCK of tags, empty on pages with
+     no canonical promo film (see ogVideoTags in lib/WebsitePageGenerator.cjs) —
+     never an empty og:video, which unfurls worse than no og:video at all.
+     Do NOT write that token's name in braces anywhere in this comment: the
+     generator's replace pass does not know what a comment is, and would inline
+     a second live copy of the tags in here.
+
+     NOTE the static-site limit: these tags are per PAGE, and a share link is
+     `<artist page>?mix=<txid>`. A crawler ignores the query, so the preview is
+     the ARTIST's card, not the individual mix's. That is why the share modal
+     points links at the artist page rather than at whatever page the listener
+     was on — the artist's own artwork is the closest honest preview a static
+     deploy can carry. Per-mix unfurls would need one HTML page per mix. -->
+<meta property="og:site_name" content="Underground Existence">
+<meta property="og:title" content="{{PAGE_TITLE}}">
+<meta property="og:description" content="{{PAGE_DESC}}">
+<meta property="og:image" content="{{OG_IMAGE}}">
+<meta property="og:image:alt" content="{{PAGE_TITLE}}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://undergroundexistence.info/{{PAGE_PATH}}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{PAGE_TITLE}}">
+<meta name="twitter:description" content="{{PAGE_DESC}}">
+<meta name="twitter:image" content="{{OG_IMAGE}}">
+<meta name="twitter:image:alt" content="{{PAGE_TITLE}}">{{OG_VIDEO_TAGS}}
+<link rel="canonical" href="https://undergroundexistence.info/{{PAGE_PATH}}">
+<!-- The site's permanent permaweb address, for the share modal's PERMAWEB link.
+     An ArNS name, not a manifest txid: the manifest id of the deploy being
+     generated cannot exist yet, and an older one would share a frozen archive.
+     See permawebBase() in lib/WebsitePageGenerator.cjs. -->
+<meta name="ue-permaweb-base" content="{{PERMAWEB_BASE}}">
+<link rel="preload" as="image" href="img/digging-hero.webp" type="image/webp" fetchpriority="high">
+<link rel="preload" as="font" href="fonts/rationale-v1-regular.woff2" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/site.css">
+<!-- UE theme switch (light/dark). Dark is the default and is expressed by the ABSENCE of
+     `data-theme` on <html>; light is `<html data-theme="light">`. See the light-theme token
+     contract — every colour lives in css/site.css under :root / :root[data-theme="light"].
+     WHY INLINE, AND WHY HERE:
+       * Inline because `REQUIRED_MANIFEST_PATHS` in lib/WebsiteDeployer.js is a hard 23-path
+         deploy gate; a new website/js/*.js file would need that gate plus the .gitignore
+         allow-list changed, and is out of scope for a theme toggle.
+       * In <head>, synchronous, no defer/async: it therefore runs to completion before <body>
+         is parsed, so `data-theme` is already on <html> when the first box is laid out. The
+         dark→light flash is structurally impossible — there is no paint before this line.
+       * localStorage reads are wrapped in try/catch: Safari private mode and the per-transaction
+         Arweave sandbox subdomain can throw on access, and an uncaught throw here would abort
+         the rest of the page's head scripts.
+     The toggle wiring lives in this same block (not in nav.html) so the storage key, the
+     theme-color values and the icon/aria mapping have exactly one definition and cannot drift;
+     the click handler is delegated off `document`, so it binds safely on pages where either
+     button is absent and needs no DOM to exist at this point. -->
+<script>
+(function () {
+  var KEY = 'ue-theme';
+  /* The mobile browser chrome is painted from --bg-base, READ FROM THE
+     STYLESHEET rather than duplicated here. This script runs after the
+     stylesheet link, so the cascade is already resolvable. Hardcoding the pair
+     drifted three times in one session as the palette changed, and the symptom
+     is a hairline of the wrong colour above the page — invisible on desktop,
+     obvious on a phone. The literals below are only a fallback for the case
+     where the stylesheet somehow has not applied. */
+  var GROUND_FALLBACK = { dark: '#0a0606', light: '#e8e4e0' };
+  function ground(theme) {
+    try {
+      var v = getComputedStyle(root).getPropertyValue('--bg-base').trim();
+      if (v) return v;
+    } catch (e) { /* fall through */ }
+    return GROUND_FALLBACK[theme] || GROUND_FALLBACK.dark;
+  }
+  var TOGGLE_IDS = ['nav-theme-toggle', 'mobile-theme-toggle'];
+  var root = document.documentElement;
+
+  function stored() {
+    try { return localStorage.getItem(KEY); } catch (e) { return null; }
+  }
+  function persist(theme) {
+    try {
+      if (theme === 'light') localStorage.setItem(KEY, 'light');
+      else localStorage.removeItem(KEY);
+    } catch (e) { /* private mode / sandboxed origin — theme still applies for this page */ }
+  }
+  function current() {
+    return root.dataset.theme === 'light' ? 'light' : 'dark';
+  }
+  function apply(theme) {
+    if (theme === 'light') root.dataset.theme = 'light';
+    else delete root.dataset.theme;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    /* read AFTER the attribute flip above, so the cascade already reflects the
+       new theme and --bg-base resolves to the theme we just applied */
+    if (meta) meta.setAttribute('content', ground(theme));
+  }
+
+  /* --- pre-paint --- */
+  /* The toggle is hidden for now (partials/nav.html), so the site is always
+     dark: a visitor who once chose light must not be stuck there with no way
+     back. Their saved choice is left in storage; restore with:
+     apply(stored() === 'light' ? 'light' : 'dark'); */
+  apply('dark');
+
+  /* Point each toggle at the theme it switches TO. */
+  function syncToggles() {
+    var toLight = current() !== 'light';
+    for (var i = 0; i < TOGGLE_IDS.length; i++) {
+      var btn = document.getElementById(TOGGLE_IDS[i]);
+      if (!btn) continue;
+      btn.setAttribute('aria-label', toLight ? 'Switch to light theme' : 'Switch to dark theme');
+      btn.setAttribute('aria-pressed', toLight ? 'false' : 'true');
+      var use = btn.querySelector('use');
+      if (use) use.setAttribute('href', toLight ? '#i-sun' : '#i-moon');
+    }
+  }
+  window.__ueThemeSync = syncToggles;
+
+  function toggle() {
+    var theme = current() === 'light' ? 'dark' : 'light';
+    apply(theme);
+    persist(theme);
+    syncToggles();
+    /* Required: website/js/player.js's waveform renderer listens for this to drop its
+       cached bar colours. Never remove or rename it. */
+    try {
+      window.dispatchEvent(new CustomEvent('ue:themechange', { detail: { theme: theme } }));
+    } catch (e) { /* no CustomEvent constructor — theme still applied */ }
+  }
+
+  document.addEventListener('click', function (ev) {
+    var node = ev.target;
+    if (!node || typeof node.closest !== 'function') return;
+    if (!node.closest('#nav-theme-toggle, #mobile-theme-toggle')) return;
+    ev.preventDefault();
+    toggle();
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncToggles);
+  } else {
+    syncToggles();
+  }
+})();
+</script>

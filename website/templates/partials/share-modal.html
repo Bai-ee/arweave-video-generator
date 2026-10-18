@@ -1,0 +1,602 @@
+<!-- UE share modal.
+     ONE centre-screen share widget for the whole site. Every share affordance —
+     the icon on a mix card, the icon on a catalog row, the hero's share button,
+     the player bar — opens THIS, so sharing looks and behaves identically
+     everywhere. Callers reach it through `window.ueShare.open({...})`.
+
+     WHY THIS MARKUP IS STATIC, AND WHY THE CONTROLLER IS INLINE:
+       * Static: same reasoning as the shared dialog next door — nothing to
+         build at runtime, nothing to tear down, and css/site.css can style it
+         from stable ids.
+       * Inline script: `REQUIRED_MANIFEST_PATHS` in lib/WebsiteDeployer.js is a
+         hard deploy gate, so a new website/js/*.js file would need that gate
+         changed. A partial is inlined into every generated page by
+         lib/WebsitePageGenerator.cjs and costs no new request.
+       * Position: with the other global partials, before the deferred
+         js/boot.js tag, so `window.ueShare` exists before ue-links.js runs and
+         the element is already parsed when a listener first clicks share.
+
+     WHAT IT OFFERS, IN DELIBERATE ORDER — the order IS the design, because the
+     top item is the one most people will use:
+       1. Share…      native share sheet (mobile: Instagram, TikTok, Messages,
+                      WhatsApp in one tap). Rendered only when navigator.share
+                      exists, which is essentially "is this a phone".
+       2. Copy link   always present, and the link is also shown in a readonly
+                      field — so a blocked clipboard is never a dead end and
+                      the listener can always see what they are about to send.
+       3. Save video  the mix's own 30s promo film. The ONLY route to Instagram
+                      and TikTok: neither accepts a shared URL, both take an
+                      uploaded file. See saveVideo() for the CORS caveat.
+       4. Start at    only when opened mid-playback — "share the drop" is the
+                      highest-intent share a DJ mix has.
+       5. Platforms   X / Facebook / Reddit / Telegram / WhatsApp / Email web
+                      intents. Cheap, mostly desktop, deliberately last.
+
+     WHICH ADDRESS IT SHARES. Two, switched by the segmented control:
+       PERMAWEB (default)  the site's ArNS address — <meta name="ue-permaweb-base">,
+                           written by the generator from ARNS_NAME. It is the
+                           forever address: permanent, and re-pointed at the
+                           newest manifest on every deploy, so a link shared
+                           today still opens the archive years from now even if
+                           the domain lapses. NOT a manifest txid — that would
+                           freeze the archive at one deploy, and the txid of the
+                           deploy being generated cannot exist yet anyway.
+       SITE                whatever host the listener is actually on, resolved
+                           relatively — undergroundexistence.info in production,
+                           and the manifest URL when they are already reading
+                           through one. Unfurls most reliably when posted.
+     Both carry the same `?mix=<txid>` deep link, so either one lands on the
+     same mix. The `t=` timestamp rides on whichever is selected.
+
+     NO COLOURS LIVE HERE. Everything visual is css/site.css.
+     Style hooks, all stable:
+       #ue-share-dialog (+ ::backdrop)   the <dialog> itself
+         [open]                          shown
+         [data-has-video="on|off"]       whether this mix has a promo film
+         [data-has-time="on|off"]        whether a timestamp is on offer
+         [data-host="permaweb|site"]     which address is selected
+       #ue-share-panel                   inner panel — PADDING GOES HERE, not on
+                                         the dialog: a backdrop click is detected
+                                         as "target is the dialog element", so
+                                         padding on the dialog would be a dead
+                                         click-to-close zone. Two columns from
+                                         720px up (media | controls), one below.
+       #ue-share-close                   the ✕ button
+       #ue-share-media                   square preview (art, or the film)
+       #ue-share-body                    the controls column
+       #ue-share-title / #ue-share-artist
+       #ue-share-native / #ue-share-copy      primary actions
+       #ue-share-host                    the address switch (.ue-share-host-opt)
+       #ue-share-url                     the readonly link field
+       #ue-share-note                    one line explaining the chosen address
+       #ue-share-at                      the "start at m:ss" row
+       #ue-share-targets                 the platform row (.ue-share-target)
+       #ue-share-video-dl / #ue-share-audio-dl
+       #ue-share-status                  aria-live feedback line
+
+     The `hidden` attribute on the dialog is load-bearing in BOTH directions,
+     exactly as on #ue-dialog: a browser without <dialog> would otherwise paint
+     the panel inline on every page. The controller removes `hidden` right
+     before showModal() and restores it on close. -->
+<dialog id="ue-share-dialog" aria-labelledby="ue-share-title" data-has-video="off" data-has-time="off" data-host="permaweb" hidden>
+  <div id="ue-share-panel">
+    <button id="ue-share-close" type="button" aria-label="Close">
+      <span class="ue-share-close-glyph" aria-hidden="true">&#10005;</span>
+    </button>
+
+    <div id="ue-share-media">
+      <img id="ue-share-art" alt="" decoding="async">
+      <video id="ue-share-video" muted loop playsinline preload="none" aria-hidden="true"></video>
+      <button id="ue-share-sound" type="button" aria-pressed="false" aria-label="Unmute preview" hidden>
+        <svg class="icon-svg icon-muted"><use href="#i-volume-off"></use></svg>
+        <svg class="icon-svg icon-unmuted"><use href="#i-volume"></use></svg>
+      </button>
+    </div>
+
+    <div id="ue-share-body">
+      <p id="ue-share-eyebrow">Share this mix</p>
+      <h2 id="ue-share-title"></h2>
+      <p id="ue-share-artist"></p>
+
+      <div id="ue-share-primary">
+        <button id="ue-share-native" class="ue-share-action ue-share-action--primary" type="button" hidden>Share&hellip;</button>
+        <button id="ue-share-copy" class="ue-share-action" type="button">Copy link</button>
+      </div>
+
+      <div id="ue-share-host" role="group" aria-label="Which address to share">
+        <button class="ue-share-host-opt" type="button" data-host="permaweb" aria-pressed="true">Permaweb</button>
+        <button class="ue-share-host-opt" type="button" data-host="site" aria-pressed="false">Site</button>
+      </div>
+
+      <input id="ue-share-url" type="text" readonly spellcheck="false" autocomplete="off" aria-label="Link to this mix">
+      <p id="ue-share-note"></p>
+
+      <label id="ue-share-at" for="ue-share-at-input">
+        <input id="ue-share-at-input" type="checkbox">
+        <span>Start at <span id="ue-share-at-time"></span></span>
+      </label>
+
+      <div id="ue-share-files">
+        <button id="ue-share-video-dl" class="ue-share-action" type="button">Save video</button>
+        <a id="ue-share-audio-dl" class="ue-share-action" data-download href="#" hidden>Download mix</a>
+      </div>
+
+      <p id="ue-share-hint" hidden></p>
+
+      <div id="ue-share-targets" role="group" aria-label="Share to a platform"></div>
+
+      <p id="ue-share-status" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+</dialog>
+<script>
+(function () {
+  'use strict';
+
+  var dlg = document.getElementById('ue-share-dialog');
+  var panel = document.getElementById('ue-share-panel');
+  if (!dlg || !panel) return;
+
+  /* Feature test, not a UA test — same contract as #ue-dialog. Without
+     showModal() this module simply never claims the job, and every caller
+     falls back to its own pre-existing share path (see ue-links.js), so
+     sharing still works on an engine too old for <dialog>. */
+  var supported = typeof dlg.showModal === 'function' && typeof dlg.close === 'function';
+  if (!supported) return;
+
+  var artEl = document.getElementById('ue-share-art');
+  var videoEl = document.getElementById('ue-share-video');
+  var soundBtn = document.getElementById('ue-share-sound');
+  var titleEl = document.getElementById('ue-share-title');
+  var artistEl = document.getElementById('ue-share-artist');
+  var nativeBtn = document.getElementById('ue-share-native');
+  var copyBtn = document.getElementById('ue-share-copy');
+  var urlEl = document.getElementById('ue-share-url');
+  var atRow = document.getElementById('ue-share-at');
+  var atInput = document.getElementById('ue-share-at-input');
+  var atTimeEl = document.getElementById('ue-share-at-time');
+  var videoBtn = document.getElementById('ue-share-video-dl');
+  var audioBtn = document.getElementById('ue-share-audio-dl');
+  var hintEl = document.getElementById('ue-share-hint');
+  var targetsEl = document.getElementById('ue-share-targets');
+  var statusEl = document.getElementById('ue-share-status');
+  var closeBtn = document.getElementById('ue-share-close');
+  var noteEl = document.getElementById('ue-share-note');
+  var hostEl = document.getElementById('ue-share-host');
+
+  /* The permanent address, written into every page by the generator. Missing
+     or malformed (a hand-edited page, an old deploy) simply removes the
+     PERMAWEB option — the site link always works. */
+  function permawebBase() {
+    try {
+      var m = document.querySelector('meta[name="ue-permaweb-base"]');
+      var v = m && m.getAttribute('content');
+      if (v && /^https:\/\//i.test(v)) return v.replace(/\/+$/, '') + '/';
+    } catch (err) { /* ignore */ }
+    return '';
+  }
+  var PERMAWEB = permawebBase();
+
+  var NOTES = {
+    permaweb: 'Permanent Arweave address. Outlives the domain.',
+    site: 'Best link preview when posted to a feed.'
+  };
+
+  var hostMode = PERMAWEB ? 'permaweb' : 'site';
+
+  var current = null;      /* the info object this modal is currently showing */
+  var lastFocused = null;  /* what to hand focus back to on close */
+  var pressedOnSelf = false;
+  var statusTimer = null;
+
+  function str(v) {
+    return typeof v === 'string' ? v : (v === 0 || v ? String(v) : '');
+  }
+
+  /* Same display convention as player.js formatTime() and ue-links.js
+     formatShareTime(), so a shared timestamp reads as the number the listener
+     actually saw on the waveform. */
+  function clock(sec) {
+    sec = Math.floor(Number(sec) || 0);
+    if (!isFinite(sec) || sec < 0) sec = 0;
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = sec % 60;
+    var mm = h > 0 && m < 10 ? '0' + m : String(m);
+    var ss = s < 10 ? '0' + s : String(s);
+    return h > 0 ? h + ':' + mm + ':' + ss : mm + ':' + ss;
+  }
+
+  function say(msg) {
+    if (!statusEl) return;
+    statusEl.textContent = str(msg);
+    if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
+    if (msg) statusTimer = setTimeout(function () { statusEl.textContent = ''; }, 4000);
+  }
+
+  /* The page + deep link both addresses share. `page` is the mix's ARTIST page
+     (data-page in the generated markup) — a link there unfurls with that
+     selector's own artwork, which a link to whatever page the listener
+     happened to be browsing would not. */
+  function relativeTarget() {
+    if (!current || !current.txid) return '';
+    var page = str(current.page);
+    if (!page) {
+      try {
+        page = (location.pathname || '').split('/').pop() || '';
+      } catch (err) { page = ''; }
+    }
+    var rel = page + '?mix=' + encodeURIComponent(current.txid);
+    if (atInput && !atInput.disabled && atInput.checked && current.t > 0) {
+      rel += '&t=' + encodeURIComponent(String(Math.floor(current.t)));
+    }
+    return rel;
+  }
+
+  /* PERMAWEB resolves against the ArNS base — the forever address, which every
+     deploy re-points at the newest manifest. SITE resolves against
+     location.href and is therefore never a hardcoded domain: the same deploy is
+     reachable at undergroundexistence.info AND through a gateway's manifest
+     path, and "share where I am" must honour whichever the listener is on. */
+  function buildUrl() {
+    var rel = relativeTarget();
+    if (!rel) return '';
+    var base = (hostMode === 'permaweb' && PERMAWEB) ? PERMAWEB : location.href;
+    try {
+      return new URL(rel, base).href;
+    } catch (err) {
+      return rel;
+    }
+  }
+
+  function setHostMode(mode) {
+    hostMode = (mode === 'permaweb' && PERMAWEB) ? 'permaweb' : 'site';
+    dlg.setAttribute('data-host', hostMode);
+    if (hostEl) {
+      var opts = hostEl.querySelectorAll('.ue-share-host-opt');
+      Array.prototype.forEach.call(opts, function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-host') === hostMode ? 'true' : 'false');
+      });
+    }
+    if (noteEl) noteEl.textContent = NOTES[hostMode] || '';
+    refreshUrl();
+  }
+
+  function shareTitle() {
+    if (!current) return 'Underground Existence';
+    var t = str(current.title);
+    var a = str(current.artist);
+    if (t && a) return t + ' — ' + a;
+    return t || a || 'Underground Existence';
+  }
+
+  /* The platform row. Web intents only — Instagram and TikTok have none, which
+     is exactly why "Save video" sits above this. `name` is the visible label;
+     the site's type does the identifying, so no brand SVGs are shipped. */
+  function targetUrls(url, text) {
+    var u = encodeURIComponent(url);
+    var t = encodeURIComponent(text);
+    var tu = encodeURIComponent(text + ' ' + url);
+    return [
+      { name: 'X', href: 'https://twitter.com/intent/tweet?text=' + t + '&url=' + u },
+      { name: 'Facebook', href: 'https://www.facebook.com/sharer/sharer.php?u=' + u },
+      { name: 'Reddit', href: 'https://www.reddit.com/submit?url=' + u + '&title=' + t },
+      { name: 'Telegram', href: 'https://t.me/share/url?url=' + u + '&text=' + t },
+      { name: 'WhatsApp', href: 'https://api.whatsapp.com/send?text=' + tu },
+      { name: 'Email', href: 'mailto:?subject=' + t + '&body=' + tu }
+    ];
+  }
+
+  function renderTargets(url) {
+    if (!targetsEl) return;
+    targetsEl.textContent = '';
+    var text = shareTitle();
+    targetUrls(url, text).forEach(function (t) {
+      var a = document.createElement('a');
+      a.className = 'ue-share-target';
+      a.href = t.href;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = t.name;
+      a.setAttribute('aria-label', 'Share on ' + t.name);
+      targetsEl.appendChild(a);
+    });
+  }
+
+  /* Re-derives every URL-carrying control from the CURRENT state of the
+     timestamp checkbox. Called on open and on every toggle, so the link in the
+     field, the platform intents and the native share sheet can never disagree
+     about whether the share starts at 12:34. */
+  function refreshUrl() {
+    var url = buildUrl();
+    if (urlEl) urlEl.value = url;
+    renderTargets(url);
+    return url;
+  }
+
+  /* ---------- copy ---------- */
+
+  function selectUrlField() {
+    if (!urlEl) return;
+    try { urlEl.focus(); urlEl.select(); } catch (err) { /* ignore */ }
+  }
+
+  function copyUrl() {
+    var url = buildUrl();
+    if (!url) return;
+    var done = function () { say('Link copied.'); };
+    var failed = function () {
+      /* never a dead end: the link is already on screen in a readonly field,
+         so the recovery is to select it rather than open another dialog */
+      selectUrlField();
+      say('Copy blocked by the browser — the link is selected, press ' +
+        (/Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '') ? '⌘C' : 'Ctrl+C') + '.');
+    };
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(url).then(done, function () {
+          if (!legacyCopy(url)) failed(); else done();
+        });
+        return;
+      }
+    } catch (err) { /* fall through */ }
+    if (legacyCopy(url)) done(); else failed();
+  }
+
+  function legacyCopy(text) {
+    if (!urlEl || typeof document.execCommand !== 'function') return false;
+    var ok = false;
+    try {
+      urlEl.value = text;
+      urlEl.select();
+      ok = !!document.execCommand('copy');
+    } catch (err) { ok = false; }
+    return ok;
+  }
+
+  /* ---------- native share sheet ---------- */
+
+  function nativeShare() {
+    var url = buildUrl();
+    if (!url || !navigator.share) return;
+    try {
+      navigator.share({ title: shareTitle(), text: shareTitle(), url: url })
+        .then(function () { close(); }, function () { /* dismissed — stay open */ });
+    } catch (err) { /* older implementations can throw synchronously */ }
+  }
+
+  /* ---------- save the promo film ----------
+     The honest state of this, as of the build that introduced it: the video
+     objects are served from Google Cloud Storage WITHOUT an
+     Access-Control-Allow-Origin header, so the fetch below is blocked
+     cross-origin and every real visitor lands in the catch. That is not a bug
+     to route around — it is the same escalation player.js already uses for
+     audio downloads, and the fallback (open the file, tell them to save it)
+     works on every platform including iOS.
+
+     Add a CORS rule to the bucket for undergroundexistence.info and this
+     upgrades itself to a true one-tap download with no code change. */
+  function saveVideo() {
+    if (!current || !current.video || !videoBtn) return;
+    if (videoBtn.classList.contains('is-loading')) return;
+    var url = current.video;
+    var name = (str(current.filename) || shareTitle()).replace(/[\\/:*?"<>|]/g, '').trim() || 'mix';
+    videoBtn.classList.add('is-loading');
+    say('Preparing video…');
+
+    var openInstead = function () {
+      videoBtn.classList.remove('is-loading');
+      showHint('Your browser could not save it directly. The video opened in a new tab — ' +
+        'long-press it (phone) or right-click → “Save video as…” (desktop), then post it.');
+      say('');
+      try { window.open(url, '_blank', 'noopener'); } catch (err) { /* popup blocked */ }
+    };
+
+    var pending;
+    try {
+      pending = fetch(url, { mode: 'cors' });
+    } catch (err) {
+      openInstead();
+      return;
+    }
+    pending.then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.blob();
+    }).then(function (blob) {
+      var objectUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = name + '.mp4';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 10000);
+      videoBtn.classList.remove('is-loading');
+      say('Video saved. Post it anywhere — the link is above.');
+    }).catch(openInstead);
+  }
+
+  function showHint(text) {
+    if (!hintEl) return;
+    hintEl.textContent = str(text);
+    hintEl.hidden = !text;
+  }
+
+  /* ---------- preview film ---------- */
+
+  function reducedMotion() {
+    try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+    catch (err) { return false; }
+  }
+  function saveData() {
+    try { return !!(navigator.connection && navigator.connection.saveData); } catch (err) { return false; }
+  }
+
+  /* The preview is the artwork by default and upgrades to the film. Muted,
+     because that is the only thing browsers autoplay, with a sound toggle for
+     anyone who wants to hear what they are about to post. Reduced-motion and
+     Save-Data keep the still — a 14MB autoplay is the wrong answer to both. */
+  function startPreview() {
+    if (!videoEl) return;
+    var src = current && current.video;
+    if (!src || reducedMotion() || saveData()) {
+      stopPreview();
+      return;
+    }
+    try {
+      videoEl.muted = true;
+      videoEl.setAttribute('src', src);
+      if (current.img) videoEl.setAttribute('poster', current.img);
+      videoEl.hidden = false;
+      if (soundBtn) {
+        soundBtn.hidden = false;
+        soundBtn.setAttribute('aria-pressed', 'false');
+        soundBtn.setAttribute('aria-label', 'Unmute preview');
+      }
+      var p = videoEl.play();
+      if (p && typeof p.catch === 'function') p.catch(function () { /* autoplay refused — poster stays */ });
+    } catch (err) { stopPreview(); }
+  }
+
+  function stopPreview() {
+    if (!videoEl) return;
+    try {
+      videoEl.pause();
+      videoEl.removeAttribute('src');
+      videoEl.load();
+    } catch (err) { /* ignore */ }
+    videoEl.hidden = true;
+    if (soundBtn) soundBtn.hidden = true;
+  }
+
+  /* ---------- open / close ---------- */
+
+  /* info: { txid, title, artist, img, video, audio, page, filename, t }
+     Everything but txid is optional; a missing piece removes its control
+     rather than rendering an empty one. */
+  function open(info) {
+    if (!info || typeof info !== 'object' || !info.txid) return false;
+    current = {
+      txid: str(info.txid),
+      title: str(info.title),
+      artist: str(info.artist),
+      img: str(info.img),
+      video: str(info.video),
+      audio: str(info.audio),
+      page: str(info.page),
+      filename: str(info.filename),
+      t: Math.floor(Number(info.t) || 0)
+    };
+
+    try { lastFocused = document.activeElement; } catch (err) { lastFocused = null; }
+
+    if (titleEl) titleEl.textContent = current.title || 'This mix';
+    if (artistEl) {
+      artistEl.textContent = current.artist;
+      artistEl.hidden = !current.artist;
+    }
+    if (artEl) {
+      if (current.img) { artEl.setAttribute('src', current.img); artEl.hidden = false; }
+      else { artEl.removeAttribute('src'); artEl.hidden = true; }
+      artEl.setAttribute('alt', shareTitle());
+    }
+
+    dlg.setAttribute('data-has-video', current.video ? 'on' : 'off');
+    if (videoBtn) videoBtn.hidden = !current.video;
+
+    if (audioBtn) {
+      if (current.audio) {
+        audioBtn.setAttribute('href', current.audio);
+        /* player.js owns a[data-download] site-wide (fetch → blob → save, with
+           the same open-in-a-tab fallback), so the mix download here needs no
+           code of its own. */
+        audioBtn.setAttribute('data-filename', current.filename || shareTitle());
+        audioBtn.hidden = false;
+      } else {
+        audioBtn.hidden = true;
+      }
+    }
+
+    var hasTime = current.t > 0;
+    dlg.setAttribute('data-has-time', hasTime ? 'on' : 'off');
+    if (atInput) {
+      atInput.checked = hasTime;   /* opened FROM a timestamp: default to using it */
+      atInput.disabled = !hasTime;
+    }
+    if (atTimeEl) atTimeEl.textContent = hasTime ? clock(current.t) : '';
+    if (atRow) atRow.hidden = !hasTime;
+
+    if (nativeBtn) nativeBtn.hidden = typeof navigator.share !== 'function';
+    if (hostEl) hostEl.hidden = !PERMAWEB;   /* no ArNS base -> no choice to make */
+    showHint('');
+    say('');
+    setHostMode(hostMode);
+
+    try {
+      dlg.hidden = false;
+      dlg.showModal();
+    } catch (err) {
+      dlg.hidden = true;
+      return false;
+    }
+    startPreview();
+    return true;
+  }
+
+  /* Teardown runs from BOTH the close() path and the `close` event, and is
+     idempotent. Two triggers because only one of them covers each case: the
+     event is the only signal for a native Esc / form dismissal, and calling it
+     directly is what guarantees the 14MB preview stops downloading the instant
+     a listener hits ✕, without waiting on an event the page never controls. */
+  function teardown() {
+    dlg.hidden = true;
+    stopPreview();
+    current = null;
+    say('');
+    showHint('');
+    try { if (lastFocused && lastFocused.focus) lastFocused.focus(); } catch (err) { /* ignore */ }
+    lastFocused = null;
+  }
+
+  function close() {
+    try { dlg.close(); } catch (err) { /* ignore */ }
+    teardown();
+  }
+
+  dlg.addEventListener('close', teardown);
+
+  /* Backdrop click. Tracked across pressdown→click so a drag that STARTS
+     inside the panel and ends on the backdrop (selecting the link text, for
+     instance) does not close the modal — the same trap #ue-dialog documents. */
+  dlg.addEventListener('pointerdown', function (e) { pressedOnSelf = e.target === dlg; });
+  dlg.addEventListener('click', function (e) {
+    if (e.target === dlg && pressedOnSelf) close();
+    pressedOnSelf = false;
+  });
+
+  if (closeBtn) closeBtn.addEventListener('click', close);
+  if (copyBtn) copyBtn.addEventListener('click', copyUrl);
+  if (nativeBtn) nativeBtn.addEventListener('click', nativeShare);
+  if (videoBtn) videoBtn.addEventListener('click', saveVideo);
+  if (atInput) atInput.addEventListener('change', function () { refreshUrl(); });
+  if (urlEl) urlEl.addEventListener('focus', selectUrlField);
+  if (hostEl) {
+    hostEl.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('.ue-share-host-opt') : null;
+      if (!btn) return;
+      setHostMode(btn.getAttribute('data-host'));
+    });
+  }
+
+  if (soundBtn && videoEl) {
+    soundBtn.addEventListener('click', function () {
+      videoEl.muted = !videoEl.muted;
+      soundBtn.setAttribute('aria-pressed', videoEl.muted ? 'false' : 'true');
+      soundBtn.setAttribute('aria-label', videoEl.muted ? 'Unmute preview' : 'Mute preview');
+      if (!videoEl.muted && videoEl.paused) { try { videoEl.play(); } catch (err) { /* ignore */ } }
+    });
+  }
+
+  window.ueShare = { version: 1, open: open, close: close };
+})();
+</script>

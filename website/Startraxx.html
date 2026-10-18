@@ -1,163 +1,1479 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <!-- Open Graph tags -->
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Underground Existence">
-    <meta property="og:title" content="STAR TRAXX | Underground Existence">
-    <meta property="og:description" content="STAR TRAXX's mixes on Underground Existence - Chicago's Underground Music Archive">
-    <meta property="og:image" content="img/artists/startraxxthumb.jpg">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- UE gateway connection warming (gateway-warming phase, connection-hints deliverable).
+     The two APPROVED range-capable Arweave gateways for mix audio are
+     arweave.fllstck.dev and frostor.xyz (website/js/player-core.js RANGE_HOSTS;
+     see MIX_AUDIO_SCRUBBING.md for the measured evidence). This origin issues
+     TWO different request types at each host, and Chrome/Firefox key a
+     preconnected socket by (origin, credentials-mode) — so a `preconnect`
+     WITHOUT `crossorigin` and one WITH `crossorigin` open two DIFFERENT
+     connection pools:
+       1) the <audio> element's own media load (player.js sets `audio.src`
+          directly; no `crossorigin` attribute is ever set on it anywhere in
+          this codebase) — a credentialed, no-CORS request;
+       2) the background Range-header probe (`fetch(url, {headers:{Range:
+          'bytes=0-127'}}, ...)` in player.js) — a CORS-mode fetch, answered
+          with `Access-Control-Allow-Origin: *` per MIX_AUDIO_SCRUBBING.md.
+     Both requests happen close together on a real play (setSrc+play fires
+     synchronously on the user gesture while both candidates are probed in
+     the background), so both pools are genuinely used here — this is a
+     deliberate "both" per host, not a guess at which one is needed.
+     `dns-prefetch` is included alongside `preconnect` (not just as legacy
+     fallback): these are third-party ar.io nodes whose DNS and availability
+     have been observed to fluctuate within a single day (a 30s cold
+     timeout, a 404 carrying plausible-looking headers, and a total local
+     DNS resolution failure for arweave.fllstck.dev have all been observed).
+     Resolving early surfaces a dead host sooner so the player's existing
+     verified-failover (player-core.js) can move on faster; a host that
+     fails to resolve makes the hint a silent, harmless no-op — no error, no
+     console noise, no effect on page load.
+     LIMITATION (verified 2026-09-08 via curl): both hosts 302-redirect
+     EVERY request — including these apex requests — to a per-transaction
+     sandbox subdomain (e.g. https://<43-char-base32>.arweave.fllstck.dev/
+     <txid>), so this apex preconnect does NOT pre-open the socket that
+     actually serves the mix bytes; that socket is per-mix and cannot be
+     hinted statically. This only shaves the DNS+TCP+TLS cost of the
+     mandatory first hop (the 302 itself), nothing more.
+     WHY ONLY dns-prefetch IS STATIC: this partial is shared by EVERY
+     generated page, including about.html and residents.html, which contain
+     zero playable mixes and will never load audio. A `preconnect` costs a
+     real DNS+TCP+TLS handshake and holds a socket, and — per the LIMITATION
+     above — an apex preconnect only saves the mandatory 302 hop anyway;
+     spending four of them on a page that will never play a mix is waste.
+     `dns-prefetch` is close to free and its benefit (surfacing a dead
+     gateway sooner, so failover starts sooner) is page-independent, so it
+     stays static. The expensive `preconnect` — including the `crossorigin`
+     variant needed for the CORS probe/warm pool described above — is
+     injected at RUNTIME by website/js/ue-warm.js, and only on pages that
+     actually have playable mixes to warm. -->
+<link rel="dns-prefetch" href="https://arweave.fllstck.dev">
+<link rel="dns-prefetch" href="https://frostor.xyz">
+<!-- arweave.net apex is NEVER an interactive playback source — raw
+     arweave.net ignores Range on these bundled items (MIX_AUDIO_SCRUBBING.md)
+     and player-core.js's buildCandidates() never emits it as a candidate by
+     construction. This hint exists ONLY for the artwork <img> tags (og:image,
+     mix/artist thumbnails — none carry a `crossorigin` attribute anywhere in
+     the generated markup, so only the no-CORS pool is needed) and the
+     canonical download links, both of which point at arweave.net on nearly
+     every generated page (residents.html alone: 18 artist-avatar images).
+     Same sandbox-subdomain redirect limitation applies here too (verified
+     2026-09-08 via curl: arweave.net apex also 302s every request to a
+     per-content sandbox subdomain) — this only warms the apex hop before
+     that redirect, not the final image/download host. -->
+<link rel="preconnect" href="https://arweave.net">
+<title>STAR TRAXX — Underground Existence</title>
+<meta name="description" content="STAR TRAXX on Underground Existence — 1 mix, archived on Arweave.">
+<meta name="theme-color" content="#0a0606">
+<link rel="icon" type="image/png" href="icon/favicon-32x32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icon/favicon-32x32.png">
+<!-- Unfurl card. A shared link is only worth as much as its preview: without
+     the twitter:* pair below, X/Discord/Slack rendered a UE link as a bare
+     text row and the artwork never appeared. `summary_large_image` is the
+     card the cover art deserves — every og:image here is a square skyline
+     still or an artist portrait, never a logo.
 
-    <title>STAR TRAXX | Underground Existence</title>
+     og:image:alt carries the same text the page's own <img alt> would, so the
+     preview is described for anyone reading it through a screen reader.
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="css/bootstrap-reboot.min.css">
-    <link rel="stylesheet" href="css/bootstrap-grid.min.css">
-    <link rel="stylesheet" href="css/owl.carousel.min.css">
-    <link rel="stylesheet" href="css/magnific-popup.css">
-    <link rel="stylesheet" href="css/select2.min.css">
-    <link rel="stylesheet" href="css/main.css">
+     The OG_VIDEO_TAGS token below is a whole BLOCK of tags, empty on pages with
+     no canonical promo film (see ogVideoTags in lib/WebsitePageGenerator.cjs) —
+     never an empty og:video, which unfurls worse than no og:video at all.
+     Do NOT write that token's name in braces anywhere in this comment: the
+     generator's replace pass does not know what a comment is, and would inline
+     a second live copy of the tags in here.
 
-    <!-- Favicons -->
-    <link rel="icon" type="image/png" href="icon/favicon-32x32.png" sizes="32x32">
-    <link rel="apple-touch-icon" href="icon/favicon-32x32.png">
+     NOTE the static-site limit: these tags are per PAGE, and a share link is
+     `<artist page>?mix=<txid>`. A crawler ignores the query, so the preview is
+     the ARTIST's card, not the individual mix's. That is why the share modal
+     points links at the artist page rather than at whatever page the listener
+     was on — the artist's own artwork is the closest honest preview a static
+     deploy can carry. Per-mix unfurls would need one HTML page per mix. -->
+<meta property="og:site_name" content="Underground Existence">
+<meta property="og:title" content="STAR TRAXX — Underground Existence">
+<meta property="og:description" content="STAR TRAXX on Underground Existence — 1 mix, archived on Arweave.">
+<meta property="og:image" content="https://7utlvsnf5pwxyvghgmypkzmcvm6skupeup5cj5ogdaygu5rzjtca.ardrive.net/_Sa6yaXr7XxUxzMw9WWCqz0lUeSj-iT1xhgwanY5TMQ/img/artists/startraxxthumb.jpg">
+<meta property="og:image:alt" content="STAR TRAXX — Underground Existence">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://undergroundexistence.info/Startraxx.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="STAR TRAXX — Underground Existence">
+<meta name="twitter:description" content="STAR TRAXX on Underground Existence — 1 mix, archived on Arweave.">
+<meta name="twitter:image" content="https://7utlvsnf5pwxyvghgmypkzmcvm6skupeup5cj5ogdaygu5rzjtca.ardrive.net/_Sa6yaXr7XxUxzMw9WWCqz0lUeSj-iT1xhgwanY5TMQ/img/artists/startraxxthumb.jpg">
+<meta name="twitter:image:alt" content="STAR TRAXX — Underground Existence">
+<link rel="canonical" href="https://undergroundexistence.info/Startraxx.html">
+<!-- The site's permanent permaweb address, for the share modal's PERMAWEB link.
+     An ArNS name, not a manifest txid: the manifest id of the deploy being
+     generated cannot exist yet, and an older one would share a frozen archive.
+     See permawebBase() in lib/WebsitePageGenerator.cjs. -->
+<meta name="ue-permaweb-base" content="https://undergroundexistence.ar.io/">
+<link rel="preload" as="image" href="img/digging-hero.webp" type="image/webp" fetchpriority="high">
+<link rel="preload" as="font" href="fonts/rationale-v1-regular.woff2" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/site.css">
+<!-- UE theme switch (light/dark). Dark is the default and is expressed by the ABSENCE of
+     `data-theme` on <html>; light is `<html data-theme="light">`. See the light-theme token
+     contract — every colour lives in css/site.css under :root / :root[data-theme="light"].
+     WHY INLINE, AND WHY HERE:
+       * Inline because `REQUIRED_MANIFEST_PATHS` in lib/WebsiteDeployer.js is a hard 23-path
+         deploy gate; a new website/js/*.js file would need that gate plus the .gitignore
+         allow-list changed, and is out of scope for a theme toggle.
+       * In <head>, synchronous, no defer/async: it therefore runs to completion before <body>
+         is parsed, so `data-theme` is already on <html> when the first box is laid out. The
+         dark→light flash is structurally impossible — there is no paint before this line.
+       * localStorage reads are wrapped in try/catch: Safari private mode and the per-transaction
+         Arweave sandbox subdomain can throw on access, and an uncaught throw here would abort
+         the rest of the page's head scripts.
+     The toggle wiring lives in this same block (not in nav.html) so the storage key, the
+     theme-color values and the icon/aria mapping have exactly one definition and cannot drift;
+     the click handler is delegated off `document`, so it binds safely on pages where either
+     button is absent and needs no DOM to exist at this point. -->
+<script>
+(function () {
+  var KEY = 'ue-theme';
+  /* The mobile browser chrome is painted from --bg-base, READ FROM THE
+     STYLESHEET rather than duplicated here. This script runs after the
+     stylesheet link, so the cascade is already resolvable. Hardcoding the pair
+     drifted three times in one session as the palette changed, and the symptom
+     is a hairline of the wrong colour above the page — invisible on desktop,
+     obvious on a phone. The literals below are only a fallback for the case
+     where the stylesheet somehow has not applied. */
+  var GROUND_FALLBACK = { dark: '#0a0606', light: '#e8e4e0' };
+  function ground(theme) {
+    try {
+      var v = getComputedStyle(root).getPropertyValue('--bg-base').trim();
+      if (v) return v;
+    } catch (e) { /* fall through */ }
+    return GROUND_FALLBACK[theme] || GROUND_FALLBACK.dark;
+  }
+  var TOGGLE_IDS = ['nav-theme-toggle', 'mobile-theme-toggle'];
+  var root = document.documentElement;
+
+  function stored() {
+    try { return localStorage.getItem(KEY); } catch (e) { return null; }
+  }
+  function persist(theme) {
+    try {
+      if (theme === 'light') localStorage.setItem(KEY, 'light');
+      else localStorage.removeItem(KEY);
+    } catch (e) { /* private mode / sandboxed origin — theme still applies for this page */ }
+  }
+  function current() {
+    return root.dataset.theme === 'light' ? 'light' : 'dark';
+  }
+  function apply(theme) {
+    if (theme === 'light') root.dataset.theme = 'light';
+    else delete root.dataset.theme;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    /* read AFTER the attribute flip above, so the cascade already reflects the
+       new theme and --bg-base resolves to the theme we just applied */
+    if (meta) meta.setAttribute('content', ground(theme));
+  }
+
+  /* --- pre-paint --- */
+  /* The toggle is hidden for now (partials/nav.html), so the site is always
+     dark: a visitor who once chose light must not be stuck there with no way
+     back. Their saved choice is left in storage; restore with:
+     apply(stored() === 'light' ? 'light' : 'dark'); */
+  apply('dark');
+
+  /* Point each toggle at the theme it switches TO. */
+  function syncToggles() {
+    var toLight = current() !== 'light';
+    for (var i = 0; i < TOGGLE_IDS.length; i++) {
+      var btn = document.getElementById(TOGGLE_IDS[i]);
+      if (!btn) continue;
+      btn.setAttribute('aria-label', toLight ? 'Switch to light theme' : 'Switch to dark theme');
+      btn.setAttribute('aria-pressed', toLight ? 'false' : 'true');
+      var use = btn.querySelector('use');
+      if (use) use.setAttribute('href', toLight ? '#i-sun' : '#i-moon');
+    }
+  }
+  window.__ueThemeSync = syncToggles;
+
+  function toggle() {
+    var theme = current() === 'light' ? 'dark' : 'light';
+    apply(theme);
+    persist(theme);
+    syncToggles();
+    /* Required: website/js/player.js's waveform renderer listens for this to drop its
+       cached bar colours. Never remove or rename it. */
+    try {
+      window.dispatchEvent(new CustomEvent('ue:themechange', { detail: { theme: theme } }));
+    } catch (e) { /* no CustomEvent constructor — theme still applied */ }
+  }
+
+  document.addEventListener('click', function (ev) {
+    var node = ev.target;
+    if (!node || typeof node.closest !== 'function') return;
+    if (!node.closest('#nav-theme-toggle, #mobile-theme-toggle')) return;
+    ev.preventDefault();
+    toggle();
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncToggles);
+  } else {
+    syncToggles();
+  }
+})();
+</script>
+
 </head>
-
 <body>
-    <!-- header -->
-    <header class="header">
-        <div class="header__content">
-            <div class="header__logo">
-                <a href="index.html">
-                    <img src="img/loge_horiz.png" alt="">
-                </a>
-            </div>
-            <div class="header__actions"></div>
-        </div>
-    </header>
-    <!-- end header -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.14v13.72c0 .96 1.05 1.55 1.87 1.05l11.03-6.86a1.23 1.23 0 0 0 0-2.1L9.87 4.09C9.05 3.59 8 4.18 8 5.14Z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 4.5h3.4v15H7zM13.6 4.5H17v15h-3.4z"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6 5h2.4v14H6zM18.8 5.9v12.2c0 .9-1 1.4-1.7 1L8.9 13a1.16 1.16 0 0 1 0-2l8.2-6.1c.7-.5 1.7 0 1.7 1Z"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M15.6 5H18v14h-2.4zM5.2 5.9v12.2c0 .9 1 1.4 1.7 1L15.1 13a1.16 1.16 0 0 0 0-2L6.9 4.9c-.7-.5-1.7 0-1.7 1Z"/></symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M17.6 14.6l2.9 2.9-2.9 2.9v-1.9h-1.4c-1.9 0-3.6-.9-4.7-2.4l.9-1.6c.8 1.3 2.2 2 3.8 2h1.4v-1.9ZM3.5 6h3.1c1.9 0 3.6.9 4.7 2.4l-.9 1.6c-.8-1.3-2.2-2-3.8-2H3.5V6Zm14.1 1.9V6l2.9 2.9-2.9 2.9V9.9h-1.4c-1.6 0-3 .8-3.8 2l-2 3.6C9.3 17.1 7.6 18 5.7 18H3.5v-2h2.2c1.6 0 3-.8 3.8-2l2-3.6c1.1-1.5 2.8-2.4 4.7-2.4h1.4Z"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M6.5 8h9V5.5L19.4 9l-3.9 3.5V10h-9c-.6 0-1 .4-1 1v2.5h-2V11c0-1.7 1.3-3 3-3Zm11 8h-9v2.5L4.6 15l3.9-3.5V14h9c.6 0 1-.4 1-1v-2.5h2V13c0 1.7-1.3 3-3 3Z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm1-13h-2v6l4.7 2.8 1-1.7-3.7-2.2V7Z"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><path d="M18 4h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V2h2v2h8V2h2v2ZM5 9v10h14V9H5Z"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9v6h3.6L13 20V4L7.6 9H4Zm12.2 3a3.6 3.6 0 0 0-2-3.2v6.4a3.6 3.6 0 0 0 2-3.2Zm-2-8.4v2.1a6.4 6.4 0 0 1 0 12.6v2.1a8.5 8.5 0 0 0 0-16.8Z"/></symbol>
+  <symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M4 9v6h3.6L13 20V4L7.6 9H4Zm16.5 0.9-1.4-1.4-2.1 2.1-2.1-2.1-1.4 1.4 2.1 2.1-2.1 2.1 1.4 1.4 2.1-2.1 2.1 2.1 1.4-1.4-2.1-2.1 2.1-2.1Z"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M18 16.1a2.9 2.9 0 0 0-1.9.8l-6.9-4a3.3 3.3 0 0 0 0-1.8l6.8-4a3 3 0 1 0-1-2.2l.1.7-6.8 4a3 3 0 1 0 0 4.8l6.9 4-.1.7a2.9 2.9 0 1 0 2.9-2.9Z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><path d="M15.9 14.5h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9Z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z"/></symbol>
+  <symbol id="i-kebab" viewBox="0 0 24 24"><path d="M12 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm7.9 9h-3a15.6 15.6 0 0 0-1.4-6.2A8 8 0 0 1 19.9 11ZM12 4.1c.9 1.2 2 3.5 2.2 6.9H9.8c.2-3.4 1.3-5.7 2.2-6.9ZM8.5 4.8A15.6 15.6 0 0 0 7.1 11h-3a8 8 0 0 1 4.4-6.2ZM4.1 13h3c.2 2.4.7 4.5 1.4 6.2A8 8 0 0 1 4.1 13Zm5.7 0h4.4c-.2 3.4-1.3 5.7-2.2 6.9-.9-1.2-2-3.5-2.2-6.9Zm5.7 6.2c.7-1.7 1.2-3.8 1.4-6.2h3a8 8 0 0 1-4.4 6.2Z"/></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24"><path d="M3 10h2v4H3zM7 7h2v10H7zM11 4h2v16h-2zM15 8h2v8h-2zM19 10h2v4h-2z"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M9 5.5 15.5 12 9 18.5l-1.4-1.4 5.1-5.1-5.1-5.1L9 5.5Z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M11 3h2v9.2l3.1-3.1 1.4 1.4L12 16 6.5 10.5l1.4-1.4L11 12.2V3ZM4 18h16v2H4v-2Z"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm1 2v9.6l4-4 3.5 3.5 2.5-2.5 4 4V6H5Zm10 2.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM11.2 2.8h1.6v2.8h-1.6zM11.2 18.4h1.6v2.8h-1.6zM2.8 11.2h2.8v1.6H2.8zM18.4 11.2h2.8v1.6h-2.8zM15.96 6.9 17.94 4.92 19.08 6.06 17.1 8.04ZM8.04 6.9 6.06 4.92 4.92 6.06 6.9 8.04ZM15.96 17.1 17.94 19.08 19.08 17.94 17.1 15.96ZM8.04 17.1 6.06 19.08 4.92 17.94 6.9 15.96Z"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1Z"/></symbol>
+</svg>
 
-    <!-- sidebar -->
-    <div class="sidebar">
-        <div class="sidebar__logo">
-            <img src="img/loge_horiz.png" alt="">
-        </div>
-
-        <ul class="sidebar__nav">
-            <li class="sidebar__nav-item">
-                <a href="index.html" class="sidebar__nav-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20,8h0L14,2.74a3,3,0,0,0-4,0L4,8a3,3,0,0,0-1,2.26V19a3,3,0,0,0,3,3H18a3,3,0,0,0,3-3V10.25A3,3,0,0,0,20,8ZM14,20H10V15a1,1,0,0,1,1-1h2a1,1,0,0,1,1,1Zm5-1a1,1,0,0,1-1,1H16V15a3,3,0,0,0-3-3H11a3,3,0,0,0-3,3v5H6a1,1,0,0,1-1-1V10.25a1,1,0,0,1,.34-.75l6-5.25a1,1,0,0,1,1.32,0l6,5.25a1,1,0,0,1,.34.75Z"></path></svg> <span>Home</span></a>
-            </li>
-        </ul>
+<header id="site-header">
+  <div id="site-header-inner">
+    <a id="site-wordmark" href="index.html"><img id="site-wordmark-logo" src="img/square-ue.png" alt="Underground Existence"><span id="site-wordmark-tagline">Mixtapes from Chicago</span></a>
+    <nav id="primary-nav" aria-label="Primary">
+      <a class="primary-nav-link" href="index.html">Home</a>
+      <a class="primary-nav-link is-active" href="residents.html">Selectors</a>
+      <a class="primary-nav-link" href="archive.html">Archive</a>
+      <!-- About hidden from nav for now (owner request 2026-10-17): <a class="primary-nav-link" href="about.html">About</a> -->
+    </nav>
+    <div id="nav-desktop-actions">
+      <span id="nav-search-divider"></span>
+      <button id="nav-search-toggle" type="button" aria-label="Search">
+        <svg class="icon-svg"><use href="#i-search"></use></svg>
+        <span>Search</span>
+      </button>
+      <!-- Theme toggle. Markup is the DARK default (sun = "switch to light"); the inline
+           theme block in partials/head.html rewrites the <use> href, aria-label and
+           aria-pressed when light is active. Styling belongs to css/site.css. -->
+      <!-- light/dark toggle hidden for now (owner 2026-10-05; head.html forces dark):
+      <button id="nav-theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+        <svg class="icon-svg"><use href="#i-sun"></use></svg>
+      </button> -->
     </div>
-    <!-- end sidebar -->
-
-    <!-- player -->
-    <div class="player">
-        <div class="player__cover">
-            <img src="img/artists/startraxxthumb.jpg" alt="">
-        </div>
-
-        <div class="player__content">
-            <span class="player__track"><b class="player__title">Loading...</b> – <span class="player__artist">STAR TRAXX</span></span>
-            <audio src="" id="audio" controls></audio>
-        </div>
+    <div id="mobile-nav-actions">
+      <button id="mobile-search-toggle" type="button" aria-label="Search">
+        <svg class="icon-svg" style="width:20px;height:20px"><use href="#i-search"></use></svg>
+      </button>
+      <!-- light/dark toggle hidden for now (see #nav-theme-toggle above):
+      <button id="mobile-theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+        <svg class="icon-svg" style="width:20px;height:20px"><use href="#i-sun"></use></svg>
+      </button> -->
+      <button id="mobile-menu-toggle" type="button" aria-label="Menu">
+        <svg class="icon-svg" style="width:22px;height:22px"><use href="#i-menu"></use></svg>
+      </button>
     </div>
-    <!-- end player -->
+  </div>
+  <div id="mobile-menu">
+    <a class="mobile-menu-link" href="index.html">Home</a>
+    <a class="mobile-menu-link is-active" href="residents.html">Selectors</a>
+    <a class="mobile-menu-link" href="archive.html">Archive</a>
+    <!-- About hidden from nav for now (owner request 2026-10-17): <a class="mobile-menu-link" href="about.html">About</a> -->
+  </div>
+</header>
+<!-- Runs the moment the two toggles have been parsed, so a returning light-theme visitor never
+     sees the dark-default sun icon repaint into a moon. All logic lives in partials/head.html;
+     this is a call, not a second implementation, and is a no-op if that block ever goes away. -->
+<script>window.__ueThemeSync && window.__ueThemeSync();</script>
 
-    <!-- main content -->
-    <main class="main">
-        <div class="container-fluid">
-            <div class="row row--grid">
-                <!-- breadcrumb -->
-                <div class="col-12">
-                    <ul class="breadcrumb">
-                        <li class="breadcrumb__item"><a href="index.html">Home</a></li>
-                        <li class="breadcrumb__item breadcrumb__item--active">STAR TRAXX</li>
-                    </ul>
-                </div>
-                <!-- end breadcrumb -->
 
-                <!-- title -->
-                <div class="col-12">
-                    <div class="main__title main__title--page">
-                        <h1>STAR TRAXX</h1>
-                    </div>
-                </div>
-                <!-- end title -->
-
-                <!-- releases -->
-                <div class="col-12">
-                    <div class="release">
-                        <div class="release__content">
-                            <div class="release__cover">
-                                <img src="img/artists/startraxxthumb.jpg" alt="">
-                            </div>
-                            <div class="release__stat">
-                                <span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21.65,2.24a1,1,0,0,0-.8-.23l-13,2A1,1,0,0,0,7,5V15.35A3.45,3.45,0,0,0,5.5,15,3.5,3.5,0,1,0,9,18.5V10.86L20,9.17v4.18A3.45,3.45,0,0,0,18.5,13,3.5,3.5,0,1,0,22,16.5V3A1,1,0,0,0,21.65,2.24ZM5.5,20A1.5,1.5,0,1,1,7,18.5,1.5,1.5,0,0,1,5.5,20Zm13-2A1.5,1.5,0,1,1,20,16.5,1.5,1.5,0,0,1,18.5,18ZM20,7.14,9,8.83v-3L20,4.17Z"/></svg> 1 Mixes</span>
-                            </div>
-                        </div>
-
-                        <!-- playlist -->
-                        <ul class="main__list main__list--playlist">
-                            
-    <li class="single-item">
-      <a data-playlist data-title="Mix Tape" data-artist="STAR TRAXX" data-img="img/artists/startraxxthumb.jpg" href="https://3t4xoq2sswghgedqxsojzckllnq4oay6p4xrte7tl5mfm5ia7cka.arweave.net/3Pl3Q1KVjHMQcLycnIlLW2HHAx5_LxmT819YVnUA-JQ" class="single-item__cover">
-        <img src="img/artists/startraxxthumb.jpg" alt="">
-      </a>
-      <div class="single-item__title">
-        <h4><a href="#">Mix Tape</a></h4>
-        <span><a href="#">STAR TRAXX</a> | other | Circe &#39;95</span>
+<main class="page-shell">
+  <section id="artist-detail-header" data-section="artist-detail">
+    <div id="artist-detail-portrait">
+      <div class="hero-image-clip">
+        <img src="https://7utlvsnf5pwxyvghgmypkzmcvm6skupeup5cj5ogdaygu5rzjtca.ardrive.net/_Sa6yaXr7XxUxzMw9WWCqz0lUeSj-iT1xhgwanY5TMQ/img/artists/startraxxthumb.jpg" alt="STAR TRAXX" decoding="async" loading="eager" fetchpriority="high" data-fallback-initial="ST">
+        <!-- logo overlay off the portrait for now (owner 2026-10-05):
+        <img id="artist-detail-portrait-logo" src="img/ue-white-horiz.png" alt="" aria-hidden="true"> -->
       </div>
-      <span class="single-item__time">30:00</span>
-    </li>
-                    </div>
-                </div>
-                <!-- end releases -->
-            </div>
-        </div>
-    </main>
-    <!-- end main content -->
+    </div>
+    <div id="artist-detail-content">
+      <span class="section-eyebrow">Selector</span>
+      <h1 id="artist-detail-name">STAR TRAXX</h1>
+      <span id="artist-detail-signature" aria-hidden="true">Star Traxx</span>
+      <div id="artist-detail-meta">
+        <!-- genre hidden for now (see metaChips in lib/WebsitePageGenerator.cjs):
+        <span class="meta-chip"><svg class="icon-svg"><use href="#i-wave"></use></svg> OTHER</span> -->
+        <span class="meta-chip">1 MIX</span>
+      </div>
+    </div>
+  </section>
 
-    <!-- footer -->
-    <footer class="footer">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-12 col-sm-8 col-md-6 col-lg-6 col-xl-4 order-4 order-md-1 order-lg-4 order-xl-1">
-                    <div class="footer__logo">
-                        <img src="img/loge_horiz.png" alt="">
-                    </div>
-                    <p class="footer__tagline">Hosted on Arweave</p>
-                    <div class="footer__links">
-                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSfnuTItd-QSZkgPwIy9baGBZ8nyC_6Y3JxsXLSLywJfuwrXYw/viewform?usp=sf_link" target="_blank">Contribute Here</a>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-12">
-                    <div class="footer__content">
-                        <div class="footer__social">
-                            <a href="https://twitter.com/" target="_blank"><svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 15C0 6.71573 6.71573 0 15 0C23.2843 0 30 6.71573 30 15C30 23.2843 23.2843 30 15 30C6.71573 30 0 23.2843 0 15Z" fill="#55ACEE"/><path d="M14.5508 12.1922L14.5822 12.7112L14.0576 12.6477C12.148 12.404 10.4798 11.5778 9.06334 10.1902L8.37085 9.50169L8.19248 10.0101C7.81477 11.1435 8.05609 12.3405 8.843 13.1455C9.26269 13.5904 9.16826 13.654 8.4443 13.3891C8.19248 13.3044 7.97215 13.2408 7.95116 13.2726C7.87772 13.3468 8.12953 14.3107 8.32888 14.692C8.60168 15.2217 9.15777 15.7407 9.76631 16.0479L10.2804 16.2915L9.67188 16.3021C9.08432 16.3021 9.06334 16.3127 9.12629 16.5351C9.33613 17.2236 10.165 17.9545 11.0883 18.2723L11.7388 18.4947L11.1723 18.8337C10.3329 19.321 9.34663 19.5964 8.36036 19.6175C7.88821 19.6281 7.5 19.6705 7.5 19.7023C7.5 19.8082 8.78005 20.4014 9.52499 20.6344C11.7598 21.3229 14.4144 21.0264 16.4079 19.8506C17.8243 19.0138 19.2408 17.3507 19.9018 15.7407C20.2585 14.8827 20.6152 13.315 20.6152 12.5629C20.6152 12.0757 20.6467 12.0121 21.2343 11.4295C21.5805 11.0906 21.9058 10.7198 21.9687 10.6139C22.0737 10.4126 22.0632 10.4126 21.5281 10.5927C20.6362 10.9105 20.5103 10.8681 20.951 10.3915C21.2762 10.0525 21.6645 9.43813 21.6645 9.25806C21.6645 9.22628 21.5071 9.27924 21.3287 9.37458C21.1398 9.4805 20.7202 9.63939 20.4054 9.73472L19.8388 9.91479L19.3247 9.56524C19.0414 9.37458 18.6427 9.16273 18.4329 9.09917C17.8978 8.95087 17.0794 8.97206 16.5967 9.14154C15.2852 9.6182 14.4563 10.8469 14.5508 12.1922Z" fill="white"/></svg></a>
-                            <a href="https://www.instagram.com//" target="_blank"><svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 15C0 6.71573 6.71573 0 15 0C23.2843 0 30 6.71573 30 15C30 23.2843 23.2843 30 15 30C6.71573 30 0 23.2843 0 15Z" fill="white"></path><mask x="0" y="0" width="30" height="30"><path fill-rule="evenodd" clip-rule="evenodd" d="M0 15C0 6.71573 6.71573 0 15 0C23.2843 0 30 6.71573 30 15C30 23.2843 23.2843 30 15 30C6.71573 30 0 23.2843 0 15Z" fill="white"></path></mask><g><path fill-rule="evenodd" clip-rule="evenodd" d="M14.9984 7C12.8279 7 12.5552 7.00949 11.7022 7.04834C10.8505 7.08734 10.2692 7.22217 9.76048 7.42001C9.23431 7.62433 8.78797 7.89767 8.3433 8.3425C7.8983 8.78717 7.62496 9.23352 7.41996 9.75952C7.22162 10.2684 7.08662 10.8499 7.04829 11.7012C7.01012 12.5546 7.00012 12.8274 7.00012 15.0001C7.00012 17.1728 7.00979 17.4446 7.04846 18.2979C7.08762 19.1496 7.22246 19.731 7.42013 20.2396C7.62463 20.7658 7.89796 21.2122 8.3428 21.6568C8.78731 22.1018 9.23365 22.3758 9.75948 22.5802C10.2685 22.778 10.85 22.9128 11.7015 22.9518C12.5548 22.9907 12.8273 23.0002 14.9999 23.0002C17.1727 23.0002 17.4446 22.9907 18.2979 22.9518C19.1496 22.9128 19.7316 22.778 20.2406 22.5802C20.7666 22.3758 21.2123 22.1018 21.6568 21.6568C22.1018 21.2122 22.3751 20.7658 22.5801 20.2398C22.7768 19.731 22.9118 19.1495 22.9518 18.2981C22.9901 17.4448 23.0001 17.1728 23.0001 15.0001C23.0001 12.8274 22.9901 12.5547 22.9518 11.7014C22.9118 10.8497 22.7768 10.2684 22.5801 9.7597C22.3751 9.23352 22.1018 8.78717 21.6568 8.3425C21.2118 7.89752 20.7668 7.62418 20.2401 7.42001C19.7301 7.22217 19.1484 7.08734 18.2967 7.04834C17.4434 7.00949 17.1717 7 14.9984 7ZM14.5903 8.44156L14.7343 8.44165L15.0009 8.44171C17.1369 8.44171 17.3901 8.44937 18.2336 8.4877C19.0136 8.52338 19.437 8.65369 19.719 8.76321C20.0923 8.9082 20.3585 9.08154 20.6383 9.36154C20.9183 9.64154 21.0916 9.9082 21.237 10.2816C21.3465 10.5632 21.477 10.9866 21.5125 11.7666C21.5508 12.6099 21.5591 12.8633 21.5591 14.9983C21.5591 17.1333 21.5508 17.3866 21.5125 18.23C21.4768 19.01 21.3465 19.4333 21.237 19.715C21.092 20.0883 20.9183 20.3542 20.6383 20.634C20.3583 20.914 20.0925 21.0873 19.719 21.2323C19.4373 21.3423 19.0136 21.4723 18.2336 21.508C17.3903 21.5463 17.1369 21.5547 15.0009 21.5547C12.8647 21.5547 12.6115 21.5463 11.7682 21.508C10.9882 21.472 10.5649 21.3417 10.2827 21.2322C9.90935 21.0872 9.64268 20.9138 9.36268 20.6338C9.08268 20.3538 8.90934 20.0878 8.76401 19.7143C8.65451 19.4326 8.52401 19.0093 8.48851 18.2293C8.45017 17.386 8.4425 17.1326 8.4425 14.9963C8.4425 12.8599 8.45017 12.6079 8.48851 11.7646C8.52417 10.9846 8.65451 10.5612 8.76401 10.2792C8.90901 9.90588 9.08268 9.63922 9.36268 9.35919C9.64268 9.07919 9.90935 8.90588 10.2827 8.76053C10.5647 8.65054 10.9882 8.52054 11.7682 8.48471C12.5062 8.45135 12.7922 8.44138 14.2832 8.4397V8.44171C14.3803 8.44156 14.4825 8.44153 14.5903 8.44156ZM18.3113 10.7296C18.3113 10.1994 18.7413 9.76987 19.2713 9.76987V9.76953C19.8013 9.76953 20.2313 10.1995 20.2313 10.7296C20.2313 11.2596 19.8013 11.6895 19.2713 11.6895C18.7413 11.6895 18.3113 11.2596 18.3113 10.7296ZM15.0011 10.8916C12.7323 10.8916 10.8928 12.7311 10.8928 15C10.8928 17.2688 12.7323 19.1075 15.0011 19.1075C17.27 19.1075 19.1088 17.2688 19.1088 15C19.1088 12.7311 17.2698 10.8916 15.0011 10.8916ZM17.6678 14.9999C17.6678 13.5271 16.4738 12.3333 15.0011 12.3333C13.5283 12.3333 12.3344 13.5271 12.3344 14.9999C12.3344 16.4726 13.5283 17.6666 15.0011 17.6666C16.4738 17.6666 17.6678 16.4726 17.6678 14.9999Z" fill="black"></path></g></svg></a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </footer>
-    <!-- end footer -->
+  <section id="artist-mixes-section" data-section="artist-mixes">
+    <div class="section-header-row">
+      <span class="section-eyebrow section-eyebrow--plain">Mixes</span>
+      <a class="section-view-all" href="archive.html">Full Archive <svg class="icon-svg"><use href="#i-arrow-right"></use></svg></a>
+    </div>
+    <div id="artist-mix-list" class="catalog-list">
 
-    <!-- JS -->
-    <script src="js/jquery-3.5.1.min.js"></script>
-    <script src="js/bootstrap.bundle.min.js"></script>
-    <script src="js/owl.carousel.min.js"></script>
-    <script src="js/jquery.magnific-popup.min.js"></script>
-    <script src="js/smooth-scrollbar.js"></script>
-    <script src="js/select2.min.js"></script>
-    <script src="js/slider-radio.js"></script>
-    <script src="js/jquery.inputmask.min.js"></script>
-    <script src="js/plyr.min.js"></script>
-    <script src="js/main.js"></script>
+<div class="catalog-row catalog-row--play-first" data-mix-number="009">
+  <span class="catalog-row-lead"><button class="play-circle play-circle--sm" type="button" aria-label="Play"><svg class="icon-svg icon-play"><use href="#i-play"></use></svg><svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg></button></span>
+  <span class="catalog-row-number">009</span>
+  <a class="catalog-row-cover" data-playlist data-title="Mix Tape" data-artist="STAR TRAXX" data-img="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/819391882d0bfdee-v1t2.webp" data-duration-sec="1800" data-page="Startraxx.html" data-video="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/videos/STAR_TRAXX_video_1782822787776.mp4" href="https://3t4xoq2sswghgedqxsojzckllnq4oay6p4xrte7tl5mfm5ia7cka.arweave.net/3Pl3Q1KVjHMQcLycnIlLW2HHAx5_LxmT819YVnUA-JQ" aria-label="Play Mix Tape"><img src="https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/generated-thumbnails/v1/render/819391882d0bfdee-v1t2.webp" alt="STAR TRAXX — Mix Tape" width="960" height="960" decoding="async" loading="lazy" fetchpriority="low" data-fallback-initial="ST"></a>
+  <div class="catalog-row-main">
+    <h3 class="catalog-row-title"><a href="Startraxx.html">Mix Tape</a></h3>
+    <a class="catalog-row-artist" href="Startraxx.html">STAR TRAXX</a>
+    <div class="catalog-row-meta catalog-row-meta--inline"><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> CIRCA 1995</span></div>
+  </div>
+  <div class="catalog-row-meta catalog-row-meta-cell"><span class="meta-chip"><svg class="icon-svg"><use href="#i-calendar"></use></svg> CIRCA 1995</span></div>
+  <div class="catalog-row-actions">
+    <button class="download-btn original-art-btn" type="button" data-original-art="https://arweave.net/_RZiEh4ns9t2kqWwYLg4cjaUz3MFiP1uUhlEY-frQYc" data-original-art-title="STAR TRAXX — Mix Tape" data-mix-txid="3Pl3Q1KVjHMQcLycnIlLW2HHAx5_LxmT819YVnUA-JQ" aria-label="View original artwork for Mix Tape"><svg class="icon-svg"><use href="#i-image"></use></svg></button>
+    <a class="download-btn" data-download href="https://3t4xoq2sswghgedqxsojzckllnq4oay6p4xrte7tl5mfm5ia7cka.arweave.net/3Pl3Q1KVjHMQcLycnIlLW2HHAx5_LxmT819YVnUA-JQ" data-filename="STAR TRAXX - Mix Tape" aria-label="Download Mix Tape"><svg class="icon-svg"><use href="#i-download"></use></svg></a>
+  </div>
+</div>
+    </div>
+  </section>
+</main>
+
+<footer id="site-footer">
+  <div id="site-footer-inner">
+    <div id="footer-brand-block">
+      <div class="footer-tagline">
+        <svg class="icon-svg"><use href="#i-globe"></use></svg>
+        <span>Hosted on Arweave &middot; Est. 2007</span>
+      </div>
+    </div>
+    <div class="footer-links">
+      <a href="index.html">Home</a>
+      <a href="residents.html">Selectors</a>
+      <a href="archive.html">Archive</a>
+      <!-- About hidden from footer for now (owner request 2026-10-17): <a href="about.html">About</a> -->
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSfnuTItd-QSZkgPwIy9baGBZ8nyC_6Y3JxsXLSLywJfuwrXYw/viewform?usp=sf_link" target="_blank" rel="noopener">Contribute</a>
+    </div>
+  </div>
+</footer>
+<!-- The handwritten artist mark: measuring, splitting, and drawing one.
+     `window.ueScriptMark` is the single implementation of the mark's rules —
+     the generator emits marks at build time for every card and portrait, and
+     the hero draws one at runtime for whichever mix is playing; both must split
+     and size a name identically or the hero would not match the grid.
+
+     Two jobs:
+       refine() — the generator sizes each line from a per-character advance
+         table, which cannot see Gately's kerning and so deliberately
+         underestimates (details in WebsitePageGenerator.cjs). Once the face has
+         loaded, measure the real string and write the exact width back.
+       render() — build a mark from scratch for a name the build never saw.
+
+     Inline, in the shared footer, because it belongs to every page that has
+     marks and a new website/js/*.js would need the 23-path
+     REQUIRED_MANIFEST_PATHS deploy gate changed. Degrades quietly: with no
+     canvas or no font-loading API the generator's padded estimate stands, and
+     a runtime mark simply never appears. -->
+<script>
+(function () {
+  var FALLBACK_EM_PER_CHAR = 0.55;
+  var ctx = null;
+
+  function context() {
+    if (ctx) return ctx;
+    try { ctx = document.createElement('canvas').getContext('2d'); } catch (e) { ctx = null; }
+    if (ctx) {
+      var face = getComputedStyle(document.documentElement).getPropertyValue('--font-script').trim()
+        || "'Gately', cursive";
+      ctx.font = '100px ' + face;
+    }
+    return ctx;
+  }
+
+  /* natural width of a string in em of the script face */
+  function measure(text) {
+    if (!text) return 0;
+    var c = context();
+    if (!c) return String(text).length * FALLBACK_EM_PER_CHAR;
+    var w = c.measureText(text).width / 100;
+    return w > 0.1 ? w : String(text).length * FALLBACK_EM_PER_CHAR;
+  }
+
+  /* The mark is a signature, so it wears the stage name: a parenthetical or an
+     "AKA …" tail is display-only noise here. Mirrors scriptDisplayName() in
+     lib/WebsitePageGenerator.cjs. */
+  function displayName(name) {
+    var s = String(name == null ? '' : name)
+      .replace(/\s*[([{].*$/, '')
+      .replace(/\s+(AKA|A\.K\.A\.?)\b.*$/i, '')
+      .trim();
+    return s || String(name == null ? '' : name).trim();
+  }
+
+  /* One word on one line; two or three words stack onto two ("TYREL WILLIAMS"
+     on one line would be half the size of "AKILA" on the same tile); four or
+     more take three. The split minimises the WIDEST line, since that line is
+     what sizes every other one. Mirrors splitScriptLines() in the generator —
+     measured here rather than estimated. */
+  function lines(name) {
+    var words = displayName(name).split(/\s+/).filter(Boolean);
+    if (words.length <= 1) return words;
+    var lineCount = words.length <= 3 ? 2 : 3;
+    var best = null;
+    var cuts = [];
+    (function walk(start, remaining) {
+      if (remaining === 1) {
+        var parts = [];
+        var prev = 0;
+        cuts.forEach(function (c) { parts.push(words.slice(prev, c)); prev = c; });
+        parts.push(words.slice(prev));
+        var widest = 0;
+        parts.forEach(function (p) { widest = Math.max(widest, measure(p.join(' '))); });
+        if (!best || widest < best.widest) best = { widest: widest, parts: parts };
+        return;
+      }
+      for (var c = start + 1; c <= words.length - remaining + 1; c++) {
+        cuts.push(c);
+        walk(c, remaining - 1);
+        cuts.pop();
+      }
+    }(0, lineCount));
+    return best.parts.map(function (p) { return p.join(' '); });
+  }
+
+  /* Draw the mark for `name` into `el` (a .cover-script container). Same shape
+     the generator emits, so site.css sizes it with the same one division. */
+  function render(el, name) {
+    if (!el) return false;
+    var parts = lines(name);
+    if (!parts.length) { el.textContent = ''; el.removeAttribute('style'); return false; }
+    if (el.getAttribute('data-script-name') === String(name)) return true;   // already drawn
+    el.textContent = '';
+    el.style.setProperty('--script-lines', String(parts.length));
+    parts.forEach(function (line) {
+      var span = document.createElement('span');
+      span.className = 'cover-script-line';
+      span.style.setProperty('--script-w', measure(line).toFixed(3));
+      span.textContent = line;
+      el.appendChild(span);
+    });
+    el.setAttribute('data-script-name', String(name));
+    return true;
+  }
+
+  function refine() {
+    var marks = document.querySelectorAll('.cover-script-line');
+    var widths = {};
+    for (var i = 0; i < marks.length; i++) {
+      var node = marks[i];
+      var text = node.textContent;
+      if (!text) continue;
+      if (widths[text] === undefined) widths[text] = measure(text);
+      if (widths[text]) node.style.setProperty('--script-w', widths[text].toFixed(3));
+    }
+  }
+
+  window.ueScriptMark = { measure: measure, lines: lines, render: render, refine: refine };
+
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('100px Gately').then(function () {
+      ctx = null;        /* re-create with the real face now that it has loaded */
+      refine();
+      /* redraw anything the hero drew before the font arrived */
+      Array.prototype.forEach.call(document.querySelectorAll('.cover-script[data-script-name]'), function (el) {
+        var name = el.getAttribute('data-script-name');
+        el.removeAttribute('data-script-name');
+        render(el, name);
+      });
+    }).catch(function () { /* estimates stand */ });
+  }
+})();
+</script>
+
+<div id="persistent-player-bar" class="is-idle" data-mix-credits="{&quot;xH8qwPs-l9UD7V07Ih2jL0igYmJeQJJ3PA_cXd5cNvM&quot;:{&quot;title&quot;:&quot;ANDREW EMIL B2B RED EYE&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;},&quot;3AxXQKQwyu_xPf2b-Da-MfPCw6VFeMXuposTY5qwjUg&quot;:{&quot;title&quot;:&quot;BAI-EE&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;},&quot;aEa4HSQxSk0Hm48fnowtauh_B86QULEGEVyF8myCuCU&quot;:{&quot;title&quot;:&quot;TYREL WILLIAMS&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;},&quot;o0FK78kfeGy1cnM65Jdfhbum3pI_Z3xx8ijw6SSXjr0&quot;:{&quot;title&quot;:&quot;SASSMOUTH&quot;,&quot;sub&quot;:&quot;Live @ Viva Acid &#39;24&quot;}}">
+  <div id="player-bar-now-playing">
+    <div id="player-bar-thumb"><img class="cover-fallback" src="img/square-ue.png" alt=""></div>
+    <div id="player-bar-track-meta">
+      <div id="player-bar-title"><a href="">Select a mix to play</a></div>
+      <div id="player-bar-artist"></div>
+    </div>
+  </div>
+  <!-- film / cover / artist chips (homepage: the hero script moves #hero-source-thumbs here) -->
+  <div id="player-bar-source-slot"></div>
+  <div id="player-bar-transport">
+    <button class="transport-btn" id="player-bar-shuffle" type="button" aria-label="Shuffle">
+      <svg class="icon-svg"><use href="#i-shuffle"></use></svg>
+    </button>
+    <button class="transport-btn" id="player-bar-prev" type="button" aria-label="Previous">
+      <svg class="icon-svg"><use href="#i-prev"></use></svg>
+    </button>
+    <button class="play-circle play-circle--sm" id="player-bar-play" type="button" aria-label="Play or pause">
+      <svg class="icon-svg icon-play"><use href="#i-play"></use></svg>
+      <svg class="icon-svg icon-pause"><use href="#i-pause"></use></svg>
+    </button>
+    <button class="transport-btn" id="player-bar-next" type="button" aria-label="Next">
+      <svg class="icon-svg"><use href="#i-next"></use></svg>
+    </button>
+    <button class="transport-btn" id="player-bar-repeat" type="button" aria-label="Repeat">
+      <svg class="icon-svg"><use href="#i-repeat"></use></svg>
+    </button>
+  </div>
+  <div id="player-bar-wave-wrap">
+    <span class="player-bar-time time-current" id="player-bar-time-current">0:00</span>
+    <div id="player-bar-waveform" aria-hidden="true"></div>
+    <span class="player-bar-time time-total" id="player-bar-time-total">--:--</span>
+  </div>
+  <div id="player-bar-volume">
+    <svg class="icon-svg"><use href="#i-volume"></use></svg>
+    <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+  </div>
+  <button id="player-bar-menu-btn" type="button" aria-label="More">
+    <svg class="icon-svg"><use href="#i-kebab"></use></svg>
+  </button>
+</div>
+<script>
+/* Fade the bar's live parts in once the player has set them up, instead of
+   showing the idle placeholder and then swapping (a visible content shift).
+   css: #persistent-player-bar[data-bar-boot]. `ue-player-ready` fires after
+   player.js has synced the bar (and ue-resume.js primes on that same event),
+   so a short beat after it the bar is final. The fallback covers a player that
+   never loads; no JS means no attribute and the bar simply shows. */
+(function () {
+  var bar = document.getElementById('persistent-player-bar');
+  if (!bar) return;
+  bar.setAttribute('data-bar-boot', 'pending');
+  function ready() {
+    if (bar.getAttribute('data-bar-boot') !== 'pending') return;
+    void bar.offsetWidth;   /* flush 'pending' so the fade runs */
+    bar.setAttribute('data-bar-boot', 'ready');
+  }
+  document.addEventListener('ue-player-ready', function () { setTimeout(ready, 80); }, { once: true });
+  setTimeout(ready, 6000);
+})();
+</script>
+
+<div id="search-overlay" role="dialog" aria-label="Search">
+  <button id="search-overlay-close" type="button">Close</button>
+  <div id="search-overlay-inner">
+    <input id="search-input" type="text" placeholder="Search mixes &amp; residents&hellip;" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+</div>
+
+<!-- UE shared dialog (transient-UI rework).
+     ONE centre-screen dialog for the whole site, reserved for genuine decisions:
+     a terminal playback failure (retry / download), the clipboard-blocked copy
+     fallback, and a mix's original artwork (artist page, "View original artwork"). Transient states (starting / buffering / seeking) keep the existing
+     inline pill on the waveform and must NOT come through here.
+
+     WHY THIS MARKUP IS STATIC, AND WHY THE CONTROLLER IS INLINE:
+       * Static: the old floating slabs were injected at runtime, which is exactly
+         what this rework removes. The dialog ships in the page, hidden, so there is
+         nothing to build, nothing to tear down, and css/site.css can style it from
+         stable ids/classes.
+       * Inline script: `REQUIRED_MANIFEST_PATHS` in lib/WebsiteDeployer.js is a hard
+         23-path deploy gate — a new website/js/*.js file would need that gate changed
+         and is out of scope. A partial costs nothing: it is inlined into every
+         generated page by lib/WebsitePageGenerator.cjs.
+       * Position: this partial sits with the other global partials, immediately
+         before the deferred js/boot.js tag, so `window.ueDialog` exists before any
+         player module runs and the element is already parsed when it does.
+
+     NO COLOURS LIVE HERE. Everything visual is css/site.css (owned by the CSS lead).
+     Style hooks, all stable:
+       #ue-dialog (+ ::backdrop)      the <dialog> itself
+         [open]                       shown
+         [data-actions="0|1|2"]       how many action buttons are rendered
+         [data-copy="on|off"]         whether the copy input is showing
+         [data-image="on|off"]        whether the image slot is showing
+       #ue-dialog-panel              inner panel — put PADDING HERE, not on #ue-dialog:
+                                     a backdrop click is detected as "target is the
+                                     dialog element", so padding on the dialog itself
+                                     would become a dead click-to-close zone.
+       #ue-dialog-close              the ✕ button   (.ue-dialog-close-glyph inside)
+       #ue-dialog-title              title line
+       #ue-dialog-message            body copy (carries [hidden] when unused)
+       #ue-dialog-image              open({ image: { src, alt } }) (carries [hidden])
+       #ue-dialog-copy-input         read-only copy fallback field (carries [hidden])
+       #ue-dialog-actions            actions row
+       .ue-dialog-action             an action button
+         .ue-dialog-action--primary / .ue-dialog-action--quiet  (also [data-variant])
+
+     The `hidden` attribute on the dialog is load-bearing in BOTH directions: a browser
+     with no <dialog> support treats the element as an unknown inline box and would
+     otherwise paint the panel inline on every page. The controller removes `hidden`
+     right before showModal() and restores it on close, so the UA rule
+     `[hidden] { display: none }` can never fight an open dialog. -->
+<dialog id="ue-dialog" aria-labelledby="ue-dialog-title" aria-describedby="ue-dialog-message" data-actions="0" data-copy="off" data-image="off" hidden>
+  <div id="ue-dialog-panel">
+    <button id="ue-dialog-close" type="button" aria-label="Close">
+      <span class="ue-dialog-close-glyph" aria-hidden="true">&#10005;</span>
+    </button>
+    <h2 id="ue-dialog-title"></h2>
+    <p id="ue-dialog-message" hidden></p>
+    <img id="ue-dialog-image" alt="" decoding="async" hidden>
+    <input id="ue-dialog-copy-input" type="text" readonly spellcheck="false" autocomplete="off" aria-label="Copy this text" hidden>
+    <div id="ue-dialog-actions"></div>
+  </div>
+</dialog>
+<script>
+(function () {
+  var dlg = document.getElementById('ue-dialog');
+  var panel = document.getElementById('ue-dialog-panel');
+  var titleEl = document.getElementById('ue-dialog-title');
+  var msgEl = document.getElementById('ue-dialog-message');
+  var copyEl = document.getElementById('ue-dialog-copy-input');
+  var imageEl = document.getElementById('ue-dialog-image');
+  var actionsEl = document.getElementById('ue-dialog-actions');
+  var closeBtn = document.getElementById('ue-dialog-close');
+
+  /* Feature test, not a UA test. Old Safari and every pre-2022 engine either lack
+     <dialog> entirely or ship it without showModal; either way we degrade instead of
+     throwing, because a caller here is always on a playback path and playback must
+     never break because a dialog could not open. */
+  var supported = !!(dlg && panel && typeof dlg.showModal === 'function' && typeof dlg.close === 'function');
+
+  var lastFocused = null;   /* what to hand focus back to on close */
+  var pressedOnSelf = false; /* backdrop press tracking, see the click handler */
+
+  function str(v) {
+    return typeof v === 'string' ? v : (v === 0 || v ? String(v) : '');
+  }
+
+  function setText(el, text) {
+    if (!el) return false;
+    var value = str(text);
+    el.textContent = value;
+    if (value) el.removeAttribute('hidden');
+    else el.setAttribute('hidden', '');
+    return !!value;
+  }
+
+  /* Wipe every trace of the previous call. Actions are removed as NODES, so their
+     listeners go with them and no onSelect can leak into the next dialog. */
+  function reset() {
+    if (titleEl) titleEl.textContent = '';
+    setText(msgEl, '');
+    if (actionsEl) actionsEl.textContent = '';
+    if (copyEl) {
+      copyEl.value = '';
+      copyEl.setAttribute('hidden', '');
+    }
+    if (imageEl) {
+      imageEl.removeAttribute('src');
+      imageEl.alt = '';
+      imageEl.setAttribute('hidden', '');
+    }
+    if (dlg) {
+      dlg.setAttribute('data-actions', '0');
+      dlg.setAttribute('data-copy', 'off');
+      dlg.setAttribute('data-image', 'off');
+    }
+  }
+
+  function restoreFocus() {
+    var target = lastFocused;
+    lastFocused = null;
+    if (!target || typeof target.focus !== 'function') return;
+    /* Only if it is still on the page — the failing card may have been re-rendered. */
+    if (document.contains && !document.contains(target)) return;
+    try { target.focus(); } catch (e) { /* focus is a nicety, never a failure */ }
+  }
+
+  function close() {
+    if (!supported) return;
+    try {
+      if (dlg.open) dlg.close();
+      else { reset(); dlg.setAttribute('hidden', ''); restoreFocus(); }
+    } catch (e) { /* already closed */ }
+  }
+
+  function buildAction(spec) {
+    if (!spec || typeof spec !== 'object') return null;
+    var label = str(spec.label);
+    if (!label) return null;
+    var variant = spec.variant === 'quiet' ? 'quiet' : 'primary';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ue-dialog-action ue-dialog-action--' + variant;
+    btn.setAttribute('data-variant', variant);
+    btn.textContent = label;
+    btn.addEventListener('click', function () {
+      var result;
+      /* A throwing onSelect must still close the dialog — otherwise a bug in a caller
+         leaves a modal on screen with the page inert behind it. */
+      try {
+        result = typeof spec.onSelect === 'function' ? spec.onSelect() : undefined;
+      } catch (e) {
+        result = undefined;
+      }
+      /* Exactly `false` keeps it open (e.g. an action that swaps in new content). */
+      if (result !== false) close();
+    });
+    return btn;
+  }
+
+  function open(spec) {
+    spec = spec && typeof spec === 'object' ? spec : {};
+    var title = str(spec.title);
+    var message = str(spec.message);
+    var copyText = str(spec.copyText);
+    var actions = Object.prototype.toString.call(spec.actions) === '[object Array]' ? spec.actions : [];
+    /* http(s) only: the one caller passes a stored artwork URL, and nothing else
+       (javascript:, data:) should ever reach an <img src> from here. */
+    var image = spec.image && typeof spec.image === 'object' && /^https?:\/\//i.test(str(spec.image.src))
+      ? { src: str(spec.image.src), alt: str(spec.image.alt) } : null;
+
+    /* Nothing to say and nothing to do — refuse rather than flash an empty box. */
+    if (!title && !message && !copyText && !image && actions.length === 0) return false;
+
+    if (!supported) {
+      /* Degraded path: the copy fallback is the only case where the user still has
+         something to do, so hand them a prompt they can select out of. Everything
+         else simply does not appear — the caller has already handled its own state. */
+      if (copyText && typeof window.prompt === 'function') {
+        try {
+          window.prompt(message || title || 'Copy this text', copyText);
+          return true;
+        } catch (e) { return false; }
+      }
+      return false;
+    }
+
+    var wasOpen = dlg.open;
+    /* Calling open() on an already-open dialog REPLACES its content. Only capture the
+       return-focus target on the first open, or a replace would point focus at the
+       button inside the dialog we are about to throw away. */
+    if (!wasOpen) lastFocused = document.activeElement;
+
+    reset();
+
+    if (titleEl) titleEl.textContent = title;
+    setText(msgEl, message);
+
+    if (image && imageEl) {
+      imageEl.alt = image.alt;
+      imageEl.src = image.src;
+      imageEl.removeAttribute('hidden');
+      dlg.setAttribute('data-image', 'on');
+    }
+
+    if (copyText && copyEl) {
+      copyEl.value = copyText;
+      copyEl.readOnly = true;
+      copyEl.removeAttribute('hidden');
+      dlg.setAttribute('data-copy', 'on');
+    }
+
+    var built = 0;
+    for (var i = 0; i < actions.length && built < 2; i++) {
+      var btn = buildAction(actions[i]);
+      if (!btn) continue;
+      actionsEl.appendChild(btn);
+      built++;
+    }
+    dlg.setAttribute('data-actions', String(built));
+
+    if (!wasOpen) {
+      dlg.removeAttribute('hidden');
+      try {
+        dlg.showModal();
+      } catch (e) {
+        /* Supported in principle, refused in practice (detached node, already open as
+           a non-modal). Put it back the way it was and tell the caller nothing showed. */
+        dlg.setAttribute('hidden', '');
+        reset();
+        lastFocused = null;
+        return false;
+      }
+    }
+
+    /* Focus: the copy field first (pre-selected so cmd/ctrl-C works immediately),
+       otherwise the first action, otherwise the ✕ — never nothing. */
+    try {
+      if (copyText && copyEl) {
+        copyEl.focus();
+        copyEl.select();
+        if (typeof copyEl.setSelectionRange === 'function') {
+          copyEl.setSelectionRange(0, copyEl.value.length);
+        }
+      } else {
+        var first = actionsEl.querySelector('.ue-dialog-action');
+        if (first) first.focus();
+        else if (closeBtn) closeBtn.focus();
+      }
+    } catch (e) { /* platform already focused something inside the dialog */ }
+
+    return true;
+  }
+
+  if (supported) {
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () { close(); });
+    }
+
+    /* Backdrop click. A click whose target is the dialog ELEMENT (rather than anything
+       inside #ue-dialog-panel) landed on the backdrop. Both the press and the release
+       must have landed there, so a text selection dragged out of the panel does not
+       close the dialog on mouseup. */
+    dlg.addEventListener('pointerdown', function (ev) {
+      pressedOnSelf = ev.target === dlg;
+    });
+    dlg.addEventListener('mousedown', function (ev) {
+      /* pointerdown covers every current engine; mousedown is the fallback for one
+         that fires only mouse events, and is harmless where both fire. */
+      pressedOnSelf = ev.target === dlg;
+    });
+    dlg.addEventListener('click', function (ev) {
+      if (ev.target === dlg && pressedOnSelf) close();
+      pressedOnSelf = false;
+    });
+
+    /* Esc closes via the platform's own `cancel` → `close`; we only clean up after. */
+    dlg.addEventListener('close', function () {
+      reset();
+      dlg.setAttribute('hidden', '');
+      pressedOnSelf = false;
+      restoreFocus();
+    });
+  }
+
+  window.ueDialog = { open: open, close: close, supported: supported };
+})();
+</script>
+
+<!-- UE share modal.
+     ONE centre-screen share widget for the whole site. Every share affordance —
+     the icon on a mix card, the icon on a catalog row, the hero's share button,
+     the player bar — opens THIS, so sharing looks and behaves identically
+     everywhere. Callers reach it through `window.ueShare.open({...})`.
+
+     WHY THIS MARKUP IS STATIC, AND WHY THE CONTROLLER IS INLINE:
+       * Static: same reasoning as the shared dialog next door — nothing to
+         build at runtime, nothing to tear down, and css/site.css can style it
+         from stable ids.
+       * Inline script: `REQUIRED_MANIFEST_PATHS` in lib/WebsiteDeployer.js is a
+         hard deploy gate, so a new website/js/*.js file would need that gate
+         changed. A partial is inlined into every generated page by
+         lib/WebsitePageGenerator.cjs and costs no new request.
+       * Position: with the other global partials, before the deferred
+         js/boot.js tag, so `window.ueShare` exists before ue-links.js runs and
+         the element is already parsed when a listener first clicks share.
+
+     WHAT IT OFFERS, IN DELIBERATE ORDER — the order IS the design, because the
+     top item is the one most people will use:
+       1. Share…      native share sheet (mobile: Instagram, TikTok, Messages,
+                      WhatsApp in one tap). Rendered only when navigator.share
+                      exists, which is essentially "is this a phone".
+       2. Copy link   always present, and the link is also shown in a readonly
+                      field — so a blocked clipboard is never a dead end and
+                      the listener can always see what they are about to send.
+       3. Save video  the mix's own 30s promo film. The ONLY route to Instagram
+                      and TikTok: neither accepts a shared URL, both take an
+                      uploaded file. See saveVideo() for the CORS caveat.
+       4. Start at    only when opened mid-playback — "share the drop" is the
+                      highest-intent share a DJ mix has.
+       5. Platforms   X / Facebook / Reddit / Telegram / WhatsApp / Email web
+                      intents. Cheap, mostly desktop, deliberately last.
+
+     WHICH ADDRESS IT SHARES. Two, switched by the segmented control:
+       PERMAWEB (default)  the site's ArNS address — <meta name="ue-permaweb-base">,
+                           written by the generator from ARNS_NAME. It is the
+                           forever address: permanent, and re-pointed at the
+                           newest manifest on every deploy, so a link shared
+                           today still opens the archive years from now even if
+                           the domain lapses. NOT a manifest txid — that would
+                           freeze the archive at one deploy, and the txid of the
+                           deploy being generated cannot exist yet anyway.
+       SITE                whatever host the listener is actually on, resolved
+                           relatively — undergroundexistence.info in production,
+                           and the manifest URL when they are already reading
+                           through one. Unfurls most reliably when posted.
+     Both carry the same `?mix=<txid>` deep link, so either one lands on the
+     same mix. The `t=` timestamp rides on whichever is selected.
+
+     NO COLOURS LIVE HERE. Everything visual is css/site.css.
+     Style hooks, all stable:
+       #ue-share-dialog (+ ::backdrop)   the <dialog> itself
+         [open]                          shown
+         [data-has-video="on|off"]       whether this mix has a promo film
+         [data-has-time="on|off"]        whether a timestamp is on offer
+         [data-host="permaweb|site"]     which address is selected
+       #ue-share-panel                   inner panel — PADDING GOES HERE, not on
+                                         the dialog: a backdrop click is detected
+                                         as "target is the dialog element", so
+                                         padding on the dialog would be a dead
+                                         click-to-close zone. Two columns from
+                                         720px up (media | controls), one below.
+       #ue-share-close                   the ✕ button
+       #ue-share-media                   square preview (art, or the film)
+       #ue-share-body                    the controls column
+       #ue-share-title / #ue-share-artist
+       #ue-share-native / #ue-share-copy      primary actions
+       #ue-share-host                    the address switch (.ue-share-host-opt)
+       #ue-share-url                     the readonly link field
+       #ue-share-note                    one line explaining the chosen address
+       #ue-share-at                      the "start at m:ss" row
+       #ue-share-targets                 the platform row (.ue-share-target)
+       #ue-share-video-dl / #ue-share-audio-dl
+       #ue-share-status                  aria-live feedback line
+
+     The `hidden` attribute on the dialog is load-bearing in BOTH directions,
+     exactly as on #ue-dialog: a browser without <dialog> would otherwise paint
+     the panel inline on every page. The controller removes `hidden` right
+     before showModal() and restores it on close. -->
+<dialog id="ue-share-dialog" aria-labelledby="ue-share-title" data-has-video="off" data-has-time="off" data-host="permaweb" hidden>
+  <div id="ue-share-panel">
+    <button id="ue-share-close" type="button" aria-label="Close">
+      <span class="ue-share-close-glyph" aria-hidden="true">&#10005;</span>
+    </button>
+
+    <div id="ue-share-media">
+      <img id="ue-share-art" alt="" decoding="async">
+      <video id="ue-share-video" muted loop playsinline preload="none" aria-hidden="true"></video>
+      <button id="ue-share-sound" type="button" aria-pressed="false" aria-label="Unmute preview" hidden>
+        <svg class="icon-svg icon-muted"><use href="#i-volume-off"></use></svg>
+        <svg class="icon-svg icon-unmuted"><use href="#i-volume"></use></svg>
+      </button>
+    </div>
+
+    <div id="ue-share-body">
+      <p id="ue-share-eyebrow">Share this mix</p>
+      <h2 id="ue-share-title"></h2>
+      <p id="ue-share-artist"></p>
+
+      <div id="ue-share-primary">
+        <button id="ue-share-native" class="ue-share-action ue-share-action--primary" type="button" hidden>Share&hellip;</button>
+        <button id="ue-share-copy" class="ue-share-action" type="button">Copy link</button>
+      </div>
+
+      <div id="ue-share-host" role="group" aria-label="Which address to share">
+        <button class="ue-share-host-opt" type="button" data-host="permaweb" aria-pressed="true">Permaweb</button>
+        <button class="ue-share-host-opt" type="button" data-host="site" aria-pressed="false">Site</button>
+      </div>
+
+      <input id="ue-share-url" type="text" readonly spellcheck="false" autocomplete="off" aria-label="Link to this mix">
+      <p id="ue-share-note"></p>
+
+      <label id="ue-share-at" for="ue-share-at-input">
+        <input id="ue-share-at-input" type="checkbox">
+        <span>Start at <span id="ue-share-at-time"></span></span>
+      </label>
+
+      <div id="ue-share-files">
+        <button id="ue-share-video-dl" class="ue-share-action" type="button">Save video</button>
+        <a id="ue-share-audio-dl" class="ue-share-action" data-download href="#" hidden>Download mix</a>
+      </div>
+
+      <p id="ue-share-hint" hidden></p>
+
+      <div id="ue-share-targets" role="group" aria-label="Share to a platform"></div>
+
+      <p id="ue-share-status" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+</dialog>
+<script>
+(function () {
+  'use strict';
+
+  var dlg = document.getElementById('ue-share-dialog');
+  var panel = document.getElementById('ue-share-panel');
+  if (!dlg || !panel) return;
+
+  /* Feature test, not a UA test — same contract as #ue-dialog. Without
+     showModal() this module simply never claims the job, and every caller
+     falls back to its own pre-existing share path (see ue-links.js), so
+     sharing still works on an engine too old for <dialog>. */
+  var supported = typeof dlg.showModal === 'function' && typeof dlg.close === 'function';
+  if (!supported) return;
+
+  var artEl = document.getElementById('ue-share-art');
+  var videoEl = document.getElementById('ue-share-video');
+  var soundBtn = document.getElementById('ue-share-sound');
+  var titleEl = document.getElementById('ue-share-title');
+  var artistEl = document.getElementById('ue-share-artist');
+  var nativeBtn = document.getElementById('ue-share-native');
+  var copyBtn = document.getElementById('ue-share-copy');
+  var urlEl = document.getElementById('ue-share-url');
+  var atRow = document.getElementById('ue-share-at');
+  var atInput = document.getElementById('ue-share-at-input');
+  var atTimeEl = document.getElementById('ue-share-at-time');
+  var videoBtn = document.getElementById('ue-share-video-dl');
+  var audioBtn = document.getElementById('ue-share-audio-dl');
+  var hintEl = document.getElementById('ue-share-hint');
+  var targetsEl = document.getElementById('ue-share-targets');
+  var statusEl = document.getElementById('ue-share-status');
+  var closeBtn = document.getElementById('ue-share-close');
+  var noteEl = document.getElementById('ue-share-note');
+  var hostEl = document.getElementById('ue-share-host');
+
+  /* The permanent address, written into every page by the generator. Missing
+     or malformed (a hand-edited page, an old deploy) simply removes the
+     PERMAWEB option — the site link always works. */
+  function permawebBase() {
+    try {
+      var m = document.querySelector('meta[name="ue-permaweb-base"]');
+      var v = m && m.getAttribute('content');
+      if (v && /^https:\/\//i.test(v)) return v.replace(/\/+$/, '') + '/';
+    } catch (err) { /* ignore */ }
+    return '';
+  }
+  var PERMAWEB = permawebBase();
+
+  var NOTES = {
+    permaweb: 'Permanent Arweave address. Outlives the domain.',
+    site: 'Best link preview when posted to a feed.'
+  };
+
+  var hostMode = PERMAWEB ? 'permaweb' : 'site';
+
+  var current = null;      /* the info object this modal is currently showing */
+  var lastFocused = null;  /* what to hand focus back to on close */
+  var pressedOnSelf = false;
+  var statusTimer = null;
+
+  function str(v) {
+    return typeof v === 'string' ? v : (v === 0 || v ? String(v) : '');
+  }
+
+  /* Same display convention as player.js formatTime() and ue-links.js
+     formatShareTime(), so a shared timestamp reads as the number the listener
+     actually saw on the waveform. */
+  function clock(sec) {
+    sec = Math.floor(Number(sec) || 0);
+    if (!isFinite(sec) || sec < 0) sec = 0;
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = sec % 60;
+    var mm = h > 0 && m < 10 ? '0' + m : String(m);
+    var ss = s < 10 ? '0' + s : String(s);
+    return h > 0 ? h + ':' + mm + ':' + ss : mm + ':' + ss;
+  }
+
+  function say(msg) {
+    if (!statusEl) return;
+    statusEl.textContent = str(msg);
+    if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
+    if (msg) statusTimer = setTimeout(function () { statusEl.textContent = ''; }, 4000);
+  }
+
+  /* The page + deep link both addresses share. `page` is the mix's ARTIST page
+     (data-page in the generated markup) — a link there unfurls with that
+     selector's own artwork, which a link to whatever page the listener
+     happened to be browsing would not. */
+  function relativeTarget() {
+    if (!current || !current.txid) return '';
+    var page = str(current.page);
+    if (!page) {
+      try {
+        page = (location.pathname || '').split('/').pop() || '';
+      } catch (err) { page = ''; }
+    }
+    var rel = page + '?mix=' + encodeURIComponent(current.txid);
+    if (atInput && !atInput.disabled && atInput.checked && current.t > 0) {
+      rel += '&t=' + encodeURIComponent(String(Math.floor(current.t)));
+    }
+    return rel;
+  }
+
+  /* PERMAWEB resolves against the ArNS base — the forever address, which every
+     deploy re-points at the newest manifest. SITE resolves against
+     location.href and is therefore never a hardcoded domain: the same deploy is
+     reachable at undergroundexistence.info AND through a gateway's manifest
+     path, and "share where I am" must honour whichever the listener is on. */
+  function buildUrl() {
+    var rel = relativeTarget();
+    if (!rel) return '';
+    var base = (hostMode === 'permaweb' && PERMAWEB) ? PERMAWEB : location.href;
+    try {
+      return new URL(rel, base).href;
+    } catch (err) {
+      return rel;
+    }
+  }
+
+  function setHostMode(mode) {
+    hostMode = (mode === 'permaweb' && PERMAWEB) ? 'permaweb' : 'site';
+    dlg.setAttribute('data-host', hostMode);
+    if (hostEl) {
+      var opts = hostEl.querySelectorAll('.ue-share-host-opt');
+      Array.prototype.forEach.call(opts, function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-host') === hostMode ? 'true' : 'false');
+      });
+    }
+    if (noteEl) noteEl.textContent = NOTES[hostMode] || '';
+    refreshUrl();
+  }
+
+  function shareTitle() {
+    if (!current) return 'Underground Existence';
+    var t = str(current.title);
+    var a = str(current.artist);
+    if (t && a) return t + ' — ' + a;
+    return t || a || 'Underground Existence';
+  }
+
+  /* The platform row. Web intents only — Instagram and TikTok have none, which
+     is exactly why "Save video" sits above this. `name` is the visible label;
+     the site's type does the identifying, so no brand SVGs are shipped. */
+  function targetUrls(url, text) {
+    var u = encodeURIComponent(url);
+    var t = encodeURIComponent(text);
+    var tu = encodeURIComponent(text + ' ' + url);
+    return [
+      { name: 'X', href: 'https://twitter.com/intent/tweet?text=' + t + '&url=' + u },
+      { name: 'Facebook', href: 'https://www.facebook.com/sharer/sharer.php?u=' + u },
+      { name: 'Reddit', href: 'https://www.reddit.com/submit?url=' + u + '&title=' + t },
+      { name: 'Telegram', href: 'https://t.me/share/url?url=' + u + '&text=' + t },
+      { name: 'WhatsApp', href: 'https://api.whatsapp.com/send?text=' + tu },
+      { name: 'Email', href: 'mailto:?subject=' + t + '&body=' + tu }
+    ];
+  }
+
+  function renderTargets(url) {
+    if (!targetsEl) return;
+    targetsEl.textContent = '';
+    var text = shareTitle();
+    targetUrls(url, text).forEach(function (t) {
+      var a = document.createElement('a');
+      a.className = 'ue-share-target';
+      a.href = t.href;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = t.name;
+      a.setAttribute('aria-label', 'Share on ' + t.name);
+      targetsEl.appendChild(a);
+    });
+  }
+
+  /* Re-derives every URL-carrying control from the CURRENT state of the
+     timestamp checkbox. Called on open and on every toggle, so the link in the
+     field, the platform intents and the native share sheet can never disagree
+     about whether the share starts at 12:34. */
+  function refreshUrl() {
+    var url = buildUrl();
+    if (urlEl) urlEl.value = url;
+    renderTargets(url);
+    return url;
+  }
+
+  /* ---------- copy ---------- */
+
+  function selectUrlField() {
+    if (!urlEl) return;
+    try { urlEl.focus(); urlEl.select(); } catch (err) { /* ignore */ }
+  }
+
+  function copyUrl() {
+    var url = buildUrl();
+    if (!url) return;
+    var done = function () { say('Link copied.'); };
+    var failed = function () {
+      /* never a dead end: the link is already on screen in a readonly field,
+         so the recovery is to select it rather than open another dialog */
+      selectUrlField();
+      say('Copy blocked by the browser — the link is selected, press ' +
+        (/Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '') ? '⌘C' : 'Ctrl+C') + '.');
+    };
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(url).then(done, function () {
+          if (!legacyCopy(url)) failed(); else done();
+        });
+        return;
+      }
+    } catch (err) { /* fall through */ }
+    if (legacyCopy(url)) done(); else failed();
+  }
+
+  function legacyCopy(text) {
+    if (!urlEl || typeof document.execCommand !== 'function') return false;
+    var ok = false;
+    try {
+      urlEl.value = text;
+      urlEl.select();
+      ok = !!document.execCommand('copy');
+    } catch (err) { ok = false; }
+    return ok;
+  }
+
+  /* ---------- native share sheet ---------- */
+
+  function nativeShare() {
+    var url = buildUrl();
+    if (!url || !navigator.share) return;
+    try {
+      navigator.share({ title: shareTitle(), text: shareTitle(), url: url })
+        .then(function () { close(); }, function () { /* dismissed — stay open */ });
+    } catch (err) { /* older implementations can throw synchronously */ }
+  }
+
+  /* ---------- save the promo film ----------
+     The honest state of this, as of the build that introduced it: the video
+     objects are served from Google Cloud Storage WITHOUT an
+     Access-Control-Allow-Origin header, so the fetch below is blocked
+     cross-origin and every real visitor lands in the catch. That is not a bug
+     to route around — it is the same escalation player.js already uses for
+     audio downloads, and the fallback (open the file, tell them to save it)
+     works on every platform including iOS.
+
+     Add a CORS rule to the bucket for undergroundexistence.info and this
+     upgrades itself to a true one-tap download with no code change. */
+  function saveVideo() {
+    if (!current || !current.video || !videoBtn) return;
+    if (videoBtn.classList.contains('is-loading')) return;
+    var url = current.video;
+    var name = (str(current.filename) || shareTitle()).replace(/[\\/:*?"<>|]/g, '').trim() || 'mix';
+    videoBtn.classList.add('is-loading');
+    say('Preparing video…');
+
+    var openInstead = function () {
+      videoBtn.classList.remove('is-loading');
+      showHint('Your browser could not save it directly. The video opened in a new tab — ' +
+        'long-press it (phone) or right-click → “Save video as…” (desktop), then post it.');
+      say('');
+      try { window.open(url, '_blank', 'noopener'); } catch (err) { /* popup blocked */ }
+    };
+
+    var pending;
+    try {
+      pending = fetch(url, { mode: 'cors' });
+    } catch (err) {
+      openInstead();
+      return;
+    }
+    pending.then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.blob();
+    }).then(function (blob) {
+      var objectUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = name + '.mp4';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 10000);
+      videoBtn.classList.remove('is-loading');
+      say('Video saved. Post it anywhere — the link is above.');
+    }).catch(openInstead);
+  }
+
+  function showHint(text) {
+    if (!hintEl) return;
+    hintEl.textContent = str(text);
+    hintEl.hidden = !text;
+  }
+
+  /* ---------- preview film ---------- */
+
+  function reducedMotion() {
+    try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+    catch (err) { return false; }
+  }
+  function saveData() {
+    try { return !!(navigator.connection && navigator.connection.saveData); } catch (err) { return false; }
+  }
+
+  /* The preview is the artwork by default and upgrades to the film. Muted,
+     because that is the only thing browsers autoplay, with a sound toggle for
+     anyone who wants to hear what they are about to post. Reduced-motion and
+     Save-Data keep the still — a 14MB autoplay is the wrong answer to both. */
+  function startPreview() {
+    if (!videoEl) return;
+    var src = current && current.video;
+    if (!src || reducedMotion() || saveData()) {
+      stopPreview();
+      return;
+    }
+    try {
+      videoEl.muted = true;
+      videoEl.setAttribute('src', src);
+      if (current.img) videoEl.setAttribute('poster', current.img);
+      videoEl.hidden = false;
+      if (soundBtn) {
+        soundBtn.hidden = false;
+        soundBtn.setAttribute('aria-pressed', 'false');
+        soundBtn.setAttribute('aria-label', 'Unmute preview');
+      }
+      var p = videoEl.play();
+      if (p && typeof p.catch === 'function') p.catch(function () { /* autoplay refused — poster stays */ });
+    } catch (err) { stopPreview(); }
+  }
+
+  function stopPreview() {
+    if (!videoEl) return;
+    try {
+      videoEl.pause();
+      videoEl.removeAttribute('src');
+      videoEl.load();
+    } catch (err) { /* ignore */ }
+    videoEl.hidden = true;
+    if (soundBtn) soundBtn.hidden = true;
+  }
+
+  /* ---------- open / close ---------- */
+
+  /* info: { txid, title, artist, img, video, audio, page, filename, t }
+     Everything but txid is optional; a missing piece removes its control
+     rather than rendering an empty one. */
+  function open(info) {
+    if (!info || typeof info !== 'object' || !info.txid) return false;
+    current = {
+      txid: str(info.txid),
+      title: str(info.title),
+      artist: str(info.artist),
+      img: str(info.img),
+      video: str(info.video),
+      audio: str(info.audio),
+      page: str(info.page),
+      filename: str(info.filename),
+      t: Math.floor(Number(info.t) || 0)
+    };
+
+    try { lastFocused = document.activeElement; } catch (err) { lastFocused = null; }
+
+    if (titleEl) titleEl.textContent = current.title || 'This mix';
+    if (artistEl) {
+      artistEl.textContent = current.artist;
+      artistEl.hidden = !current.artist;
+    }
+    if (artEl) {
+      if (current.img) { artEl.setAttribute('src', current.img); artEl.hidden = false; }
+      else { artEl.removeAttribute('src'); artEl.hidden = true; }
+      artEl.setAttribute('alt', shareTitle());
+    }
+
+    dlg.setAttribute('data-has-video', current.video ? 'on' : 'off');
+    if (videoBtn) videoBtn.hidden = !current.video;
+
+    if (audioBtn) {
+      if (current.audio) {
+        audioBtn.setAttribute('href', current.audio);
+        /* player.js owns a[data-download] site-wide (fetch → blob → save, with
+           the same open-in-a-tab fallback), so the mix download here needs no
+           code of its own. */
+        audioBtn.setAttribute('data-filename', current.filename || shareTitle());
+        audioBtn.hidden = false;
+      } else {
+        audioBtn.hidden = true;
+      }
+    }
+
+    var hasTime = current.t > 0;
+    dlg.setAttribute('data-has-time', hasTime ? 'on' : 'off');
+    if (atInput) {
+      atInput.checked = hasTime;   /* opened FROM a timestamp: default to using it */
+      atInput.disabled = !hasTime;
+    }
+    if (atTimeEl) atTimeEl.textContent = hasTime ? clock(current.t) : '';
+    if (atRow) atRow.hidden = !hasTime;
+
+    if (nativeBtn) nativeBtn.hidden = typeof navigator.share !== 'function';
+    if (hostEl) hostEl.hidden = !PERMAWEB;   /* no ArNS base -> no choice to make */
+    showHint('');
+    say('');
+    setHostMode(hostMode);
+
+    try {
+      dlg.hidden = false;
+      dlg.showModal();
+    } catch (err) {
+      dlg.hidden = true;
+      return false;
+    }
+    startPreview();
+    return true;
+  }
+
+  /* Teardown runs from BOTH the close() path and the `close` event, and is
+     idempotent. Two triggers because only one of them covers each case: the
+     event is the only signal for a native Esc / form dismissal, and calling it
+     directly is what guarantees the 14MB preview stops downloading the instant
+     a listener hits ✕, without waiting on an event the page never controls. */
+  function teardown() {
+    dlg.hidden = true;
+    stopPreview();
+    current = null;
+    say('');
+    showHint('');
+    try { if (lastFocused && lastFocused.focus) lastFocused.focus(); } catch (err) { /* ignore */ }
+    lastFocused = null;
+  }
+
+  function close() {
+    try { dlg.close(); } catch (err) { /* ignore */ }
+    teardown();
+  }
+
+  dlg.addEventListener('close', teardown);
+
+  /* Backdrop click. Tracked across pressdown→click so a drag that STARTS
+     inside the panel and ends on the backdrop (selecting the link text, for
+     instance) does not close the modal — the same trap #ue-dialog documents. */
+  dlg.addEventListener('pointerdown', function (e) { pressedOnSelf = e.target === dlg; });
+  dlg.addEventListener('click', function (e) {
+    if (e.target === dlg && pressedOnSelf) close();
+    pressedOnSelf = false;
+  });
+
+  if (closeBtn) closeBtn.addEventListener('click', close);
+  if (copyBtn) copyBtn.addEventListener('click', copyUrl);
+  if (nativeBtn) nativeBtn.addEventListener('click', nativeShare);
+  if (videoBtn) videoBtn.addEventListener('click', saveVideo);
+  if (atInput) atInput.addEventListener('change', function () { refreshUrl(); });
+  if (urlEl) urlEl.addEventListener('focus', selectUrlField);
+  if (hostEl) {
+    hostEl.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('.ue-share-host-opt') : null;
+      if (!btn) return;
+      setHostMode(btn.getAttribute('data-host'));
+    });
+  }
+
+  if (soundBtn && videoEl) {
+    soundBtn.addEventListener('click', function () {
+      videoEl.muted = !videoEl.muted;
+      soundBtn.setAttribute('aria-pressed', videoEl.muted ? 'false' : 'true');
+      soundBtn.setAttribute('aria-label', videoEl.muted ? 'Unmute preview' : 'Mute preview');
+      if (!videoEl.muted && videoEl.paused) { try { videoEl.play(); } catch (err) { /* ignore */ } }
+    });
+  }
+
+  window.ueShare = { version: 1, open: open, close: close };
+})();
+</script>
+
+<script>
+/* "View original artwork" (generator originalArtBtnHtml). Every list shows a
+   mix's generated render; its own custom cover is viewable only here, in the
+   shared dialog. A ?mix=<txid> share link to a mix that has one opens it on
+   load. Inline (not a js/ file) for the same REQUIRED_MANIFEST_PATHS reason the
+   dialog partial gives. */
+(function () {
+  function openArt(btn) {
+    if (!btn || !window.ueDialog || typeof window.ueDialog.open !== 'function') return;
+    var title = btn.getAttribute('data-original-art-title') || '';
+    window.ueDialog.open({
+      title: title,
+      image: { src: btn.getAttribute('data-original-art') || '', alt: 'Original artwork — ' + title }
+    });
+  }
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest('.original-art-btn') : null;
+    if (btn) openArt(btn);
+  });
+  var m = /[?&]mix=([A-Za-z0-9_-]{43})(?:&|$)/.exec(location.search || '');
+  if (m) {
+    var btn = document.querySelector('.original-art-btn[data-mix-txid="' + m[1] + '"]');
+    if (btn) openArt(btn);
+  }
+})();
+</script>
+<script src="js/boot.js" defer></script>
 </body>
-</html> 
+</html>

@@ -1,7 +1,80 @@
 # Mix Audio Playback & Scrubbing
 
-Status: **play-only** (mixes play, forward-scrub freezes). Real scrubbing needs a range-serving host (see Option B).
-Last verified: 2026-07-01.
+Status: **SCRUBBING LIVE** (2026-09-08 rebuild). Playback runs on a verified state machine over the two Range-capable ar.io gateways; waveforms are interactive scrubbers with confirmed seeks.
+History below (2026-07-01 matrix) kept because gateway behavior shifts — re-verify before changing hosts.
+
+## Current solution (2026-09-08 — replaces the 2026-07-03 tier design)
+
+ar-io-node Release 74+ (April 2026) added Range support + background caching for bundled data items. Re-verified 2026-09-08 across 4 mixes × 2 hosts × 2 range shapes (16/16 probes): **arweave.fllstck.dev** and **frostor.xyz** serve the mixes with `206` + a coherent `Content-Range` + `Accept-Ranges: bytes` on open-ended (`bytes=0-`), bounded, and mid-file-no-end ranges, CORS `*` with `Access-Control-Expose-Headers: *`. `arweave.net` still ignores Range on these items (5/5 control probes returned `200` full-file); `ar-io.dev` still 402s open-ended (x402 metering).
+
+### Why the tier design was replaced
+
+The old design probed with a **4-second** race and, on expiry, fell back to the canonical `arweave.net` URL as a final "plays, no scrub" tier. Measured cold gateway latency is 0.9–12.7 s typically, with a 24.98 s worst observation and one 30 s timeout — far beyond 4 s. So the race routinely expired and handed interactive playback to the raw gateway, which reports `audio.seekable` as a **zero-width** `[[0, 0]]` range: every seek is silently discarded and `currentTime` snaps back to 0, while the UI paints progress anyway because `duration` is known. That is the whole of the "scrubbing does nothing" bug. The 15-second frozen-clock watchdog calling `setSrc()` on a still-buffering source is the whole of the "mixes restart after a few minutes" bug.
+
+### What ships now
+
+Policy and state transitions live in **`website/js/player-core.js`** — a pure module (no DOM, no fetch, no timers) covered by 55 unit tests in `tests/`, run with `npm test`. `website/js/player.js` is the host: it owns the `<audio>` element and the UI, and only executes the command objects the module returns.
+
+- **Candidates, not tiers.** `buildCandidates()` emits one candidate per range host and **never** the raw URL. Raw `arweave.net` is download-only, permanently. Canonical URLs still stay `arweave.net/<txid>` in Firestore/`artists.json`; the gateway is chosen at play time and never stored.
+- **Probing never gates playback.** On a user gesture the first candidate is set and `play()` is called synchronously (mobile autoplay). Both candidates are probed in the background on a ~22 s budget; a candidate is only offered for interactive seeking once its own probe returned `206`. `evaluateProbe()` gates strictly on `status === 206` plus a parseable `Content-Range` — one gateway was observed returning `404` carrying a plausible-looking `Content-Range`, so header presence alone is not trusted.
+- **Verified failover.** On a media `error`, a genuine sustained stall, a premature `ended`, or a load that produces nothing for 25 s, the active candidate is marked unhealthy and the next eligible one is loaded, resuming from `confirmedTime` — the last position the media element actually reported, never an optimistic UI position. Recovery is capped at one attempt per candidate. Measured resume accuracy: 0.12–0.13 s behind the last confirmed position.
+- **Stale events cannot corrupt state.** Every load bumps a `playbackGeneration`; every media event carries the generation it was observed under, and the module drops anything stale.
+- **Seeks are confirmed, not assumed.** A seek is authoritative only after `seeked` fires within tolerance **and** the target lies inside `audio.seekable`. Dragging paints a preview only; exactly one seek commits on release. A failed seek restores the last confirmed playhead and shows an actionable message.
+- **No silent degradation.** When no range-capable candidate remains, the player shows a terminal "Playback unavailable" + **Retry**, marks the waveform non-seekable, and keeps the Download control on the canonical URL. It never quietly falls back to a source it cannot scrub.
+- Waveform bars are still deterministic seeded bars, not decoded audio (a 100–200MB client-side decode is infeasible; real peaks would need precomputation at upload).
+
+### Debug / test affordances
+
+- `?uedebug=1` — overlay showing active host, state, currentTime, duration, seekable ranges, readyState, generation, last recovery reason.
+- `?uefail=<hostSubstring>` / `?uefail=a,b` / `?uefail=all` — **test only**: rewrites matching candidate hosts to an unreachable address so failover and the terminal state can be exercised in a browser. Inert without the parameter.
+- `window.UEPlayer.debug.snapshot()` and `window.UEPlayer.debug.log` (last 100 structured entries, mirrored to `console.debug('[UEPlayer]', …)`). No cookies, no analytics, no listener identifiers.
+
+## Gateway warming (2026-09-08, second phase — start latency)
+
+Reliability was phase one; this is start *speed*. Measured cause: the first touch of a cold mix on
+a gateway costs **2–12 s** to first byte (observed 2.08 / 7.54 / 9.97 / 10.12 / 12.35 s). A second,
+already-warm request for the same mix costs **~0.6 s**. Warming pays that cost before the click.
+
+**`website/js/ue-warm.js`** issues bounded range requests to the same candidates the player uses:
+
+- **`Range: bytes=0-65535`. 64 KiB, always.** Never open-ended, never a whole file. The mixes are
+  93–280 MB; an open-ended warm measured 105,605,531 bytes on one of them. Grep-check before you
+  change anything here: the only Range literals in `website/js/` are `bytes=0-127` (the player's
+  probe) and `bytes=0-65535` (warm).
+- Page policy is derived from existing `data-section` markers — no artist names, no new markup, and
+  every future generated page inherits it. `home` → featured + 4; `artist` → every unique txid on
+  the page; `archive` → `IntersectionObserver` only (`rootMargin: 400px`), never the whole catalog;
+  `selectors`/`about`/unknown → nothing. A `data-warm-policy` attribute overrides per page.
+- Concurrency **2**, 150 ms + jitter spacing, 20 s per-request timeout, dedupe by txid for the
+  session, `failed` never auto-retried. `artists.json` has 45 playable entries but only **35 unique
+  txids**, so txid dedupe is load-bearing, not theoretical (`akila.html` lists one txid twice).
+- Explicit intent (hover / focus / touchstart / pointerdown / click) jumps a mix to the front, and
+  enqueues it if it was never queued — the common archive case. Intent lives in `ue-warm.js`, NOT
+  `player.js`; it must work before the player has loaded.
+- `UEWarm.notifyPlaybackStarting(txid)` cancels that txid's warm and pauses the queue while the real
+  load runs, so warming cannot compete with the click it exists to accelerate. Resumes on `playing`,
+  on pause/terminal failure, or after a 30 s bound.
+- Reduced data (`saveData`, `slow-2g`/`2g`/`3g`) → intent only.
+- Warming never creates a media element, never calls `play()`, never mutates the queue or mix data,
+  and never touches raw `arweave.net`.
+
+**`website/js/ue-host-pref.js`** remembers the last gateway that actually served a 206
+(`ue-gw-pref-v1`, 12 h TTL, versioned key) and reorders candidates on the next visit. It is a
+**hint only** — validated against `RANGE_HOSTS` before use, so a hand-edited localStorage value
+cannot redirect playback to an arbitrary origin; probing, verification and failover are unchanged.
+
+Connection hints: the shared head carries only `dns-prefetch` for the two gateways (cheap, and it
+surfaces a dead host sooner). The expensive `preconnect` — both credential modes, since the media
+load is no-CORS and the warm fetch is CORS — is injected at runtime by `ue-warm.js` and **only on
+pages that actually warm**, so `about.html`/`residents.html` do not open sockets to audio gateways
+they will never use.
+
+### Gotcha that will waste your afternoon
+
+A Chrome tab whose `document.visibilityState` is `hidden` **defers media loading entirely** — `readyState` stays 0 with no error, even for a 2-second WAV data URI with no network involved. Sustained playback is unaffected once started. If you test playback through automation, foreground the tab or you will misdiagnose a working player as dead.
+
+Ops note: after adding a new mix, pre-warm it once per gateway or first play starts late:
+`curl -H "Range: bytes=0-1023" https://arweave.fllstck.dev/<txid>` (repeat for frostor.xyz). A 404 usually resolves on retry as the gateway locates the item.
 
 This doc exists because "just switch the gateway" looks obvious and is wrong. Read it before touching mix playback URLs.
 

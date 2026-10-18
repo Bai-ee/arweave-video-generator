@@ -255,13 +255,21 @@
                     >
                       Upload Mix
                     </button>
-                    <button 
-                      id="uploadArtistImageBtn" 
+                    <button
+                      id="uploadArtistImageBtn"
                       onclick="showArtistImageModal()"
                       class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
                       style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
                     >
                       Upload Artist Thumbnail
+                    </button>
+                    <button
+                      id="skylineThumbnailsBtn"
+                      onclick="showSkylineThumbnailModal()"
+                      class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap"
+                      style="transition: all 0.3s ease; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px;"
+                    >
+                      Skyline Thumbnails
                     </button>
                   </div>
                 </div>
@@ -834,16 +842,16 @@
           
           <div id="mixArtistImageContainer" style="display: none;">
             <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">
-              Artist Image <span style="color: #ef4444;">*</span> <span style="color: #888; font-size: 0.75rem;">(Required for new artists)</span>
+              Upload artwork (optional)
             </label>
-            <input 
-              type="file" 
-              id="mixArtistImageInput" 
+            <input
+              type="file"
+              id="mixArtistImageInput"
               accept=".jpg,.jpeg,.png,.gif,.webp,image/*"
               style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias);"
             />
             <p style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
-              Upload an image for the new artist (.jpg, .png, .gif, .webp)
+              Upload an image for the new artist (.jpg, .png, .gif, .webp) — skip this and one is generated automatically.
             </p>
           </div>
           
@@ -1185,6 +1193,71 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Skyline Thumbnails Modal (contract §3.12 / plan Phase 4 admin controls) -->
+    <div id="skylineThumbnailModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
+      <div style="background: radial-gradient(ellipse at center, rgba(20, 20, 30, 0.7) 0%, rgba(0, 0, 0, 0.6) 100%); border: 2px solid var(--color-yellow-75); border-radius: 10px; padding: 2rem; max-width: 640px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2 style="color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 1.5rem; margin: 0;">SKYLINE THUMBNAILS</h2>
+          <button onclick="hideSkylineThumbnailModal()" style="background: transparent; border: none; color: var(--color-yellow-75); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
+        </div>
+
+        <div id="skylineThumbnailPickerRow" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div>
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">Artist</label>
+            <select id="skylineArtistSelect" onchange="handleSkylineArtistChange()" style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); cursor: pointer;">
+              <option value="">Select an artist...</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">Entity</label>
+            <div style="display: flex; gap: 1rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">
+                <input type="radio" name="skylineEntityType" id="skylineEntityArtist" value="artist" onchange="handleSkylineEntityTypeChange()" style="accent-color: var(--color-yellow-75); cursor: pointer;" />
+                <span>Artist image</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">
+                <input type="radio" name="skylineEntityType" id="skylineEntityMix" value="mix" checked onchange="handleSkylineEntityTypeChange()" style="accent-color: var(--color-yellow-75); cursor: pointer;" />
+                <span>Mix</span>
+              </label>
+            </div>
+          </div>
+
+          <div id="skylineMixContainer">
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.875rem;">Mix</label>
+            <select id="skylineMixSelect" style="width: 100%; padding: 0.75rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); cursor: pointer;">
+              <option value="">Select an artist first...</option>
+            </select>
+          </div>
+
+          <button type="button" onclick="loadSkylineThumbnailStatus()" class="btn-base btn-secondary full-btn rounded text-center whitespace-nowrap" style="padding: 0.75rem; background: transparent; color: var(--color-yellow-75); border: 2px solid var(--color-yellow-75); font-weight: bold; border-radius: 10px; cursor: pointer;">
+            Load Status
+          </button>
+        </div>
+
+        <div id="skylineThumbnailStatusPanel" style="display: none; margin-top: 1.5rem; padding: 1rem; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.875rem;">
+          <div id="skylineThumbnailStatusBody"></div>
+
+          <div id="skylineThumbnailActionsRow" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
+            <button type="button" onclick="skylineRequestThumbnail()" style="padding: 0.5rem 0.75rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias); font-size: 0.75rem;">Preview / Generate</button>
+            <button type="button" onclick="skylineRegenerateThumbnail()" style="padding: 0.5rem 0.75rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias); font-size: 0.75rem;">Regenerate</button>
+            <button type="button" onclick="skylineRetryThumbnail()" style="padding: 0.5rem 0.75rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias); font-size: 0.75rem;">Retry Failed</button>
+            <button type="button" onclick="skylineRestoreThumbnail()" style="padding: 0.5rem 0.75rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias); font-size: 0.75rem;">Restore Previous</button>
+            <button type="button" id="skylineLockBtn" onclick="skylineToggleLock()" style="padding: 0.5rem 0.75rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias); font-size: 0.75rem;">Lock</button>
+          </div>
+
+          <div style="margin-top: 1rem;">
+            <label style="display: block; color: var(--color-yellow-75); font-family: var(--font-mathias); margin-bottom: 0.5rem; font-size: 0.75rem;">Replace with uploaded artwork</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="file" id="skylineUploadArtworkInput" accept=".jpg,.jpeg,.png,.gif,.webp,image/*" style="flex: 1; padding: 0.5rem; border: 2px solid var(--color-yellow-75); border-radius: 5px; background: #0a0a0a; color: var(--color-yellow-75); font-family: var(--font-mathias); font-size: 0.75rem;" />
+              <button type="button" onclick="skylineUploadArtwork()" style="padding: 0.5rem 0.75rem; background: transparent; border: 1px solid var(--color-yellow-75); border-radius: 5px; color: var(--color-yellow-75); cursor: pointer; font-family: var(--font-mathias); font-size: 0.75rem; white-space: nowrap;">Upload &amp; Replace</button>
+            </div>
+            <p style="color: #888; font-size: 0.7rem; margin-top: 0.35rem;">Uploads to Arweave via the existing image-upload endpoint, then locks the record so no automatic job ever overwrites it.</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -4019,6 +4092,12 @@
           filename = 'video.mp4';
           console.log('[Download] No filename provided, using default:', filename);
         }
+
+        // iOS only offers "Save Video" (camera roll) when the name ends in .mp4
+        if (!/\.mp4$/i.test(filename)) {
+          filename += '.mp4';
+          console.log('[Download] Normalized filename to:', filename);
+        }
         
         console.log('[Download] Device:', isIOS() ? 'iOS' : isMobileDevice() ? 'Android/Mobile' : 'Desktop');
         console.log('[Download] Video URL (full):', videoUrl);
@@ -4067,9 +4146,11 @@
           const blob = await response.blob();
           console.log('[Download] iOS: Blob created - size:', blob.size, 'bytes, type:', blob.type);
           
-          // Create File object from blob
-          const file = new File([blob], filename, { 
-            type: blob.type || 'video/mp4',
+          // Create File object from blob.
+          // Force video/mp4 so iOS shows "Save Video" (camera roll). The proxy may
+          // report octet-stream; if we pass that through, iOS only offers "Save to Files".
+          const file = new File([blob], filename, {
+            type: 'video/mp4',
             lastModified: Date.now()
           });
           console.log('[Download] iOS: File object created');
@@ -4122,27 +4203,25 @@
             console.log('[Download] iOS: Share API not available');
           }
           
-          // Fallback: Create blob URL and open helper page
-          console.log('[Download] iOS: Share API not available or failed, using blob URL fallback');
-          const blobUrl = URL.createObjectURL(blob);
-          const downloadPageUrl = createIOSDownloadPage(blobUrl, filename);
+          // Fallback: open helper page with a REAL https video URL (not blob:).
+          // iOS will not "Save to Photos" from a blob: URL, but it will from an
+          // inline video/mp4 served over https via the proxy.
+          console.log('[Download] iOS: Share API not available or failed, using inline proxy fallback');
+          const inlineUrl = `${location.origin}/api/videos?download=true&inline=true&videoUrlB64=${encodedUrl}&filename=${encodeURIComponent(filename)}`;
+          const downloadPageUrl = createIOSDownloadPage(inlineUrl, filename);
           const newWindow = window.open(downloadPageUrl, '_blank');
-          
+
           if (newWindow) {
-            console.log('[Download] iOS: Helper page opened with blob URL');
+            console.log('[Download] iOS: Helper page opened with inline proxy URL');
             showToast('Video opened! Long press the video and select "Save to Photos"', 'success');
             setTimeout(() => {
-              URL.revokeObjectURL(blobUrl);
               URL.revokeObjectURL(downloadPageUrl);
             }, 60000);
             return;
           } else {
-            console.log('[Download] iOS: Popup blocked, opening blob URL directly');
-            window.open(blobUrl, '_blank');
+            console.log('[Download] iOS: Popup blocked, opening inline video URL directly');
+            window.open(inlineUrl, '_blank');
             showToast('Video opened! Long press and select "Save to Photos"', 'info');
-            setTimeout(() => {
-              URL.revokeObjectURL(blobUrl);
-            }, 30000);
             return;
           }
           
@@ -4222,8 +4301,8 @@
           const blob = await response.blob();
           console.log('[Download] Android: Blob created - size:', blob.size, 'bytes, type:', blob.type);
           
-          const file = new File([blob], filename, { 
-            type: blob.type || 'video/mp4',
+          const file = new File([blob], filename, {
+            type: 'video/mp4',
             lastModified: Date.now()
           });
           console.log('[Download] Android: File object created');
@@ -5076,6 +5155,248 @@
     // End Artist Image Upload Modal Functions
     // =====================================================
 
+    // =====================================================
+    // Skyline Thumbnails Admin Panel (contract §3.12 / plan Phase 4)
+    // Scoped, read-mostly controls over the skyline thumbnail pipeline — status, preview/
+    // generate, regenerate, retry, restore, lock/unlock, and replace-with-uploaded-artwork.
+    // Every action posts to the existing /api/manage-artists endpoint; statuses render exactly
+    // what the API returns, including "not-requested" when the pipeline flag is off.
+    // =====================================================
+
+    let skylineMixesForArtist = [];
+    let skylineLastStatus = null; // last-loaded thumbnailStatus result, read by the lock toggle
+
+    window.showSkylineThumbnailModal = async function() {
+      document.getElementById('skylineThumbnailModal').style.display = 'flex';
+      document.getElementById('skylineThumbnailStatusPanel').style.display = 'none';
+      await populateSkylineArtistSelect();
+    };
+
+    window.hideSkylineThumbnailModal = function() {
+      document.getElementById('skylineThumbnailModal').style.display = 'none';
+    };
+
+    document.getElementById('skylineThumbnailModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'skylineThumbnailModal') {
+        hideSkylineThumbnailModal();
+      }
+    });
+
+    async function populateSkylineArtistSelect() {
+      const select = document.getElementById('skylineArtistSelect');
+      if (!select) return;
+      try {
+        if (!availableArtists || availableArtists.length === 0) {
+          await loadArtists();
+        }
+        select.innerHTML = '<option value="">Select an artist...</option>';
+        (availableArtists || []).forEach((artist) => {
+          const option = document.createElement('option');
+          option.value = artist.name;
+          option.textContent = artist.name;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error populating skyline artist select:', error);
+      }
+    }
+
+    window.handleSkylineEntityTypeChange = function() {
+      const isMix = document.getElementById('skylineEntityMix').checked;
+      document.getElementById('skylineMixContainer').style.display = isMix ? 'block' : 'none';
+      document.getElementById('skylineThumbnailStatusPanel').style.display = 'none';
+    };
+
+    window.handleSkylineArtistChange = async function() {
+      const artistName = document.getElementById('skylineArtistSelect').value;
+      const mixSelect = document.getElementById('skylineMixSelect');
+      document.getElementById('skylineThumbnailStatusPanel').style.display = 'none';
+      skylineMixesForArtist = [];
+      mixSelect.innerHTML = '<option value="">Loading mixes...</option>';
+
+      if (!artistName) {
+        mixSelect.innerHTML = '<option value="">Select an artist first...</option>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/artists?artist=${encodeURIComponent(artistName)}`);
+        const data = await response.json();
+        skylineMixesForArtist = (data && data.mixes) || [];
+        mixSelect.innerHTML = '';
+        if (skylineMixesForArtist.length === 0) {
+          mixSelect.innerHTML = '<option value="">No mixes for this artist</option>';
+          return;
+        }
+        skylineMixesForArtist.forEach((mix, index) => {
+          const option = document.createElement('option');
+          option.value = String(index);
+          option.textContent = mix.title || `Mix ${index + 1}`;
+          mixSelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading mixes for skyline thumbnail panel:', error);
+        mixSelect.innerHTML = '<option value="">Failed to load mixes</option>';
+      }
+    };
+
+    function getSkylineSelection() {
+      const artistName = document.getElementById('skylineArtistSelect').value;
+      const entityType = document.getElementById('skylineEntityMix').checked ? 'mix' : 'artist';
+      if (!artistName) {
+        showToast('Select an artist first', 'error');
+        return null;
+      }
+      if (entityType === 'artist') {
+        return { artistName, entityType };
+      }
+      const mixSelect = document.getElementById('skylineMixSelect');
+      const mix = skylineMixesForArtist[parseInt(mixSelect.value, 10)];
+      if (!mix) {
+        showToast('Select a mix first', 'error');
+        return null;
+      }
+      return { artistName, entityType, mixArweaveURL: mix.arweaveURL, mixTitle: mix.title };
+    }
+
+    async function callSkylineAction(action, extra = {}) {
+      const selection = getSkylineSelection();
+      if (!selection) return null;
+      try {
+        const response = await fetch('/api/manage-artists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, ...selection, ...extra }),
+        });
+        const data = await response.json();
+        if (!data.success) {
+          showToast(data.error || `${action} failed`, 'error');
+          return null;
+        }
+        return data.result;
+      } catch (error) {
+        console.error(`Skyline action "${action}" failed:`, error);
+        showToast(`${action} failed: ${error.message}`, 'error');
+        return null;
+      }
+    }
+
+    function renderSkylineStatus(status) {
+      skylineLastStatus = status;
+      const panel = document.getElementById('skylineThumbnailStatusPanel');
+      const body = document.getElementById('skylineThumbnailStatusBody');
+      if (!status || status.success === false) {
+        panel.style.display = 'block';
+        body.innerHTML = `<div style="color: #ef4444;">${(status && status.reason) || 'Not requested yet'}</div>`;
+        return;
+      }
+      panel.style.display = 'block';
+      const job = status.job;
+      body.innerHTML = `
+        <div><strong>Status:</strong> ${status.thumbnailStatus}</div>
+        <div><strong>Origin:</strong> ${status.origin || 'none'}</div>
+        <div><strong>Locked:</strong> ${status.locked ? 'yes' : 'no'}</div>
+        <div><strong>Image URL:</strong> <span style="word-break: break-all;">${status.imageUrl || '(none)'}</span></div>
+        <div><strong>Source video:</strong> ${status.sourceVideoId || '(none)'}</div>
+        <div><strong>Source timestamp:</strong> ${status.sourceTimeSec != null ? status.sourceTimeSec + 's' : '(none)'}</div>
+        <div><strong>Has previous:</strong> ${status.hasPrevious ? 'yes' : 'no'}</div>
+        ${job ? `<div><strong>Job:</strong> ${job.status} (attempt ${job.attempts}/3)${job.error ? ` — ${job.error.message}` : ''}</div>` : ''}
+      `;
+      const lockBtn = document.getElementById('skylineLockBtn');
+      if (lockBtn) {
+        lockBtn.textContent = status.locked ? 'Unlock' : 'Lock';
+      }
+    }
+
+    window.loadSkylineThumbnailStatus = async function() {
+      const result = await callSkylineAction('thumbnailStatus');
+      if (result) renderSkylineStatus(result);
+    };
+
+    window.skylineRequestThumbnail = async function() {
+      const result = await callSkylineAction('requestThumbnail');
+      if (result) {
+        showToast(`Thumbnail: ${result.status}`, result.status === 'failed' ? 'error' : 'success');
+        await window.loadSkylineThumbnailStatus();
+      }
+    };
+
+    window.skylineRegenerateThumbnail = async function() {
+      const result = await callSkylineAction('regenerateThumbnail');
+      if (result) {
+        showToast(`Thumbnail: ${result.status}`, result.status === 'failed' ? 'error' : 'success');
+        await window.loadSkylineThumbnailStatus();
+      }
+    };
+
+    window.skylineRetryThumbnail = async function() {
+      const result = await callSkylineAction('retryThumbnail');
+      if (result) {
+        showToast(result.retried ? 'Retry queued' : 'Nothing to retry', result.retried ? 'success' : 'error');
+        await window.loadSkylineThumbnailStatus();
+      }
+    };
+
+    window.skylineRestoreThumbnail = async function() {
+      const result = await callSkylineAction('restoreThumbnail');
+      if (result) {
+        showToast(result.applied ? 'Restored previous image' : (result.reason || 'Nothing to restore'), result.applied ? 'success' : 'error');
+        await window.loadSkylineThumbnailStatus();
+      }
+    };
+
+    window.skylineToggleLock = async function() {
+      const locked = !(skylineLastStatus && skylineLastStatus.locked);
+      const action = locked ? 'lockThumbnail' : 'unlockThumbnail';
+      const result = await callSkylineAction(action);
+      if (result) {
+        showToast(result.changed ? (locked ? 'Locked' : 'Unlocked') : (result.reason || 'No change'), result.changed ? 'success' : 'error');
+        await window.loadSkylineThumbnailStatus();
+      }
+    };
+
+    window.skylineUploadArtwork = async function() {
+      const selection = getSkylineSelection();
+      if (!selection) return;
+      const fileInput = document.getElementById('skylineUploadArtworkInput');
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        showToast('Choose an image file first', 'error');
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', 'image');
+        formData.append('artistName', selection.artistName);
+        // 'add-to-folder' just uploads and returns the Arweave URL — it does not itself touch
+        // the artist's thumbnail field, so the mix-vs-artist choice below stays authoritative.
+        formData.append('imageAction', 'add-to-folder');
+
+        const uploadResponse = await fetch('/api/upload', { method: 'POST', body: formData });
+        const uploadData = await uploadResponse.json();
+        if (!uploadData.success) {
+          showToast(uploadData.error || 'Upload failed', 'error');
+          return;
+        }
+
+        const result = await callSkylineAction('setUploadedArtwork', { imageUrl: uploadData.arweaveUrl });
+        if (result) {
+          showToast(result.changed ? 'Artwork replaced' : (result.reason || 'Replace failed'), result.changed ? 'success' : 'error');
+          fileInput.value = '';
+          await window.loadSkylineThumbnailStatus();
+        }
+      } catch (error) {
+        console.error('Skyline upload-artwork failed:', error);
+        showToast('Upload failed: ' + error.message, 'error');
+      }
+    };
+
+    // =====================================================
+    // End Skyline Thumbnails Admin Panel
+    // =====================================================
+
     /**
      * Toggle between file upload and URL input
      */
@@ -5123,12 +5444,9 @@
           showToast('Please enter a new artist name', 'error');
           return;
         }
-        
-        // Check if artist image is required for new artists
-        if (!artistImageInput.files || artistImageInput.files.length === 0) {
-          showToast('Artist image is required for new artists', 'error');
-          return;
-        }
+
+        // Artist artwork is optional (contract: "Upload artwork (optional)") — a new artist
+        // with no uploaded image automatically receives a generated skyline thumbnail.
       } else if (artistSelect.value) {
         // Existing artist
         artistName = artistSelect.value;
