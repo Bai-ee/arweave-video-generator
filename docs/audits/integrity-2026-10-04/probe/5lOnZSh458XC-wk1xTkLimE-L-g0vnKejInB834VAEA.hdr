@@ -1,0 +1,39 @@
+HTTP/2 302 
+date: Mon, 05 Oct 2026 03:22:30 GMT
+content-type: text/html
+location: https://4zj2ozjipdt4lqx3be24koilrjqt4l7igs7hfhumrha7g7qvabaa.arweave.net/5lOnZSh458XC-wk1xTkLimE-L-g0vnKejInB834VAEA
+access-control-allow-origin: *
+cache-control: max-age=3153600000
+server: CDN77-Turbo
+access-control-allow-headers: *
+access-control-allow-methods: GET, POST, HEAD, OPTIONS
+access-control-expose-headers: *
+x-77-nzt: kVRnx10JSOqOfwI3pCqrzgAdPfWqV2TvOQ
+x-77-nzt-ray: 65998c19a9cb19341b18c36a89a6af1b
+x-77-pop: atlantaUSGA
+x-77-cache: MISS
+
+HTTP/2 200 
+date: Mon, 05 Oct 2026 03:22:30 GMT
+content-type: audio/mpeg
+access-control-allow-methods: GET, POST, HEAD, OPTIONS
+access-control-allow-origin: *
+access-control-expose-headers: *
+ao-body-key: data
+ao-types: status="integer"
+app-name: ArDrive-App
+app-platform: Web
+app-version: 2.67.4
+content-digest: sha-256=:mED0NS5JIAixXA3sZG4O/hnTdkpvAh85iKSfX4UFxtk=:
+license: nF6Mjy_Yy_Gv-DYLq7QPxz5PdXUQ4rtOpbJZdcaFEKw
+signature: comm-5lonzsh458xc-wk1xtklime-l-g0vnkejinb834vaea=:q2O812V2XIXOKOUMvSf3tbibOG0XcSSmegoD3jk87hY51DQtub56k97Lew+/UBvirZyC/pKLbu3N1SSQc65BAsb6edFs4yPPSGcbJUkV8XMt3cl0QTvtoVvNBTcps3sIx8CNow8K93w7mR8rnDGOUvmwiSUqHESmWNKjq4AP/kWmHV/e1ld4yqtRox3sGMoFnrzbMSFMi8uZBRlGJ0ItJsac31I1kyTmoWaMcNoQ9Mc5vGqACGfepe6ULVlVWqvNeIWJRGc01Lcuv8zR6PFXZle0UD7kXzPVlz++VA2hZKfvpww+K41Ae3Os1dSamLhHDzzxKXHFxuCUWGmIBbH+DEl8g4n+ugHEPa9VWiwzdcCgKL4vzeAv7iBi5l7UCpJw2B/+siiIHIwNUB4MyjMIrQsQ1he+6FYitU551teLQDjKmg55aELKjul4N4grJYrIk8htAfEuiTJkjp/iXhmuhZuHaRRYsAvBPkzKjygu67SExPfoLeHLaF65Item8jJcZeXDpjK/4LfAaJuiiHmLaXjTA/d6MhHJpJaUu177YK1+lEPQxBGD0jQBjmddqrF/kDgBMG3LL0eZdAyINY6H9uUgQd8fq9T+Xn+GqGi0enJYL+Hb/wyMEfkLz+Au11ayflTWpnHbBY3osFni4Et2xgBIGY28f0xwFXOggb3lJyg=:
+signature-input: comm-5lonzsh458xc-wk1xtklime-l-g0vnkejinb834vaea=("ao-body-key" "app-name" "app-platform" "app-version" "content-digest" "content-type" "license" "unix-time");alg="ans104@1.0/rsa-pss-sha256";keyid="publickey:saRLCGZ88g12wzkJiGzyFbYeVSqPFgzb-B5jdsws4c1O-HOcxoYPOEkwFuCfl5zI7HohRE1NMqMAZlsB44ZkoO4ne38xwXwfJ8znFM-SHyHPY720FRF23ZIOFHO0GVQgHTE2mA0g_KNRQlTRYW1ohevjBcd7rwCZS7_AFOHozNw0LCdEbFd5YeYrcSZAfeqX2DmQM4W2hFP8RwwDQUvO8qH4W9OLgM4-UlDbDHCS3spoPa_XV7wNbWjMfvyxPF3RhME0nQ2462vi_ZVZmBJ-gIMy3Z9DVTXFo5n5J3HiDR4dxVLHsm-AepYJdcN35PrDxtg45QOuzVW-EZAg51gdudgOzGNxp8e-CHnaOHhhwwtfkck3KV7xdQdiXq-ZmkLmnpHzyXQlkhCfYV1sa1h0v49ZWb_B762nIh-LrDkn1hCpeDMB2VugkY8W6CxBhvyf9HZUYyMCxohAzUZPn5suA6vbe8iuEc9c8yV0G5d3_LvVSDC1PyjfthWcwdrnmPwnlNJrQ51XGOzM3YjVke03imeN0Ii8GmtB_D1-mTPU_ui55j-FkIgsFDKL1aqwsty9hlqClKAVWf8cfOQpA2ZQWvlf6_u7w7IqvrDkQhBRyb9kIeFO5HkCri3R34Rm_PB5H_pP54tEzECDekSvMFtj8xszGbn6w9zep4EdhJf5Ets";bundle="false";committer="5Gp_ilmFM4D0xwRmc9YcAxPo5B9zlfc4m35zcA1s_nw";original-tags="1:App-Name:QXJEcml2ZS1BcHA, 2:App-Platform:V2Vi, 3:App-Version:Mi42Ny40, 4:Unix-Time:MTc0NTAyNjE0OQ, 5:Content-Type:YXVkaW8vbXBlZw, 6:License:bkY2TWp5X1l5X0d2LURZTHE3UVB4ejVQZFhVUTRydE9wYkpaZGNhRkVLdw"
+status: 200
+unix-time: 1745026149
+x-77-nzt: k03PvbPT2zvg+Xol/rqXb6nXO8qherLMmjPffL6f7lV6tSO0XCEeRwc
+x-77-nzt-ray: 44134c33ecd9fbd11b18c36aaba41820
+x-77-cache: MISS
+server: CDN77-Turbo
+access-control-allow-headers: *
+x-77-pop: chicagoUSIL
+
