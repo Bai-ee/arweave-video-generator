@@ -61,7 +61,9 @@
   --bg-panel: #140d0d;
   --bg-card: #150e0e;
   --bg-elevated: #1c1212;
-  --accent: #ffffff;
+  /* --accent is the HOVER/filled state (maroon, matches the play button);
+     --accent-bright is the rest state, whitened per the site-wide recolor. */
+  --accent: #470f0f;
   --accent-bright: #ffffff;
   --accent-dim: #7a0e16;
   --on-accent: #ffffff;
@@ -1032,7 +1034,7 @@ ul { list-style: none; }
   --text-primary: #f6f3ee;
   --text-secondary: rgba(246, 243, 238, 0.84);
   --text-muted: rgba(246, 243, 238, 0.6);
-  --accent: #ffffff;
+  --accent: #470f0f;
   --accent-bright: #ffffff;
   --hairline: rgba(255, 255, 255, 0.22);
   /* An EDGE, not a background. On paper the resting shadow separates the tile,
@@ -2978,7 +2980,7 @@ ul { list-style: none; }
   --text-primary: #f2ece4;
   --text-secondary: #b7aaa3;
   --text-muted: #8a7d77;
-  --accent: #ffffff;
+  --accent: #470f0f;
   --accent-bright: #ffffff;
   --on-accent: #ffffff;
   --hairline: rgba(255, 255, 255, 0.1);
