@@ -5,6 +5,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { execSync } from 'child_process';
 import ffmpegStatic from 'ffmpeg-static';
+import { isPlayableMixUrl, findRequestedMix } from './mix-audio.js';
 
 // Configure FFmpeg - try multiple sources
 let ffmpegConfigured = false;
@@ -243,34 +244,22 @@ class ArweaveAudioClient {
       throw new Error(`Artist ${selectedArtist.artistName} has no mixes`);
     }
     
-    // Filter mixes that have valid Arweave URLs
-    const validMixes = selectedArtist.mixes.filter(mix => 
-      mix.mixArweaveURL && 
-      mix.mixArweaveURL.startsWith('http') && 
-      mix.mixArweaveURL.includes('arweave.net')
-    );
-    
+    // Playable mixes: Arweave, or this project's Firebase Storage (mixes not yet archived to Arweave).
+    const validMixes = selectedArtist.mixes.filter((mix) => isPlayableMixUrl(mix.mixArweaveURL));
+
     if (validMixes.length === 0) {
-      throw new Error(`Artist ${selectedArtist.artistName} has no mixes with valid Arweave URLs`);
+      throw new Error(`Artist ${selectedArtist.artistName} has no mixes with playable (Arweave or Firebase) URLs`);
     }
-    
-    // If a specific mix title is provided, try to find it
+
+    // If a specific mix title is provided, render exactly that mix or fail: a silent swap would ship a video whose
+    // recorded mix title is not what plays.
     let selectedMix;
     if (mixTitle) {
-      const normalizedMixTitle = mixTitle.toLowerCase();
-      selectedMix = validMixes.find(mix => {
-        const normalizedTitle = mix.mixTitle.toLowerCase();
-        return normalizedTitle === normalizedMixTitle || 
-               normalizedTitle.includes(normalizedMixTitle) ||
-               normalizedMixTitle.includes(normalizedTitle);
-      });
-      
-      if (selectedMix) {
-        console.log(`[ArweaveAudioClient] Found specific mix: ${selectedMix.mixTitle}`);
-      } else {
-        console.warn(`[ArweaveAudioClient] Mix "${mixTitle}" not found for artist "${selectedArtist.artistName}", using random selection`);
-        selectedMix = validMixes[0]; // pinned: first valid mix for repeatability (was random when unset)
+      selectedMix = findRequestedMix(validMixes, mixTitle);
+      if (!selectedMix) {
+        throw new Error(`Mix "${mixTitle}" not found or not playable for artist "${selectedArtist.artistName}"`);
       }
+      console.log(`[ArweaveAudioClient] Found specific mix: ${selectedMix.mixTitle}`);
     } else {
       // Random mix selection
       selectedMix = validMixes[0]; // pinned: first valid mix for repeatability (was random when unset)
