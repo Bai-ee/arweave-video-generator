@@ -143,9 +143,12 @@ class ArweaveAudioClient {
     else if (text.includes(':')) {
       const parts = text.split(':');
       if (parts.length === 2) {
-        const minutes = parseInt(parts[0]) || 0;
-        const seconds = parseInt(parts[1]) || 0;
-        const v = (minutes * 60) + seconds;
+        const first = parseInt(parts[0]) || 0;
+        const second = parseInt(parts[1]) || 0;
+        // DJ mixes are never under 10 minutes, so a small first part is hours ("2:44" = 2h44m, as the Firebase-hosted
+        // mixes are listed); "60:00" / "72:00" stay minutes:seconds. Without this a long mix only ever sampled its
+        // first ~2 minutes.
+        const v = first < 10 ? (first * 3600) + (second * 60) : (first * 60) + second;
         if (v > 0) return v;
       }
     }
@@ -251,15 +254,17 @@ class ArweaveAudioClient {
       throw new Error(`Artist ${selectedArtist.artistName} has no mixes with playable (Arweave or Firebase) URLs`);
     }
 
-    // If a specific mix title is provided, render exactly that mix or fail: a silent swap would ship a video whose
-    // recorded mix title is not what plays.
+    // A requested title renders that mix (Arweave or Firebase). Only if the title no longer exists at all does it fall
+    // back to a random playable mix by the same artist — the render never fails over audio.
     let selectedMix;
     if (mixTitle) {
       selectedMix = findRequestedMix(validMixes, mixTitle);
-      if (!selectedMix) {
-        throw new Error(`Mix "${mixTitle}" not found or not playable for artist "${selectedArtist.artistName}"`);
+      if (selectedMix) {
+        console.log(`[ArweaveAudioClient] Found specific mix: ${selectedMix.mixTitle}`);
+      } else {
+        selectedMix = validMixes[Math.floor(Math.random() * validMixes.length)];
+        console.warn(`[ArweaveAudioClient] Mix "${mixTitle}" not found for artist "${selectedArtist.artistName}", using random mix "${selectedMix.mixTitle}"`);
       }
-      console.log(`[ArweaveAudioClient] Found specific mix: ${selectedMix.mixTitle}`);
     } else {
       // Random mix selection
       selectedMix = validMixes[0]; // pinned: first valid mix for repeatability (was random when unset)
