@@ -110,6 +110,10 @@
       of a missing module is ever hard-depended on */ };
     document.head.appendChild(s);
   }
+  /* Visitor analytics (pageviews, clicks, mix plays → HITLOOP). Independent
+     of the player chains; a failed load just means no analytics. Runs after
+     window.__ueAudioEl exists above, so it can watch mix plays. */
+  loadScriptThen('js/ue-analytics.js', null);
   loadCore(function (ok) {
     if (!ok) return;
     loadScriptThen('js/ue-host-pref.js', function () {
