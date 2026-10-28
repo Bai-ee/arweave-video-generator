@@ -28,3 +28,18 @@ export function findRequestedMix(mixes, mixTitle) {
     || mixes.find((mix) => titleOf(mix).includes(wanted) || wanted.includes(titleOf(mix)))
     || null;
 }
+
+/**
+ * Pauses between repeated attempts to pull a mix segment from its gateway. The Arweave gateway returns 502/504 in
+ * blips that last minutes, far longer than the one-second pauses the worker used (2026-10-28: four ACIDMAN renders
+ * died this way while the website still played the mix). Waits grow 10s → 30s → 60s → 120s, so five attempts span
+ * about four minutes — inside the Action's 30-minute budget, long enough to ride out a blip.
+ */
+export const GATEWAY_RETRY_DELAYS_MS = Object.freeze([10_000, 30_000, 60_000, 120_000]);
+
+/** Milliseconds to wait before attempt `attempt` (1-based) runs again; null after the last allowed attempt. */
+export function gatewayRetryDelayMs(attempt, delays = GATEWAY_RETRY_DELAYS_MS) {
+  const index = Number(attempt) - 1;
+  if (!Number.isInteger(index) || index < 0 || index >= delays.length) return null;
+  return delays[index];
+}

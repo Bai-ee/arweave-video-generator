@@ -5,7 +5,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { execSync } from 'child_process';
 import ffmpegStatic from 'ffmpeg-static';
-import { isPlayableMixUrl, findRequestedMix } from './mix-audio.js';
+import { isPlayableMixUrl, findRequestedMix, gatewayRetryDelayMs } from './mix-audio.js';
 
 // Configure FFmpeg - try multiple sources
 let ffmpegConfigured = false;
@@ -350,26 +350,32 @@ class ArweaveAudioClient {
     // Direct execSync for GitHub Actions (CI).
     if (process.env.GITHUB_ACTIONS === 'true') {
       console.log('[ArweaveAudioClient] Using direct FFmpeg execSync for GitHub Actions');
-      try {
-        // EFFICIENT RANDOM SLICE: -ss BEFORE -i makes ffmpeg issue an HTTP range request and
-        // fetch ONLY the ~30s segment from the Arweave file — it does NOT download the whole
-        // mix. startTime is a random offset, so each render pulls a different slice (not the
-        // beginning). This is the original behavior. Reconnect flags handle gateway drops.
-        const ffmpegCommand = `ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss ${startTime} -i "${url}" -t ${duration} -vn -map 0:a -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
-        console.log(`[ArweaveAudioClient] FFmpeg command: ${ffmpegCommand.substring(0, 150)}...`);
+      // EFFICIENT RANDOM SLICE: -ss BEFORE -i makes ffmpeg issue an HTTP range request and
+      // fetch ONLY the ~30s segment from the Arweave file — it does NOT download the whole
+      // mix. startTime is a random offset, so each render pulls a different slice (not the
+      // beginning). This is the original behavior. Reconnect flags handle gateway drops.
+      const ffmpegCommand = `ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss ${startTime} -i "${url}" -t ${duration} -vn -map 0:a -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
+      console.log(`[ArweaveAudioClient] FFmpeg command: ${ffmpegCommand.substring(0, 150)}...`);
+      // The gateway (arweave.net) answers 502/504 in blips of a few minutes. Retry the same
+      // slice with growing pauses (see gatewayRetryDelayMs) instead of failing on the first 5XX.
+      for (let attempt = 1; ; attempt++) {
         try {
           execSync(ffmpegCommand, { stdio: 'pipe', timeout: 180000 });
+          console.log(`[ArweaveAudioClient] Segment download completed: ${path.basename(outputPath)}`);
+          return outputPath;
         } catch (execErr) {
           // stdio:'pipe' swallows stderr — surface the last lines for diagnostics.
           const stderr = execErr.stderr ? execErr.stderr.toString().split('\n').slice(-8).join('\n') : '(no stderr)';
+          console.error(`[ArweaveAudioClient] ffmpeg attempt ${attempt} failed:`, execErr.message);
           console.error(`[ArweaveAudioClient] ffmpeg stderr (last lines):\n${stderr}`);
-          throw execErr;
+          const delay = gatewayRetryDelayMs(attempt);
+          if (delay === null) {
+            console.error('[ArweaveAudioClient] Direct FFmpeg execSync failed: gateway retries exhausted');
+            throw execErr;
+          }
+          console.log(`[ArweaveAudioClient] Gateway retry: waiting ${delay / 1000}s before attempt ${attempt + 1}...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
-        console.log(`[ArweaveAudioClient] Segment download completed: ${path.basename(outputPath)}`);
-        return outputPath;
-      } catch (error) {
-        console.error(`[ArweaveAudioClient] Direct FFmpeg execSync failed:`, error.message);
-        throw error;
       }
     }
 
