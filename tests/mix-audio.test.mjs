@@ -23,3 +23,13 @@ test('exact title wins over a looser contains-match; no match returns null', () 
   assert.equal(findRequestedMix(mixes, 'Loft Livin'), null);
   assert.equal(findRequestedMix(mixes, ''), null);
 });
+
+test('gateway retry backs off 10s → 30s → 60s → 120s, then gives up', async () => {
+  const { gatewayRetryDelayMs, GATEWAY_RETRY_DELAYS_MS } = await import('../worker/lib/mix-audio.js');
+  assert.deepEqual([...GATEWAY_RETRY_DELAYS_MS], [10_000, 30_000, 60_000, 120_000]);
+  assert.equal(gatewayRetryDelayMs(1), 10_000);
+  assert.equal(gatewayRetryDelayMs(4), 120_000);
+  assert.equal(gatewayRetryDelayMs(5), null);
+  assert.equal(gatewayRetryDelayMs(0), null);
+  assert.equal(gatewayRetryDelayMs('x'), null);
+});
