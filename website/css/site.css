@@ -652,12 +652,12 @@ ul { list-style: none; }
 /* touch screens have no hover to reveal them, and the refresh button lives here */
 @media (hover: none) { #hero-media-controls { opacity: 1; } }
 #hero-media-controls button {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 0;   /* squares, like every other control */
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: rgba(6, 4, 4, 0.55);
   backdrop-filter: blur(6px);
@@ -670,7 +670,13 @@ ul { list-style: none; }
   border-color: rgba(255, 255, 255, 0.5);
 }
 #hero-media-controls button:active { transform: scale(0.94); transition-duration: 0.1s; }
-#hero-media-controls .icon-svg { width: 16px; height: 16px; }
+#hero-media-controls .icon-svg { width: 18px; height: 18px; }
+/* phones: bigger targets */
+@media (max-width: 900px) {
+  #hero-media-controls { gap: 10px; }
+  #hero-media-controls button { width: 52px; height: 52px; }
+  #hero-media-controls .icon-svg { width: 20px; height: 20px; }
+}
 /* the mute button shows the state it will MOVE to, like the theme toggle:
    muted now => offer sound */
 #hero-mute-toggle .icon-unmuted { display: none; }
@@ -3321,15 +3327,15 @@ body[data-drawer="open"] #player-bar-grip { transform: translateY(var(--grip-ope
 #persistent-player-bar.ue-bar-v2.is-idle #player-bar-about { display: none; }
 
 @media (max-width: 900px) {
-  /* one flex row of squares: play (fills) · prev · next · share · shuffle */
+  /* phones: the play button alone, the full width of the bar (prev / next /
+     shuffle / share stay in the DOM for player.js, hidden) */
   #persistent-player-bar.ue-bar-v2 { gap: 10px; padding: 60px 12px 14px; }
   #persistent-player-bar.ue-bar-v2 #player-bar-volume-box,
-  #persistent-player-bar.ue-bar-v2 #player-bar-thumb { display: none; }
-  #persistent-player-bar.ue-bar-v2 .transport-btn { display: inline-flex; flex: none; }
-  #persistent-player-bar.ue-bar-v2 #player-bar-repeat { display: none; }
-  #persistent-player-bar.ue-bar-v2 .ue-links-icon-btn { order: 2; width: 56px; height: 56px; }
-  #persistent-player-bar.ue-bar-v2 #player-bar-shuffle { order: 3; }
-  #persistent-player-bar.ue-bar-v2 #player-bar-play { display: inline-flex; flex: 1 1 auto; width: auto; min-width: 0; height: 56px; }
+  #persistent-player-bar.ue-bar-v2 #player-bar-thumb,
+  #persistent-player-bar.ue-bar-v2 .transport-btn,
+  #persistent-player-bar.ue-bar-v2 .ue-links-icon-btn,
+  #persistent-player-bar.ue-bar-v2 .ue-links-icon-btn[hidden] { display: none !important; }
+  #persistent-player-bar.ue-bar-v2 #player-bar-play { display: inline-flex; flex: 1 1 100%; width: 100%; min-width: 0; height: 56px; }
   #persistent-player-bar.ue-bar-v2 #player-bar-play .icon-svg { width: 22px; height: 22px; }
   #player-bar-grip { padding: 0 16px; }
   #persistent-player-bar.ue-bar-v2.is-idle { padding: 60px 12px 14px; }
