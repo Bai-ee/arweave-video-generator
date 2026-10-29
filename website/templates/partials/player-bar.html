@@ -1,10 +1,16 @@
-<div id="persistent-player-bar" class="is-idle" data-mix-credits="{{MIX_CREDITS}}">
-  <div id="player-bar-now-playing">
-    <div id="player-bar-thumb"><img class="cover-fallback" src="img/square-ue.png" alt=""></div>
-    <div id="player-bar-track-meta">
-      <div id="player-bar-title"><a href="">Select a mix to play</a></div>
-      <div id="player-bar-artist"></div>
+<div id="persistent-player-bar" class="is-idle ue-bar-v2" data-mix-credits="{{MIX_CREDITS}}">
+  <!-- Grip strip: drag up here (or tap ABOUT) to open the "about this mix"
+       drawer (js/ue-drawer.js). The strip itself rides up to the nav and the
+       drawer fills in beneath it; the controls row below never moves. -->
+  <div id="player-bar-grip">
+    <span class="drawer-pill" aria-hidden="true"></span>
+    <div id="player-bar-now-playing">
+      <div id="player-bar-track-meta">
+        <div id="player-bar-title"><a href="">Select a mix to play</a></div>
+        <div id="player-bar-artist"></div>
+      </div>
     </div>
+    <button id="player-bar-about" type="button" aria-controls="mix-drawer" aria-expanded="false" hidden>About <span aria-hidden="true">↑</span></button>
   </div>
   <!-- film / cover / artist chips (homepage: the hero script moves #hero-source-thumbs here) -->
   <div id="player-bar-source-slot"></div>
@@ -26,19 +32,35 @@
       <svg class="icon-svg"><use href="#i-repeat"></use></svg>
     </button>
   </div>
+  <!-- The bar carries no seek control: the hero waveform is the one scrubber.
+       player.js still binds to these ids, so they stay in the DOM, hidden. -->
   <div id="player-bar-wave-wrap">
     <span class="player-bar-time time-current" id="player-bar-time-current">0:00</span>
     <div id="player-bar-waveform" aria-hidden="true"></div>
     <span class="player-bar-time time-total" id="player-bar-time-total">--:--</span>
   </div>
+  <!-- volume; ue-links.js appends its share button in here -->
   <div id="player-bar-volume">
-    <svg class="icon-svg"><use href="#i-volume"></use></svg>
-    <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+    <div id="player-bar-volume-box">
+      <svg class="icon-svg"><use href="#i-level"></use></svg>
+      <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+    </div>
   </div>
-  <button id="player-bar-menu-btn" type="button" aria-label="More">
-    <svg class="icon-svg"><use href="#i-kebab"></use></svg>
-  </button>
+  <!-- the mix's own cover, far right (player.js fills it; hidden when it's the fallback) -->
+  <div id="player-bar-thumb"><img class="cover-fallback" src="img/square-ue.png" alt=""></div>
 </div>
+
+<!-- About-this-mix drawer. The bar's grip strip (#player-bar-grip) slides up
+     to the nav and this fills the screen under it; the controls row stays.
+     Content comes from about/<artist>.html (one fragment per artist) via
+     js/ue-drawer.js. -->
+<div id="mix-drawer-scrim" aria-hidden="true"></div>
+<aside id="mix-drawer" aria-hidden="true" aria-label="About this mix">
+  <div id="mix-drawer-body" tabindex="-1">
+    <div id="mix-drawer-content"></div>
+  </div>
+</aside>
+<script src="js/ue-drawer.js" defer></script>
 <script>
 /* Fade the bar's live parts in once the player has set them up, instead of
    showing the idle placeholder and then swapping (a visible content shift).

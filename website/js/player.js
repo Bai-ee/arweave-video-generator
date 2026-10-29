@@ -1225,6 +1225,29 @@
      a tile click can later repoint heroIdx at some other entry
      (pointHeroAt), so a re-roll must always write to ITS OWN entry and
      point heroIdx back at it — never mutate whatever heroIdx happens to be. */
+  /* shared by the featured re-roll below and the archive queue (loadArchive).
+     Duration parsing mirrors lib/WebsitePageGenerator.cjs parseDurationSec —
+     short leading numbers ("1:30") mean H:MM, not MM:SS. */
+  function parseDurSec(raw) {
+    var m = String(raw || '').trim().match(/^(\d{1,3}):(\d{2})$/);
+    if (!m) return 0;
+    var a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+    if (a === 0 && b === 0) return 0;
+    return a <= 10 ? (a * 60 + b) * 60 : a * 60 + b;
+  }
+  /* Only generated renders are shown (generator shownMixImage, same rule):
+     the mix's generated cover, else its render made in place of uploaded
+     art, else — with no cover at all — a generated artist image, else ''. */
+  function shownMixImage(m, a) {
+    var gen = function (url, meta) {
+      return !!(meta && meta.origin === 'generated-skyline' && /^https?:\/\//i.test(url || ''));
+    };
+    if (gen(m.mixImageFilename, m.mixImageMeta)) return m.mixImageFilename;
+    if (gen(m.renderImageFilename, m.renderImageMeta)) return m.renderImageFilename;
+    if (!m.mixImageFilename && gen(a.artistImageFilename, a.artistImageMeta)) return a.artistImageFilename;
+    return '';
+  }
+
   var featuredIdx0 = heroIdx;
   var rerollFeatured = function () { return false; };
 
@@ -1232,13 +1255,6 @@
     var heroTitleEl = document.getElementById('featured-mix-title');
     if (!heroTitleEl || !featuredAnchor) return;
 
-    function parseDurSec(raw) {
-      var m = String(raw || '').trim().match(/^(\d{1,3}):(\d{2})$/);
-      if (!m) return 0;
-      var a = parseInt(m[1], 10), b = parseInt(m[2], 10);
-      if (a === 0 && b === 0) return 0;
-      return a <= 10 ? (a * 60 + b) * 60 : a * 60 + b;
-    }
     function metaChip(iconId, text) {
       var span = document.createElement('span');
       span.className = 'meta-chip';
@@ -1256,19 +1272,6 @@
       dot.className = 'meta-dot';
       dot.innerHTML = '&middot;';
       return dot;
-    }
-
-    /* Only generated renders are shown (generator shownMixImage, same rule):
-       the mix's generated cover, else its render made in place of uploaded
-       art, else — with no cover at all — a generated artist image, else ''. */
-    function shownMixImage(m, a) {
-      var gen = function (url, meta) {
-        return !!(meta && meta.origin === 'generated-skyline' && /^https?:\/\//i.test(url || ''));
-      };
-      if (gen(m.mixImageFilename, m.mixImageMeta)) return m.mixImageFilename;
-      if (gen(m.renderImageFilename, m.renderImageMeta)) return m.renderImageFilename;
-      if (!m.mixImageFilename && gen(a.artistImageFilename, a.artistImageMeta)) return a.artistImageFilename;
-      return '';
     }
 
     /* the catalog is fetched once and shared by the load-time roll and every
@@ -1659,19 +1662,86 @@
     }
   }
 
+  /* ---------- the whole archive behind prev / next / shuffle ----------
+     The page's queue holds only the mixes on this page (one artist's, on an
+     artist page). Prev/next and shuffle walk the whole archive instead:
+     artists.json is fetched once — prefetched on idle and on the first
+     pointerdown on those buttons, so the click itself stays a synchronous
+     user gesture for play() — and every mix not already in the queue is
+     appended as a detached play anchor carrying the same data-* a page
+     anchor does, so load()/setBarTrack()/the about drawer treat it like any
+     other entry. archiveOrder lists queue indices in archive order; until it
+     exists, navigation falls back to the page's own order. */
+  var archivePromise = null;
+  var archiveOrder = null;
+  function mixKey(url) {
+    var txid = (window.UEPlayerCore && typeof window.UEPlayerCore.extractTxid === 'function')
+      ? window.UEPlayerCore.extractTxid(url) : null;
+    return txid || url;
+  }
+  function loadArchive() {
+    if (archivePromise) return archivePromise;
+    archivePromise = fetch('artists.json').then(function (r) { return r.json(); }).then(function (data) {
+      var byKey = {};
+      for (var i = 0; i < queue.length; i++) byKey[mixKey(queue[i].url)] = i;
+      var order = [];
+      (data || []).forEach(function (a) {
+        (a.mixes || []).forEach(function (m) {
+          var url = m.mixArweaveURL || '';
+          if (!/^https?:\/\//i.test(url)) return;
+          var key = mixKey(url);
+          if (key in byKey) { order.push(byKey[key]); return; }
+          var el = document.createElement('a');
+          el.setAttribute('data-playlist', '');
+          el.setAttribute('href', url);
+          el.setAttribute('data-title', m.mixTitle || 'Untitled Mix');
+          el.setAttribute('data-artist', a.artistName || '');
+          el.setAttribute('data-img', shownMixImage(m, a));
+          el.setAttribute('data-page', a.artistFilename || '');
+          el.setAttribute('data-duration-sec', String(parseDurSec(m.mixDuration)));
+          el.setAttribute('data-date', m.mixDateYear || '');
+          el.setAttribute('data-genre', (a.artistGenre || '').toLowerCase());
+          queue.push({
+            el: el,
+            url: url,
+            title: el.getAttribute('data-title'),
+            artist: el.getAttribute('data-artist'),
+            img: el.getAttribute('data-img'),
+            page: el.getAttribute('data-page'),
+            durationSec: parseDurSec(m.mixDuration)
+          });
+          byKey[key] = queue.length - 1;
+          order.push(queue.length - 1);
+        });
+      });
+      for (var j = 0; j < queue.length; j++) if (order.indexOf(j) < 0) order.push(j);
+      archiveOrder = order;
+    });
+    archivePromise.catch(function () { archivePromise = null; }); /* a later press retries */
+    return archivePromise;
+  }
   function nextIndex(dir) {
     if (!queue.length) return -1;
-    if (state.shuffle && queue.length > 1) {
-      var r;
-      do { r = Math.floor(Math.random() * queue.length); } while (r === state.index);
-      return r;
+    if (state.shuffle && queue.length > 1) return randomIndex();
+    var list = archiveOrder || null;
+    if (!list) {
+      var n = state.index + dir;
+      if (n >= queue.length) n = 0;
+      if (n < 0) n = queue.length - 1;
+      return n;
     }
-    var n = state.index + dir;
-    if (n >= queue.length) n = 0;
-    if (n < 0) n = queue.length - 1;
-    return n;
+    var pos = list.indexOf(state.index);
+    var p = pos + dir;
+    if (p >= list.length) p = 0;
+    if (p < 0) p = list.length - 1;
+    return list[p];
   }
-
+  function randomIndex() {
+    if (queue.length < 2) return queue.length ? 0 : -1;
+    var r;
+    do { r = Math.floor(Math.random() * queue.length); } while (r === state.index);
+    return r;
+  }
   /* ---------- host bridge for optional feature modules ----------
      Media Session, deep links/share, and Resume Listening are separate
      progressive-enhancement modules (website/js/ue-*.js). They must never
@@ -2332,9 +2402,14 @@
     load(nextIndex(-1)); play();
   });
   if (btnNext) btnNext.addEventListener('click', function () { load(nextIndex(1)); play(); });
-  if (btnShuffle) btnShuffle.addEventListener('click', function () {
-    state.shuffle = !state.shuffle; syncButtons();
+  /* shuffle is a press, not a mode: any mix from the whole archive, now */
+  if (btnShuffle) btnShuffle.addEventListener('click', function () { load(randomIndex()); play(); });
+  /* have the archive in hand before those clicks land */
+  [btnPrev, btnNext, btnShuffle].forEach(function (b) {
+    if (b) b.addEventListener('pointerdown', function () { loadArchive(); }, { once: true });
   });
+  if (window.requestIdleCallback) window.requestIdleCallback(function () { loadArchive(); }, { timeout: 4000 });
+  else setTimeout(loadArchive, 2500);
   if (btnRepeat) btnRepeat.addEventListener('click', function () {
     state.repeat = state.repeat === 'off' ? 'all' : state.repeat === 'all' ? 'one' : 'off';
     syncButtons();

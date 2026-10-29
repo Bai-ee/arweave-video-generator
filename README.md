@@ -354,6 +354,19 @@ git push origin main
 
 **Propagation Time**: ArNS updates may take 5-60 minutes to propagate
 
+**Public domain (2026-10-23)**: `undergroundexistence.info` does NOT resolve through ArNS. It is a GoDaddy domain forward (302 / `REDIRECT_TEMPORARY`) to `https://arweave.net/<manifest>/index.html`, so after a deploy the forward must be repointed to the new manifest:
+`PUT https://api.godaddy.com/v2/customers/<customer UUID>/domains/forwards/undergroundexistence.info` with body `{"type":"REDIRECT_TEMPORARY","url":"https://arweave.net/<manifest>/index.html"}` and a GoDaddy personal access token (scopes `domains.domain:read`, `domains.forward:update`). The customer id is the account's internal UUID, not the customer number. The ArNS update currently fails with "process not whitelisted"; that does not affect the public domain. Wait for arweave.net to serve the new manifest (it can 404 for a few minutes) before repointing.
+
+### 4b. Visitor analytics
+
+**Status**: ✅ Live (2026-10-23)
+
+- `website/js/ue-analytics.js`, loaded by `website/js/boot.js` (and listed in `REQUIRED_MANIFEST_PATHS` in `lib/WebsiteDeployer.js`), sends `pageview`, `engagement`, `click` and `play` (mix title + artist from the shared `window.__ueAudioEl`) beacons to HITLOOP's collector `https://hitloop.agency/api/public/site-events`.
+- Data is stored in HITLOOP Firestore (`site_analytics/ue/events`) and read through the HITLOOP owner MCP: `get_site_analytics` / `get_site_sessions` with site `"ue"`. No dashboard on this site.
+- No cookies: a random visitor id in localStorage and a 30-minute idle session. No IP or user agent is stored.
+- Off on localhost unless `?ue_analytics=1`; `?ue_analytics_test=1` marks the tab as test traffic (excluded from real numbers).
+- Collector, report shape and kill switch are documented in HITLOOP `docs/source-of-truth/CLIENT-MCP-SERVER.md` § Website sources.
+
 ### 5. Firebase Usage Indicators
 
 **Status**: ✅ Production Ready
