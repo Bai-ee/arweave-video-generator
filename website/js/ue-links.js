@@ -9,11 +9,9 @@
    What this file does, on any existing artist/catalog page (no new pages,
    no path changes):
      1. `<page>.html?mix=<txid>[&t=<seconds>]` — on load, if `mix` names a
-        playable track ON THIS PAGE, scroll it into view and outline it
-        with `.ue-links-deep-link-highlight`. That highlight IS the "this
-        is the mix you were linked to" signal — this module injects no
-        floating banner of its own (one was deleted: it covered the grid,
-        and it said nothing the highlight does not). The offer to start at
+        playable track ON THIS PAGE, scroll it into view and mark it with
+        `.ue-links-deep-link-highlight` (a marker class with no styling:
+        the linked row looks like every other row). The offer to start at
         a shared timestamp goes to the persistent player bar instead, via
         `window.uePlayerBar.prime({... startSec, label, source:'deep-link'})`
         — an element already on screen, with nothing to dismiss. Priming
@@ -369,17 +367,13 @@
       '.ue-links-popover{position:absolute;bottom:calc(100% + 10px);right:0;min-width:190px;background:var(--bg-elevated,#140d0d);border:1px solid var(--hairline-accent,rgba(193,18,31,0.45));border-radius:10px;box-shadow:var(--shadow-float,0 12px 30px rgba(0,0,0,0.5));padding:6px;display:flex;flex-direction:column;gap:2px;z-index:1100}' +
       '.ue-links-popover-item{display:block;width:100%;text-align:left;background:transparent;border:0;border-radius:6px;color:var(--text-primary,#f2ece4);font-family:inherit;font-size:12.5px;padding:8px 10px;cursor:pointer}' +
       '.ue-links-popover-item:hover,.ue-links-popover-item:focus-visible{background:var(--accent-veil-strong,rgba(193,18,31,0.16));color:var(--text-primary,#fff)}' +
-      /* The whole of this module's deep-link feedback: an outline on the
-         linked mix plus a single pulse. No fixed-position slab, nothing to
-         dismiss, nothing covering the grid. */
-      '.ue-links-deep-link-highlight{outline:2px solid var(--accent-bright,#e01e2b);outline-offset:4px;border-radius:12px;animation:ue-links-highlight-pulse 1.8s ease-out 1}' +
-      '@keyframes ue-links-highlight-pulse{0%{box-shadow:0 0 0 0 var(--accent-glow-soft,rgba(224,30,43,0.45))}100%{box-shadow:0 0 0 16px rgba(224,30,43,0)}}' +
+      /* .ue-links-deep-link-highlight is a marker only (owner, 2026-10-28):
+         the linked mix is scrolled into view with no outline or pulse. */
       '@media (max-width:480px){' +
       '.ue-links-icon-btn{width:30px;height:30px}' +
       '.ue-links-popover{right:-4px;min-width:170px}' +
       '}' +
       '@media (prefers-reduced-motion: reduce){' +
-      '.ue-links-deep-link-highlight{animation:none}' +
       '.ue-links-icon-btn,.ue-links-popover-item{transition:none}' +
       '}'
     );

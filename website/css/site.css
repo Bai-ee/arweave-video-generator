@@ -743,15 +743,17 @@ ul { list-style: none; }
   #featured-waveform { order: -1; flex-basis: 100%; }
 }
 
-/* circular play buttons */
+/* play buttons: squares, the same treatment as the player bar's own play
+   (#player-bar-play): solid oxblood, 1px white border, white glyph. The class
+   name predates the square and stays, so no markup or JS has to change. */
 .play-circle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  border: 2px solid var(--accent-bright);
-  color: var(--accent-bright);
-  background: var(--accent-veil);
+  border-radius: 0;
+  border: 1px solid var(--on-accent);
+  color: var(--on-accent);
+  background: #470f0f;
   transition: background 0.2s var(--ease-out-expo), color 0.2s var(--ease-out-expo), transform 0.16s var(--ease-out-expo);
   flex: none;
 }
@@ -774,7 +776,7 @@ ul { list-style: none; }
    both glyphs are correct and the override is unnecessary. */
 .play-circle--lg { width: 76px; height: 76px; }
 .play-circle--lg .icon-svg { width: 26px; height: 26px; }
-.play-circle--sm { width: 42px; height: 42px; border-width: 1.5px; }
+.play-circle--sm { width: 42px; height: 42px; }
 .play-circle--sm .icon-svg { width: 15px; height: 15px; }
 .play-circle .icon-pause { display: none; }
 .play-circle.is-playing .icon-play { display: none; }
@@ -901,7 +903,7 @@ ul { list-style: none; }
 /* a backdrop fills the stage: the film and the portrait are cropped to it
    rather than letterboxed (the portrait keeps the face in the upper third) */
 #featured-mix-hero #hero-collage-frame .hero-image-clip #hero-promo-video { object-fit: cover; }
-#featured-mix-hero #hero-media[data-hero-mode="artist"] #hero-mix-art { object-fit: cover; object-position: 50% 25%; }
+#featured-mix-hero #hero-media[data-hero-mode="artist"] #hero-mix-art { object-fit: cover; object-position: 50% 25%; filter: var(--artist-photo-filter); }
 /* the stage's own copy names the mix, so the cover's plate and the script
    mark would say it twice — kept in the DOM (the script still writes them) */
 #featured-mix-hero #hero-mix-plate,
@@ -1232,7 +1234,15 @@ ul { list-style: none; }
   gap: 8px;
   flex: none;
 }
-.catalog-row-actions { display: flex; align-items: center; gap: 10px; }
+.catalog-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+/* catalog rows (artist pages, archive): the artwork / download / share
+   buttons are squares, like the play button that leads the row */
+.catalog-row-actions .download-btn,
+.catalog-row-actions .ue-links-icon-btn { border-radius: 0; }
+/* the share button (js/ue-links.js) matches the other two on desktop */
+@media (min-width: 701px) {
+  .catalog-row-actions .ue-links-icon-btn { width: 42px; height: 42px; }
+}
 #featured-download-button { width: 46px; height: 46px; }
 
 /* placeholder cover when an artist/mix has no image — always shown whole,
@@ -1372,9 +1382,13 @@ ul { list-style: none; }
   content-visibility: auto;
   contain-intrinsic-size: 1200px;
 }
+/* The actions column is a fixed width (room for its most buttons: artwork,
+   download, share = 3 × 42 + 2 × 10 gap), so a row with fewer buttons doesn't
+   widen the year column and every year sits in the same place. */
 .catalog-row {
+  --catalog-actions-w: 146px;
   display: grid;
-  grid-template-columns: 58px 64px minmax(0, 1.7fr) minmax(0, 1fr) auto;
+  grid-template-columns: 58px 64px minmax(0, 1.7fr) minmax(0, 1fr) var(--catalog-actions-w);
   align-items: center;
   gap: clamp(10px, 2vw, 22px);
   padding: 12px 6px;
@@ -1384,7 +1398,7 @@ ul { list-style: none; }
 .catalog-row:hover { background: var(--veil-hover); }
 /* artist pages: the play button leads the row (generator catalogRowHtml
    playFirst) — one extra column at the far left */
-.catalog-row--play-first { grid-template-columns: 42px 58px 64px minmax(0, 1.7fr) minmax(0, 1fr) auto; }
+.catalog-row--play-first { grid-template-columns: 42px 58px 64px minmax(0, 1.7fr) minmax(0, 1fr) var(--catalog-actions-w); }
 .catalog-row-lead { display: flex; align-items: center; justify-content: center; }
 .catalog-row-number {
   font-size: 15px;
@@ -1480,7 +1494,8 @@ ul { list-style: none; }
 }
 .resident-card-photo img, .resident-card-photo .cover-fallback {
   width: 100%; height: 100%; object-fit: cover;
-  filter: var(--img-filter);
+  object-position: 50% 25%;
+  filter: var(--artist-photo-filter);
   transition: transform 0.6s var(--ease-out-expo);
 }
 .resident-card:hover .resident-card-photo img { transform: scale(1.04); }
@@ -1488,7 +1503,7 @@ ul { list-style: none; }
   content: '';
   position: absolute;
   inset: 0;
-  background: var(--portrait-scrim);
+  background: var(--artist-photo-scrim);
   pointer-events: none;
 }
 .resident-card-body { padding: 14px 14px 16px; }
@@ -1541,7 +1556,16 @@ ul { list-style: none; }
 }
 #artist-detail-portrait img:not(#artist-detail-portrait-logo), #artist-detail-portrait .cover-fallback {
   width: 100%; height: 100%; object-fit: cover;
-  filter: var(--img-filter-hero);
+  object-position: 50% 25%;
+  filter: var(--artist-photo-filter);
+}
+/* the shared artist-photo look over the portrait (under the logo lockup) */
+#artist-detail-portrait .hero-image-clip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--artist-photo-scrim);
 }
 /* Centred and sized to fit WHOLE. This sits inside .hero-image-clip, which is
    overflow:hidden, so the old `left:-4%; width:108%` bled 4% past each edge and
@@ -1942,18 +1966,9 @@ ul { list-style: none; }
    animate or change its border. The muted .player-bar-primed-label line above
    is still the cue for "resume at 0:52" / a shared link. */
 
-/* breathing live-dot while audio is playing */
 #player-bar-title { position: relative; }
-#persistent-player-bar.is-playing #player-bar-title::before {
-  content: '';
-  display: inline-block;
-  width: 7px; height: 7px;
-  margin-right: 8px;
-  border-radius: 50%;
-  background: var(--accent-bright);
-  vertical-align: 1px;
-  animation: live-dot-breathe 1.8s ease-in-out infinite;
-}
+/* (the breathing dot that used to sit before the title while playing is
+   gone; this keyframe stays for the buffering/seeking status dot below) */
 @keyframes live-dot-breathe {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(0.75); }
@@ -3091,4 +3106,455 @@ body::before, body::after {
 @media (prefers-reduced-motion: reduce) {
   #player-bar-source-slot .hero-thumb:not([hidden]) { animation: none; }
   #homepage-selectors-grid[data-fade="on"] .mix-card-cover img:not(.cover-fallback) { transition: none; }
+}
+
+/* ==========================================================================
+   Player bar v2 + "about this mix" drawer (owner, 2026-10-28)
+   Design: hub canvas "UE Player Drawer", row 5.
+   - The bar carries NO seek control any more: the hero waveform is the one
+     scrubber. #player-bar-wave-wrap stays in the DOM for player.js, hidden.
+   - Bar = grip strip (pill · artist · ABOUT) over a controls row.
+     Desktop 130px: play 260×56 · prev · next · … · volume · menu.
+     Mobile 130px: play full width inside 12px margins, nothing else.
+   - Open = the grip strip itself slides up to sit under the nav, and the
+     drawer (#mix-drawer) fills the screen beneath it, content starting right
+     under the artist name / ABOUT line. The controls row never moves.
+     js/ue-drawer.js.
+   Everything below is scoped to .ue-bar-v2 / #mix-drawer so the rules above
+   this block are untouched.
+   ========================================================================== */
+:root {
+  --player-bar-height: 130px;
+  --ue-nav-h: 73px;
+  --drawer-bg: #0c0707;              /* one opaque surface: bar, strip and drawer */
+  --drawer-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+/* ONE look for every DJ photo (homepage hero, drawer, artist page, DJs page):
+   the hero filter plus grayscale, which evens out the faint, uneven warm tint
+   the source photos carry; over it the hero's sheen and bottom shade
+   (--hero-scrim), darkening toward the edges and bottom, and a light overall
+   veil for the hero's low key. Film grain is the page layer (body::after).
+   Defined on both themes' roots so --bg-panel resolves per theme. */
+:root, :root[data-theme="light"] {
+  --artist-photo-filter: var(--img-filter-hero, none) grayscale(1);
+  --artist-photo-scrim:
+    var(--hero-scrim),
+    radial-gradient(ellipse 85% 75% at 50% 38%, transparent 35%, color-mix(in srgb, var(--bg-panel) 78%, transparent) 100%),
+    linear-gradient(180deg, transparent 40%, color-mix(in srgb, var(--bg-panel) 80%, transparent) 100%),
+    color-mix(in srgb, var(--bg-panel) 30%, transparent);
+}
+@media (max-width: 1020px) { :root { --ue-nav-h: 61px; } }
+
+/* ---- the bar ---- */
+#persistent-player-bar.ue-bar-v2 {
+  height: var(--player-bar-height);
+  padding: 60px var(--page-pad) 14px;   /* 48 grip + 12 top margin */
+  border-top: 0;                  /* the strip carries both edge lines (it moves) */
+  box-shadow: none;
+  background: var(--drawer-bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+/* one flex row: play · prev · next · shuffle · share · cover … volume (far right).
+   transport and volume are the player's containers; flattened so the row
+   can be ordered freely. */
+#persistent-player-bar.ue-bar-v2 #player-bar-transport,
+#persistent-player-bar.ue-bar-v2 #player-bar-volume { display: contents; }
+/* open / dragging: the bar is just the controls row, so the drawer (and its
+   dots) can reach right down to it; the grip keeps its screen position. */
+body[data-drawer="open"] #persistent-player-bar.ue-bar-v2,
+body[data-drawer="dragging"] #persistent-player-bar.ue-bar-v2 { height: calc(var(--player-bar-height) - 48px); padding-top: 12px; }
+body[data-drawer="open"] #player-bar-grip,
+body[data-drawer="dragging"] #player-bar-grip { top: -48px; }
+#persistent-player-bar.ue-bar-v2 #player-bar-wave-wrap,
+#persistent-player-bar.ue-bar-v2 #player-bar-source-slot,
+#persistent-player-bar.ue-bar-v2 #player-bar-artist,
+#persistent-player-bar.ue-bar-v2 #player-bar-repeat { display: none; }
+
+#player-bar-grip {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 var(--page-pad);
+  border-top: 1px solid var(--hairline-accent);
+  box-shadow: inset 0 1px 0 var(--veil-inset-strong);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--drawer-bg);   /* same in every state: nothing shifts on grab */
+  cursor: grab;
+  touch-action: none;             /* the strip is a handle, every drag is ours */
+  user-select: none;
+  -webkit-user-select: none;
+  /* open: the strip rides up to sit under the nav (the drawer fills in below it) */
+  --grip-open-y: calc(-100dvh + var(--ue-nav-h) + var(--player-bar-height));
+  transition: transform 0.5s var(--drawer-ease);
+  will-change: transform;
+}
+#player-bar-grip:active { cursor: grabbing; }
+body[data-drawer="open"] #player-bar-grip { transform: translateY(var(--grip-open-y)); }
+.drawer-pill {
+  position: absolute;
+  left: 50%; top: 6px;
+  transform: translateX(-50%);
+  width: 56px; height: 4px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0.7;
+  pointer-events: none;
+}
+#persistent-player-bar.ue-bar-v2 #player-bar-now-playing { gap: 0; order: 0; flex: 1 1 auto; }
+#player-bar-about { order: 1; }
+#persistent-player-bar.ue-bar-v2 #player-bar-title { font-size: 14px; letter-spacing: 0.04em; }
+#player-bar-about {
+  height: 44px;
+  padding: 0 4px;
+  background: transparent;
+  border: 0;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  flex: none;
+}
+#player-bar-about:hover { color: var(--accent-bright); }
+#player-bar-about[hidden] { display: none; }
+#persistent-player-bar.ue-bar-v2:not(.has-about) .drawer-pill { opacity: 0; }
+
+#persistent-player-bar.ue-bar-v2 #player-bar-play {
+  order: -1;
+  flex: none;
+  width: 260px;
+  height: 56px;
+}
+#persistent-player-bar.ue-bar-v2 #player-bar-prev { order: 0; }
+#persistent-player-bar.ue-bar-v2 #player-bar-next { order: 1; }
+#persistent-player-bar.ue-bar-v2 #player-bar-shuffle { order: 2; display: inline-flex; }
+#persistent-player-bar.ue-bar-v2 .ue-links-icon-btn { order: 3; }
+#persistent-player-bar.ue-bar-v2 #player-bar-thumb { order: 4; }
+#persistent-player-bar.ue-bar-v2 #player-bar-volume-box { order: 5; margin-left: auto; }
+#persistent-player-bar.ue-bar-v2 #player-bar-play .icon-svg { width: 20px; height: 20px; }
+#persistent-player-bar.ue-bar-v2 .transport-btn {
+  width: 56px; height: 56px;
+  flex: none;
+  padding: 0;
+  align-items: center; justify-content: center;
+  border: 1px solid var(--hairline-accent);
+}
+#persistent-player-bar.ue-bar-v2 .transport-btn .icon-svg { width: 18px; height: 18px; }
+/* shuffle / repeat ON: the square fills, unmistakable next to hover */
+#persistent-player-bar.ue-bar-v2 .transport-btn.is-on {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--drawer-bg);
+}
+/* volume: a 56-tall square-cornered box — level glyph in its own 56² cell,
+   then a hairline track with a square thumb */
+#player-bar-volume-box {
+  display: flex; align-items: center;
+  flex: none;
+  height: 56px; width: 200px;
+  border: 1px solid var(--hairline-accent);
+  box-sizing: border-box;
+}
+#player-bar-volume-box > .icon-svg {
+  width: 54px; height: 54px; flex: none;
+  padding: 18px;
+  box-sizing: border-box;
+  color: var(--text-secondary);
+  border-right: 1px solid var(--hairline);
+}
+#persistent-player-bar.ue-bar-v2 #volume-slider {
+  flex: 1 1 auto; width: auto; min-width: 0;
+  height: 56px; margin: 0; padding: 0 16px;
+  background: transparent;
+  -webkit-appearance: none; appearance: none;
+  cursor: pointer;
+}
+#persistent-player-bar.ue-bar-v2 #volume-slider::-webkit-slider-runnable-track { height: 2px; background: var(--hairline-accent); border-radius: 0; }
+#persistent-player-bar.ue-bar-v2 #volume-slider::-moz-range-track { height: 2px; background: var(--hairline-accent); border-radius: 0; }
+#persistent-player-bar.ue-bar-v2 #volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; margin-top: -6px;
+  border-radius: 0; border: 0;
+  background: var(--text-primary);
+  box-shadow: none;
+}
+#persistent-player-bar.ue-bar-v2 #volume-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 0; border: 0; background: var(--text-primary); box-shadow: none; }
+#persistent-player-bar.ue-bar-v2 #volume-slider:focus-visible { outline: 1px solid var(--accent-bright); outline-offset: -1px; }
+/* share (ue-links.js mounts it in the volume slot): same square as the transport buttons */
+#persistent-player-bar.ue-bar-v2 .ue-links-icon-btn {
+  width: 56px; height: 56px;
+  margin-left: 0;
+  border-radius: 0;
+  border: 1px solid var(--hairline-accent);
+}
+#persistent-player-bar.ue-bar-v2 .ue-links-icon-svg { width: 18px; height: 18px; }
+/* before a track loads ue-links hides share; keep its slot so play never
+   changes size, just show it inactive */
+#persistent-player-bar.ue-bar-v2 .ue-links-icon-btn[hidden] {
+  display: inline-flex !important;
+  opacity: 0.35;
+  pointer-events: none;
+}
+/* the mix's own cover, far right; the fallback mark is not worth a slot */
+#persistent-player-bar.ue-bar-v2 #player-bar-thumb {
+  display: block;
+  flex: none;
+  width: 56px; height: 56px;
+  margin: 0;
+  border: 1px solid var(--hairline-accent);
+  border-radius: 0;
+  overflow: hidden;
+}
+#persistent-player-bar.ue-bar-v2 #player-bar-thumb:has(.cover-fallback),
+#persistent-player-bar.ue-bar-v2.is-idle #player-bar-thumb { display: none; }
+/* idle (no mix yet): the grip still reads "Select a mix to play", no pill */
+#persistent-player-bar.ue-bar-v2.is-idle #player-bar-about { display: none; }
+
+@media (max-width: 900px) {
+  /* one flex row of squares: play (fills) · prev · next · share · shuffle */
+  #persistent-player-bar.ue-bar-v2 { gap: 10px; padding: 60px 12px 14px; }
+  #persistent-player-bar.ue-bar-v2 #player-bar-volume-box,
+  #persistent-player-bar.ue-bar-v2 #player-bar-thumb { display: none; }
+  #persistent-player-bar.ue-bar-v2 .transport-btn { display: inline-flex; flex: none; }
+  #persistent-player-bar.ue-bar-v2 #player-bar-repeat { display: none; }
+  #persistent-player-bar.ue-bar-v2 .ue-links-icon-btn { order: 2; width: 56px; height: 56px; }
+  #persistent-player-bar.ue-bar-v2 #player-bar-shuffle { order: 3; }
+  #persistent-player-bar.ue-bar-v2 #player-bar-play { display: inline-flex; flex: 1 1 auto; width: auto; min-width: 0; height: 56px; }
+  #persistent-player-bar.ue-bar-v2 #player-bar-play .icon-svg { width: 22px; height: 22px; }
+  #player-bar-grip { padding: 0 16px; }
+  #persistent-player-bar.ue-bar-v2.is-idle { padding: 60px 12px 14px; }
+  #persistent-player-bar.ue-bar-v2.is-idle #player-bar-now-playing { display: flex; }
+  #persistent-player-bar.ue-bar-v2.is-idle #player-bar-volume { display: contents; }
+  #persistent-player-bar.ue-bar-v2.is-idle #player-bar-play { height: 56px; }
+  body { padding-bottom: calc(var(--player-bar-height) + 24px); }
+}
+
+/* ---- the hero scrubber's weight: thin bars, 36px on phones, 56px up ---- */
+#featured-mix-hero { --hero-bar-h: var(--player-bar-height); }
+#featured-mix-hero .waveform-track { height: 56px; }
+@media (max-width: 900px) { #featured-mix-hero .waveform-track { height: 36px; } }
+body[data-drawer="open"], body[data-drawer="dragging"] { overflow: hidden; }   /* the page behind stays put */
+
+/* ---- the drawer ---- */
+#mix-drawer-scrim {
+  position: fixed; inset: 0;
+  z-index: 998;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+body[data-drawer="open"] #mix-drawer-scrim, body[data-drawer="dragging"] #mix-drawer-scrim { opacity: 1; pointer-events: auto; }
+#mix-drawer {
+  position: fixed;
+  left: 0; right: 0;
+  top: var(--ue-nav-h);
+  bottom: calc(var(--player-bar-height) - 48px);   /* down to the controls row */
+  padding-top: 48px;                                /* the grip strip sits here */
+  z-index: 999;
+  background: var(--drawer-bg);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.5s var(--drawer-ease);
+  color: var(--text-primary);
+}
+body[data-drawer="open"] #mix-drawer { transform: translateY(0); }
+#mix-drawer-body {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 24px var(--page-pad) 32px;
+  outline: none;
+}
+#mix-drawer-content { max-width: var(--page-max); margin: 0 auto; }
+/* Drawer content stays plain: one text colour (plus the hero's script red),
+   no borders, no dividers, no labels or tags. Space alone separates the parts. */
+#mix-drawer-content, #mix-drawer-content * { color: var(--text-primary); }
+#mix-drawer-content p { margin: 0 0 16px; font-size: 17px; line-height: 1.55; }
+#mix-drawer-content h2, #mix-drawer-content h3 {
+  margin: 32px 0 8px;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: clamp(19px, 1.6vw, 22px);
+  line-height: 1.2;
+}
+/* Layout, top to bottom (js/ue-drawer.js contentHtml):
+   1. .drawer-mix        — two columns: the mix's cover | Now playing + title
+   2. .drawer-artist-row — the artist, small: portrait + name
+   3. .drawer-story      — one full-width column: quote, interview, flyers
+   Phones: the mix stacks, cover first. */
+.drawer-mix {
+  display: grid;
+  grid-template-columns: minmax(220px, 5fr) 7fr;
+  gap: 24px 56px;
+  align-items: end;
+  padding-top: 16px;
+}
+.drawer-mix--no-cover { grid-template-columns: minmax(0, 1fr); }
+.drawer-mix-cover img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+/* a real event flyer keeps its own shape */
+.drawer-mix-cover--flyer img { aspect-ratio: auto; height: auto; }
+.drawer-mix-text { min-width: 0; }
+#mix-drawer-content .drawer-now-playing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+#mix-drawer-content .drawer-mix-title {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: clamp(44px, 7vw, 120px);
+  line-height: 0.92;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+/* a mix's details under its title (about/<slug>.html .drawer-mix-details-src):
+   label column | value, the label set like the Q numbers */
+#mix-drawer-content .drawer-mix-details {
+  display: grid;
+  gap: 8px;
+  margin: 28px 0 0;
+  max-width: 60ch;
+}
+.drawer-mix-details > div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 16px;
+  align-items: baseline;
+}
+#mix-drawer-content .drawer-mix-details dt {
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+#mix-drawer-content .drawer-mix-details dd { margin: 0; font-size: 17px; line-height: 1.45; }
+.drawer-artist-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+  margin-top: 72px;
+}
+.drawer-artist-row:not(:has(.drawer-portrait)) { grid-template-columns: minmax(0, 1fr); }
+/* the drawer's DJ photo: the shared artist-photo treatment (see
+   --artist-photo-filter / --artist-photo-scrim, start of this drawer block) */
+.drawer-portrait { position: relative; overflow: hidden; background: var(--bg-panel); }
+.drawer-portrait img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;   /* always square */
+  object-fit: cover;
+  object-position: 50% 25%;
+  filter: var(--artist-photo-filter);
+}
+.drawer-portrait::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--artist-photo-scrim);
+}
+#mix-drawer-content .drawer-artist {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: clamp(32px, 3vw, 44px);
+  line-height: 1;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+/* the story's pull quote: set like the mix title (big, upright, uppercase) */
+#mix-drawer-content .drawer-quote {
+  margin: 0 0 56px;
+  max-width: 20ch;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: clamp(32px, 4vw, 64px);
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+.drawer-story { margin-top: 48px; }   /* full width of the drawer */
+/* the interview as numbered Q&A: question (with its number) on the left,
+   the answer on the right at a readable measure. Phones: one column. */
+.drawer-run { min-width: 0; counter-reset: drawer-q; }
+.drawer-run section {
+  display: grid;
+  grid-template-columns: 3fr 7fr;
+  gap: 0 48px;
+  align-items: start;
+}
+#mix-drawer-content .drawer-run h3 {
+  grid-column: 1;
+  margin: 48px 0 0;
+  font-family: var(--font-body);
+  font-size: clamp(22px, 2vw, 28px);
+  line-height: 1.15;
+  text-transform: uppercase;
+  counter-increment: drawer-q;
+}
+#mix-drawer-content .drawer-run h3::before {
+  content: 'Q' counter(drawer-q);
+  display: block;
+  margin-bottom: 8px;
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  opacity: 0.6;
+}
+#mix-drawer-content .drawer-run p { grid-column: 2; max-width: 68ch; margin: 48px 0 0; }
+#mix-drawer-content .drawer-run section:first-child h3:first-child,
+#mix-drawer-content .drawer-run section:first-child h3:first-child + p { margin-top: 0; }
+.drawer-run .drawer-inline-img { grid-column: 2; }
+.drawer-inline-img, .drawer-flyers img {
+  width: 100%; height: auto; display: block;
+  filter: var(--img-filter-hero, none);
+}
+/* no single image wider than half the drawer on desktop
+   (the answer column is 70%, so 70% of it ≈ 49%) */
+.drawer-inline-img { max-width: 70%; margin: 32px 0 0; }
+.drawer-flyers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));   /* full width: as many across as fit */
+  gap: 12px;
+  align-items: start;
+  margin-top: 48px;
+}
+@media (max-width: 900px) {
+  #mix-drawer-body { padding: 14px 16px 24px; }
+  .drawer-mix { grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 4px; }
+  .drawer-artist-row { grid-template-columns: 72px minmax(0, 1fr); gap: 14px; margin-top: 48px; }
+  .drawer-story { margin-top: 40px; }
+  #mix-drawer-content p { font-size: 16px; }
+  .drawer-run section { grid-template-columns: minmax(0, 1fr); }
+  #mix-drawer-content .drawer-run h3, .drawer-run .drawer-inline-img { grid-column: 1; }
+  #mix-drawer-content .drawer-run h3 { margin-top: 40px; }
+  #mix-drawer-content .drawer-run p,
+  #mix-drawer-content .drawer-run section:first-child h3:first-child + p { grid-column: 1; margin-top: 12px; }
+  .drawer-inline-img { max-width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mix-drawer, #mix-drawer-scrim, #player-bar-grip { transition: none !important; }
 }
