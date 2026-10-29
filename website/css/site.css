@@ -1455,12 +1455,17 @@ ul { list-style: none; }
   /* narrow number column + stacked action buttons free ~80px for the
      title column so mix titles stop breaking mid-word */
   .catalog-row { grid-template-columns: 28px 52px minmax(0, 1fr) auto; gap: 10px 12px; }
-  .catalog-row--play-first { grid-template-columns: 36px 28px 52px minmax(0, 1fr) auto; }
+  /* rows with their own play button drop the cover too, so the title and
+     artist run the full width (owner, 2026-10-29). The cover anchor stays in
+     the DOM: it is the player's queue entry. */
+  .catalog-row--play-first { grid-template-columns: 36px 28px minmax(0, 1fr) auto; }
+  .catalog-row--play-first .catalog-row-cover { display: none; }
   .catalog-row--play-first .catalog-row-lead .play-circle { width: 36px; height: 36px; }
   .catalog-row-number { font-size: 13px; }
   .catalog-row-cover { width: 52px; height: 52px; }
-  .catalog-row-meta-cell { display: none; }
-  .catalog-row-meta--inline { margin-top: 4px; }
+  /* no date on phones (owner, 2026-10-29) */
+  .catalog-row-meta-cell,
+  .catalog-row-meta--inline { display: none; }
   .catalog-row-actions { flex-direction: column; gap: 8px; }
 }
 @media (min-width: 701px) {
@@ -3547,8 +3552,34 @@ body[data-drawer="open"] #mix-drawer { transform: translateY(0); }
   align-items: start;
   margin-top: 48px;
 }
+/* the playing mix's scrubber: the bar's own waveform, moved under the mix
+   title by ue-drawer.js (#drawer-mix-scrub-slot). Solid colours, no shades:
+   played = the text colour, still to play = the bar's dark red. */
+#mix-drawer-content #drawer-mix-scrub-slot { margin-top: 28px; }
+#mix-drawer-content #player-bar-wave-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  --wave-played: var(--text-primary);
+  --wave-unplayed: #470f0f;
+  --wave-remaining: #470f0f;
+}
+#mix-drawer-content #player-bar-waveform { height: 64px; }
+#mix-drawer-content #player-bar-wave-wrap .player-bar-time {
+  display: inline;
+  min-width: 7ch;
+  font-family: var(--font-body);
+  font-size: 17px;
+  letter-spacing: 0;
+}
+#mix-drawer-content #player-bar-wave-wrap .player-bar-time.time-current { text-align: left; }
+#mix-drawer-content #player-bar-wave-wrap .player-bar-time.time-total { text-align: right; }
 @media (max-width: 900px) {
   #mix-drawer-body { padding: 14px 16px 24px; }
+  #mix-drawer-content #drawer-mix-scrub-slot { margin-top: 20px; }
+  #mix-drawer-content #player-bar-waveform { height: 48px; }
+  #mix-drawer-content #player-bar-wave-wrap { gap: 10px; }
+  #mix-drawer-content #player-bar-wave-wrap .player-bar-time { min-width: 0; font-size: 15px; }
   .drawer-mix { grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 4px; }
   .drawer-artist-row { grid-template-columns: 72px minmax(0, 1fr); gap: 14px; margin-top: 48px; }
   .drawer-story { margin-top: 40px; }

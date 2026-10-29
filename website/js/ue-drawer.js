@@ -130,6 +130,7 @@
             ? '<p class="drawer-now-playing"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 10h3v10H4zM10.5 4h3v16h-3zM17 13h3v7h-3z"/></svg>Now playing</p>'
             : '') +
           '<h2 class="drawer-mix-title">' + esc(track.title) + '</h2>' +
+          (playing ? '<div class="drawer-mix-scrub" id="drawer-mix-scrub-slot"></div>' : '') +
         '</div>' +
       '</div>' +
       (name
@@ -189,6 +190,33 @@
     text.appendChild(match);
   }
 
+  /* ---------- the playing mix's scrubber ----------
+     Not every page has a hero waveform, so the drawer carries one: the bar's
+     own #player-bar-wave-wrap (hidden in the v2 bar) is moved under the mix
+     title while that mix is loaded. Moving the node keeps every player.js
+     binding (pointer + keyboard seek, progress paint, times, status region).
+     It goes back to the bar before each re-render so innerHTML never
+     destroys it. */
+  var waveWrap = document.getElementById('player-bar-wave-wrap');
+  var waveHome = waveWrap && waveWrap.parentNode;
+  var waveHomeNext = waveWrap && waveWrap.nextSibling;
+  // the canvas caches its colours per theme; the themechange event is the
+  // only way to make player.js re-read them (its listener just repaints)
+  function repaintWave() {
+    try { window.dispatchEvent(new CustomEvent('ue:themechange')); } catch (err) { /* ok */ }
+  }
+  function parkWave() {
+    if (!waveWrap || waveWrap.parentNode === waveHome) return;
+    waveHome.insertBefore(waveWrap, waveHomeNext);
+    repaintWave();
+  }
+  function mountWave() {
+    var slot = waveWrap && contentEl.querySelector('#drawer-mix-scrub-slot');
+    if (!slot) return;
+    slot.appendChild(waveWrap);
+    repaintWave();
+  }
+
   function syncArtist() {
     var track = currentTrack();
     var slug = slugOf(track);
@@ -201,9 +229,11 @@
     withArtists(function (idx) {
       function render(fragment) {
         if (key !== currentSlug) return;
+        parkWave();
         contentEl.innerHTML = contentHtml(track, portraitFor(track, idx), fragment, playing);
         applyFragmentCover(track);
         applyFragmentDetails(track);
+        if (playing) mountWave();
         bodyEl.scrollTop = 0;
         setAvailable(true);
       }
