@@ -1,0 +1,36 @@
+{
+  "_doc": "Locked artist portrait recipes. See ARTIST_PORTRAITS.md. The committed WebP is the source of truth; this file records exactly how it was made so it can be verified and reproduced. Never edit a locked entry's settings without re-rendering, reviewing and updating outputSha256 together.",
+  "toolchain": { "ffmpeg": "8.1.3", "note": "Renders are byte-identical with this ffmpeg/libwebp. A different version may differ slightly; verify visually, then re-lock." },
+  "portraits": [
+    {
+      "artist": "PAUL JOHNSON",
+      "slug": "pauljohnson",
+      "output": "website/img/about/pauljohnson/portrait.webp",
+      "outputSha256": "f6bbcde83644d0a7071c5659680dbd8b32bbcfc66c923f5fe670466339c7f6b4",
+      "source": {
+        "url": "https://xlr8r.com/wp-content/uploads/2021/08/E7-Gde0WQAc3lj1-2-1024x683.jpeg",
+        "file": "pauljohnson.jpg",
+        "sha256": "d53f578a649caa26bfff94994d8ff46d9fa52f8688b5b5739b565c9f1f02b572",
+        "rights": "owner's pick; press photo (XLR8R), not licensed"
+      },
+      "crop": "400:400:320:30",
+      "env": {},
+      "locked": "2026-11-18"
+    },
+    {
+      "artist": "JEFF CRAVEN",
+      "slug": "jeffcraven",
+      "output": "website/img/about/jeffcraven/portrait.webp",
+      "outputSha256": "cc57aa69c4cca1a4ff1b76564e7a7d7f21b88868262da7c936750c7d75f9becb",
+      "source": {
+        "url": "https://media.licdn.com/dms/image/v2/C4E03AQFDEejWKrb72A/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1590590894614?e=2147483647&v=beta&t=HI7YAOXDwLjjSxENzF_-gzdTIcZ3AACayRSFqF_YyDY",
+        "file": "jeffcraven.jpg",
+        "sha256": "b4c0197bd4578ff206fb452f77a559f610df5e3c44a749be3117047c32d1dedc",
+        "rights": "owner's pick; LinkedIn profile photo (200px)"
+      },
+      "crop": "128:128:32:14",
+      "env": { "LS": "0.6" },
+      "locked": "2026-11-18"
+    }
+  ]
+}
