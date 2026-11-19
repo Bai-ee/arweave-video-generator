@@ -1069,7 +1069,8 @@
       var timer = setTimeout(function () { try { ctrl.abort(); } catch (err) { /* ok */ } }, PROBE_TIMEOUT_MS);
       fetch(c.url, { headers: { Range: 'bytes=0-127' }, signal: ctrl.signal }).then(function (r) {
         clearTimeout(timer);
-        return { status: r.status, contentRange: r.headers.get('Content-Range'), acceptRanges: r.headers.get('Accept-Ranges') };
+        return { status: r.status, contentRange: r.headers.get('Content-Range'), acceptRanges: r.headers.get('Accept-Ranges'),
+          direct: window.UEPlayerCore.isDirectUrl(c.url) };
       }).catch(function () {
         clearTimeout(timer);
         return { status: 0, contentRange: null, acceptRanges: null };
