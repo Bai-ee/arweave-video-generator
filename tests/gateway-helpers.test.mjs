@@ -84,6 +84,22 @@ describe('buildCandidates', () => {
     assert.equal(UEPlayerCore.isDirectUrl(other), false);
     assert.equal(UEPlayerCore.isDirectUrl(UEPlayerCore.DIRECT_PREFIX + 'short'), false);
   });
+
+  test('a keyed archive.org mix URL is its own single candidate', () => {
+    const url = UEPlayerCore.ARCHIVE_PREFIX + 'rave_Paul_Johnson_Live_At_Fame/Paul_Johnson_-_Live_At_Fame.mp3#/' + TXID;
+    assert.equal(UEPlayerCore.isDirectUrl(url), true);
+    assert.equal(UEPlayerCore.extractTxid(url), TXID);
+    const candidates = UEPlayerCore.buildCandidates(url);
+    assert.equal(candidates.length, 1);
+    assert.equal(candidates[0].url, url);
+    assert.equal(candidates[0].host, UEPlayerCore.ARCHIVE_PREFIX);
+  });
+
+  test('archive.org URLs without a content id are not playable', () => {
+    const url = UEPlayerCore.ARCHIVE_PREFIX + 'rave_Paul_Johnson_Live_At_Fame/Paul_Johnson_-_Live_At_Fame.mp3';
+    assert.equal(UEPlayerCore.isDirectUrl(url), false);
+    assert.deepEqual(UEPlayerCore.buildCandidates(url), []);
+  });
 });
 
 describe('parseContentRange', () => {
