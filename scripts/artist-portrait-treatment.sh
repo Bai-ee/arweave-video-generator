@@ -23,6 +23,7 @@ HB=${HB:-45}; BL=${BL:-0.30}; BR=${BR:-0.62}
 LS=${LS:-0}
 CURVE=${CURVE:-0/0.04 0.2/0.24 0.5/0.66 0.8/0.88 1/0.92}
 PRE=""; [ -n "$CROP" ] && PRE="crop=${CROP},"
+TMPD=$(mktemp -d); TMP="$TMPD/portrait.png"; trap 'rm -rf "$TMPD"' EXIT
 ffmpeg -loglevel error -y -i "$IN" -filter_complex "
 [0]${PRE}scale=1000:1000:force_original_aspect_ratio=increase:flags=lanczos,crop=1000:1000,format=gray,
 normalize=blackpt=black:whitept=white:smoothing=0,
@@ -34,5 +35,25 @@ curves=master='${CURVE}',split[s][h];
 geq=lum='p(X+6*(2*mod(abs(sin(floor(Y/4)*12.9898)*43758.5453),1)-1),Y)',
 geq=lum='lum(X,Y)*(1-${LS}*pow(1-X/W,1.4))*(1-0.5*lt(mod(Y,8),2.5))',
 noise=alls=46:allf=u,gblur=sigma=0.6,noise=alls=18:allf=u,format=gray" \
-  -c:v libwebp -quality 86 "$OUT"
+  -f image2 -c:v png "$TMP"
+# Tone match (TONE=0 to skip): map this image's 5/25/50/75/95th luminance
+# percentiles onto the existing artist set (measured 2026-11-18 on 8 portraits:
+# p5 ~21, p25 ~34, p50 ~68, p75 ~137, p95 ~192 of 255), so every portrait has the
+# same black floor, midtones and highlights.
+if [ "${TONE:-1}" = "1" ]; then
+  CURVE2=$(ffmpeg -loglevel error -i "$TMP" -vf format=gray,scale=250:250 -f rawvideo - | python3 -I -c '
+import sys
+v=sorted(sys.stdin.buffer.read()); n=len(v)
+src=[v[int(q*(n-1))] for q in (.05,.25,.50,.75,.95)]
+dst=[21,34,68,137,192]
+pts=[(0.0,0.0)]
+for s_,d in zip(src,dst):
+    x=s_/255
+    if x>pts[-1][0]+0.004 and x<0.996: pts.append((x,d/255))
+pts.append((1.0,0.86))
+print(" ".join(f"{x:.4f}/{y:.4f}" for x,y in pts))')
+  ffmpeg -loglevel error -y -i "$TMP" -vf "format=gray,curves=master='${CURVE2}',format=gray" -c:v libwebp -quality 86 "$OUT"
+else
+  ffmpeg -loglevel error -y -i "$TMP" -c:v libwebp -quality 86 "$OUT"
+fi
 echo "wrote $OUT"

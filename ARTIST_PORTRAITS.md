@@ -17,7 +17,7 @@ same treatment before they are added.
    `img/about/<slug>/portrait.webp`, commit the WebP, merge, and deploy the site.
 5. Check the DJs page and the artist page next to two existing artists.
 
-Tuning: `CURVE` (tone), `SM` (trail length), `SH` (trail shift), `HB`/`BL`/`BR` (left blur), `LS` (left shade, for evenly lit photos). The defaults are tuned on
+Tuning: `CURVE` (tone), `SM` (trail length), `SH` (trail shift), `HB`/`BL`/`BR` (left blur), `LS` (left shade, for evenly lit photos). The script ends with a tone match (TONE=1, default) that maps each portrait onto the existing set's black floor, midtones and highlights. The defaults are tuned on
 a low-key photo (dark background); a bright photo may need a darker `CURVE` (see the script).
 
 The DJs page lists artists alphabetically by name.
