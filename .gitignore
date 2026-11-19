@@ -135,3 +135,5 @@ backups/
 
 # Never track the local secrets file (wallet JWK + service account key).
 .env.local
+# Locked artist portrait recipes (ARTIST_PORTRAITS.md)
+!config/artist-portraits.json
