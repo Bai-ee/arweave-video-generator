@@ -44,7 +44,52 @@ impossible. Arweave holds only the site (HTML, JS, CSS, images, `artists.json`).
 | Artist | Pipeline | Mixes | Audio |
 |---|---|---|---|
 | PAUL JOHNSON | Rave Archive | 15 tape sides | archive.org (streamed) |
-| JEFF CRAVEN | Mixtape Processing (REC020) | "Untitled", 1:35:21, both sides joined | Firebase Storage `-17ht1csELDW30uLHP4ROR1gXoYxAffMekoAN6aXEjI` |
+| JEFF CRAVEN | Mixtape Processing (tape REC020) | "Untitled", ??, 1:35:21, both sides joined | Firebase Storage `-17ht1csELDW30uLHP4ROR1gXoYxAffMekoAN6aXEjI` |
 
-Next in line: more Rave Archive Chicago DJs (`~/server/data/ravearchive/catalog.csv`, 182
-likely); Paul Johnson "Jive Turkey" (2012) from Bryan's Drive; new cassettes as Bryan drops them.
+Latest manifest (2026-11-19): `KLvtBJwghaxW5eJeZwmKr0jcIzaMIxLmxhGAC0PcvLw` — GoDaddy forward target
+`https://turbo-gateway.com/KLvtBJwghaxW5eJeZwmKr0jcIzaMIxLmxhGAC0PcvLw/index.html`.
+
+## Who does what today
+
+| Step | Owner | Trigger |
+|---|---|---|
+| Digitize a tape, drop it on the NAS | Bryan | — |
+| Trim, restore, Tape Deck review, MP3 upload, `ue-manifest.json` | HITLOOP Mixtape Processing (`/open hitloop-mixtape-processing`) | Bryan asks |
+| Pick Rave Archive DJs from the catalog | Bryan | — |
+| Portrait, Firestore, drawer, PR, deploy, verify | master session (this doc) | Bryan says "add tape X" / "add DJ Y" |
+| Merge OK, artist photo, title/date | Bryan | each release |
+| GoDaddy forward | Bryan (no credentials here) | each release |
+
+## Next steps: connect and automate the two pipelines
+
+Proposed, in order. Each keeps Bryan's approval gates (photo, title/date, merge).
+
+1. **One handoff file for both sources.** Freeze `ue-manifest.json` as v1:
+   `{ manifestVersion: 1, source: "mixtape" | "ravearchive", artistName, slug, mixes: [{ mixTitle,
+   mixDateYear, mixNote, durationS, audio: { url, sha256?, rangeOk } }], portrait: { sourceUrl? },
+   status: "ready" }`. The Mixtape pipeline already writes nearly this (add `source`, `slug`, a
+   `mixes` array, `status`). Add `ravearchive-to-manifest.py <dj>` that turns catalog rows into
+   the same file (one mix per tape side, archive URL with its `#/<id>`).
+2. **`scripts/ue-publish.mjs` — the finish line as code.** `--manifest <path>`:
+   check every audio URL answers 206; require a locked portrait for the slug (or stop and ask
+   for a photo); dry-run prints the exact Firestore diff; `--write` = fresh backup + one
+   transaction that refuses duplicate `mixArweaveURL` + re-read; create the about drawer from a
+   template; run `npm test` and the local Playwright check (page loads, first mix plays and
+   seeks). It opens the PR but never merges.
+3. **A ready queue instead of a message.** The Mixtape publish step (and the archive adapter)
+   drops manifests into `~/mixtape-work/ue/ready/`. The master session checks the folder (a
+   `/loop` or a launchd job every 30 min) and runs `ue-publish --manifest` on each one,
+   moving it to `done/` or `blocked/` (missing photo, failed check) with a reason Bryan sees.
+4. **Lock the deploy endpoint before automating it.** `POST /api/deploy-website` has no auth
+   today: add a shared secret (Vercel env + this server), then let `ue-publish --deploy` call it
+   after Bryan's merge OK and verify the new manifest.
+5. **Stop hand-editing the GoDaddy forward.** Either repair ArNS (`undergroundexistence.ar.io`,
+   ANT currently unreadable) so the name always points at the latest manifest and GoDaddy
+   forwards to it once, or give a GoDaddy API key with forwarding scope so the deploy step
+   repoints it. ArNS is the cleaner fix; both need Bryan.
+6. **Rotate the Arweave wallet** (its key is in the public repo's history) before any of this runs
+   unattended.
+7. **Housekeeping:** delete the unused duplicate REC020 MP3
+   (`website/mixes/-kDSvi7TPG6WuHqZJCrU819FbvVG1t87rRSl5OmEb5c`, Bryan's OK); retitle the
+   HITLOOP Tape Deck review to "Jeff Craven — Untitled"; Paul Johnson "Jive Turkey" goes under the
+   existing PAUL JOHNSON artist.
