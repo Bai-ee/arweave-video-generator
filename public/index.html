@@ -1471,6 +1471,26 @@
   </main>
 
   <script>
+      // POST /api/deploy-website with the deploy token (X-Deploy-Token) once the server
+      // requires one (DEPLOY_WEBSITE_TOKEN). Asks once, keeps it in this browser only.
+      async function postDeployWebsite(body) {
+        const KEY = 'ue-deploy-token';
+        const read = () => { try { return localStorage.getItem(KEY) || ''; } catch (e) { return ''; } };
+        const send = (token) => fetch('/api/deploy-website', {
+          method: 'POST',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { 'X-Deploy-Token': token } : {}),
+          body: JSON.stringify(body || {})
+        });
+        let res = await send(read());
+        if (res.status === 401 || res.status === 403) {
+          const token = window.prompt('Deploy token (ask Bryan):') || '';
+          if (!token) return res;
+          res = await send(token);
+          if (res.ok) { try { localStorage.setItem(KEY, token); } catch (e) {} }
+        }
+        return res;
+      }
+
     // Video generation state
     let activeJobs = new Map(); // jobId -> polling interval
     let videos = []; // Cached video list
@@ -6121,13 +6141,7 @@
         
         showToast('Starting website deployment...', 'info');
         
-        const response = await fetch('/api/deploy-website', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({})
-        });
+        const response = await postDeployWebsite({});
         
         let data;
         try {
@@ -6253,13 +6267,7 @@
         try {
           showToast('Starting website deployment to Arweave...', 'info');
           
-          const response = await fetch('/api/deploy-website', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({})
-          });
+          const response = await postDeployWebsite({});
           
           let data;
           try {

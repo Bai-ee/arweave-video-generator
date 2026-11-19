@@ -137,3 +137,7 @@ backups/
 .env.local
 # Locked artist portrait recipes (ARTIST_PORTRAITS.md)
 !config/artist-portraits.json
+
+# Rave Archive artist specs (item ids per UE artist)
+!config/ravearchive/*.json
+__pycache__/

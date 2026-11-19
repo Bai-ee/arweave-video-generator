@@ -1,0 +1,59 @@
+{
+ "artistName": "DANNY THE WILDCHILD",
+ "slug": "dannythewildchild",
+ "artistGenre": "drum & bass",
+ "items": [
+  {
+   "id": "rave_Danny_the_Wildchild_Bat_It_Up",
+   "with": ""
+  },
+  {
+   "id": "rave_Danny_the_Wildchild_Conference_99",
+   "with": ""
+  },
+  {
+   "id": "rave_Danny_the_Wildchild_Curve_Style",
+   "with": ""
+  },
+  {
+   "id": "rave_Danny_the_Wildchild_Do_You_Like_Scratching",
+   "with": ""
+  },
+  {
+   "id": "rave_Danny_the_Wildchild_Live_At_Direct_Drive",
+   "with": ""
+  },
+  {
+   "id": "rave_Danny_the_Wildchild_November_22_1994",
+   "with": ""
+  },
+  {
+   "id": "rave_Danny_the_Wildchild_Peep_The_Technique",
+   "with": ""
+  },
+  {
+   "id": "rave_Danny_the_Wildchild_Roots",
+   "with": ""
+  },
+  {
+   "id": "rave_Danny_the_Wildchild_Studio_Mix",
+   "with": ""
+  },
+  {
+   "id": "rave_Danny_the_Wildchild_The_Jungle_Book",
+   "with": ""
+  },
+  {
+   "id": "rave_Danny_the_Wildchild_Wild_Style",
+   "with": ""
+  },
+  {
+   "id": "rave_Danny_the_Wildchild_Zig-Zag",
+   "with": ""
+  }
+ ],
+ "rename": {
+  "dannythewildchildbooka": "The Jungle Book (Side A)",
+  "dannythewildchildbookb": "The Jungle Book (Side B)"
+ }
+}
