@@ -78,3 +78,7 @@ The DJs page lists artists alphabetically by name.
 |---|---|---|
 | PAUL JOHNSON | XLR8R, 2021 | owner's pick; press photo, not licensed |
 | JEFF CRAVEN | LinkedIn profile photo (200px) | owner's pick |
+| DANNY THE WILDCHILD | Rave Archive item photo (Wild Style) | shared with the archive |
+| MARK FARINA | Traxsource artist photo | press photo, not licensed |
+| DJ SNEAK | Gray Area artist photo | press photo, not licensed |
+| TERRY MULLAN | Rave Archive item photo | shared with the archive |

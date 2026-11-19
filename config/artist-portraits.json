@@ -1,6 +1,9 @@
 {
   "_doc": "Locked artist portrait recipes. See ARTIST_PORTRAITS.md. The committed WebP is the source of truth; this file records exactly how it was made so it can be verified and reproduced. Never edit a locked entry's settings without re-rendering, reviewing and updating outputSha256 together.",
-  "toolchain": { "ffmpeg": "8.1.3", "note": "Renders are byte-identical with this ffmpeg/libwebp. A different version may differ slightly; verify visually, then re-lock." },
+  "toolchain": {
+    "ffmpeg": "8.1.3",
+    "note": "Renders are byte-identical with this ffmpeg/libwebp. A different version may differ slightly; verify visually, then re-lock."
+  },
   "portraits": [
     {
       "artist": "PAUL JOHNSON",
@@ -29,8 +32,70 @@
         "rights": "owner's pick; LinkedIn profile photo (200px)"
       },
       "crop": "128:128:32:14",
-      "env": { "LS": "0.6" },
+      "env": {
+        "LS": "0.6"
+      },
       "locked": "2026-11-18"
+    },
+    {
+      "artist": "DANNY THE WILDCHILD",
+      "slug": "dannythewildchild",
+      "output": "website/img/about/dannythewildchild/portrait.webp",
+      "outputSha256": "4bb8c235cd2720f1cff5198cec88ec95890e93722b4a3b8507d2434ba6104b2c",
+      "source": {
+        "url": "https://archive.org/download/rave_Danny_the_Wildchild_Wild_Style/14_grande%5B1%5D.jpg",
+        "file": "dannythewildchild.jpg",
+        "sha256": "3765f2fe3c94826d44f6fdb41df33880bc1e7ff7e34e9b56a7cf4b190d695f89",
+        "rights": "Rave Archive item photo (Wild Style)"
+      },
+      "crop": "160:160:92:14",
+      "env": {},
+      "locked": "2026-11-19"
+    },
+    {
+      "artist": "MARK FARINA",
+      "slug": "markfarina",
+      "output": "website/img/about/markfarina/portrait.webp",
+      "outputSha256": "2b817581461e672d33189dd01cdc4521472aa04592ea47656f9ed05767b4ec68",
+      "source": {
+        "url": "https://geo-static.traxsource.com/files/artists/544.jpg",
+        "file": "markfarina.jpg",
+        "sha256": "dfc2379b6f6febe81b99085c7f607f58c26ff4d390dd83fb7698d8c8059fbe21",
+        "rights": "owner's pick; Traxsource artist photo, not licensed"
+      },
+      "crop": "190:190:186:156",
+      "env": {},
+      "locked": "2026-11-19"
+    },
+    {
+      "artist": "DJ SNEAK",
+      "slug": "djsneak",
+      "output": "website/img/about/djsneak/portrait.webp",
+      "outputSha256": "a7d8024abaa0580762c20ad765ec619ef00683b8e2ff64cdd27065b99650fa4e",
+      "source": {
+        "url": "https://cdn.sanity.io/images/pge26oqu/production/ab3b1c80723aa603bc4cc756d79ea14379a5cbc5-1200x1200.jpg",
+        "file": "djsneak.jpg",
+        "sha256": "59b752fa9de7f03865dbc5f0de6506a96e35dc07c9d41da576695f4682f5a75b",
+        "rights": "owner's pick; Gray Area artist photo, not licensed"
+      },
+      "crop": "400:400:424:80",
+      "env": {},
+      "locked": "2026-11-19"
+    },
+    {
+      "artist": "TERRY MULLAN",
+      "slug": "terrymullan",
+      "output": "website/img/about/terrymullan/portrait.webp",
+      "outputSha256": "bf08249867c6f7ededcbef1cdd4014118f570e5466cb5ef6526bf54dc6f5cfa0",
+      "source": {
+        "url": "https://archive.org/download/rave_Terry_Mullan_Straight_Jackin/terrymullan.jpg",
+        "file": "terrymullan.jpg",
+        "sha256": "d9155494ddc197a827efb72ef421e9351a84731f2354f0d232267ae4276c6430",
+        "rights": "Rave Archive item photo"
+      },
+      "crop": "225:225:117:65",
+      "env": {},
+      "locked": "2026-11-19"
     }
   ]
 }

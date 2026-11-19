@@ -10,6 +10,24 @@ One finish line for every source of new mixes. Two pipelines feed it today:
 **Never upload third-party mixes to Arweave.** Arweave is permanent; a takedown would be
 impossible. Arweave holds only the site (HTML, JS, CSS, images, `artists.json`).
 
+## Rave Archive: building an artist record
+
+`~/server/scripts/ravearchive-build-artist.py <spec.json>` turns a list of archive items into a
+ready `system/artists` record (`~/server/data/ravearchive/<slug>-artist.json`): one mix per MP3
+side, house-style titles (`Title (Side A)`, year moved to `mixDateYear`), the `#/<id>` key,
+the item's photo as `mixImageFilename`, and the credit note. Every side is range-probed (206) and
+the script exits non-zero on any problem. Specs live in `~/server/data/ravearchive/specs/`:
+
+```json
+{"artistName": "TERRY MULLAN", "slug": "terrymullan", "artistGenre": "house",
+ "items": [{"id": "rave_Terry_Mullan_Live_In_Denver_With_Hipp-E", "with": "Hipp-E"}],
+ "rename": {"<mp3 file stem>": "Exact Title (Side A)"}}
+```
+
+Rules: back-to-back sets go under the artist the item is filed under, with `(with X)` in the
+title; when the archive holds the same b2b twice, list it once. Skip items that only mention the
+artist (e.g. a mix recorded at their apartment).
+
 ## The shared finish line
 
 1. **Audio URL** — one playable, range-capable URL per mix:
