@@ -23,6 +23,7 @@ HB=${HB:-45}; BL=${BL:-0.30}; BR=${BR:-0.62}
 LS=${LS:-0}
 CURVE=${CURVE:-0/0.04 0.2/0.24 0.5/0.66 0.8/0.88 1/0.92}
 PRE=""; [ -n "$CROP" ] && PRE="crop=${CROP},"
+TMPD=$(mktemp -d); TMP="$TMPD/portrait.png"; trap 'rm -rf "$TMPD"' EXIT
 ffmpeg -loglevel error -y -i "$IN" -filter_complex "
 [0]${PRE}scale=1000:1000:force_original_aspect_ratio=increase:flags=lanczos,crop=1000:1000,format=gray,
 normalize=blackpt=black:whitept=white:smoothing=0,
@@ -34,5 +35,14 @@ curves=master='${CURVE}',split[s][h];
 geq=lum='p(X+6*(2*mod(abs(sin(floor(Y/4)*12.9898)*43758.5453),1)-1),Y)',
 geq=lum='lum(X,Y)*(1-${LS}*pow(1-X/W,1.4))*(1-0.5*lt(mod(Y,8),2.5))',
 noise=alls=46:allf=u,gblur=sigma=0.6,noise=alls=18:allf=u,format=gray" \
-  -c:v libwebp -quality 86 "$OUT"
+  -f image2 -c:v png "$TMP"
+# Tone match (TONE=0 to skip): map this image's 5/25/50/75/95th luminance
+# percentiles onto the existing artist set (measured 2026-11-18 on 8 portraits:
+# p5 ~21, p25 ~34, p50 ~68, p75 ~137, p95 ~192 of 255), so every portrait has the
+# same black floor, midtones and highlights.
+if [ "${TONE:-1}" = "1" ]; then
+  python3 -I "$(dirname "$0")/portrait-tone-match.py" "$TMP" "$OUT"
+else
+  ffmpeg -loglevel error -y -i "$TMP" -c:v libwebp -quality 86 "$OUT"
+fi
 echo "wrote $OUT"
