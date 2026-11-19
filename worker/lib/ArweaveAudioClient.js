@@ -5,7 +5,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { execSync } from 'child_process';
 import ffmpegStatic from 'ffmpeg-static';
-import { isPlayableMixUrl, findRequestedMix, gatewayRetryDelayMs } from './mix-audio.js';
+import { isPlayableMixUrl, findRequestedMix, gatewayRetryDelayMs, mixUrlCandidates } from './mix-audio.js';
 
 // Configure FFmpeg - try multiple sources
 let ffmpegConfigured = false;
@@ -33,6 +33,8 @@ try {
  * Arweave Audio Client for 30-second audio clip generation
  * Based on the comprehensive build guide - efficiently downloads segments from Arweave
  */
+const SEGMENT_DOWNLOAD_DEADLINE_MS = 15 * 60 * 1000;
+
 class ArweaveAudioClient {
   constructor() {
     // Store loading promise so we can await it when needed
@@ -346,6 +348,9 @@ class ArweaveAudioClient {
 
     const maxRetries = 3;
     let lastError;
+    // The job has a 30-minute budget: stop starting new hosts/rounds after 15 minutes and surface the last error.
+    const downloadStartedAt = Date.now();
+    const pastDeadline = () => Date.now() - downloadStartedAt > SEGMENT_DOWNLOAD_DEADLINE_MS;
 
     // Direct execSync for GitHub Actions (CI).
     if (process.env.GITHUB_ACTIONS === 'true') {
@@ -354,31 +359,41 @@ class ArweaveAudioClient {
       // fetch ONLY the ~30s segment from the Arweave file — it does NOT download the whole
       // mix. startTime is a random offset, so each render pulls a different slice (not the
       // beginning). This is the original behavior. Reconnect flags handle gateway drops.
-      const ffmpegCommand = `ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss ${startTime} -i "${url}" -t ${duration} -vn -map 0:a -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
-      console.log(`[ArweaveAudioClient] FFmpeg command: ${ffmpegCommand.substring(0, 150)}...`);
-      // The gateway (arweave.net) answers 502/504 in blips of a few minutes. Retry the same
-      // slice with growing pauses (see gatewayRetryDelayMs) instead of failing on the first 5XX.
+      const buildCommand = (inputUrl) => `ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss ${startTime} -i "${inputUrl}" -t ${duration} -vn -map 0:a -c:a aac -b:a 128k -ac 2 -ar 44100 -y "${outputPath}"`;
+      // Each attempt walks every candidate gateway in order with no wait between them; the backoff (see
+      // gatewayRetryDelayMs) only applies once all of them failed, to ride out blips (502/504) lasting minutes.
+      // arweave.net alone is not enough: since 2026-11-17 it 302s to a sandbox subdomain that returns 404.
+      const candidates = mixUrlCandidates(url);
       for (let attempt = 1; ; attempt++) {
-        try {
-          execSync(ffmpegCommand, { stdio: 'pipe', timeout: 180000 });
-          console.log(`[ArweaveAudioClient] Segment download completed: ${path.basename(outputPath)}`);
-          return outputPath;
-        } catch (execErr) {
-          // stdio:'pipe' swallows stderr — surface the last lines for diagnostics.
-          const stderr = execErr.stderr ? execErr.stderr.toString().split('\n').slice(-8).join('\n') : '(no stderr)';
-          console.error(`[ArweaveAudioClient] ffmpeg attempt ${attempt} failed:`, execErr.message);
-          console.error(`[ArweaveAudioClient] ffmpeg stderr (last lines):\n${stderr}`);
-          const delay = gatewayRetryDelayMs(attempt);
-          if (delay === null) {
-            console.error('[ArweaveAudioClient] Direct FFmpeg execSync failed: gateway retries exhausted');
-            throw execErr;
+        let lastExecErr;
+        for (const candidate of candidates) {
+          if (lastExecErr && pastDeadline()) break;
+          const ffmpegCommand = buildCommand(candidate);
+          console.log(`[ArweaveAudioClient] FFmpeg command: ${ffmpegCommand.substring(0, 150)}...`);
+          try {
+            execSync(ffmpegCommand, { stdio: 'pipe', timeout: 75_000 });
+            console.log(`[ArweaveAudioClient] Segment via ${new URL(candidate).host}`);
+            console.log(`[ArweaveAudioClient] Segment download completed: ${path.basename(outputPath)}`);
+            return outputPath;
+          } catch (execErr) {
+            lastExecErr = execErr;
+            // stdio:'pipe' swallows stderr — surface the last lines for diagnostics.
+            const stderr = execErr.stderr ? execErr.stderr.toString().split('\n').slice(-8).join('\n') : '(no stderr)';
+            console.error(`[ArweaveAudioClient] ffmpeg attempt ${attempt} failed via ${new URL(candidate).host}:`, execErr.message);
+            console.error(`[ArweaveAudioClient] ffmpeg stderr (last lines):\n${stderr}`);
           }
-          console.log(`[ArweaveAudioClient] Gateway retry: waiting ${delay / 1000}s before attempt ${attempt + 1}...`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
         }
+        const delay = gatewayRetryDelayMs(attempt);
+        if (delay === null || pastDeadline()) {
+          console.error('[ArweaveAudioClient] Direct FFmpeg execSync failed: gateway retries exhausted or 15-minute deadline reached');
+          throw lastExecErr;
+        }
+        console.log(`[ArweaveAudioClient] Gateway retry: all ${candidates.length} gateways failed, waiting ${delay / 1000}s before attempt ${attempt + 1}...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
 
+    const fallbackCandidates = mixUrlCandidates(url);
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.log(`[ArweaveAudioClient] 🔄 Attempt ${attempt}/${maxRetries} for segment download`);
@@ -390,93 +405,107 @@ class ArweaveAudioClient {
         // FFmpeg is already configured via system installation in Docker
         console.log(`[ArweaveAudioClient] 🔧 FFmpeg configuration: System FFmpeg in Docker`);
         
-        return await new Promise((resolve, reject) => {
-          let command;
-          
-          if (useSimpleCommand) {
-            // Simple command for Railway - no complex filters
-            console.log('[ArweaveAudioClient] Using simple FFmpeg command for Railway compatibility');
-            command = ffmpeg(url)
-              .setStartTime(startTime)
-              .duration(duration)
-              .noVideo() // Ignore embedded cover art/video streams
-              .audioCodec('aac')
-              .audioBitrate('128k')
-              .audioChannels(2)
-              .audioFrequency(44100)
-              .output(outputPath);
-          } else {
-            // Full featured command for local development
-            command = ffmpeg(url)
-              .setStartTime(startTime)
-              .duration(duration)
-              .noVideo() // Ignore embedded cover art/video streams
-              .audioFilters([
-                `afade=t=in:st=0:d=${fadeInDuration}`,
-                `afade=t=out:st=${duration - fadeOutDuration}:d=${fadeOutDuration}`
-              ])
-              .audioCodec('aac')
-              .audioBitrate('128k')
-              .audioChannels(2)
-              .audioFrequency(44100)
-              .output(outputPath);
+        let segmentResult;
+        let candidateError;
+        for (const attemptUrl of fallbackCandidates) {
+          if (candidateError && pastDeadline()) break;
+          try {
+            segmentResult = await new Promise((resolve, reject) => {
+              let command;
+              
+              if (useSimpleCommand) {
+                // Simple command for Railway - no complex filters
+                console.log('[ArweaveAudioClient] Using simple FFmpeg command for Railway compatibility');
+                command = ffmpeg(attemptUrl)
+                  .setStartTime(startTime)
+                  .duration(duration)
+                  .noVideo() // Ignore embedded cover art/video streams
+                  .audioCodec('aac')
+                  .audioBitrate('128k')
+                  .audioChannels(2)
+                  .audioFrequency(44100)
+                  .output(outputPath);
+              } else {
+                // Full featured command for local development
+                command = ffmpeg(attemptUrl)
+                  .setStartTime(startTime)
+                  .duration(duration)
+                  .noVideo() // Ignore embedded cover art/video streams
+                  .audioFilters([
+                    `afade=t=in:st=0:d=${fadeInDuration}`,
+                    `afade=t=out:st=${duration - fadeOutDuration}:d=${fadeOutDuration}`
+                  ])
+                  .audioCodec('aac')
+                  .audioBitrate('128k')
+                  .audioChannels(2)
+                  .audioFrequency(44100)
+                  .output(outputPath);
+              }
+    
+              // Add metadata if provided
+              if (metadata) {
+                if (metadata.artist) command.outputOptions('-metadata', `artist=${metadata.artist}`);
+                if (metadata.title) command.outputOptions('-metadata', `title=${metadata.title}`);
+                if (metadata.album) command.outputOptions('-metadata', `album=${metadata.album}`);
+                if (metadata.genre) command.outputOptions('-metadata', `genre=${metadata.genre}`);
+              }
+    
+              // Enhanced network connection options for reliability
+              // Key: -ss before -i enables efficient HTTP range requests (only downloads needed segment)
+              // The -ss flag before input tells FFmpeg to seek in the HTTP stream, which triggers range requests
+              command.inputOptions([
+                '-timeout', '30000000', // 30 second timeout (reduced for faster failures)
+                '-reconnect', '1',
+                '-reconnect_streamed', '1',
+                '-reconnect_delay_max', '5', // Reduced delay for faster retries
+                '-reconnect_at_eof', '1',
+                '-reconnect_on_network_error', '1'
+              ]);
+    
+              // Capture stderr for better error diagnostics
+              let stderrOutput = '';
+              
+              command
+                .on('start', (commandLine) => {
+                  console.log(`[ArweaveAudioClient] FFmpeg command: ${commandLine.substring(0, 150)}...`);
+                })
+                .on('stderr', (stderrLine) => {
+                  stderrOutput += stderrLine + '\n';
+                  // Log important FFmpeg messages
+                  if (stderrLine.includes('error') || stderrLine.includes('Error') || stderrLine.includes('failed') || stderrLine.includes('HTTP')) {
+                    console.log(`[ArweaveAudioClient] FFmpeg: ${stderrLine.trim()}`);
+                  }
+                })
+                .on('progress', (progress) => {
+                  if (progress.percent) {
+                    console.log(`[ArweaveAudioClient] Progress: ${Math.round(progress.percent)}% done`);
+                  }
+                })
+                .on('end', () => {
+                  console.log(`[ArweaveAudioClient] Segment download completed: ${path.basename(outputPath)}`);
+                  resolve(outputPath);
+                })
+                .on('error', (error) => {
+                  console.error(`[ArweaveAudioClient] Download error (attempt ${attempt}):`, error.message);
+                  // Log last 500 chars of stderr for debugging
+                  if (stderrOutput) {
+                    const lastStderr = stderrOutput.split('\n').slice(-10).join('\n');
+                    console.error(`[ArweaveAudioClient] FFmpeg stderr (last 10 lines):\n${lastStderr}`);
+                  }
+                  lastError = error;
+                  reject(error);
+                })
+                .run();
+            });
+            break;
+          } catch (candidateErr) {
+            candidateError = candidateErr;
+            console.error(`[ArweaveAudioClient] Gateway ${new URL(attemptUrl).host} failed:`, candidateErr.message);
+            try { await fs.unlink(outputPath); } catch (cleanupError) { /* ignore */ }
           }
-
-          // Add metadata if provided
-          if (metadata) {
-            if (metadata.artist) command.outputOptions('-metadata', `artist=${metadata.artist}`);
-            if (metadata.title) command.outputOptions('-metadata', `title=${metadata.title}`);
-            if (metadata.album) command.outputOptions('-metadata', `album=${metadata.album}`);
-            if (metadata.genre) command.outputOptions('-metadata', `genre=${metadata.genre}`);
-          }
-
-          // Enhanced network connection options for reliability
-          // Key: -ss before -i enables efficient HTTP range requests (only downloads needed segment)
-          // The -ss flag before input tells FFmpeg to seek in the HTTP stream, which triggers range requests
-          command.inputOptions([
-            '-timeout', '30000000', // 30 second timeout (reduced for faster failures)
-            '-reconnect', '1',
-            '-reconnect_streamed', '1',
-            '-reconnect_delay_max', '5', // Reduced delay for faster retries
-            '-reconnect_at_eof', '1',
-            '-reconnect_on_network_error', '1'
-          ]);
-
-          // Capture stderr for better error diagnostics
-          let stderrOutput = '';
-          
-          command
-            .on('start', (commandLine) => {
-              console.log(`[ArweaveAudioClient] FFmpeg command: ${commandLine.substring(0, 150)}...`);
-            })
-            .on('stderr', (stderrLine) => {
-              stderrOutput += stderrLine + '\n';
-              // Log important FFmpeg messages
-              if (stderrLine.includes('error') || stderrLine.includes('Error') || stderrLine.includes('failed') || stderrLine.includes('HTTP')) {
-                console.log(`[ArweaveAudioClient] FFmpeg: ${stderrLine.trim()}`);
-              }
-            })
-            .on('progress', (progress) => {
-              if (progress.percent) {
-                console.log(`[ArweaveAudioClient] Progress: ${Math.round(progress.percent)}% done`);
-              }
-            })
-            .on('end', () => {
-              console.log(`[ArweaveAudioClient] Segment download completed: ${path.basename(outputPath)}`);
-              resolve(outputPath);
-            })
-            .on('error', (error) => {
-              console.error(`[ArweaveAudioClient] Download error (attempt ${attempt}):`, error.message);
-              // Log last 500 chars of stderr for debugging
-              if (stderrOutput) {
-                const lastStderr = stderrOutput.split('\n').slice(-10).join('\n');
-                console.error(`[ArweaveAudioClient] FFmpeg stderr (last 10 lines):\n${lastStderr}`);
-              }
-              lastError = error;
-              reject(error);
-            })
-            .run();
-        });
+        }
+        if (segmentResult === undefined) throw candidateError;
+        return segmentResult;
 
       } catch (error) {
         lastError = error;
