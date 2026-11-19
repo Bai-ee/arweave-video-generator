@@ -13,12 +13,14 @@
 #   env: CURVE (tone curve), SM (trail blur px, 200), SH (trail shift px, 110),
 #        HB (left-side blur px, 45), BL/BR (blur->focus ramp, 0.30-0.62 of width)
 # Low-key sources (dark background) look right with the default CURVE; for a
-# bright source try CURVE='0/0.02 0.25/0.18 0.5/0.52 0.8/0.84 1/0.90'.
+# bright, evenly lit source use CURVE='0/0 0.3/0.06 0.55/0.36 0.8/0.74 1/0.92' LS=0.7 (Jeff Craven).
 set -euo pipefail
 IN=$1; OUT=$2; CROP=${3:-}
 SM=${SM:-200}; SH=${SH:-110}
 # Left side of the face blurred, right side in focus: sharp image fades in between BL and BR (fraction of width).
 HB=${HB:-45}; BL=${BL:-0.30}; BR=${BR:-0.62}
+# LS: extra shade on the left side (0 = none). Evenly lit, bright photos need ~0.7 to get the shadowy left.
+LS=${LS:-0}
 CURVE=${CURVE:-0/0.04 0.2/0.24 0.5/0.66 0.8/0.88 1/0.92}
 PRE=""; [ -n "$CROP" ] && PRE="crop=${CROP},"
 ffmpeg -loglevel error -y -i "$IN" -filter_complex "
@@ -30,7 +32,7 @@ curves=master='${CURVE}',split[s][h];
 [b]avgblur=sizeX=${SM}:sizeY=1,crop=iw-${SH}:ih:${SH}:0,pad=iw+${SH}:ih:0:0:color=black,curves=master='0/0 0.5/0.32 1/0.8',format=gray[tr];
 [a][tr]blend=all_expr='A*(0.05+0.95*pow(X/W,2.2))+B*(0.95-0.95*pow(X/W,2.2))',format=gray,
 geq=lum='p(X+6*(2*mod(abs(sin(floor(Y/4)*12.9898)*43758.5453),1)-1),Y)',
-geq=lum='lum(X,Y)*(1-0.5*lt(mod(Y,8),2.5))',
+geq=lum='lum(X,Y)*(1-${LS}*pow(1-X/W,1.4))*(1-0.5*lt(mod(Y,8),2.5))',
 noise=alls=46:allf=u,gblur=sigma=0.6,noise=alls=18:allf=u,format=gray" \
   -c:v libwebp -quality 86 "$OUT"
 echo "wrote $OUT"
