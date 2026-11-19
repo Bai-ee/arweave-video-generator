@@ -87,7 +87,14 @@ function selfCheckBase32() {
 // id (see DIRECT_PREFIX in website/js/player-core.js). The id plays the txid role.
 const DIRECT_AUDIO_PREFIX = 'https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/';
 
+const ARCHIVE_AUDIO_PREFIX = 'https://archive.org/download/';
+const ARCHIVE_ID_RE = /#\/([A-Za-z0-9_-]{43})$/;
+
 function parseArweaveUrl(rawUrl) {
+  if (typeof rawUrl === 'string' && rawUrl.startsWith(ARCHIVE_AUDIO_PREFIX) && ARCHIVE_ID_RE.test(rawUrl)) {
+    return { ok: true, host: 'archive.org', isBareGateway: false, isSubdomain: false, isDirect: true,
+      subdomain: null, txid: ARCHIVE_ID_RE.exec(rawUrl)[1], extraPath: '' };
+  }
   if (typeof rawUrl === 'string' && rawUrl.startsWith(DIRECT_AUDIO_PREFIX)) {
     return { ok: true, host: 'storage.googleapis.com', isBareGateway: false, isSubdomain: false, isDirect: true,
       subdomain: null, txid: rawUrl.slice(DIRECT_AUDIO_PREFIX.length), extraPath: '' };

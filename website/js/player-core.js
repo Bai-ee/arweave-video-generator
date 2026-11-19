@@ -46,7 +46,12 @@
      in player.js so both files agree on what a txid looks like. */
   var TXID_RE = /\/([A-Za-z0-9_-]{43})(?:[/?#]|$)/;
 
+  /* A "#/<id>" fragment (archive mixes, below) wins over any path segment. */
+  var FRAG_ID_RE = /#\/([A-Za-z0-9_-]{43})$/;
+
   function extractTxid(url) {
+    var f = FRAG_ID_RE.exec(String(url || ''));
+    if (f) return f[1];
     var m = TXID_RE.exec(String(url || ''));
     return m ? m[1] : null;
   }
@@ -57,8 +62,25 @@
      answers Range requests with 206, so the URL itself is the one candidate. */
   var DIRECT_PREFIX = 'https://storage.googleapis.com/editvideos-63486.firebasestorage.app/website/mixes/';
 
+  /* Licensed archive mixes (e.g. Rave Archive on the Internet Archive) stream
+     straight from archive.org, which answers Range with 206 and allows CORS.
+     They carry a 43-char content id after "#/" (base64url sha256 of the URL
+     without the fragment) so extractTxid keys them like any other mix — deep
+     links, resume and waveform seeds keep working. The fragment is never sent
+     to the server. */
+  var ARCHIVE_PREFIX = 'https://archive.org/download/';
+  var DIRECT_PREFIXES = [DIRECT_PREFIX, ARCHIVE_PREFIX];
+
+  function directPrefixOf(url) {
+    var s = String(url || '');
+    for (var i = 0; i < DIRECT_PREFIXES.length; i++) {
+      if (s.indexOf(DIRECT_PREFIXES[i]) === 0) return DIRECT_PREFIXES[i];
+    }
+    return null;
+  }
+
   function isDirectUrl(url) {
-    return String(url || '').indexOf(DIRECT_PREFIX) === 0 && !!extractTxid(url);
+    return !!directPrefixOf(url) && !!extractTxid(url);
   }
 
   function makeCandidate(url, host) {
@@ -78,7 +100,7 @@
      by construction rather than by a runtime check anywhere downstream.
      The one exception is a direct Storage URL (above), which is range-capable. */
   function buildCandidates(url) {
-    if (isDirectUrl(url)) return [makeCandidate(String(url), DIRECT_PREFIX)];
+    if (isDirectUrl(url)) return [makeCandidate(String(url), directPrefixOf(url))];
     var txid = extractTxid(url);
     if (!txid) return [];
     var out = [];
@@ -889,6 +911,7 @@
   var UEPlayerCore = {
     RANGE_HOSTS: RANGE_HOSTS,
     DIRECT_PREFIX: DIRECT_PREFIX,
+    ARCHIVE_PREFIX: ARCHIVE_PREFIX,
     extractTxid: extractTxid,
     isDirectUrl: isDirectUrl,
     buildCandidates: buildCandidates,
