@@ -41,18 +41,7 @@ noise=alls=46:allf=u,gblur=sigma=0.6,noise=alls=18:allf=u,format=gray" \
 # p5 ~21, p25 ~34, p50 ~68, p75 ~137, p95 ~192 of 255), so every portrait has the
 # same black floor, midtones and highlights.
 if [ "${TONE:-1}" = "1" ]; then
-  CURVE2=$(ffmpeg -loglevel error -i "$TMP" -vf format=gray,scale=250:250 -f rawvideo - | python3 -I -c '
-import sys
-v=sorted(sys.stdin.buffer.read()); n=len(v)
-src=[v[int(q*(n-1))] for q in (.05,.25,.50,.75,.95)]
-dst=[21,34,68,137,192]
-pts=[(0.0,0.0)]
-for s_,d in zip(src,dst):
-    x=s_/255
-    if x>pts[-1][0]+0.004 and x<0.996: pts.append((x,d/255))
-pts.append((1.0,0.86))
-print(" ".join(f"{x:.4f}/{y:.4f}" for x,y in pts))')
-  ffmpeg -loglevel error -y -i "$TMP" -vf "format=gray,curves=master='${CURVE2}',format=gray" -c:v libwebp -quality 86 "$OUT"
+  python3 -I "$(dirname "$0")/portrait-tone-match.py" "$TMP" "$OUT"
 else
   ffmpeg -loglevel error -y -i "$TMP" -c:v libwebp -quality 86 "$OUT"
 fi
