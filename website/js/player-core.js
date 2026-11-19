@@ -136,6 +136,15 @@
     if (result.status !== 206) {
       return { rangeCapable: false, reason: 'no-206' };
     }
+    /* Direct hosts (archive.org, our Storage bucket) answer Range with a real
+       206 but archive.org does not list Content-Range in
+       Access-Control-Expose-Headers, so the browser hides it from fetch().
+       For a direct URL a 206 with the header hidden is still proof of range
+       support (a server that ignores Range answers 200). Arweave gateways
+       keep the strict check below. */
+    if (result.direct && (result.contentRange === null || result.contentRange === undefined)) {
+      return { rangeCapable: true, reason: 'ok-206-header-hidden' };
+    }
     var range = parseContentRange(result.contentRange);
     if (!range) {
       return { rangeCapable: false, reason: 'bad-content-range' };

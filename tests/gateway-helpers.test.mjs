@@ -145,6 +145,19 @@ describe('parseContentRange', () => {
 });
 
 describe('evaluateProbe', () => {
+  test('a direct host 206 with Content-Range hidden by CORS is range-capable', () => {
+    assert.deepEqual(UEPlayerCore.evaluateProbe({ status: 206, contentRange: null, direct: true }),
+      { rangeCapable: true, reason: 'ok-206-header-hidden' });
+  });
+
+  test('an Arweave gateway 206 without a readable Content-Range is still rejected', () => {
+    assert.equal(UEPlayerCore.evaluateProbe({ status: 206, contentRange: null }).rangeCapable, false);
+  });
+
+  test('a direct host 200 is never range-capable', () => {
+    assert.equal(UEPlayerCore.evaluateProbe({ status: 200, contentRange: null, direct: true }).rangeCapable, false);
+  });
+
   test('accepts a 206 with a coherent Content-Range', () => {
     const result = UEPlayerCore.evaluateProbe({ status: 206, contentRange: 'bytes 0-127/280171663', acceptRanges: 'bytes' });
     assert.equal(result.rangeCapable, true);
