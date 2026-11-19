@@ -10,6 +10,7 @@ import { deployWebsiteToArweave, REQUIRED_MANIFEST_PATHS } from '../lib/WebsiteD
 import { initializeFirebaseAdmin, getFirestore, getStorage } from '../lib/firebase-admin.js';
 import { syncFirebaseToWebsiteJSON } from '../lib/WebsiteSync.js';
 import { updateArNSRecord } from '../lib/ArNSUpdater.js';
+import { checkDeployToken } from '../lib/deploy-auth.js';
 import path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
@@ -32,7 +33,7 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Deploy-Token');
     res.setHeader('Content-Type', 'application/json');
 
     // Handle OPTIONS preflight
@@ -152,6 +153,11 @@ export default async function handler(req, res) {
   // Only allow POST for deployment
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const auth = checkDeployToken(req.headers);
+  if (!auth.ok) {
+    return res.status(auth.status).json({ success: false, error: auth.error });
   }
 
   try {
